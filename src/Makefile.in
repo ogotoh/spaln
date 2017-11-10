@@ -1,0 +1,127 @@
+#	Makefile.in for splan/sortgrcd
+#	Copyright(c) Osamu Gotoh <<o.gotoh@asit.go.jp>>
+exec_prefix = /usr/local/bin
+table_dir = /usr/local/bin
+alndbs_dir = /db/seqdb
+CXX  = g++
+CFLAGS = -O3
+RANLIB = ranlib
+LD  = g++
+AR = ar ru
+DEL = rm -f
+
+CXX := $(CXX) $(CFLAGS)
+
+.SUFFIXES: .o .c .cc .h .sh
+
+PROG = spaln sortgrcd makmdm makdbs
+
+STDH = stdtype.h
+CLIB = clib.a
+SLIB = sblib.a $(CLIB)
+LLIB = -lpthread -lm
+
+.c.o:
+	$(CXX) -c $<
+.cc.o:
+	$(CXX) -c $<
+
+.c:
+	$(CXX) -o $@ $< $(CLIB)
+
+all: $(PROG) 
+
+clean:
+	$(DEL) $(PROG) *.exe
+clear:
+	$(DEL) $(PROG) *.exe *.o *.a
+clearall:
+	$(DEL) $(PROG) core *.o *.a *.exe *% *BAK Makefile iolib.h
+
+tar:
+	$(DEL) *.o *.a *% *BAK *~ Makefile iolib.h $(PROG)
+	cd .. ; \
+	Cur=`pwd` ; \
+	Pnm=`basename $$Cur` ; \
+	cd .. ; \
+	tar cvf Sources.tar $$Pnm
+
+install:
+	test -d $(exec_prefix) || mkdir -p $(exec_prefix)
+	cp $(PROG) $(exec_prefix)
+	test -d $(table_dir) || mkdir -p $(table_dir)
+	@if test "$(table_dir)" != "$(CURDIR)/../table"; then \
+		cp -pfR ../table/* $(table_dir); \
+	fi
+	./makmdm $(table_dir)
+	test -d $(alndbs_dir) || mkdir -p $(alndbs_dir)
+	@if test "$(alndbs_dir)" != "$(CURDIR)/../seqdb"; then \
+		cp -pfR ../seqdb/????* $(alndbs_dir); \
+	fi
+
+uninstall uninst:
+	cd $(exec_prefix); rm -f $(PROG)
+	cd $(table_dir); cd ..; rm -fr $(table_dir)
+
+test:   $(PROG)
+	@if test -r $(table_dir)/mdm_mtx; then \
+	  ./test.sh; \
+	else \
+	   echo "please make install before test"; \
+	fi
+
+wc:
+	wc $(SRC) $(HDR)
+ls:
+	ls $(SRC) $(HDR)
+
+spaln:	spaln.o blksrc.o $(SLIB)
+	$(CXX) -o spaln spaln.o blksrc.o $(SLIB) $(LLIB)
+sortgrcd:	sortgrcd.c $(SLIB)
+	$(CXX) -o sortgrcd sortgrcd.c $(SLIB)
+makdbs: makdbs.c dbs.h seq.h bitpat.h $(SLIB)
+	$(CXX) -o makdbs makdbs.c $(SLIB) $(LLIB)
+makmdm: makmdm.c mdm.h $(CLIB)
+	$(CXX) -o makmdm makmdm.c $(CLIB) $(LLIB)
+
+spaln.o: spaln.c seq.h aln.h
+bitpat.o: bitpat.c bitpat.h
+wln.o:	wln.c	seq.h	    aln.h	wln.h
+sqpr.o:	sqpr.c	seq.h		dbs.h
+seq.o:	seq.c	seq.h		aln.h	dbs.h
+simmtx.o:	simmtx.c seq.h aln.h mdm.h
+utilseq.o:	utilseq.c	seq.h
+codepot.o:	codepot.c	codepot.h
+aln2.o:	aln2.c	seq.h		aln.h
+gsinfo.o:	gsinfo.c	seq.h
+vmf.o:	vmf.c vmf.h $(STDH)
+dbs.o:	dbs.c dbs.h $(STDH)
+gaps.o:	    gaps.c  gaps.h  seq.h
+divseq.o:	divseq.c	aln.h
+fwd2b1.o:	fwd2b1.c	aln.h	seq.h	codepot.h
+fwd2h1.o:	fwd2h1.c	aln.h	seq.h	codepot.h
+fwd2s1.o:	fwd2s1.c	aln.h	seq.h	codepot.h
+fwd2d1.o:	fwd2d1.c	aln.h	seq.h
+
+sblib.a: aln2.o dbs.o gaps.o  codepot.o divseq.o gsinfo.o \
+	fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o \
+	seq.o simmtx.o sqpr.o utilseq.o vmf.o wln.o
+	$(AR) sblib.a aln2.o dbs.o gaps.o  codepot.o divseq.o gsinfo.o \
+	fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o \
+	seq.o simmtx.o sqpr.o utilseq.o vmf.o wln.o
+	$(RANLIB) sblib.a
+
+clib.o:		clib.c		stdtype.h
+iolib.o:	iolib.c		stdtype.h
+mfile.o:	mfile.c		stdtype.h
+sets.o:		sets.c		stdtype.h
+supprime.o:	supprime.c	stdtype.h
+
+clib.a: clib.o iolib.o mfile.o sets.o supprime.o
+	$(AR) clib.a clib.o iolib.o mfile.o sets.o supprime.o
+	$(RANLIB) clib.a
+
+cmn.h:	$(STDH) 
+	touch cmn.h
+seq.h:	$(STDH)
+	touch seq.h

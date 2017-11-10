@@ -1,0 +1,200 @@
+/*****************************************************************************
+*
+*	Collection of functions for general use
+*
+*	qopen		dopen		qout
+*	makefnam	partfnam	topath
+*	getiary
+*	inputf		finputf		sinputf	
+*	promptin	prompt		progetc		progets
+*
+**	Osamu Gotoh, ph.D.	(-2001)
+*	Saitama Cancer Center Research Institute
+*	818 Komuro, Ina-machi, Saitama 362-0806, Japan
+*
+*	Osamu Gotoh, Ph.D.	(2001-)
+*	National Institute of Advanced Industrial Science and Technology
+*	Computational Biology Research Center (CBRC)
+*	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
+*
+*	Osamu Gotoh, Ph.D.      (2003-)
+*	Department of Intelligence Science and Technology
+*	Graduate School of Informatics, Kyoto University
+*	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
+*
+*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*****************************************************************************/
+
+#ifndef  _IOLIB_
+#define  _IOLIB_
+
+#include "adddef.h"
+#include <stdarg.h>
+#include <dirent.h>
+
+/*	Default Paths/Names of FIles	*/
+
+#ifndef DEF_TAB_PATH
+#define DEF_TAB_PATH	"#table_dir#"
+#endif
+
+#ifndef DEF_MAT_PATH
+#define DEF_MAT_PATH	"#table_dir#"
+#endif
+
+#ifndef DEF_OUT_FN
+#define DEF_OUT_FN	"./aln.out"
+#endif
+
+//	Env Variables
+
+#ifndef ALN_TAB
+#define ALN_TAB		"ALN_TAB"
+#endif
+
+#ifndef BLASTMAT
+#define BLASTMAT	"BLASTMAT"
+#endif
+
+#if LEAKTRACE
+#include "MemoryTrace.hpp"
+#endif
+
+//	Others
+
+static	const	int	QUERY = INT_MIN;
+static	const	int	SILENT = QUERY + 1;
+static	const	int	POPUP = QUERY + 2;
+static	const	double	DQUERY = QUERY + 0.L;
+static	const	double	DSILENT = DQUERY + 1.L;
+static	const	double	DPOPUP = DQUERY + 2.L;
+static	const	char*	esc_code = "\x1b[";
+static	const	char*	font_end = "</font></b>";
+
+enum CharColorCode {
+	CMC_BLACK = '0', CMC_RED, CMC_GREEN, CMC_YELLOW,
+	CMC_BLUE, CMC_MAGENTA, CMC_CYAN, CMC_WHITE, CMC_BACK = '9'
+};
+enum CharAttrCode {
+	CMC_RESET = '0', CMC_BOLD, CMC_FAINT, CMC_ITALIC, CMC_UNDER, 
+	CMC_SLINK, CMC_RLINK, CMC_REVERSE
+};
+
+struct INTERACT {
+	INT prompt	: 1;
+	INT echo	: 1;
+};
+
+class EscCharCtl {
+	FILE*	fd;
+	void	putctl(int maincode, int subcode = 0, int attr = 0);
+	void	reset() {fputs(esc_code, fd); fputs("0m", fd);}
+public:
+	void	putchr(int c, int front = 0, int back = 0, int attr = 0) {
+	    putctl(front, back, attr);
+	    putc(c, fd);
+	    reset();
+	}
+	void	putstr(const char* s, int front = 0, int back = 0, int attr = 0) {
+	    putctl(front, back, attr);
+	    fputs(s, fd);
+	    reset();
+	}
+	EscCharCtl(FILE* _fd = stdout) : fd(_fd) {};
+};
+
+class HtmlCharCtl {
+	FILE*   fd;
+	void    putctl(const char* fg, const char* bg);
+	void    reset() {fputs(font_end, fd);}
+public:
+	void    putchr(int c, const char* front = 0, const char* back = 0) {
+	    putctl(front, back);
+	    putc(c, fd);
+	    reset();
+	}
+	void    putstr(const char* s, const char* front = 0, const char* back = 0) {
+	    putctl(front, back);
+	    fputs(s, fd);
+	    reset();
+	}
+	HtmlCharCtl(FILE* _fd = stdout, const char* title = 0);
+	~HtmlCharCtl();
+};
+
+class Gnm2tab : public StrHash<int> {
+	StrHash<int>*	domphy;
+public:
+	Gnm2tab(int field = 5);
+	~Gnm2tab() {delete domphy;}
+	int	taxon_code(const char* sqid, char** taxon);
+};
+
+class Ftable {
+	const	char* tabpath[3];
+	char*	subdir;
+	Gnm2tab*	g2t;
+public:
+	Ftable() : subdir(0), g2t(0) {
+	    tabpath[0] = ".";
+	    tabpath[1] = getenv(ALN_TAB);
+	    tabpath[2] = DEF_TAB_PATH;
+	}
+	~Ftable() {delete[] subdir; delete g2t;}
+	void	setSubDir(const char* dir) {
+	    if (!subdir || strcmp(subdir, dir))
+		subdir = strrealloc(subdir, dir);
+	}
+	void	setpath(const char* ps, const char* convtab = 0);
+	DIR*	dopen(const char* dname, bool test);
+	FILE*	fopen(const char* fname, const char* mode);
+	FILE*	fopen(const char* fname, const char* envpath, const char* defpath);
+	Gnm2tab*	read_gnm2tab(int field = 5) {
+	    if (!g2t) g2t = new Gnm2tab(field);
+	    return (g2t);
+	}
+};
+
+#ifdef  BSD
+#ifndef SEEK_SET
+enum {SEEK_SET, SEEK_CUR, SEEK_END};
+#endif
+#endif
+
+extern	Ftable	ftable;
+extern	char*	fgets_wocr(char* str, INT maxl, FILE* fd);
+extern	char*	topath( char* res, const char* org);
+extern	char*	makefnam(const char* fnam, const char* defn, char* result);
+extern	char*	partfnam( char* part, const char* fname, const char* where);
+extern	FILE*	fopenpbe(const char* path, const char* name, const char* extent, 
+			const char* opt, int lvl = 0, char* buf = 0);
+extern	FILE*	qopen(const char* dfname, const char* mode);
+extern	FILE*	qout(const char* dfn);
+extern	void	qclose();
+extern	void	setintval(const char* mssg, int* pval, int* back, int given);
+extern	void	setdblval(const char* mssg, double* pval, double* back, const double* given);
+extern	long	diskspc(char* drive);
+extern	void	setprompt(int prom, int ech);
+extern	int	getprompt();
+extern	void	fatal(const char* format,...);
+extern	void	prompt(const char* s,...);
+extern	int	progetc(const char* frmt,...);
+extern	char*	progets(char* str, const char* frmt,...);
+extern	int	promptin(const char* s,...);
+extern	int	sinputf(const char* s, const char* f,...);
+extern	int	sgetiarray(int* array, int size, const char** pps);
+extern	int	fgetiarray(int* array, int size, FILE* fd);
+extern	int	getiarray(int* array, int size, const char* ps);
+extern	size_t	file_size(FILE* fd);
+extern	size_t	file_size(const char* fn);
+extern	FILE*	out_fd;
+
+inline	FILE* outfd(const char* fn)
+{
+	if (!fn || !(out_fd = fopen(fn, "w"))) out_fd = stdout;
+	return (out_fd);
+}
+
+/*  End of iolib.h  */
+
+#endif

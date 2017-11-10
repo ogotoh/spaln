@@ -1,0 +1,681 @@
+<html>
+
+<head>
+
+<title>SPALN information</title>
+
+<meta HTTP-EQUIV="OWNER" CONTENT="O.Gotoh">
+
+<link REL="made" HREF="mailto:o.gotoh@aist.go.jp">
+
+</head>
+
+<!--
+<body BGCOLOR="#00336633" link="#FFFF00" vlink="#77FFFF77" alink="#FFFF00" text="#FFFFFF">
+-->
+
+<a NAME="Top"></a>
+
+<DIV style="background-color:#FFF0C4;">
+
+<br>
+<h1><center>SPALN information</center></h1>
+<br>
+<br>
+
+<H2 ALIGN=left>
+<ul>
+	<li><a href='#Ov'>Overview</a>
+	<li><a href="#Ref">References</a>
+	<li><a href="../cgi-bin/spaln.pl">Online Server</a>
+<!--	<li><a href="./pr_tut.html">Tutorial</a> -->
+	<li><a href="#Ver2">Major changes in Version2</a>
+	<li><a href="#In">Install</a>
+	<li><a href="#Seq">Sequence data formation</a>
+	<li><a href="#Usr">Execution</a>
+	<li><a href="#Exl">Example</a>
+	<li><a href="#Chg">Change from previous version</a>
+	<li><a href="#Dwn">Download</a>
+</ul>
+</H2>
+<SPAN style="padding-bottom:20px;"></SPAN>
+<hr>
+</DIV>
+<body BGCOLOR="#FFFFF0FF">
+<H2 ALIGN=left> <a name="Ov">Overview</a> </H2>
+
+<B>Spaln</B> (space-efficient spliced alignment) is a
+stand-alone program that maps and aligns a set of cDNA or protein sequences
+onto a whole genomic sequence in a single job. <b>Spaln</b> also performs spliced 
+or ordinary alignment after rapid similarity search against a protein sequence
+ database, if a genomic segment or an amino acid sequence is given as a query. From Version 1.4, spaln supports a combination of protein sequence database and a given genomic segment. From Version 2.2, spaln also performs rapid similarity search and (semi-)global alignment of a set of protein sequence queries again a protein sequence database. <b>Spaln</b> adopts multi-phase
+heuristics that makes it possible to perform the job on a conventional personal
+computer running under Unix/Linux with limited memory. The program is written
+in C++ and distributed as source codes and also as executables for a few platforms. 
+Unless binaries are not provided, users must compile the program on their
+own system. Although the program has been tested only on a Linux operating
+system, it is likely to be portable to most Unix systems with little or no
+modifications. The accessory program <b>sortgrcd</b> sorts the gene loci found
+by <b>spaln</b> in the order of chromosomal position and orientation. 
+
+<p>
+<h2><a name="Ref">References</a></h2>
+<P>
+
+[1] Gotoh, O. &quot;<a href='http://nar.oxfordjournals.org/cgi/content/abstract/gkn105?ijkey=N2yLVza41RuShAg&keytype=ref'>
+A space-efficient and accurate method for mapping and aligning cDNA sequences onto genomic sequence</a>&quot;
+<i>Nucleic Acids Research</i> <b>36</b> (8) 2630-2638 (2008).
+<BR>
+[2] Gotoh, O. &quot;<a href='http://bioinformatics.oxfordjournals.org/cgi/content/abstract/btn460?ijkey=XajuzvyHlcQZoQd&keytype=ref'>
+Direct mapping and alignment of protein sequences onto genomic sequence</a>&quot;
+<i>Bioinformatics</i> <b>24</b> (21) 2438-2444 (2008).
+<BR>
+[3] Iwata, H. and Gotoh, O., &quot;<a href='http://nar.oxfordjournals.org/content/40/20/e161'>
+Benchmarking spliced alignment programs including  Spaln2, an extended version of Spaln that incorporates additional species-specific features</a>&quot;
+<i>Nucleic Acids Research</i> <b>40</b> (20) e161 (2012)
+<BR>
+<p>
+<h2><a href="#Chg">Present Version: 2.3.1</a>, Last update: 2017-06-22 </h2>
+<p>
+<h2><a name="In">Install</a></h2>
+<h3>From source</h3>
+To compile the source codes in the default settings, follow the instructions below. If you download the source file (<a href="../archive/spaln2.3.1.tar.gz">spaln2.3.1</a>) in the directory <font color="#40A040"><em>download</em></font>, five directories will be generated under <em><font color="#40A040">download</font>/spalnXX/</em> after installation, where XX is a version code. We assume <font color="#40A040"><em>work</em></font> is your workspace, which may or may not be identical to <em><font color="#40A040">download</font></em>. <B>Note:</B> The default destinations of the installed files of version 1 are somewhat different from those described here.
+<p>
+ <ul>
+  <li> bin : binaries
+  <li> doc : documents
+  <li> seqdb : sample sequences. In this directory you should format genomic or database files
+  <li> src : source codes
+  <li> table : parameter files used by <B>spaln</B>
+ </ul>
+<p>
+To modify the location of executables and/or other settings, run 'configure --help' at step 6 below. (<b>Warning</b>: Full path name rather than relative path name must be given for executables or other directories as the arguments of the <B>configure</B> command.) These locations are hard coded in <B>spaln</B>. The locations of the 'seqdb' and 'table' directories will be respectively denoted by <em><font color="#40A040">seqdb</font></em> and <em><font color="#40A040">table</font></em> below. Hence, <em><font color="#40A040">seqdb</font></em>=<em><font color="#40A040">download</font>/spalnXX/seqdb</em>, and <font color="#40A040"><em>table</em></font>=<em><font color="#40A040">download</font>/spalnXX/table</em> in the default settings.
+<p>
+<ol>
+ <li> <TT>% mkdir <em><font color="#40A040">download</font></em></TT>
+ <li> <TT>% cd <em><font color="#40A040">download</font></em></TT>
+ <li> Download spalnXX.tar.gz 
+ <li> <TT>% tar xfz spalnXX.tar.gz</TT>
+ <li> <TT>% cd ./spalnXX/src</TT>
+ <li> <TT>% ./configure [--help]</TT>
+    <ul>
+        <li>Please manually edit Makefile if $(CC) does not indicate a C++ compiler or
+        <li><TT>% CC=g++ ./configure [other options]</TT>
+    </ul>
+ <li> <TT>% make</TT>
+ <li> <TT>% make install</TT>
+    <ul>
+        <li>Executables are copied to ../bin
+        <li>makmdm program makes mutation data matrices of various PAM levels in the ../table directory
+    </ul>
+ <li> <TT>% make clearall</TT>
+ <li> Add <em><font color="#40A040">download</font>/spalnXX/bin</em> to your PATH
+ <ul>
+    <TT>% setenv PATH $PATH:<em><font color="#40A040">download</font>/spalnXX/bin</em> (csh/tsh)</TT><BR>
+    <TT>$ export PATH=$PATH:<em><font color="#40A040">download</font>/spalnXX/bin</em> (sh/bsh)</TT> <BR>
+ </ul>
+    Preferably, you may add the above line in your start up rc file (<i>e.g.</i> ~/.bashrc)<BR>
+ Alternatively, move or copy <em><font color="#40A040">download</font>/spalnXX/bin/*</em> to a directory on your PATH, if you have not specified the location of executables at step 6 above.
+ <li> If you have changed the location of <em><font color="#40A040">table</font></em> and/or <em><font color="#40A040">seqdb</font></em> directory after installation, set the env variables ALN_TAB and/or ALN_DBS as explained in the following subsection. 
+ <li> Proceed to <a href="#Seq">Sequence data formation</a>.
+</ol>
+<BR>
+<h3>From binaries</h3>
+Binaries for a 32 bit (<a href="../archive/spaln2.0.4.linux32.tar.gz">spaln2.0.4.linux32</a>) or 64 bit (<a href="../archive/spaln2.3.1.linux64.tar.gz">spaln2.3.1.linux64</a>) Linux machine are available. To use the binaries, follow the instructions below. 
+<p>
+Case I: Assume the directory <font color="#40A040"><em>work</em></font> is your workspace where every material is stored. In this case, <font color="#40A040"><em>seqdb</font></em>=<em><font color="#40A040">work</font></em>.
+<ol>
+ <li> <TT>% mkdir <em><font color="#40A040">work</font></em></TT>
+ <li> <TT>% cd <em><font color="#40A040">work</font></em></TT>
+ <li> Download spalnXX.PC.tar.gz, where PC is a platform code
+ <li> <TT>% tar xfz spalnXX.PC.tar.gz</TT>
+ <li> Add <em><font color="#40A040">work</font>/bin</em> to your PATH <BR>
+      Or move or copy <em><font color="#40A040">work</font>/bin/*</em> to a directory on your PATH
+ <li> <TT>% mv ./table/* .; rmdir ./table</TT>
+ <li> <TT>% mv ./seqdb/* .; rmdir ./seqdb</TT>
+ <li> Now proceed to <a href="#Seq">Sequence data formation</a>.
+</ol> 
+<p>
+Case II: Assume your workspace <font color="#40A040"><em>work</em></font> is distinct from <font color="#40A040"><em>seqdb</em></font>
+<ol>
+ <li> <TT>% mkdir <em><font color="#40A040">download</font></em></TT>
+ <li> <TT>% cd <em><font color="#40A040">download</font></em></TT>
+ <li> Download spalnXX.PC.tar.gz, where PC is a platform code
+ <li> <TT>% tar xfz spalnXX.PC.tar.gz</TT>
+ <li> Add <em><font color="#40A040">download</font>/bin</em> to your PATH<BR>
+  Or move or copy <font color="#40A040"><em>download</font>/bin/*</em> to a directory on your PATH
+ <li> <TT>% setenv ALN_TAB <font color="#40A040"><em>download</em></font>/table</TT> (csh/tsh)
+ <BR> <TT>$ export ALN_TAB=<font color="#40A040"><em>download</em></font>/table</TT> (sh/bsh)
+ <li> <TT>% setenv ALN_DBS <font color="#40A040"><em>download</em></font>/seqdb</TT> (csh/tsh)
+ <BR> <TT>$ export ALN_DBS=<font color="#40A040"><em>download</em></font>/seqdb</TT> (sh/bsh)
+ <li> Add the above lines to your rc file, so that you don't have to repeat the commands at every login time.
+ <li> Now proceed to <a href="#Seq">Sequence data formation </a>
+</ol>
+
+<p> 
+<h2><a name="Seq">Sequence data formation</a></h2>
+If you do not need genome mapping or database search, you may skip this section. All sequence files should be in (multi-)fasta format. The genomic sequence must be formatted before use. 
+
+<ol>
+ <li> <TT>% cd <font color="#40A040"><em>seqdb</em></font></TT></li>
+ <li> Download or copy genomic sequences or protein database sequence in multi-fasta format.</li>
+ <li> Chromosomal sequences should be concatenated into a single file. Alternatively, you can use multiple chromosomal files without concatenation. This procedure will be described at the end of this section. To render the 'make' command effective, the extension of the genomic sequence file should be '.mfa'or '.gf', and protein database sequence should be '.faa'. Hereafter, the file name is assumed to be xxxgnm.mfa or prosdb.faa. <del> The total number of residues in a file must not be greater than or equal to 2**32.</del> </li>
+ <li> <TT>% ./makeidx.pl -i[n|p|np] [spaln options] xxxgnm.mfa</TT> or<BR>
+      <TT>% ./makeidx.pl -i[a] [spaln options] prosdb.faa</TT>
+      <ul>
+    <li> These commands are shortcuts that replace the following series of operations 5-7, if (i) the input is a single sequence file. <del>and (ii) the default parameter setting is used.</del> In that case, you can <a href="#Usr">skip</a> following instructions.The block size and <i>k</i>-mer size are estimated from the genome size. The -ix option specifies the "block file(s)" .bkx to be constructed, where x is 'a', 'n' or 'p'. The -inp option will construct both .bkn and .bkp files together with the .idx and associated files. If -ix is omitted or x is empty, no block file is constructed.</ul></li></li>
+ <li> <TT>% make xxxgnm.idx</TT> (for genomic sequence) or<BR>
+      <TT>% make prosdb.idx</TT> (for protein database sequence)
+      <ul>
+     <li> This command converts the sequence into a binary format. Four or five files, xxxgnm.seq, xxxgnm.idx, xxxgnm.ent, xxxgnm.grp, and optionally xxxgnm.odr are constructed (prosdb instead of xxxgnm in case of make prosdb.idx). It may take several tens of minutes to construct the files for mammalian genome.</li>
+       </li></ul></li>
+ <li> <TT>% make xxxgnm.bkn</TT> (for cDNA queries) or<BR>
+      <TT>% make xxxgnm.bkp</TT> (for protein queries) or<BR>
+      <TT>% make prosdb.bka</TT> (for protein database)<BR>
+  <ul>
+   <li> This command makes the block index table. This process may take another several tens of minutes.
+   <li> Internally, the make command invokes<BR>
+'<TT>spaln -Wxxxgnm.bkn -KD [Options] xxxgnm.mfa</TT>' or<BR>
+'<TT>spaln -Wxxxgnm.bkp -KP [Options] xxxgnm.mfa</TT>' or<BR>
+'<TT>spaln -Wprosdb.bka -KA [Options] prosdb.faa</TT>'.
+   <li> If xxxgnm.grp or prosdb.grp were successfully constructed at step 5 above, the option values below would be automatically calculated by script makblk.pl.  <em><b>WARNING:</b> The estimated maximal gene size can be
+      inadequately small if only a part of the genome (<i>e.g</i> a single chromosome)
+      is formatted.</em> At that time, explicitly specify the maximal gene size by
+      the -XG<i>N</i> option of makblk.pl or at the runtime of <B>spaln</B>.
+      <i>N</i> can have suffix 'k' and 'M' to indicate that the number is measured in kbp and Mbp, respectively.
+   <li> Options: (default value)
+    <ul>
+      <li> -XA<i>N</i>: alphabet size of the reduced amino acids: 6 < <i>N</i> <= 20 (20)
+      <li> -XB<i>S</i>: bit patterns of the spaced seeds. The pattern should be asymmetric  when the number of patterns > 2.
+      <li> -XC<i>N</i>: number of seed patterns: 0 <= <i>N</i> <= 5 (0: contiguous seed) 
+      <li> -XG<i>N</i>:	maximum gene length (262144) 
+      <li> -Xa<i>N</i>:	a parameter used to filter excessively abundant words (10)
+      <li> -Xb<i>N</i>:	block size (4096)
+<del><i>N</i> < 65536 and 'genome size' < 65536 * <i>N</i> must be satisfied.</del> An estimate of <i>N</i> is sqrt(genome size). For mammals, <i>N</i> is nearly equal to 54000.
+      <li> -Xg<i>N</i>:	maximal distance in block number between 5' terminal and 3' terminal blocks (16)
+      <li> -Xk<i>N</i>:	word size (11 for DNA, 5 for protein) 
+      <li> -Xs<i>N</i>:	distance between neighboring seeds (= <i>k</i>) <BR>
+    </ul>
+  </ul>
+ <li> It is possible to generate xxxgnm.idx and other three files directly from the input files without concatenation:<BR>
+  <ul>
+   <TT>% makdbs -nxxxgnm -KD file1 ... fileN</TT><BR>
+   <TT>% make xxxgnm.bkn</TT> (for cDNA queries) or<BR>
+   <TT>% make xxxgnm.bkp</TT> (for protein queries)<BR>
+  </ul>
+ This method is particularly useful when the concatenation might yield a file too large to be dealt with by the OS.
+</ol>
+
+
+<h2><a name="Usr">Execution</a></h2>
+
+<ol>
+  <li> Prepare protein, cDNA, or genomic segment sequence(s) in (multi-)fasta format (denoted by <i>query</i> below)
+  <li> Store <i>query</i> to <em><font color="#40A040">work</font></em>
+  <li> <TT>% cd <em><font color="#40A040">work</font></em></TT>
+  <li> Run <B>spaln</B> in one of the following four modes. <B>Spaln</B> 
+    does not support comparison between two genomic segments.<BR>
+    (A) <TT>% spaln -Q[0|1|2|3] [-O<i>N</i>] [other options]
+     <i>genome_segment query</i></TT><BR>
+    (B) <TT>% spaln -Q[4|5|6|7] [-O<i>N</i>] [other options] 
+    -d<i>xxxgnm query</i></TT><BR>
+    (C) <TT>% spaln -Q[4|5|6|7] [-O<i>N</i>] [other options] 
+    -a<i>prosdb query</i></TT><BR>
+    (D) <TT>% spaln -Q[4|5|6|7] [-O<i>N</i>] [other options] 
+    <i>prosdb.faa query</i></TT><BR>
+In the last case, <i>prosdb.faa</i> will be internally formatted, and the formatted results will be discarded after the end of execution.<BR>
+    <p> 
+     Only a subset of queries may be examined if <i>query</i> is replaced with '<i>query</i> (from to)', where 'from' and 'to' are the first and last entry numbers in <i>query</i> to be examined.<BR> To run <B>spaln</B> on multiple CPUs, for example, the following commands may be used and the results may be summarized with <B>sortgrcd</B>, as explained later.<BR>
+(A) <TT>% spaln -Q7 -O12 -oxxxO1 -dxxxgnm '<i>query</i> (1 1000)'</TT><BR>
+(B) <TT>% spaln -Q7 -O12 -oxxxO2 -dxxxgnm '<i>query</i> (1001 2000)'</TT><BR>
+(C) <TT>% spaln -Q7 ...</TT><BR>
+However, the procedure will be simplified if a multi-thread operation is
+used as follows:<br>
+(D) <TT>% spaln -Q7 -O12 -oxxx -dxxxgnm -t[<i>N</i>] query</TT><p>
+  Options: (default value)<BR>
+    <ul>
+     <li> -C<i>N</i>:	Use the genetic code specified by the "transl_table number" defined in <a  href="http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi">NCBI transl_table</a> (1).
+     <li> -H<i>N</i>:	Output is suppressed if the alignment score is less than <i>N</i>. See also -pw. (35)
+     <li> -K[D|P|A]: Format either genomic DNA for sequence search with DNA (D) or Protein (P) queries or protein database sequences for search with a genomic segment (A). Use in combination with -W option below.
+     <li> -LS:	Smith-Waterman-type local alignment. This option may prune out weakly matched terminal regions.
+     <li> -M[<i>N</i>]: Single or multiple output for each query
+      <ul>
+       <li> No option (default): single locus
+       <li> No argument: Multiple loci up to the maximum number specified by the program (4 in the present implementation)
+       <li> <i>N</i>=1: Re-search the <i>query</i> region not aligned in the first trial. May be useful to detect chimera or fragmented genomic region
+	<li> <i>N</i>>1: Output multiple loci maximally up to <i>N</i>
+      </ul>
+     <li> -O<i>N</i>: Select output format (4)
+      <ul>
+       <li> <i>N</i>=0: Gff3 gene format
+       <li> <i>N</i>=1: Alignment
+       <li> <i>N</i>=2: Gff3 match format
+       <li> <i>N</i>=3: Bed format
+       <li> <i>N</i>=4: Exon-oriented format similar to the output of megablast -D 3
+       <li> <i>N</i>=5: Intron-oriented output
+       <li> <i>N</i>=6: Concatenated exon sequence
+       <li> <i>N</i>=7: Translated amino-acid sequence. Presently not very useful for cDNA queries because the entire exon rather than an ORF is translated
+       <li> <i>N</i>=8: Mapping (block) information only. Use with -Q4
+       <li> <i>N</i>=10: SAM format
+       <li> <i>N</i>=12:	 Output the same information as -O4 in the
+	    binary format. If -oOutput is set, three files named
+	    Output.grd, Output.erd, and Output.qrd will be created. Otherwise,
+	    query.grd, query.erd, and query.qrd will be created.
+       </ul>
+     <li> -Q<i>N</i>: Select algorithm (3)
+       <ul>
+        <li> 0&lt;=<i>N</i>&lt;=3: Genomic segment in the fasta format given by the first argument vs. <i>query</i> given by the second argument. One may skip the formatting step described above if only this mode of operation is used.
+        <li> 4&lt;=<i>N</i>&lt;=7: Genome mapping and alignment. The genomic sequence must be formatted beforehand.
+        <li> <i>N</i>=0,4: DP procedure without HSP search. Considerably slow
+        <li> <i>N</i>=1,2,3,5,6,7: Recursive HSP search up to the level of (<i>N</i> % 4)
+       </ul>
+     <li> -R<i>S</i>:	Read block index table from file <i>S</i>. 
+      If omitted, the xxxgnm.bkn, xxxgnm.bkp,
+      or prosdb.bka file will be read depending on the type of query. The
+      appropriate file is searched for in the current directory, the directory
+      specified by the <span class=SpellE>env</span> variable 'ALN_DBS', and the
+      'seqdb' directory specified at the compile time in this order.
+      <li> -S<i>N</i>:	Orientation of the DNA query sequence (0)
+       <ul>
+	<li> <i>N</i>=0: The
+       orientation is inferred from the phrases (e.g. 5' end) in the header
+       line of each entry within a fasta file. If no information is available,
+       both orientations are examined, and the result with the better score is
+       reported.
+	<li> <i>N</i>=1: Forward orientation only
+	<li> <i>N</i>=2: Reverse-complement orientation only
+	<li> <i>N</i>=3: Examine both orientations
+       </ul>
+    <li> -T<i>xxx</i>:	Specify the species. For genome vs. DNA comparison, -yS flag should also be set in combination with this option. <i>xxx</i> corresponds to the subdirectory in the <em><font color="#40A040">table</font></em> directory. 
+     <li> -V<i>N</i>:	Minimum space to induce Hirschberg's algorithm (16M)
+     <li> -W<i>S</i>:	Write block index table to file <i>S</i>. 
+     <li> -i[a|p]:	Input mode with -Q[0ÅÖNÅÖ3].
+       <ul>
+	<li> -ia: Alternative mode; a genomic segment of an odd numbered entry in the input file is aligned with the query of the following entry.
+	<li> -ip: Parallel mode; the i-th entry in the file specified by the first argument is aligned with the i-th entry in the file specified by the second argument.
+	<li>  	default: The genomic segment specified by the first argument is aligned with each entry in the file specified by the second argument.
+       </ul>
+     <li> -o<i>S</i>:	Destination of output file name (stdout)
+     <li> -pa:	Terminal polyA or polyT sequence is not trimmed.
+     <li> -pi:	Mark exon-intron junctions by color in the alignment (-O1).
+     <li> -pq:	Suppress warning messages sent to <i>stderr</i>.
+     <li> -pw:	Report result even if alignment score is below threshold value.
+     <li> -px:	Suppress self-comparisons in the execution mode (C) or (D).
+     <li> -xB<i>S</i>: 	Bit pattern of seeds used for HSP search at level 1
+     <li> -xb<i>S</i>:	Bit pattern of seeds used for HSP search at level 3
+     <li> -u<i>N</i>:	Gap-extension penalty (3, 2, 2)
+     <li> -v<i>N</i>:	Gap-opening penalty (8, 6, 9)
+     <li> -ya<i>N</i>:	Dinucleotide pairs at the ends of an intron (0)
+       <ul>
+	<li> <i>N</i>=0: Accept only the canonical pairs (GT..AG,GC..AG,AT..AC)
+	<li> <i>N</i>=1: accept also AT..AN
+	<li> <i>N</i>=2: allow up to one mismatch from GT..AG
+	<li> <i>N</i>=3: accept any pairs. An omission of <i>N</i> implies <i>N</i> = 3 
+       </ul>
+     <li> -yi<i>N</i>:	Intron penalty (11, 8, 11)
+     <li> -yj<i>N</i>:	Incline of long gap penalty (0.6)
+     <li> -yk<i>N</i>:	Flex point where the incline of gap penalty changes (7)
+     <li> -yl<i>N</i>:	Double affine gap penalty if <i>N</i>=3; otherwise affine gap penalty
+     <li> -ym<i>N</i>:	Score for a nucleotide match (2, 2)
+     <li> -yn<i>N</i>:	Penalty for nucleotide mismatch (6, 2)
+     <li> -yo<i>N</i>:	Penalty for an in-frame termination codon (100)
+     <li> -yp<i>N</i>:	PAM level used in the alignment (third) phase (150)
+     <li> -yq<i>N</i>:	PAM level used in the second phase (50)
+     <li> -yx<i>N</i>:	Penalty for a frame shift (100)
+     <li> -yy<i>N</i>:	Relative contribution of splicing signal (8)
+     <li> -yz<i>N</i>:	Relative contribution of coding potential (2)
+     <li> -yA<i>N</i>:	Relative contribution of the translational initiation or termination signal (8)
+     <li> -yB<i>N</i>:	Relative contribution of branch point signal (0)
+     <li> -yE<i>N</i>:	Minimum exon length (2)
+     <li> -yI<i>S</i>:	Intron distribution parameters
+     <li> -yJ<i>N</i>:	Relative contribution of the bonus given
+      to a conserved intron position
+     <li> -yL<i>N</i>:	Minimum intron length (30, 30)
+     <li> -yS:	For
+      cDNA queries, use species-specific exon-intron boundary signals. For
+      protein queries, invoke the 'salvage' procedure to examine all blocks
+      with positive scores.
+     <li> -yS<i>N</i>:	<i>N</i> specifies the percentile
+      contribution of the species-specific splice signal. The other part is
+      derived from the universal signal given to the dinucleotides at the ends
+      of an intron. An omission of <i>N</i> implies <i>N</i> = 100. 
+     <li> -yX:	For a DNA query, this option sets parameter
+      values for cross-species comparison. The actual values are given as the
+      second number in the parentheses of the above lines. -yS100 is also
+      automatically invoked. Conversely, this option specifies an intra-species
+      mode for a protein query, whereby -yS30 is invoked. 
+     <li> -yY<i>N</i>:	Relative contribution of length-dependent part of intron penalty (8)
+     <li> -yZ<i>N</i>:	Relative contribution of oligomer composition within an intron (0) 
+   </ul>
+  
+ <li> <TT>% sortgrcd [options] *.grd</TT><BR>
+<B>Sortgrcd</B> is used to recover the output of <B>spaln</B> with -O12 option, to apply some filtering, and also to rearrange the output of multiple <B>spaln</B> runs.
+  <ul>
+     <li> Options:
+       <ul>
+	<li> -C<i>N</i>:	Minimum cover rate = % nucleotides in predicted exons / length of <i>query</i> (x 3 if query is protein) (0-100)
+	<li> -F<i>N</i>:	Filter level (<i>N</i>=0: no; <i>N</i>=1: mild; <i>N</i>=2: medium; <i>N</i>=3: stringent)
+	<li> -I<i>N</i>:	Minimum sequence identity (0-100)
+	<li> -H<i>N</i>:	Minimum alignment score (35)
+	<li> -O<i>N</i>:	Output mode. <i>N</i>=0: Gff3 gene form; <i>N</i>=4: same as -O4 of spaln (default)
+	<li> -S<i>C</i>:	Sort chromosomes/contigs in the order of <i>C</i>=a: alphabetical, b: abundance, c: appearance in genome database, r: reverse order for minus strand
+	<li> -V<i>N</i>:	Internal memory size used for core sort. If the
+	     data size is greater than <i>N</i>, the sorting procedure will be
+	     done in pieces.
+	<li> -m<i>N</i>:	Maximum number of mismatches within 20 bp from the nearest exon-intron boundary
+	<li> -n<i>N</i>:	Maximum number of non-canonical (other than GT..AG, GC..AG, AT..AC) intron ends
+	<li> -u<i>N</i>:	Maximum number of unpaired (gap) sites within 20 bp from the nearest exon-intron boundary
+ </ul>
+     <li> By default, no filter listed above is applied.
+     <li> When the output of <B>spaln</B> is separated into several files, the combined results are subjected to the sorting. Although *.grd files are assigned as the argument, there must be corresponding *.erd and *.qrd files in the same directory.
+     <li> In the default output format, the gene structure corresponding to each transcript is delimited by a line starting with '@', whereas each gene locus is delimited by a line starting with '!'. Two transcripts belong to the same locus if their corresponding genomic regions overlap by at least one nucleotide on the same strand.
+	<li> With -O0 option, the outputs follow the instruction of Gff3 (<a href='http://www.sequenceontology.org/gff3.shtml'>http://www.sequenceontology.org/gff3.shtml</a>) where a gene locus is defined as described above.
+ 
+   </ul>
+</ol>
+<p>
+
+<h2><a name="Exl">Example</a></h2>
+ <ul>
+  <li> To experience the flow of procedures with the samples in <em><font color="#40A040">seqdb</font></em>, type in the following series of commands after moving to <em><font color="#40A040">seqdb</font></em>.<BR>
+
+  <TT>% make dictdisc.cf</TT><BR>
+  <TT>% make dictdisc.faa</TT><BR>
+  <TT>% make dictdisc_g.gf</TT><BR>
+  <TT>% ./makeidx.pl -inp dictdisc_g.gf</TT><BR>
+  <TT>% make dictdisc.srd</TT><BR>
+  <TT>% make dictdisc.spn</TT><BR>
+</ul>
+<p>
+
+<h2><a name="Chg">Change from previous versions</a></h2>
+Added/modified in Ver. 2.3.1 (2017-06-22):
+<p>
+<ol>
+ <li> The data structure of a block file (X.bkn, X.bkp, X.bka) has been simplified to reduce its size. According to this modification, upper compatibility of database is maintained, but earlier versions of <B>spaln</B> cannot read block files formatted with this version of <B>spaln</B>
+ <li> The internal representation of splicing junctions has been modified, which has led to considerable reduction in code size and memory requirement, and slight reduction in execution time.
+ <li> The algorithm for limiting the range of blocks to be passed to alignment phases has been modified. This modification will facilitate detection of the first or the last exon that is separated from the other exons by more than one block size.
+ <li> The default value for nucleotide mismatch penalty with -yX option has been restored to that of earlier versions.
+</ol>
+
+Added/modified in Ver. 2.3.0 (2017-02-15):
+<p>
+<ol>
+ <li> The limitation on the total number of residues in a database sequence less than 2**32 has been removed. To realize this update, the database format has been slightly changed. <B>Spaln ver.2.3</B> can read database sequence formatted by a previous version of <B>spaln</B>, but the opposite is not true. In some cases, reformatting the database would result in better performance, even if the data size is less than 2**32.
+ <li> Several 'new' non-standard genetic codes are supported, following the update of NCBI's transl_table.
+ <li> Makeidx.pl has been updated. Formatting options such as -XC<i>N</i> may be transferred to <B>spaln</B> through this command. The default size of <i>k</i>-mers with -p option has been slightly modified.
+ <li> Miscellaneous small modifications have been done to facilitate better maintenance.
+</ol>
+
+Added/modified in Ver. 2.2.2a (2016-11-19):
+<p>
+<ol>
+ <li> In the mapping mode, an approximate genic range is now inffered from the query, if its gene structure is provided in the extended fasta format. Examples of the extended fasta format will be obtained by running <B>spaln</B> with -O6 or -O7 option. This modification relies on the observations that orthorogous introns tend to have similar lengths, and is proven to be effective when the first or a few orfollowing introns are so longer that the 5' end of the gene is hard to be located by the previous version of <B>spaln</B>.
+ <li> The expression of genomic site numbers in an alignment is corrected.
+ <li> Excessive new line after sequence identifier is suppressed, when the header line of the query has no comment.
+</ol>
+
+Added/modified in Ver. 2.2.2 (2016-05-06):
+<p>
+<ol>
+ <li> Although implemented earlier, Spaln now formally supports rapid sequence similarity search against a protein sequence database with a set of protein sequence queries. Unlike blastp and some other programs for local sequence similarity search, spaln calculates (semi-)global alignments. Currently, <i>p</i>-values are not estimated, as spaln intends to find only a small number of strong similarities (to use the found sequence as a template for spliced alignment, when the query is a genomic segment).
+ <li> Specification of species-specific parameter set is made easier. An eight character genus-species identifier (e.g. mus_musc) or genus name (e.g. Mus) is now allowed as the argument to the -T option for specifying the corresponding parameter set (Tetrapod in this example). To activate this facility, new "gnm2tab" file must be installed in the "table" directory.
+<li> A rare problem that mapping routine becomes much slow down due to internal repeats in query sequences have been fixed.
+<li> Estimation of maximum gene length in a genome from the total genome size has been modified. Remember that you must set the expected maximum gene length by -GX<i>n</i> option (<i>n</i> is the expected maximum gene length) at the formatting phase or at each run time if your "genome" is not full size.
+<li> Intron length distribution is modelled by a combination of up to three (formally two) Frechet distributions.
+</ol>
+
+Added/modified in Ver. 2.2.1a-e (2016-02-22):
+<p>
+<ol>
+ <li> Surplus lines in seqdb/makblk.pl have been removed
+ <li> configure script has been modified.
+ <li> A few modifications have been made to accord with Mac OS X.
+ <li> Several bugs in minor run modes have been fixed.
+ <li> The problem of skipping the first sequence line in some input fasta files has been fixed.
+</ol>
+
+Added/modified in Ver. 2.2.1 (2015-12-02):
+<p>
+<ol>
+ <li> A few bugs have been fixed. In particular, output in SAM format has been corrected.
+ <li> For mapping amino acid sequences, the numbers of matches and mismatches are displayed correctly.
+</ol>
+
+Added/modified in Ver. 2.2.0 (2015-08-14):
+<p>
+<ol>
+ <li> One-time run of database search has been enabled. In this mode, you need not format database sequences beforehand. However, the formatted results are not retained. 
+ <li> A few primitive bugs have been fixed. In particular, the problem with long header line has been fixed. Output formats with -O3 (BED format) and -O10 (SAM format) are also rectified.
+</ol>
+
+Added/modified in Ver. 2.1.4 (2015-01-30):
+<p>
+<ol>
+ <li> Three-byte addressing has been abolished. Accordingly, data files formatted with an older version of spaln can be used by the current version, but the opposite will result in a failure. 
+ <li> A few primitive bugs have been fixed.
+</ol>
+
+Added/modified in Ver. 2.1.3 (2014-12-15):
+<p>
+<ol>
+ <li> <TT>-C<i>N</i></TT> option is added to deal with non-standard genetic codes, where <i>N</i> denotes the "transl_table number" defined in <a  href="http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi">NCBI transl_table</a>. For example, <TT>-C6</TT> option enables proper translation of <i>Tetrahymena</i> or <i>Paramecium</i> genes.
+ <li> A failure to identify the 3' splice junction followed by a long gap has been amended.
+ <li> A few bugs with <TT>-O1</TT> option have been fixed.
+</ol>
+
+Added/modified in Ver. 2.1.2 (2013-10-17):
+<p>
+<ol>
+ <li> A few bugs in <b>spaln</b> and <b>sortgrcd</b> have been fixed.
+ <li> Inching toward more c++ style coding.
+</ol>
+
+Added/modified in Ver. 2.1.1 (2013-7-1):
+<p>
+<ol>
+ <li> The bugs in <b>makdbs</b> have been fixed.
+ <li> The placements of exon-intron boundaries are modified when <b>spaln</b> is run under -ya[N] (N = 2 or 3) options with protein queries.
+</ol>
+
+Added/modified in Ver. 2.1.0 (2013-5-15):
+<p>
+From this version, the formats of the database files and output of <i>-O12</i>  option of <b>spaln</b> have been changed. These modifications are intended to eliminate the limitations on the lengths of identifiers of both genomic and query sequences (formally up to 20 letters). To accord with these modifications, the associated programs, <b>makdbs</b> and <b>sortgrcd</b>, have been updated. Despite these modifications in the file formats, the user interface of each program is unchanged. <b>spaln_2.1</b> can read database sequences formatted by an older version, provided that the length limitations on the identifiers are satisfied. However, <b>sortgrcd_2</b> can no longer process outputs from an older version of <b>spaln</b>. From Version 2.1.3, <b>spaln</b> can deals with non-standard genetic codes.<p>
+<p>
+
+<h2><a name="Ver2">Major changes in Version2</a></h2>
+The major revision number of <b>spaln</b> has been updated
+from 1 to 2. The new version incorporates additional features
+for intron recognition in addition to other revisions. The major points of revision are as follows. <p>
+<ol>
+ <li> The codes have been extensively rewritten in C++, so that they are no longer compiled by a C compiler.
+ <li> A heuristic routine is added after the HSP search to reduce the number of calls of the restricted DP routine.
+ <li> -t[<i>N</i>] option specifies the number of CPUs involved in a multi-thread operation. If <i>N</i> is omitted, all available CPUs are used.
+ <li> A branch point signal and an intron propensity based on its oligomer compositions are incorporated in the scoring system.
+ <li> The splice junction signals are composed of two terms: (1) universal signal that depends on the dinucleotide pair at the ends of an intron and (2) species-specific signal that depends on the sequence around each splice junction. The relative contributions of these two terms can be freely adjusted by -yS<i>N</i> option.
+ <li> The intron penalty is now automatically adjusted depending on the
+      values of other parameters.
+ <li> Species specific parameters are available for 61 divergent eukaryotes. Those parameters are stored in each subdirectory in the 'table' directory.
+ <li> A set of benchmark data named <a href="../archive/SPAliBASE.tar.gz">&quot;SPAliBASE&quot;</a> is ready for download.
+</ol>
+<p>
+<ol>
+ <li> The limitations on the length of the sequence id of both genomic and query sequences are removed. According to this modification, <b>makdbs</b> and <b>sortgrcd</b> programs are updated.
+ <li> The default order of output from <b>sortgrcd</b> has been changed.
+ <li> A few bugs under <i>- M</i> option are fixed.
+</ol>
+
+Added/modified in Ver. 2.0.6 (2012-01-23):
+<p>
+<ol>
+ <li> The limitation on the length of the sequence id (formally max. 20 letters) has been removed. Note that the length of entry id in a database file is still limited up to 14 letters. This limitation will be removed in the next release.
+ <li> -Xs<i>N</i> option is added to allow for overlapping k-mer seeds at the block search phase, where <i>N</i> (1<=<i>N</i><=<i>k</i>) indicates the distance between adjacent seeds. The sensitivity of block search will be improved with a small   <i>N</i>, which is particularly beneficial for mapping of short queries. Compared with the default setting (<i>N</i>=<i>k</i>, i.e. tiling seeds), however, the memory consumption for the k-mer table will be increased by the factor of <i>k</i>/<i>N</i>. 
+ <li> Spaln now supports mapping of paired-end reads. Use -ip option for paired input files (matching 5Åf and 3Åf reads must appear in the same order) or -ia option for a single input file (matching 5Åf and 3Åf reads must appear alternatively).
+ <li> The performance of the GvsA mode (query = genomic segment, database = amino acid sequences) has been improved.
+ <li> Memory leak errors have been fixed (20130226)
+</ol>
+<p>
+Added/modified in Ver. 2.0.4 (2011-9-10, 2011-10-11, 2011-11-17) 
+<p>
+<ol>
+<li> A bug when the database file is constructed from multiple input sequence files has been fixed. Makefile and makblk.pl in 'seqdb' directory are also modified to accord for multiple input files.
+<li> The output with the -O3 option is changed from Psl-like to Bed format.
+<li> The default parameters used in polyA detection have been
+     modified to reduce the chance of removing genome-encoded
+     polyA-like sequences.
+<li> The procedure to collect related HSPs within and adjacent significant
+     blocks has been simplified.
+<li> The procedure to assemble HSPs has been improved to reduce the chance
+      of chimera formation among tandemly repeated paralogous genes.
+<li> A bug concerning with very long genes has been fixed.
+</ol>
+
+Added/modified in Ver. 1.4.5 (2010-04-23, 2010-05-08, 2010-08-04)
+<p>
+<ol>
+<li> Graphical output is supplemented in the Web interface.
+
+<li> -U option is added to <B>spaln</B>. With this option, alignment is computed without splicing. It may be useful when genomic fragment(s) are mapped/aligned with whole genome.
+
+<li> Several small bugs in <B>sortgrcd</B> have been fixed. 
+
+<li> Occasional core dump of <B>spaln</B> with -M option has been remedied. 
+
+<li> A problem of <B>makdbs</B> command when the character '|' is contained in a second or later word in the header line of fasta file was fixed. 
+
+</ol>
+
+Added/modified in Ver. 1.4.4 (2009-12-01, 2010-01-25, 2010-02-6, 2010-02-23)
+<p>
+<ol>
+<li> -S<i>N</i> option is added to <B>spaln</B>. When <i>N</i> = 3 (default) both orientations 
+of query sequence(s) are examined. When <i>N</i> = 1 and <i>N</i> = 2, only forward and reverse 
+direction is examined, respectively. When <i>N</i> = 0, the orientation to be examined 
+depends on the annotation (header line of fasta format) of the query sequence. 
+The list of phrases that indicate the orientation is given in the file 
+&quot;StrandPhrase&quot; in the <em><font color="#40A040">table</font>/spalnXX/seqdb</em>. If no phrase in this list is found in the 
+annotation, both orientations are examined.
+
+<li> -ya<i>N</i> option of <B>spaln</B> has been modified. When <i>N</i> = 0 (default), only 
+canonical intron boundary sequences (GT..AG, GC..AG, AT..AC) are allowed. 
+When <i>N</i> = 1, the third consensus is relaxed as AT..AN. When <i>N</i> = 2, one mismatch 
+from GT..AG is allowed in addition to the relaxed consensus of AT..AN. 
+When <i>N</i> = 3, any sequence is allowed as a boundary.
+
+<li> Many bugs of <B>sortgrcd</B> have been fixed.
+<li> -O15 option of <B>sortgrcd</B> outputs information about unique introns merged 
+from the mappings of several transcripts.
+
+<li> Unnecessary spaces in Gff3 format have been removed from outputs of 
+both <B>spaln</B> and <B>sortgrcd</B>.
+</ol>
+
+Added/modified in Ver. 1.4.3c (2009-08-21)
+<p>
+<ol>
+<li> Some incompatibilities between documents and programs have been rectified.
+
+<li> Species-specific parameters in <em><font color="#40A040">table</font>/spalnXX/seqdb</em> have been updated.
+
+</ol>
+
+Added/modified in Ver. 1.4.3b  (2009-07-10) (2009-07-24)
+<p>
+<ol>
+<li> <B>Sortgrcd</B> has been modified so that files with may chromosome/contig entries should be handled.
+
+<li> <B>Spaln</B>'s write mode now accepts plural arguments each corresponding to a piece of the whole genome (e.g. each chromosomal sequence). This modification has made it possible for <B>spaln</B> to format whole genomic sequence on a platform that cannot handle a large file (e.g. > 2GB). For example, the human genome is composed of 24 chromosomes. The total genome size exceeds 2 Gb, while the maximum chromosome size is less than 300 Mb. Even though a system fails to read the file of whole genome at a time, it can support <B>spaln</B> to process chromosomal sequences sequentially. In the example bellow, &quot;my_genome&quot; is the genome name, and chr1, chr2, ... chrn are chromosomal sequence files.
+<br>
+<TT>% makdbs -nmy_genome -KD chr1 chr2 ... chrn</TT>
+<br>
+<TT>% spaln -Wmy_genome.bkn -Xk12 -Xb54272 -XG2802688 -Xg64 -KD chr1 chr2 ... chrn</TT>
+<br>
+
+Then, you can use spaln in a usual way:
+<br>
+
+<TT>% spaln -Q7 -dmy_genome cDNAs</TT>
+<br>
+
+
+<li> A few bugs are fixed to prevent core dumps under some conditions. 
+</ol>
+
+<p>
+Added/modified in Ver. 1.4.2  (2009-05-16) (2009-06-17)
+<p>
+<ol>
+ <li> Bugs of <B>sortgrcd</B> has been fixed.  <B>sortgrcd</B> now supports -O5 (intron-oriented format) output.
+ <li> Several bugs that were conditionally problematic have also been fixed.
+</ol>
+<p>
+Added/modified in Ver. 1.4.1  (2009-02-16) (2009-03-16)
+<p>
+<ol>
+ <li> A combination of a protein sequence database and a genomic segment(s) is now supported. The protein sequence database must be formatted beforehand. At the run time, a set of ORFs in the genomic segment are translated and rapidly searched against the database sequences, and then the best-hit sequence is used as the template of the spliced alignment between the relevant portion of the genomic segment and the protein sequence retrieved.
+ <li> The format of .bkn and .bkp files is slightly changed. This has introduced some incompatibility between formatted files and software; spaln Ver.1.4 can use files formatted by spaln Ver.1.3, but the inverse would make an error.
+ <li> The output form now includes Gff3 (gene or match form) and Psl-like format.
+ <li> <B>Sortgrcd</B> also supports Gff3 gene format in addition to the native format.
+ <li> The default intron-penalty function has been modified from the well-shaped to a 'generic' function derived from intron-length distributions of several species.
+ <li> Many small modifications have been made to improve the stability of the software. In particular, multiple outputs of the same locus have been suppressed when -M option is set. 
+</ol>
+<p>
+Added/modified in Ver. 1.3.2. (2008-09-12) (2008-09-25) (2008-10-21)
+<ol>
+ <li> Divide by zero error with makblk.pl when genome size is less than 1Mb has been fixed. 
+ <li> Missing genomic fragment name in -Q[0-3] mode has been recovered.
+ <li> A few bugs have been fixed to avoid core dumps due to incompatibility between HSP coordinates and sequence ends.
+ <li> Known exon boundary information can be incorporated into the objective function when a cDNA, as well as a protein, is used as a template. To do so, simply add the -yB<i>N</i> option, where <i>N</i> is the bonus given to each matched location of exon-exon boundary.
+ <li> Compile time errors on some systems have been fixed.
+</ol>
+<p>
+Added/modified in Ver. 1.3.1. (2008-08-21)
+<ol>
+ <li> The portability has been improved for spaln to run on 64-bit machines.
+ <li> The codes are cleaned up so that less number of warnings should be output at the compilation time.
+ <li> 'make install' command is modified so that species-specific parameter files should be copied to the working <em><font color="#40A040">table</font>/spalnXX/seqdb</em> directory.
+ <li> The test procedure described at the end of this document now includes the case of protein sequence queries.
+</ol>
+<p>
+Added/modified in Ver. 1.3.0 
+<ol>
+ <li> Protein sequences can now be used as queries. If properly formatted, users do not need to be conscious of the difference in the type of queries at the run time.
+ <li> Bugs with -O12 option was fixed to regain normal output.
+ <li> The best amino acid substitution matrices are now chosen in different phases of execution. In this connection, the format of mdm files has been changed. Accordingly, the revised makmdm command must be run before the use of the new version of <b>spaln</b>.
+ <li> Combination of relevant blocks has been modified to improve sensitivity.
+ <li> The 'Salvage' procedure was added to find homologues that are missed by the formal criteria.
+</ol> 
+
+<h2><a name="Dwn">Download</a></h2>
+  Source<ul>
+    <li><a href="../archive/spaln2.3.1.tar.gz">spaln2.3.1</a>
+    <li><a href="../archive/spaln2.2.2a.tar.gz">spaln2.2.2a</a>
+    <li><a href="../archive/spaln2.1.4.tar.gz">spaln2.1.4</a>
+    <li><a href="../archive/spaln2.0.6.tar.gz">spaln2.0.6</a>
+    <li><a href="../archive/spaln1.4.5b.tar.gz">spaln1.4.5</a>
+  </ul>
+  Binaries<ul>
+    <li><a href="../archive/spaln2.3.1.linux64.tar.gz">spaln2.3.1.linux64</a>
+    <li><a href="../archive/spaln2.2.2a.linux64.tar.gz">spaln2.2.2a.linux64</a>
+    <li><a href="../archive/spaln2.1.4.linux64.tar.gz">spaln2.1.4.linux64</a>
+    <li><a href="../archive/spaln2.0.6.linux64.tar.gz">spaln2.0.6.linux64</a>
+    <li><a href="../archive/spaln2.0.4.linux32.tar.gz">spaln2.0.4.linux32</a>
+  </ul>
+  Data<ul>
+    <li><a href="../archive/G3CYP.data.tar.gz">G3CYPData</a>
+    <li><a href="../archive/SPAliBASE.tar.gz">SPAliBASE</a>
+    <li><a href="../archive/spalnData.txt">Data document</a>
+    <li><a href="../archive/C756Data.tar.gz">C756Data</a>
+    <li><a href="../archive/G178Data.tar.gz">G178Data</a>
+    <li><a href="../archive/P491Data.tar.gz">P491Data</a>
+    <li><a href="../archive/spaln_data.tar.gz">spaln_data</a>
+  </ul>
+<hr>
+<p>
+Copyright (c) 2007-2017 Osamu Gotoh all rights reserved
+<p>
+
+
+</body>
+
+</html>

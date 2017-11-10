@@ -1,0 +1,9 @@
+# +/-	ID/Comment	Phrase
+# 1/2	 1/2	text
+1	1	.fwd
+1	2	/clone_end=5
+1	2	5-PRIME
+1	2	/cds=
+2	1	.rev
+2	2	/clone_end=3
+2	2	3-PRIME

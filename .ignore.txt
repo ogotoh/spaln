@@ -1,0 +1,7 @@
+src/*.o
+src/*.a
+src/*.swp
+src/*~
+src/Makefile
+src/dbs.h
+src/iolib.h

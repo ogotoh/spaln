@@ -1,0 +1,100 @@
+#!/bin/sh
+# configure script for spaln
+#
+# To impose specific compiler or flags or install directory, use for example:
+#    exec_prefix=$HOME CXX=g++ CFLAGS="-O3" ./configure
+# or for csh/tcsh users:
+#    (setenv exec_prefix $HOME; setenv CXX g++; setenv CFLAGS "-O3"; ./configure)
+#	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+VER=`sed -n -e '/VERSION "/s/.*"\(.*\)".*/\1/p' < iolib.src`
+AR=${AR-"ar rc"}
+RANLIB=${RANLIB-"ranlib"}
+exec_prefix=${exec_prefix-${PWD}/../bin}
+table_dir=${table_dir-${PWD}/../table}
+alndbs_dir=${alndbs_dir-${PWD}/../seqdb}
+
+while test $# -ge 1
+do
+case "$1" in
+    -h* | --h*)
+      echo 'usage:'
+      echo '  configure [--exec_prefix=EXPREFIX] [--table_dir=TBLDIR] [--alndbs_dir=ALN_DBS]'
+        exit 0;;
+    -e*=* | --e*=*) exec_prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
+    -t*=* | --table_dir=*) table_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
+    -d*=* | --alndbs_dir=*) alndbs_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
+    -e* | --e*) exec_prefix="$2"; shift; shift;;
+    -t* | --t*) table_dir="$2"; shift; shift;;
+    -t* | --t*) alndbs_dir="$2"; shift; shift;;
+    esac
+done
+
+test=ztest$$
+cat > $test.cc <<EOF
+extern int getchar();
+int hello() {char* str = new char[10]; return getchar();}
+EOF
+
+
+test -z "$CXX" && echo Checking for 64 bits compiler...
+# find system name and try 64 bits compiler
+CXX=${CXX-"CXX"}
+case `(uname -sr || echo unknown) 2>/dev/null` in
+#  HP-UX*)    CFLAGS=${CFLAGS-"-O"} ;;
+IRIX*)     CFLAGS=${CFLAGS-"-LANG:std -ansi -64 -O2"} ;;
+#  OSF1*)     CFLAGS=${CFLAGS-"-O -std1"} ;;
+#  SCO_SV\ 3.2*)  CFLAGS=${CFLAGS-"-O3"} ;;
+SunOS\ 5*) CFLAGS=${CFLAGS-"-xtarget=ultra -xarch=v9 -O2"} ;;
+#  UNIX_System_V\ 4.2.0)  CFLAGS=${CFLAGS-"-O"} ;;
+UNIX_SV\ 4.2MP)  CFLAGS=${CFLAGS-"-O"} ;;
+*)	     CFLAGS=${CFLAGS-"-O3"} ;;
+esac
+
+if ($CXX -c $CFLAGS $test.cc) 2>/dev/null; then
+  echo "OK, CXX=$CXX CFLAGS=$CFLAGS"
+else
+  CXX="g++"
+  CFLASS="-O3"
+  echo "use CXX=$CXX CFLAGS=$CFLAGS"
+fi
+
+if ($RANLIB -V) >/dev/null 2>/dev/null; then
+  RANLIB="$RANLIB";
+else
+  RANLIB="touch";
+fi
+
+LD=${LD-'${CXX}'}
+
+rm -f $test.*
+
+echo "binaries install to $exec_prefix"
+echo "tables install to $table_dir"
+echo "alndbs install to $alndbs_dir"
+
+# udpate Makefile
+sed < Makefile.in "
+/^CXX *=/s%=.*%= $CXX%
+/^CFLAGS *=/s%=.*%= $CFLAGS%
+/^LD *=/s%=.*%= $LD%
+/^AR *=/s%=.*%= $AR%
+/^RANLIB *=/s%=.*%= $RANLIB%
+/^exec_prefix *=/s%=.*%= $exec_prefix%
+/^table_dir *=/s%=.*%=$table_dir%
+/^alndbs_dir *=/s%=.*%=$alndbs_dir%
+" > Makefile
+
+echo "wrote Makefile"
+
+# udpate iolib.h
+sed < iolib.src "
+/#table_dir#/s%#table_dir#%$table_dir%
+" > iolib.h
+
+# udpate dbs.h 
+sed < dbs.src "
+/#alndbs_dir#/s%#alndbs_dir#%$alndbs_dir%
+" > dbs.h
+
+echo "wrote files"
+echo "OK. try make and make install. good luck!"

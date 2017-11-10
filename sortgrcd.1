@@ -1,0 +1,85 @@
+.\"
+.\" Copyright (c) 2007-2016 Osamu Gotoh all rights reserved.
+.\"
+.TH sortgrcd 1 "2016-05-06" \" -*- nroff -*-
+.SH NAME
+sortgrcd \- Postprocess of the output of spaln with -O12 option, Version 2
+
+.SH SYNOPSIS
+sortgrcd [options] xxx1.grd xxx2.grd ...
+
+.SH DESCRIPTION
+\fBsortgrcd\fR is used to recover the output of \fBspaln\fR with -O12 option, 
+to apply some filtering, and also to rearrange the outputs of multiple Spaln runs.
+
+.SH OPTIONS
+.TP
+.B -C#
+Minimum cover rate = % nucleotides in predicted exons / length of query (x 3 if query is protein) (0-100)
+.TP
+.B -F#
+Filter level #=0: no; #=1: mild; #=2: medium; #=3: stringent (0)
+.TP
+.B -H#
+Minimum alignment score
+.TP
+.B -M#
+Maximum total number of mismatches near boundaries
+.TP
+.B -N#
+Maximum number of non-canonical boundaries
+.TP
+.B -O#
+Output format. 0:Gff3, 4:Native, 5:Intron 15: unique intron
+.TP
+.B -P#
+Minimum overall % sequence identity (0-100)
+.TP
+.B -S[a|b|c|r]
+sort order of chromosomes/contigs a:alphabetical, b:abundance, c:input order r:reverse for minus strand
+.TP
+.B -U#
+Maximum total number of unpaired bases in gaps
+.TP
+.B -V#
+Maximum internal memory size used for core sort. Suffix k (or K) or m (or M) may be
+attached to specify kilo or mega bytes.
+.TP
+.B -m#
+Maximum number of mismatches within 10bp from the nearest exon-intron boundary
+.TP
+.B -n#
+Allow non-canonical (other than GT..AG, GC..AG, AT..AC) intron ends (0: no)
+.TP
+.B -u#
+Maximum number of unpaired (gap) sites within 10bp from the nearest exon-intron boundary
+
+.SH COMMENTS
+The output format of spaln -O12 has been changed since version 2; in addition to *.grd and 
+*.erd files, *.qrd file will be  generated. This change has removed the limitations on the 
+lengths of the identifiers of both target (genomic) and query sequences. The database files
+that was specified by -d option of spaln must not be changed before running sortgrcd.
+.TP
+By default, no filter listed above is applied
+.TP
+When the output of Spaln is separated in several files, the combined results are subjected to the sorting. Although *.grd files are assigned as the argument, there must be corresponding *.erd files in the same directory.
+.TP
+In the default output format, the gene structure corresponding to each transcript is delimited by a line starting with `@', whereas each gene locus is delimited by a line starting with `!'. Two transcripts belong to the same locus if their corresponding genomic regions overlap by at least one nucleotide on the same strand.
+.TP
+With -O0 option, the outputs follow the Gff3 gene format (http://www.sequenceontology.org/gff3.shtml) where a gene locus is defined as described above.
+.TP
+With -O4 (default) and -O5 options, the outputs follow the exon-oriented and intron-oriented spaln formats, respectively.
+.TP
+With -O15 option, introns are uniqued, i.e., introns inferred from different transcripts with the same 5' and 3' boundaries are output only once.
+
+.SH REFERENCES
+(1) "A Space-Efficient and Accurate Method for Mapping and Aligning 
+cDNA Sequences onto Genomic Sequence",
+O. Gotoh, Nucleic Acid Res., 36 (8), 2630-2638 (2008).
+.br
+(2) "Direct Mapping and Alignment of Protein Sequences onto Genomic Sequence",
+O. Gotoh, Bioinformatics, 24 (21) 2438-2444 (2008).
+
+.SH AUTHOR
+Osamu Gotoh <o.gotoh@aist.go.jp>
+
