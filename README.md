@@ -1,7 +1,7 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.1.1
+#### Present Version 2.3.1
 #### Last updated: 11/06/2017
 
 - [Overview](#Ov)
@@ -65,7 +65,7 @@ To modify the location of executables and/or other settings, run 'configure --he
    * % setenv ALN_DBS New_Aln_Dbs (csh/tsh)
    * $ export ALN_DBS=New_Aln_Dbs (sh/bsh)  
 Add the above lines to your rc file, so that you don't have to repeat the commands at every login time. 
-12. Proceed to [Sequence](#Sequence).
+12. Proceed to [Format](#Format).
 
 ## <a name="Format">Format</a>
 
