@@ -228,9 +228,9 @@ If you do not need genome mapping or database search, you may skip this section.
  * Options:
    * -C*N*:	Minimum cover rate = % nucleotides in predicted exons / length of *query* (x 3 if query is protein) (0-100)
    * -F*N*:	Filter level (*N*=0: no; *N*=1: mild; *N*=2: medium; *N*=3: stringent)
-   * -I*N*:	Minimum sequence identity (0-100)
    * -H*N*:	Minimum alignment score (35)
    * -O*N*:	Output mode. *N*=0: Gff3 gene form; *N*=4: same as -O4 of spaln (default)
+   * -P*N*:	Minimum sequence identity (0-100)
    * -S*C*:	Sort chromosomes/contigs in the order of *C*=a: alphabetical, b: abundance, c: appearance in genome database, r: reverse order for minus strand
    * -V*N*:	Internal memory size used for core sort. If the
 	     data size is greater than *N*, the sorting procedure will be
