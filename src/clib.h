@@ -8,7 +8,7 @@
 *	next_wd	wordcmp	isBlankLine  
 *	car	cdr	prefix	chop	replace
 *	queue	stack	fbisrch	insort
-*	comp2	comp3	decomp
+*	comb2	comb3	decomb
 *	Strlist
 *
 *	Osamu Gotoh, ph.D.	(-2001)
@@ -25,18 +25,20 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 #ifndef  _CLIB_
 #define  _CLIB_
 
 #include <math.h>
+#include "adddef.h"
 
 extern	INT	supprime(INT n);
 
 static	const	int	KILO = 1024;
 static	const	int	MEGA = 1048576;
 static	const	long	GIGA = 1073741824;
+static	const	double	PI = 3.14159265358979323846;
 static	const	int	DefStackDepth = 128;
 static	const	int	defsunit = 128;
 static	const	int	defpunit = 16;
@@ -44,6 +46,7 @@ static	const	INT	SecondHS = 8;
 static	const	float	DefHashFact = 1.2;
 static	const	double	epsilon = 1e-6;
 static	const	int	HashovLS = 12;
+static	const	int	def_un_def = (INT_MIN / 8 * 7);
 
 extern	INT	str2uint(const char* str);
 
@@ -161,11 +164,11 @@ struct KVpair {key_t key; val_t val;};
 template <class key_t, class val_t>
 class Dhash {
 protected:
-	INT	size;
+	INT	size1;
 	INT	size2;
 	KVpair<key_t, val_t>*	hash;
 	KVpair<key_t, val_t>*	hz;
-	val_t	undef;
+	val_t	un_def;
 public:
 	Dhash(int n = 0, val_t ud = 0, float hf = DefHashFact);
 	~Dhash() {delete[] hash;}
@@ -177,63 +180,64 @@ public:
 	}
 	KVpair<key_t, val_t>*	assign(key_t ky, val_t vl = 1, bool first = false) {
 	    KVpair<key_t, val_t>*	sh = map(ky);
-	    if (!first || sh->val == undef) sh->val = vl;
+	    if (!first || sh->val == un_def) sh->val = vl;
 	    return (sh);
 	}
 	KVpair<key_t, val_t>*	incr(key_t ky, val_t vl = 1){
 	    KVpair<key_t, val_t>*	sh = map(ky);
-	    if (sh->val == undef) sh->val = 0;
+	    if (sh->val == un_def) sh->val = 0;
 	    sh->val += vl;
 	    return (sh);
 	}
 	int	count();
 	KVpair<key_t, val_t>*	press(int* n, val_t* sum = 0);
 	void	clear() {
-	    KVpair<key_t, val_t> zero = {0, undef};
-	    if (undef)	vset(hash, zero, size);
-	    else	vclear(hash, size);
+	    KVpair<key_t, val_t> zero = {0, un_def};
+	    if (un_def)	vset(hash, zero, size1);
+	    else	vclear(hash, size1);
 	}
 	void	resize(int s = 0);
 	void	remove(key_t ky) {
 	    KVpair<key_t, val_t>*	sh = map(ky);
-	    sh->val = undef;
+	    sh->val = un_def;
 	}
 	KVpair<key_t, val_t>*	squeeze(int* n) {
 	    KVpair<key_t, val_t>* tmp = press(n);
 	    hash = 0;
 	    return (tmp);
 	}
+	val_t	undef() {return (un_def);}
 };
 
 template <class key_t, class val_t>
-Dhash<key_t, val_t>::Dhash(int n, val_t ud, float hf) : undef(ud)
+Dhash<key_t, val_t>::Dhash(int n, val_t ud, float hf) : un_def(ud)
 {
 	if (n == 0) {
-	    size = size2 = 0;
+	    size1 = size2 = 0;
 	    hash = hz = 0;
 	} else {
-	    size = supprime(int(hf * n));
-	    hash = new KVpair<key_t, val_t>[size];
-	    hz = hash + size;
+	    size1 = supprime(int(hf * n));
+	    hash = new KVpair<key_t, val_t>[size1];
+	    hz = hash + size1;
 	    clear();
-	    for (size2 = SecondHS; size2 > size; size2 /= 2) ;
+	    for (size2 = SecondHS; size2 > size1; size2 /= 2) ;
 	}
 }
 
 template <class key_t, class val_t>
 KVpair<key_t, val_t>* Dhash<key_t, val_t>::map(key_t key, bool record)
 {
-	INT	v = key % size;
+	INT	v = key % size1;
 	INT	u = size2 - key % size2;
 	INT	v0 = v;
 	KVpair<key_t, val_t>*	sh = hash + v;
 
-	while (sh->val != undef && sh->key != key) {
-	    v = (v + u) % size;
+	while (sh->val != un_def && sh->key != key) {
+	    v = (v + u) % size1;
 	    if (v == v0) resize();
 	    sh = hash + v;
 	}
-	if (sh->val == undef) {
+	if (sh->val == un_def) {
 	    if (record) sh->key = key;
 	    else	sh = 0;
 	}
@@ -245,7 +249,7 @@ int	Dhash<key_t, val_t>::count()
 {
 	int	c = 0;
 	for (KVpair<key_t, val_t>* sh = hash; sh < hz; ++sh)
-	    if (sh->val != undef) ++c;
+	    if (sh->val != un_def) ++c;
 	return (c);
 }
 
@@ -255,7 +259,7 @@ KVpair<key_t, val_t>* Dhash<key_t, val_t>::press(int* n, val_t* sum)
 	if (sum) *sum = 0;
 	KVpair<key_t, val_t>*	rh = hash;
 	for (KVpair<key_t, val_t>* sh = hash; sh < hz; ++sh) {
-	    if (sh->val != undef) {
+	    if (sh->val != un_def) {
 		*rh++ = *sh;
 		if (sum) *sum += sh->val;
 	    }
@@ -270,14 +274,14 @@ void Dhash<key_t, val_t>::resize(int s)
 {
 	KVpair<key_t, val_t>*	hold = hash;
 	KVpair<key_t, val_t>*	zold = hz;
-	size = supprime(s? s: 2 * size);
+	size1 = supprime(s? s: 2 * size1);
 	if (!size2)
-	    for (size2 = SecondHS; size2 > size; size2 /= 2) ;
-	hash = new KVpair<key_t, val_t>[size];
-	hz = hash + size;
+	    for (size2 = SecondHS; size2 > size1; size2 /= 2) ;
+	hash = new KVpair<key_t, val_t>[size1];
+	hz = hash + size1;
 	clear();
 	for (KVpair<key_t, val_t>* hw = hold; hw < zold; ++hw)
-	    if (hw->val != undef) assign(hw->key, hw->val);
+	    if (hw->val != un_def) assign(hw->key, hw->val);
 	delete[] hold;
 }
 
@@ -341,7 +345,7 @@ public:				// initial data size, ascending order, never replace data
 	val_t&	operator[](int i) {return (data[i]);}
 	bool	empty() {return front == 0;}
 	int	size()	{return front;}
-	void	reset() {front = 0;}
+	void	reset() {front = 0; if (hpos) hpos->clear();}
 	void	hsort();
 	int	find(const val_t& x);
 	bool	lt(const val_t& a, const val_t& b) {
@@ -632,25 +636,29 @@ inline	char*	prefix(char* dst, const char* src, int n) {
 class Strlist {
 protected:
 	char*	strbuf;
-	int*	idxlst;
-	int	sunitsize;
-	int	punitsize;
-	int	totallen;
-	int	lastlen;
-	int	maxlen;
-	int	many;
+	INT*	idxlst;
+	INT	sunitsize;
+	INT	punitsize;
+	INT	totallen;
+	INT	lastlen;
+	INT	maxlen;
+	INT	many;
 	bool	filled;
+	void	format();
 public:
 	Strlist(int m = 1, int len = defsunit);
 	Strlist(const char* str);
 	Strlist(char* str, const char* delim);
 	Strlist(FILE* fd, int m = 0);
+#if USE_ZLIB
+	Strlist(gzFile gzfd, int m = 0);
+#endif
 	Strlist(Strlist& src);
 	~Strlist() {delete[] strbuf; delete[] idxlst;}
-	char*	operator[](int n) {
+	char*	operator[](INT n) {
 	    return ((idxlst && n < many)? strbuf + idxlst[n]: strbuf);
 	}
-	int	terms() {return (many);}
+	INT	size() {return (many);}
 	char*	assign(const Strlist& src);
 	char*	assign(const char* str);
 	char*	push(const char* str);
@@ -660,94 +668,117 @@ public:
 	bool	empty() {return !strbuf || !*strbuf;}
 	void	undo() {--many; totallen -= lastlen;}
 	char*	squeeze() {char* tmp = strbuf; strbuf = 0; return (tmp);}
-	int	longest() {return (maxlen? maxlen - 1: 0);}
+	INT	longest() {return (maxlen? maxlen - 1: 0);}
 };
 
 // hash for string key
 
 template <class val_t>
-class StrHash : public Strlist {
+class StrHash {
 protected:
-	INT	size;
+	INT	size1;
 	INT	size2;
 	KVpair<INT, val_t>*	hash;
 	KVpair<INT, val_t>*	hz;
+	Strlist*	sl;
+	val_t	un_def;
 public:
-	StrHash(int n = 0, float hf = DefHashFact);
+	StrHash(int n = 0, val_t udf = def_un_def, float hf = DefHashFact);
 	StrHash(const char* fname);
-	~StrHash() {delete[] hash;}
+	StrHash(StrHash<val_t>& src) {*this = src;}
+	~StrHash() {delete sl; delete[] hash;}
 	KVpair<INT, val_t>* begin() {return hash;}
 	KVpair<INT, val_t>* end() {return hz;}
-	const char*	memname(INT iky) {return (strbuf + iky);}
-	KVpair<INT, val_t>* map(const char* ky, bool record = true);
-	KVpair<INT, val_t>* map(INT iky, bool record = true) {
-	    return map(strbuf + iky);
+	char*	strkey(INT iky) {return ((*sl)[iky]);}
+	KVpair<INT, val_t>* map(const char* ky, int record = 3);
+	KVpair<INT, val_t>* map(INT iky, int record = 3) {
+	    return map(strkey(iky));
 	}
 	KVpair<INT, val_t>* find(const char* ky) {
-	    return map(ky, false);
+	    return map(ky, 0);
 	}
 	KVpair<INT, val_t>* assign(const char* ky, 
 		val_t vl = 1, bool first = false) {
 	    KVpair<INT, val_t>*	sh = map(ky);
-	    if (!first || !sh->val) sh->val = vl;
+	    if (!first || sh->val == un_def) sh->val = vl;
 	    return (sh);
 	}
 	KVpair<INT, val_t>* incr(const char* ky, val_t vl = 1) {
 	    KVpair<INT, val_t>* sh = map(ky);
-	    sh->val += vl;
+	    if (sh->val == un_def) sh->val = vl;
+	    else	sh->val += vl;
 	    return (sh);
 	}
 	KVpair<INT, val_t>* incr(INT iky, val_t vl = 1) {
-	    return incr(strbuf + iky, vl);
+	    return incr(strkey(iky), vl);
 	}
 	KVpair<INT, val_t>* pile(const char* ky) {
-	    int	v = many;
+	    int	v = sl->size();
 	    KVpair<INT, val_t>* sh = map(ky);
-	    if (!sh->val) sh->val = v;
+	    if (sh->val == un_def) sh->val = v;
 	    return (sh);
 	}
 	KVpair<INT, val_t>* pile(INT iky) {
-	    return push(strbuf + iky);
+	    return push(strkey(iky));
 	}
 	int	count();
 	KVpair<INT, val_t>* press(int* n, val_t* sum = 0);
-	void	clear() {vclear(hash, size);}
+	void	clear() {
+	    if (un_def) {
+		KVpair<INT, val_t> zero = {0, un_def};
+		vset(hash, zero, size1);
+	    } else vclear(hash, size1);
+	}
+	int	size() {return sl->size();}
 	void	resize(int s = 0);
+	void	erase_sl()	{sl = 0;}
+	char*	squeeze() {return (sl->squeeze());}
+	val_t	undef() {return (un_def);}
 };
 
 template <class val_t>
-StrHash<val_t>::StrHash(int n, float hf) : Strlist(n? n: 1)
+StrHash<val_t>::StrHash(int n, val_t udf, float hf) : un_def(udf)
 {
 	if (n == 0) {
-	    size = size2 = 0;
+	    size1 = size2 = 0;
 	    hash = hz = 0;
+	    sl = 0;
 	} else {
-	    size = supprime(int(hf * n));
-	    hash = new KVpair<INT, val_t>[size];
-	    hz = hash + size;
-	    vclear(hash, size);
-	    for (size2 = SecondHS; size2 > size; size2 /= 2) ;
+	    size1 = supprime(int(hf * n));
+	    sl = new Strlist(size1);
+	    hash = new KVpair<INT, val_t>[size1];
+	    hz = hash + size1;
+	    if (un_def) {
+		KVpair<INT, val_t> zero = {0, un_def};
+		vset(hash, zero, size1);
+	    } else vclear(hash, size1);
+	    for (size2 = SecondHS; size2 > size1; size2 /= 2) ;
 	}
-	push("");	// 0-th recode
 }
 
 template <class val_t>
-KVpair<INT, val_t>* StrHash<val_t>::map(const char* strkey, bool record)
+KVpair<INT, val_t>* StrHash<val_t>::map(const char* skey, int record)
 {
-	INT	key = str2uint(strkey);
-	INT	v = key % size;
+	INT	key = str2uint(skey);
+	INT	v = key % size1;
 	INT	u = size2 - key % size2;
 	INT	v0 = v;
 	KVpair<INT, val_t>*	sh = hash + v;
 
-	while (sh->key && strcmp(strbuf + sh->key, strkey)) {
-	    v = (v + u) % size;
-	    if (v == v0) resize();
+	while (sh->key && strcmp(strkey(sh->key), skey)) {
+	    v = (v + u) % size1;
+	    if (v == v0) {
+		resize();
+		v = key % size1;
+	    }
 	    sh = hash + v;
 	}
-	if (!sh->val) {
-	    if (record) sh->key = push(strkey) - strbuf;
-	    else	sh = 0;
+	if (sh->val == un_def) {
+	    if (record & 2) {
+		sh->key = sl->size();
+		sl->push(skey);
+	    } else if (!record)
+		sh = 0;
 	}
 	return (sh);
 }
@@ -757,7 +788,7 @@ int StrHash<val_t>::count()
 {
 	int	c = 0;
 	for (KVpair<INT, val_t>* sh = hash; sh < hz; ++sh)
-	    if (sh->val) ++c;
+	    if (sh->val != un_def) ++c;
 	return (c);
 }
 
@@ -767,7 +798,7 @@ KVpair<INT, val_t>* StrHash<val_t>::press(int* n, val_t* sum)
 	if (sum) *sum = 0;
 	KVpair<INT, val_t>*	rh = hash;
 	for (KVpair<INT, val_t>* sh = hash; sh < hz; ++sh) {
-	    if (sh->val) {
+	    if (sh->val != un_def) {
 		*rh++ = *sh;
 		if (sum) *sum += sh->val;
 	    }
@@ -780,17 +811,20 @@ KVpair<INT, val_t>* StrHash<val_t>::press(int* n, val_t* sum)
 template <class val_t>
 void StrHash<val_t>::resize(int s)
 {
-	KVpair<INT, val_t>*	hold = hash;
-	KVpair<INT, val_t>*	zold = hz;
-	size = supprime(s? s: 2 * size);
+	StrHash<val_t>	org(*this);
+	size1 = supprime(s? s: 2 * size1);
 	if (!size2)
-	    for (size2 = SecondHS; size2 > size; size2 /= 2) ;
-	hash = new KVpair<INT, val_t>[size];
-	hz = hash + size;
+	    for (size2 = SecondHS; size2 > size1; size2 /= 2) ;
+	hash = new KVpair<INT, val_t>[size1];
+	hz = hash + size1;
 	clear();
-	for (KVpair<INT, val_t>* hw = hold; hw < zold; ++hw)
-	    if (hw->val) incr(hw->key, hw->val);
-	delete[] hold;
+	for (KVpair<INT, val_t>* hw = org.hash; hw < org.hz; ++hw) {
+	    if (hw->val != un_def) {
+		KVpair<INT, val_t>* kv = map(strkey(hw->key), 1);
+		*kv = *hw;
+	    }
+	}
+	org.erase_sl();
 }
 
 // insert sort; for any 0 <= i < num
@@ -816,47 +850,37 @@ protected:
 	double	llmt;
 	double	ulmt;
 	double	width;
-	double	(*transform)(double x);
+	double	(*nlitransform)(double x);
 	double	(*invtransform)(double x);
-	double*	data;
+	int	n_data;
+	int	idx;
 	int	sample_size;
 public:
 	bool	vrtl;
+	int*	xval;
+	double*	freq;
 	void	erase() {
-	    if (!vrtl && data) delete[] (--data); 
-	    data = 0; 
+	    if (!vrtl) {
+		if (freq) delete[] (--freq);
+		if (xval) delete[] (--xval);
+	    }
+	    xval = 0; freq = 0; 
 	}
 	PutIntoBins(int n, double l, double u, double (*t)(double x) = 0, 
-		double (*it)(double x) = 0, int m = 1);
+		double (*it)(double x) = 0, bool savedata = true);
 	PutIntoBins(PutIntoBins& src) {
 	    *this = src;
 	    vrtl = true;
 	}
 	~PutIntoBins() {erase();}
-	void	accumulate(int x, double y, int m = 0);
+	void	accumulate(int x, double y);
 	void	normalize(double to = 1., double ps = 0.);
-	int	x2n(double& x) {
-	    if (transform) x = transform(x);
-	    x = (x - llmt) / width;
-	    return int(x + epsilon);
-	}
-	int	n_in_slice(int n) {
-	    if (!invtransform) return (1);
-	    double      base = invtransform(llmt + width * n);
-	    double      ceil = invtransform(llmt + width * (++n));
-	    return (int(ceil) - int(base));
-	}
-	double	normcoef(int n) {
-	    if (!invtransform) return (1.);
-	    double	base = invtransform(llmt + width * n);
-	    double	ceil = invtransform(llmt + width * (++n));
-	    int		nl = int(ceil) - int(base);
-	    if (!nl) return (0.);
-	    return ((ceil - base) / nl);
-	}
-	double* squeeze() {double* dt = data; data = 0; return dt;}
-	double*	begin() {return (data);}
-	double*	end()   {return (data + ndiv);}
+	void	reset() {idx = 0;}
+	int	size();
+	int	step(int n) {return (xval[n] - xval[n-1]);}
+	double* squeeze() {double* dt = freq; freq = 0; return dt;}
+	double*	begin() {return (freq);}
+	double*	end()   {return (freq + n_data);}
 	int	samples(int m = 0) {return sample_size;}
 };
 
@@ -907,9 +931,9 @@ extern	int	chop(char* ps);
 extern	char*	next_wd(char** sp);
 extern	int	wordcmp(const char* a, const char* b, int n = INT_MAX);
 extern	UPTR	fbisrch(UPTR found, const UPTR key, FILE* fd, long left, long right, int width, CMPF cmpf);
-extern	int	comp2(int i, int j);
-extern	int	comp3(int i, int j, int k);
-extern	void	decomp(int i, int* t, int n);
+extern	int	comb2(int i, int j);
+extern	int	comb3(int i, int j, int k);
+extern	void	decomb(int* t, int n, int i = 2);
 extern	char*	strupr(char* str);
 extern	char*	strlwr(char* str);
 extern	int	countbit(unsigned long x);

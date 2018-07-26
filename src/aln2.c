@@ -17,7 +17,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #include "aln.h"
@@ -27,6 +27,17 @@
 static	int	estimlen(int na, int nb, SKL* skl);
 static	void	synthi(CHAR* sss[], int an, int bn, int mi, int ni);
 static	float	defSss[2][2] = {{0., 0.90}, {0.30, 1.00}};
+
+SKL* nogap_skl(const Seq* a, const Seq* b)
+{
+	SKL*	skl = new SKL[4];
+	if (!b) b = a;
+	skl->m = 0; skl->n = 2;
+	skl[1].m = a->left; skl[1].n = b->left;
+	skl[2].m = a->right; skl[2].n = b->right;
+	skl[3].m = skl[3].n = EOS;
+	return (skl);
+}
 
 VTYPE PwdB::GapPenalty3(int i, VTYPE bgop) {
 	if (i == 0) return 0;
@@ -279,11 +290,11 @@ Seq* synthseq(Seq* c, Seq* a, Seq* b, SKL* skl)
 }
 
 
-FTYPE alnscore2dist(Seq* sqs[], PwdB* pwd, int* end)
+FTYPE alnscore2dist(Seq* sqs[], PwdB* pwd, int* end, FTYPE denome)
 {
 	Seq*&   a = sqs[0];
 	Seq*&   b = sqs[1];
-	FTYPE   scr, denome;
+	FTYPE   scr;
 	int	dlen;
 	if (algmode.lcl) {
 	    int*	ends = end? end: new int[2];
@@ -308,7 +319,7 @@ FTYPE alnscore2dist(Seq* sqs[], PwdB* pwd, int* end)
 		ar += ends[1];
 		gswap(ar, a->right);
 	    }
-	    denome = (selfAlnScr(a, pwd->simmtx) + selfAlnScr(b, pwd->simmtx)) / 2;
+	    denome = sqrt(selfAlnScr(a, pwd->simmtx) * selfAlnScr(b, pwd->simmtx));
 	    if (ends[0] > 0) gswap(bl, b->left);
 	    else if (ends[0] < 0) gswap(al, a->left);
 	    if (ends[1] > 0) gswap(br, b->right);
@@ -319,7 +330,7 @@ FTYPE alnscore2dist(Seq* sqs[], PwdB* pwd, int* end)
 	    int	al = a->right - a->left;
 	    int	bl = b->right - b->left;
 	    scr = alnScoreD(sqs, pwd->simmtx, end);
-	    denome = selfAlnScr(al < bl? a: b, pwd->simmtx);
+	    if (!denome) denome = selfAlnScr(al < bl? a: b, pwd->simmtx);
 	    dlen = al - bl;
 	}
 	scr += alprm.u * abs(dlen) / 2;

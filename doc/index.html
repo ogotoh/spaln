@@ -56,7 +56,7 @@ Unless binaries are not provided, users must compile the program on their
 own system. Although the program has been tested only on a Linux operating
 system, it is likely to be portable to most Unix systems with little or no
 modifications. The accessory program <b>sortgrcd</b> sorts the gene loci found
-by <b>spaln</b> in the order of chromosomal position and orientation. 
+by <b>spaln</b> in the order of chromosomal position and orientation. From version 2.3.2, <b>spaln</b> and <b>sortgrcd</b> can handle some gzipped files without prior expansion if USE_ZLIB mode is activated upon compilation.
 
 <p>
 <h2><a name="Ref">References</a></h2>
@@ -75,11 +75,11 @@ Benchmarking spliced alignment programs including  Spaln2, an extended version o
 <i>Nucleic Acids Research</i> <b>40</b> (20) e161 (2012)
 <BR>
 <p>
-<h2><a href="#Chg">Present Version: 2.3.1</a>, Last update: 2017-06-22 </h2>
+<h2><a href="#Chg">Present Version: 2.3.2</a>, Last update: 2018-07-26 </h2>
 <p>
 <h2><a name="In">Install</a></h2>
 <h3>From source</h3>
-To compile the source codes in the default settings, follow the instructions below. If you download the source file (<a href="../archive/spaln2.3.1.tar.gz">spaln2.3.1</a>) in the directory <font color="#40A040"><em>download</em></font>, five directories will be generated under <em><font color="#40A040">download</font>/spalnXX/</em> after installation, where XX is a version code. We assume <font color="#40A040"><em>work</em></font> is your workspace, which may or may not be identical to <em><font color="#40A040">download</font></em>. <B>Note:</B> The default destinations of the installed files of version 1 are somewhat different from those described here.
+To compile the source codes in the default settings, follow the instructions below. If you download the source file (<a href="../archive/spaln2.3.2.tar.gz">spaln2.3.2</a>) in the directory <font color="#40A040"><em>download</em></font>, five directories will be generated under <em><font color="#40A040">download</font>/spalnXX/</em> after installation, where XX is a version code. We assume <font color="#40A040"><em>work</em></font> is your workspace, which may or may not be identical to <em><font color="#40A040">download</font></em>. <B>Note:</B> The default destinations of the installed files of version 1 are somewhat different from those described here.
 <p>
  <ul>
   <li> bin : binaries
@@ -101,6 +101,7 @@ To modify the location of executables and/or other settings, run 'configure --he
     <ul>
         <li>Please manually edit Makefile if $(CC) does not indicate a C++ compiler or
         <li><TT>% CC=g++ ./configure [other options]</TT>
+	<li><a name="compile"></a>To make <b>spaln</b> and <b>sorgrcd</b> handle gzipped files, ./configure command should be run with --use_zlib=1. Alternatively, you may manusally edit the generated Makefile so that -DUSE_ZLIB=1 is included in the compile option.
     </ul>
  <li> <TT>% make</TT>
  <li> <TT>% make install</TT>
@@ -121,7 +122,7 @@ To modify the location of executables and/or other settings, run 'configure --he
 </ol>
 <BR>
 <h3>From binaries</h3>
-Binaries for a 32 bit (<a href="../archive/spaln2.0.4.linux32.tar.gz">spaln2.0.4.linux32</a>) or 64 bit (<a href="../archive/spaln2.3.1.linux64.tar.gz">spaln2.3.1.linux64</a>) Linux machine are available. To use the binaries, follow the instructions below. 
+Binaries for a 32 bit (<a href="../archive/spaln2.0.4.linux32.tar.gz">spaln2.0.4.linux32</a>) or 64 bit (<a href="../archive/spaln2.3.2.linux64.tar.gz">spaln2.3.2.linux64</a>) Linux machine are available. To use the binaries, follow the instructions below. 
 <p>
 Case I: Assume the directory <font color="#40A040"><em>work</em></font> is your workspace where every material is stored. In this case, <font color="#40A040"><em>seqdb</font></em>=<em><font color="#40A040">work</font></em>.
 <ol>
@@ -154,11 +155,13 @@ Case II: Assume your workspace <font color="#40A040"><em>work</em></font> is dis
 
 <p> 
 <h2><a name="Seq">Sequence data formation</a></h2>
-If you do not need genome mapping or database search, you may skip this section. All sequence files should be in (multi-)fasta format. The genomic sequence must be formatted before use. 
+If you do not need genome mapping or database search, you may skip this section. All sequence files should be in (multi-)fasta format.<BR>
+
+To perform genome mapping, the genomic sequence must be formatted before use. Formatting is optional for amino acid sequence database search.
 
 <ol>
  <li> <TT>% cd <font color="#40A040"><em>seqdb</em></font></TT></li>
- <li> Download or copy genomic sequences or protein database sequence in multi-fasta format.</li>
+ <li> Download or copy genomic sequences or protein database sequence in multi-fasta format. If <b>spaln</b> is accordingly <a href='#compile'>compiled</a>, gzipped file need not be uncompressed (the file name must be X.gz).</li>
  <li> Chromosomal sequences should be concatenated into a single file. Alternatively, you can use multiple chromosomal files without concatenation. This procedure will be described at the end of this section. To render the 'make' command effective, the extension of the genomic sequence file should be '.mfa'or '.gf', and protein database sequence should be '.faa'. Hereafter, the file name is assumed to be xxxgnm.mfa or prosdb.faa. <del> The total number of residues in a file must not be greater than or equal to 2**32.</del> </li>
  <li> <TT>% ./makeidx.pl -i[n|p|np] [spaln options] xxxgnm.mfa</TT> or<BR>
       <TT>% ./makeidx.pl -i[a] [spaln options] prosdb.faa</TT>
@@ -348,16 +351,17 @@ used as follows:<br>
      <li> -yZ<i>N</i>:	Relative contribution of oligomer composition within an intron (0) 
    </ul>
   
- <li> <TT>% sortgrcd [options] *.grd</TT><BR>
-<B>Sortgrcd</B> is used to recover the output of <B>spaln</B> with -O12 option, to apply some filtering, and also to rearrange the output of multiple <B>spaln</B> runs.
+ <li> Sortgrcd</li><p>
+<B>Sortgrcd</B> is used to recover the output of <B>spaln</B> with -O12 option, to apply some filtering, and also to rearrange the output of multiple <B>spaln</B> runs. It is invoked by:<br>
+<TT>% sortgrcd [options] X.grd [Y.grd ...]</TT><BR>
   <ul>
      <li> Options:
        <ul>
 	<li> -C<i>N</i>:	Minimum cover rate = % nucleotides in predicted exons / length of <i>query</i> (x 3 if query is protein) (0-100)
 	<li> -F<i>N</i>:	Filter level (<i>N</i>=0: no; <i>N</i>=1: mild; <i>N</i>=2: medium; <i>N</i>=3: stringent)
+	<li> -I<i>N</i>:	Minimum sequence identity (0-100)
 	<li> -H<i>N</i>:	Minimum alignment score (35)
-	<li> -O<i>N</i>:	Output mode. <i>N</i>=0: Gff3 gene form; <i>N</i>=4: same as -O4 of spaln (default)
-	<li> -P<i>N</i>:	Minimum sequence identity (0-100)
+	<li> -O<i>N</i>:	Output mode. <i>N</i>=0 or 3-7: same as -O<i>N</i> of spaln; <i>N</i>=15: -O5 format for unique introns (default: <i>N</i>=4)
 	<li> -S<i>C</i>:	Sort chromosomes/contigs in the order of <i>C</i>=a: alphabetical, b: abundance, c: appearance in genome database, r: reverse order for minus strand
 	<li> -V<i>N</i>:	Internal memory size used for core sort. If the
 	     data size is greater than <i>N</i>, the sorting procedure will be
@@ -369,7 +373,7 @@ used as follows:<br>
      <li> By default, no filter listed above is applied.
      <li> When the output of <B>spaln</B> is separated into several files, the combined results are subjected to the sorting. Although *.grd files are assigned as the argument, there must be corresponding *.erd and *.qrd files in the same directory.
      <li> In the default output format, the gene structure corresponding to each transcript is delimited by a line starting with '@', whereas each gene locus is delimited by a line starting with '!'. Two transcripts belong to the same locus if their corresponding genomic regions overlap by at least one nucleotide on the same strand.
-	<li> With -O0 option, the outputs follow the instruction of Gff3 (<a href='http://www.sequenceontology.org/gff3.shtml'>http://www.sequenceontology.org/gff3.shtml</a>) where a gene locus is defined as described above.
+     <li> With -O0 option, the outputs follow the instruction of Gff3 (<a href='http://www.sequenceontology.org/gff3.shtml'>http://www.sequenceontology.org/gff3.shtml</a>) where a gene locus is defined as described above.
  
    </ul>
 </ol>
@@ -389,6 +393,15 @@ used as follows:<br>
 <p>
 
 <h2><a name="Chg">Change from previous versions</a></h2>
+Added/modified in Ver. 2.3.2 (2018-07-26):
+<p>
+<ol>
+ <li> From this version, input fasta files (X.mfa, X.gf, or X.faa), formatted data files (X.seq, X.bka, X.bkn, and X.bkp) for <b>spaln</b>, and X.grd, X.erd, and X.qrd for <b>sortgrcd</b> may be gzipped if USE_ZLIB mode is activated upon <a href='#compile'>compilation</a>. The compressed file name must end with .gz (e.g. X.mfa.gz). <B>Note:</B> other data files (X.ent, X.grp, X.idx, and X.odr)<u> must not</u> be compressed.</li>
+ <li> A serious bug concerning with multiple queries has been fixed. This has considerably improved mapping sensitivity particularly when -M option is set under single thread operation.</li>
+ <li> Fixation of several smaller bugs and fine tuning of codes further enhanced mapping sensitivity and specificity particularly for short protein queries.</li>
+ <li> -O<i>N</i> option of <b>sortgrcd</b> has been extended to support -O3 (BED), -O6 (cDNA = concatenated exons), and -O7 (translated amino acid sequence).</li>
+</ol>
+
 Added/modified in Ver. 2.3.1 (2017-06-22):
 <p>
 <ol>
@@ -648,6 +661,7 @@ Added/modified in Ver. 1.3.0
 
 <h2><a name="Dwn">Download</a></h2>
   Source<ul>
+    <li><a href="../archive/spaln2.3.2.tar.gz">spaln2.3.2</a>
     <li><a href="../archive/spaln2.3.1.tar.gz">spaln2.3.1</a>
     <li><a href="../archive/spaln2.2.2a.tar.gz">spaln2.2.2a</a>
     <li><a href="../archive/spaln2.1.4.tar.gz">spaln2.1.4</a>
@@ -655,6 +669,7 @@ Added/modified in Ver. 1.3.0
     <li><a href="../archive/spaln1.4.5b.tar.gz">spaln1.4.5</a>
   </ul>
   Binaries<ul>
+    <li><a href="../archive/spaln2.3.2.linux64.tar.gz">spaln2.3.2.linux64</a>
     <li><a href="../archive/spaln2.3.1.linux64.tar.gz">spaln2.3.1.linux64</a>
     <li><a href="../archive/spaln2.2.2a.linux64.tar.gz">spaln2.2.2a.linux64</a>
     <li><a href="../archive/spaln2.1.4.linux64.tar.gz">spaln2.1.4.linux64</a>
@@ -672,7 +687,7 @@ Added/modified in Ver. 1.3.0
   </ul>
 <hr>
 <p>
-Copyright (c) 2007-2017 Osamu Gotoh all rights reserved
+Copyright (c) 2007-2018 Osamu Gotoh all rights reserved
 <p>
 
 

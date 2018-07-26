@@ -2430,6 +2430,8 @@ VTYPE Aln2s1::backforth(int ovr, BOUND& lub)
 
 bool Aln2s1::indelfreespjS(int agap, VTYPE& iscr)
 {
+	int	play = -b->exin->lplay(b->left);
+	if (play > agap) agap = play;
 	int	d5 = b->left + agap;	// donor 5' end
 	int	d3 = b->left;		// donor 3' end
 	int	ilen = b->right - d5;	// intron length

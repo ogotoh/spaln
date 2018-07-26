@@ -16,7 +16,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #include "divseq.h"
@@ -170,9 +170,9 @@ static void repalninf1(SKL* skl, Seq* seqs[], Gsinfo* gsi)
 	Seq*&	b = seqs[1];
 	FSTAT&	fst = gsi->fstat;
 
-	a->fphseq(1);
+	a->fphseq();
 	putc(' ', out_fd);
-	b->fphseq(1);
+	b->fphseq();
 	fprintf(out_fd, "  %d  %.2f\n", nn, 
 	    (double) fst.val / (alprm.scale * a->many * b->many));
 	for (++skl; nn--; skl++)
@@ -856,7 +856,7 @@ static	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 	if (visit++ == 0) {
 	    if (binary) {
 		if (!OutPrm.out_file || !*OutPrm.out_file)
-		    OutPrm.out_file = (*qry->spath)[0];
+		    OutPrm.out_file = qry->spath;
 		partfnam(str, OutPrm.out_file, "b");
 		strcat(str, grext);
 		if (!(fg = fopen(str, "wb"))) fatal(efmt, str, 0);
@@ -1024,7 +1024,6 @@ void Seq::listseq(int j, bool sub)
 	CHAR*	p = at(left) + j;
 	INT	width = out_form->SeqBlkNo * out_form->SeqBlkSz;
 	INT	block = out_form->SeqBlkSz;
-//const	char*	fname = spath? (*spath)[0]: (*sname)[j];
 const	char*	fname = (*sname)[j];
 
 	if (out_form->DbName)
@@ -1044,7 +1043,7 @@ const	char*	fname = (*sname)[j];
 		} else { 
 		    fprintf(out_fd, "%-15s\t", fname);
 		}
-	    }
+	    } else	width = block = OutPrm.lpw;
 	}
 	if (descr && OutPrm.descrp)
 	    fprintf(out_fd, "%s%c%s\n", out_form->DefLabel, 
@@ -1496,22 +1495,24 @@ void Seq::fphseq(int n, FILE* fd)
 {
 	if (!fd) fd = out_fd;
 	char	str[MAXL];
-static	const char* frm[] = {"%s ( %d - %d )",  "%-16s ( %3d - %3d )"};
+static	const char* frm[] = {"%c%s [%d:%d] ", "%s ( %d - %d )",  "%-16s ( %3d - %3d )"};
 
-	if (n-- == 0) {
+	if (n <= 0) {
 	    fputs(sqname(), fd);
-	    return;
+	} else if (--n == 0) {
+	    fprintf(fd, frm[0], senschar(), sqname(), many, len);
+	} else {
+	    if (n > 2) n = 1;
+	    sprintf(str, frm[0], senschar(), sqname(), many, len);
+	    fprintf(fd, frm[n], str, SiteNo(left), SiteNo(right - 1));
 	}
-	if (n < 0 || n > 1) n = 0;
-	sprintf(str, "%c%s [%d:%d] ", senschar(), sqname(), many, len);
-	fprintf(fd, frm[n], str, SiteNo(left), SiteNo(right - 1));
 }
 
 void fphseqs(Seq* seqs[], int n)
 {
 	putc('\n', out_fd);
 	while (n--) {
-	    (*seqs++)->fphseq(1);
+	    (*seqs++)->fphseq();
 	    if (n) fputs(" - ", out_fd);
 	}
 	putc('\n', out_fd);
@@ -1534,7 +1535,7 @@ void Seq::fpweight()
 void fprint_seq_mem(Seq* seqs[], int n)
 {
 	for (int i = 0; i < n; ++i) {
-	    seqs[i]->fphseq(algmode.rng);
+	    seqs[i]->fphseq(algmode.rng? 2: 0);
 	    putc(' ', out_fd);
 	}
 	putc('\n', out_fd);
@@ -1737,16 +1738,10 @@ PrintAln::PrintAln(GAPS* _gaps[], Seq* _seqs[], int _seqnum)
 	}
 	if (markeij) {
 	    char	str[MAXL];
-	    char*	ps = seqs[0]->spath? (*seqs[0]->spath)[0]: (*seqs[0]->sname)[0];
-	    if ((ps = strrchr(ps, '/')))	++ps;
-	    sprintf(str, "%s: %s", seqnum == 1? "Prrn": "Aln", ps);
+	    sprintf(str, "%s: %s", seqnum == 1? "Prrn": "Aln", seqs[0]->sqname());
 	    for (int n = 1; n < seqnum; ++n) {
 		strcat(str, " + ");
-		ps = seqs[n]->spath? (*seqs[n]->spath)[0]: (*seqs[n]->sname)[0];
-		if ((ps = strrchr(ps, '/'))) {
-		    ++ps;
-		    strcat(str, ps);
-		}
+		strcat(str, seqs[n]->sqname());
 	    }
 	    ecc = markeij == 1? new EscCharCtl(out_fd): 0;
 	    hcc = markeij == 2? new HtmlCharCtl(out_fd, str): 0;
@@ -2291,7 +2286,7 @@ void Seq::typeseq(FILE* fd, bool in_line)
 		} else {
 		    fphseqs(tmp, 1);
 #if USE_WEIGHT
-		    fpweight();
+		    if (weight && OutPrm.printweight) fpweight();
 #endif
 		    if (sigII) putSigII();
 		}

@@ -25,42 +25,51 @@
 static	const	size_t	MAXL2K = 2048;
 static	const	INT	ddelim = SEQ_DELIM + (SEQ_DELIM << 4);
 static	bool	comment = false;
-static	INT	max_memory = 1024 * 1024 * 1024;
+static	void	usage(const char* fmt = 0, const char* arg = 0);
+static	int	cmpkey(INT* a, INT* b);
+
+static	int	defmolc = 0;
+static	int	idfy = 0;
+static	int	monit = 0;
+static	int	ignoreamb = 0;
+static	int	dbsch = 0;
+static	char	dbname[MAXL] = "";
+static	const	char*	srcpath = 0;
+static	const	char*	dstpath = "";
 
 class Makdbs {
+	int	molc;
 	int	bias;
 	int	ceil;
+	bool	cridxf;
 	SeqDb*	db;
 	SEQ_CODE*	defcode;
-	long	memsize;
-	size_t*	fsize;
-	int	memmode;
-	FILE*	fsrc;
-	char*	msrc;
-	char*	mptr;
+	size_t	recnbr;
 	FILE*	fgrp;
 	FILE*	fseq;
 	FILE*	fidx;
 	FILE*	fent;
-	size_t	recnbr;
 	char	str[MAXL];
 	char	prv[MAXL];
-	char*	mss;
-	char*	tss;
 	bool	halfway;
 	int	encode(int c);
-	void	examem(int arc, const char** argv);
-	int	convert();
-	int	convert2();
-	void	initialize(const char* av);
-	char*	get_str();
-	void	skip_till_nl();
 	char*	getDbEntry(DbsRec* rec, int idf);
+template <typename file_t>
+	int	convert(file_t fsrc);
+template <typename file_t>
+	int	convert2(file_t fsrc);
+	void	initialize(const char* av);
+template <typename file_t>
+	char*	get_str(file_t fsrc);
+template <typename file_t>
+	void	skip_till_nl(file_t fsrc);
+template <typename file_t>
+	void	makdbs(file_t fsrc);
+
 public:
-	Makdbs(int ac, const char** av);
+	Makdbs(int ac, const char** av, int mlc);
 	~Makdbs();
-	void	resource(const char* arg, int i);
-	void	mkdbs();
+	void	makdbs(const char* fn);
 	void	mkidx();
 	void	stamp21() {
 	    DbsRec	rec21 = {magicver21, comment, 0};
@@ -70,19 +79,6 @@ public:
 	    fprintf(fgrp, "%8ld %u %s\n", ftell(fseq), (INT) recnbr, ps);
 	}
 };
-
-static	void	usage(const char* fmt = 0, const char* arg = 0);
-static	int	cmpkey(INT* a, INT* b);
-
-static	int	defmolc = 0;
-static	int	idfy = 0;
-static	int	monit = 0;
-static	int	ignoreamb = 0;
-static	bool	cridxf = false;
-static	int	dbsch = 0;
-static	char	dbname[MAXL] = "";
-static	const	char*	srcpath = 0;
-static	const	char*	dstpath = "";
 
 static void usage(const char* fmt, const char* arg)
 {
@@ -109,49 +105,27 @@ static void usage(const char* fmt, const char* arg)
 	exit(1);
 }
 
-int Makdbs::encode(int c)
+template <typename file_t>
+char* Makdbs::get_str(file_t fsrc)
 {
-	if (isalpha(c)) {
-	    return (defcode->encode[toupper(c) - 'A'] - bias);
-	} else switch (c) {
-	    case _UNP:
-	    case _TRM:	return (gap_code - bias);
-	    default:	return (IGNORE);
-	}
+	char* ps = fgets(str, MAXL, fsrc);
+	halfway = ps && (strlen(ps) + 1) == MAXL;
+	return (ps);
 }
 
-char* Makdbs::get_str()
+template <typename file_t>
+void Makdbs::skip_till_nl(file_t fsrc)
 {
-	if (memmode != 2) {
-	    char* ps = fgets(str, MAXL, fsrc);
-	    halfway = ps && (strlen(ps) + 1) == MAXL;
-	    return (ps);
-	}
-	if (!*mptr) return (0);
-	char*	qs = str;
-	char*	ts = qs + MAXL - 1;
-	while (*mptr && qs < ts)
-	    if ((*qs++ = *mptr++) == '\n') break;
-	*qs = '\0';
-	halfway = ts == qs;
-	return (str);
+	int	c;
+	while ((c = fgetc(fsrc)) != EOF && c != '\n') ;
 }
 
-void Makdbs::skip_till_nl()
-{
-	if (memmode != 2) {
-	    int	c;
-	    while ((c = fgetc(fsrc)) != EOF && c != '\n') ;
-	} else {
-	    while (*mptr && *mptr++ != '\n') ;
-	}
-}
-
-int Makdbs::convert()
+template <typename file_t>
+int Makdbs::convert(file_t fsrc)
 {
 	int	n = 0;
 
-	while (get_str()) {
+	while (get_str(fsrc)) {
 	    if (db->is_DbEnd(str) || db->is_DbEntry(str)) break;
 	    for (char* pc = str; *pc; pc++) {
 		if (*pc == _COMM) break;
@@ -167,12 +141,13 @@ int Makdbs::convert()
 	return (n);
 }
 
-int Makdbs::convert2()
+template <typename file_t>
+int Makdbs::convert2(file_t fsrc)
 {
 	int	n = 0;
 	int	b = 0;
 
-	while (get_str()) {
+	while (get_str(fsrc)) {
 	    if (db->is_DbEnd(str) || db->is_DbEntry(str)) break;
 	    for (char* pc = str; *pc; pc++) {
 		if (*pc == _COMM) break;
@@ -187,6 +162,42 @@ int Makdbs::convert2()
 	if (n & 1)	putc(b + SEQ_DELIM, fseq);
 	else	putc(ddelim, fseq);
 	return (n);
+}
+
+template <typename file_t>
+void Makdbs::makdbs(file_t fsrc)
+{
+	DbsRec	rec;
+	while (get_str(fsrc)) {
+	    if (db->is_DbEntry(str)) {
+newentry:
+		rec.seqptr = ftell(fseq);
+		rec.entptr = ftell(fent);
+		char*	ps = getDbEntry(&rec, idfy);
+		if (wordcmp(ps, prv) < 0) cridxf = true;
+		car(prv, ps);
+		if (halfway) skip_till_nl(fsrc);
+	    }
+	    halfway = false;
+	    if (db->is_DbOrigin(str)) {
+		rec.seqlen = isDRNA(molc)? 
+		    convert2(fsrc): convert(fsrc);
+		fwrite(&rec, sizeof(DbsRec), 1, fidx);
+		++recnbr;
+		if (db->is_DbEntry(str)) goto newentry;
+	    }
+	}
+}
+
+int Makdbs::encode(int c)
+{
+	if (isalpha(c)) {
+	    return (defcode->encode[toupper(c) - 'A'] - bias);
+	} else switch (c) {
+	    case _UNP:
+	    case _TRM:	return (gap_code - bias);
+	    default:	return (IGNORE);
+	}
 }
 
 char* Makdbs::getDbEntry(DbsRec* rec, int idf)
@@ -219,31 +230,6 @@ char* Makdbs::getDbEntry(DbsRec* rec, int idf)
 	return (ps);
 }
 
-void Makdbs::mkdbs()
-{
-	DbsRec	rec;
-	while (get_str()) {
-	    if (db->is_DbEntry(str)) {
-newentry:
-		rec.seqptr = ftell(fseq);
-		rec.entptr = ftell(fent);
-		char*	ps = getDbEntry(&rec, idfy);
-		if (wordcmp(ps, prv) < 0) cridxf = true;
-		car(prv, ps);
-		if (halfway) skip_till_nl();
-	    }
-	    halfway = false;
-	    if (db->is_DbOrigin(str)) {
-		rec.seqlen = isDRNA(defmolc)? 
-		    convert2(): convert();
-		fwrite(&rec, sizeof(DbsRec), 1, fidx);
-		++recnbr;
-		if (db->is_DbEntry(str)) goto newentry;
-	    }
-	}
-	if (fsrc) {fclose(fsrc); fsrc = 0;}
-}
-
 static	DbsRec*	rbuf;
 static	char*	cbuf;
 
@@ -254,6 +240,7 @@ static int cmpkey(INT* a, INT* b)
 
 void Makdbs::mkidx()
 {
+	if (!cridxf) return;		// has been sorted
 	size_t	flen = ftell(fent);
 	cbuf = new char[flen];
 	rewind(fent);
@@ -274,45 +261,59 @@ void Makdbs::mkidx()
 	delete[] order;
 }
 
-void Makdbs::resource(const char* av, int i)
+void Makdbs::makdbs(const char* av)
 {
-	if (memmode != 2) {
-	    fsrc = fopenpbe(srcpath, av, 0, "r", -1);
+	if (is_gz(av)) {
+#if USE_ZLIB
+	    gzFile	gzfd = gzopenpbe(srcpath, av, 0, "r", -1);
+	    if (!gzfd) usage(not_found, av);
+	    makdbs(gzfd); 
+	    fclose(gzfd);
+#else
+	    fatal(gz_unsupport, av);
+#endif
+	} else {
+	    FILE* fsrc = fopenpbe(srcpath, av, 0, "r", -1);
 	    if (!fsrc) usage(not_found, av);
-	    SeqDb*	cdb = dbsch? setform(dbsch): whichdb(str, fsrc);
-	    if (db != cdb)
-		fatal("Inconsistent DB files %d-%d!\n",
-		    db->FormID, cdb->FormID);
-	    rewind(fsrc);
-	}
-	if (memmode == 1) {
-	    delete[] msrc;
-	    try {
-		mptr = msrc = new char[fsize[i] + 1];
-	    } catch (std::bad_alloc ba) {
-		fatal("no memory !\n");
-	    }
-	    if (fread(msrc, sizeof(char), fsize[i], fsrc) != fsize[i])
-		fatal("Fail to read %s!\n", av);
-	    msrc[fsize[i]] = '\0';
-	    mptr = msrc;
+	    makdbs(fsrc); 
 	    fclose(fsrc);
-	    fsrc = 0;
 	}
 }
 
-void Makdbs::initialize(const char* av)
+Makdbs::Makdbs(int argc, const char** argv, int mlc) 
+	: molc(mlc), bias(0), cridxf(false), db(0), recnbr(0),
+	  fgrp(0), fseq(0), fidx(0), fent(0),
+	  halfway(false)
 {
-	db = dbsch? setform(dbsch): whichdb(str, fsrc);
-	if (!db) fatal("Bad DB sorce: %s/%s!\n", srcpath, av);
-	if (!*dbname && db->DbName) strcpy(dbname, db->DbName);
-	if (!*dbname) partfnam(dbname, av, "b");
-	if (defmolc == UNKNOWN) {
-	    Seq	sd;
-	    char	str[MAXL] = "";
-	    defmolc = sd.infermolc(fsrc, str);
+	*str = *prv = '\0';
+	if (dbsch) db = setform(dbsch);
+	else {
+	    if (is_gz(*argv)) {
+#if USE_ZLIB
+		gzFile	gzfd = gzopenpbe(srcpath, *argv, 0, "r", -1);
+		if (!gzfd) usage(not_found, *argv);
+		db = whichdb(dbs_header(str, gzfd));
+		fclose(gzfd);
+#else
+		fatal(gz_unsupport, *argv);
+#endif
+	    } else {
+		FILE* fsrc = fopenpbe(srcpath, *argv, 0, "r", -1);
+		if (!fsrc) usage(not_found, *argv);
+		db = whichdb(dbs_header(str, fsrc));
+	        fclose(fsrc);
+	    }
 	}
-	if (!defcode) defcode = setSeqCode(0, defmolc);
+	if (!db) fatal("Bad DB sorce: %s/%s!\n", srcpath, *argv);
+	if (!molc) molc = infermolc(*argv);
+	bias = A - 1;
+	if (molc == PROTEIN) bias = ALA - 1;
+	defcode = setSeqCode(0, molc);
+	*str = '\0';
+	ceil = defcode->max_code - bias;
+
+	if (!*dbname && db->DbName) strcpy(dbname, db->DbName);
+	if (!*dbname) partfnam(dbname, *argv, "b");
 	fseq = fopenpbe(dstpath, dbname, SEQ_EXT, "w", 2);
 	fidx = fopenpbe(dstpath, dbname, IDX_EXT, "w+", 2);
 	fgrp = fopenpbe(dstpath, dbname, GRP_EXT, "w", 2);
@@ -320,86 +321,8 @@ void Makdbs::initialize(const char* av)
 	putc(SEQ_DELIM, fseq);	// for compatibility with blast
 }
 
-void Makdbs::examem(int argc, const char** argv)
-{
-	memsize = 0;
-	fsize = new size_t[argc];
-	if (!srcpath) srcpath = "";
-	for (int i = 0; i < argc; ++i) {
-	    fsrc = fopenpbe(srcpath, argv[i], 0, "r", -1);
-	    if (!fsrc)
-		fsrc = fopenpbe(dstpath, argv[i], 0, "r", 1);
-	    if (!fsrc) usage(not_found, argv[0]);
-	    if (i == 0) initialize(*argv);
-	    fseek(fsrc, 0L, SEEK_END);
-	    fsize[i] = ftell(fsrc);
-	    fclose(fsrc); fsrc = 0;
-	    if (fsize[i] + 1 < max_memory) {
-		try {
-		    mptr = msrc = new char[fsize[i] + 1];
-		    memsize += fsize[i];
-		} catch (std::bad_alloc ba) {
-		    memsize = memmode = 0;
-		    delete[] fsize;
-		    fsize = 0;
-		    return;
-		}
-	    } else {
-		    memsize = memmode = 0;
-		    delete[] fsize;
-		    fsize = 0;
-		    return;
-	    }
-	    if (argc > 1) delete[] msrc;
-	}
-	if (argc > 1) {
-	    try {
-		mptr = msrc = new char[memsize + 1];
-	    } catch (std::bad_alloc ba) {
-		memsize = 0;
-		memmode = 1;
-		delete[] fsize;
-		fsize = 0;
-		return;
-	    }
-	}
-	memsize = 0;
-	for (int i = 0; i < argc; ++i) {
-	    FILE*	fsrc = fopenpbe(srcpath, argv[i], 0, "r", -1);
-	    if (!fsrc)
-		fsrc = fopenpbe(dstpath, argv[i], 0, "r", 1);
-	    if (fread(msrc + memsize, sizeof(char), fsize[i], fsrc) != fsize[i])
-		usage("Fail to read %s!\n", argv[i]);
-	    memsize += fsize[i];
-	}
-	msrc[memsize] = '\0';
-	mptr = msrc;
-	memmode = 2;
-	return;
-}
-
-Makdbs::Makdbs(int argc, const char** argv)
-{
-	db = 0;
-	recnbr = 0;
-	defcode = 0;
-	msrc = mptr = 0;
-	fsrc = fgrp = fseq = fidx = fent = 0;
-	mss = tss = 0;
-	halfway = false;
-	*str = *prv = '\0';
-	examem(argc, argv);
-	if (defmolc == PROTEIN)
-	    bias = ALA - 1;
-	else
-	    bias = A - 1;
-	ceil = defcode->max_code - bias;
-}
-
 Makdbs::~Makdbs()
 {
-	delete[] msrc;
-	delete[] fsize;
 	fclose(fgrp);
 	fclose(fseq);
 	fclose(fidx);
@@ -437,14 +360,13 @@ int main(int argc, const char** argv)
 	}
 	if (argc < 1) usage();
 
-	Makdbs	md(argc, argv);
+	Makdbs	md(argc, argv, defmolc);
 	for (int i = 0; i < argc; ++i) {
-	    md.resource(argv[i], i);
+	    md.makdbs(argv[i]);
 	    md.wrtgrp(argv[i]);
-	    md.mkdbs();
 	}
 	md.stamp21();
 	md.wrtgrp("E_O_F");
-	if (cridxf) md.mkidx();
+	md.mkidx();
 	return (0);
 }

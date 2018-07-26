@@ -159,8 +159,8 @@ static	PolyA	polyA;
 static	int	no_seqs = 0;
 static	bool	pairedends = false;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.3.1";
-static	const	int	date = 170630;
+static	const	char*	version = "2.3.2";
+static	const	int	date = 170726;
 
 static void usage(const char* messg)
 {
@@ -1223,7 +1223,7 @@ static void all_in_func(Seq** sqs, SeqServer* svr, void* prm)
 		    case IS_END: case IS_ERR: return;
 		    default: 
 // read genomic sequence
-			genomicseq(sqs + 1, pwd, true);
+			genomicseq(sqs + 1, pwd, q_mns & 2);
 			break;
 		}
 	    }
@@ -1414,7 +1414,7 @@ static void* worker_func(void* arg)
 		seg_job(targ->seqs, targ->svr, sbk);
 	    } else {
 		if (targ->svr->input_ns == 2)
-		    genomicseq(targ->seqs + 1, pwd, true);
+		    genomicseq(targ->seqs + 1, pwd, q_mns & 2);
 		(void) spaln_job(targ->seqs, targ->pwd, targ->q);
 	    }
 	}
@@ -1479,7 +1479,7 @@ static void MasterWorker(Seq** sqs, SeqServer* svr, void* prm)
 	    miarg.nhf = q.mfd->size();
 	    miarg.hfg = (HalfGene*) q.mfd->flush();
 	    delete q.mfd; q.mfd = 0;
-	    if (miarg.nhf> 1) {
+	    if (miarg.nhf > 1) {
 		miarg.q = &q;
 		pthread_create(&master, 0, mistress_func, (void*) &miarg);
 		for (int n = 0; n < thread_num; ++n)
@@ -1590,7 +1590,7 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 		goto postproc;
 	    }
 	    if (!OutPrm.out_file && algmode.nsa == BIN_FORM)
-		OutPrm.out_file = (*seqs[0]->spath)[0];
+		OutPrm.out_file = seqs[0]->spath;
 	    SrchBlk*	bprm = getblkinf(seqs, dbs, mb);
 	    delete mb;
 	    if (seqs[0]->inex.intr || seqs[1]->inex.intr) makeStdSig53();

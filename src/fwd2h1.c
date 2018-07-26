@@ -18,10 +18,10 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
-#define	DEBUG	1
+#define	DEBUG	0
 #define	TERMGOP	0
 
 #include "aln.h"
@@ -3443,6 +3443,8 @@ VTYPE Aln2h1::creepfwrd(int& ovr, VTYPE bscr, BOUND& lub)
 
 bool Aln2h1::indelfreespjH(int agap, VTYPE& iscr)
 {
+	int	play = -b->exin->lplay(b->left);
+	if (play > agap) agap = play;
 	int	d5 = b->left + 3 * agap - 2;	// donor 5' end
 	int	d3 = b->left + 2;		// donor 3' end
 	int	a5 = b->right - 2;		// accpt 5' end

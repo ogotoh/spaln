@@ -21,7 +21,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #define  _IOLIBC_
@@ -39,10 +39,12 @@
 FILE*	out_fd = stdout;
 static	const	int	MAXARG = 4;
 static	const	int	NEG = -1;
+static	const	int	gzCompress_rate = 10;
 
-const char* no_file  = "\'%s\' cannot be created!\n";
-const char* not_found = "\'%s\' is not found!\n";
-const char* stddelim = " \t\n";
+const	char*	no_file = "\'%s\' cannot be created!\n";
+const	char*	not_found = "\'%s\' is not found!\n";
+const	char*	gz_unsupport = "compressed %s is not supported!\n";
+
 static	const	char*	gnm2tab = "gnm2tab";
 static  const   char*   font_tag[3] = {
 	"<b><font color=\"%s\">",
@@ -290,7 +292,7 @@ FILE*	Ftable::fopen(const char* fname, const char* mode)
 {
 	char	str[MAXL];
 	FILE*	fd = 0;
-	for (int i = 0; i < 3; ++i) {
+	for (int i = 0; i < n_tabpath; ++i) {
 	    if (tabpath[i]) {
 		strcpy(str, tabpath[i]);
 		if (subdir) {
@@ -304,6 +306,32 @@ FILE*	Ftable::fopen(const char* fname, const char* mode)
 	    }
 	}
 	fatal("%s not found! Confirm whether ALN_TAB is correctly set!\n", fname);
+	return (0);
+}
+
+// fullpath must have enough space to accmodate full path name
+
+char* Ftable::getpath(char* fullpath, const char* fname)
+{
+	FILE*	fd = 0;
+	for (int i = 0; i < n_tabpath; ++i) {
+	    if (tabpath[i]) {
+		if (subdir) {
+		    char  str[MAXL];
+		    strcat(str, tabpath[i]);
+		    strcat(str, "/");
+		    strcat(str, subdir);
+		    fd = fopenpbe(str, fname, 0, "r", -1, fullpath);
+		    if (fd) break;
+		}
+		fd = fopenpbe(tabpath[i], fname, 0, "r", -1, fullpath);
+		if (fd) break;
+	    }
+	}
+	if (fd) {
+	    fclose(fd);
+	    return (fullpath);
+	}
 	return (0);
 }
 
@@ -786,11 +814,11 @@ Gnm2tab::Gnm2tab(int field) : StrHash<int>()
 	while (char* ps = fgets(str, MAXL, fd)) {
 	    if (*ps == '#' || *ps == '\n') continue;
 	    char*	id = car(ps);
-	    char*	qs;
+	    char*	qs = 0;
 	    int 	c = 1;
 	    for ( ; c < field; ++c)
 		if (!*++ps || !(qs = car(ps))) break;
-	    if (c < field) continue;
+	    if (c < field || !qs) continue;
 	    KVpair<INT, int>*	kv = domphy->pile(qs);
 	    assign(id, kv->val);
 	}
@@ -805,7 +833,46 @@ int Gnm2tab::taxon_code(const char* sqid, char** taxon)
 	while (*sqid && sqid < tg) *ps++ = tolower(*sqid++);
 	*ps = '\0';
 	KVpair<INT, int>* kv = find(genspc);
-	if (taxon) *taxon = kv? (*domphy)[kv->val]: 0;
+	if (taxon) *taxon = kv? domphy->strkey(kv->val): 0;
 	return (kv? kv->val: ERROR);
 }
+
+#if USE_ZLIB
+
+gzFile gzopenpbe(const char* path, const char* name, 
+	const char* extent, const char* opt, int lvl, char* str)
+{
+	char	buf[MAXL];
+	if (!str) str = buf;
+
+	gzFile	fd = 0;
+	char*	ps;
+const 	char*	pt = path? path: "";
+
+	do {
+	    for (ps = str; *pt; *ps++ = *pt++) {
+		if (*pt == ';') {
+		    pt++;
+		    break;
+		}
+	    }
+	    if (ps > str && ps[-1] != PATHDELM)
+		*ps++ = PATHDELM;
+	    *ps = '\0';
+	    if (extent) {
+		partfnam(str + strlen(str), name, "b");
+		if (*extent && *extent != '.') strcat(str, ".");
+		strcat(str, extent);
+	    } else
+		strcat(str, name);
+	    if ((fd = gzopen(str, opt))) return (fd);
+	} while (*pt);
+
+	if (lvl >= 0)
+	    fprintf(stderr, "%s: cannot be open!\n", str);
+	if (lvl > 0) exit (lvl);
+	return (0);
+}
+
+#endif
 

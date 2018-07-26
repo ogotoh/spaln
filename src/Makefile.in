@@ -78,7 +78,7 @@ ls:
 spaln:	spaln.o blksrc.o $(SLIB)
 	$(CXX) -o spaln spaln.o blksrc.o $(SLIB) $(LLIB)
 sortgrcd:	sortgrcd.c $(SLIB)
-	$(CXX) -o sortgrcd sortgrcd.c $(SLIB)
+	$(CXX) -o sortgrcd sortgrcd.c $(SLIB) $(LLIB)
 makdbs: makdbs.c dbs.h seq.h bitpat.h $(SLIB)
 	$(CXX) -o makdbs makdbs.c $(SLIB) $(LLIB)
 makmdm: makmdm.c mdm.h $(CLIB)

@@ -28,13 +28,13 @@
 
 #define	TESTRAN	0
 
-static	const	int	BsVersion = 24;
+static	const	int	BsVersion = 25;
 static	const	float	RbsFactLog = 0.4;
 static	const	float	RbsFactSqr = 0.303 * 2;
 static	const	float	RlnFact = 0.00520 * 2;
 static	const	INT	NRTAB = 128;
 static	const	int	ENTSIZE = 23;	// for back compatibility
-static	const	char	ipstat[] = "IpStat.txt";
+static	const	char	ipstat[] = "IldModel.txt";
 static  const   CHAR    ntconv[26] =
 	{0,4,1,4,7,7,2,4,7,7,4,7,4,4,7,4,7,4,4,3,3,4,4,7,4,7};
 //	 a b c d e f g h i j k l m n o p q r s t u v w x y z
@@ -112,7 +112,7 @@ class Randbs {
 	float	RbsCoef;
 	float	RlnCoef;
 	float	RbsCons;
-	double	(*transform)(double x);
+	double	(*trans_form)(double x);
 	int	rscrtab[NRTAB];
 public:
 	int	Phase1T;
@@ -241,6 +241,9 @@ friend	class	AdjacentMat;
 	    return (pwc->ChrID? pwc->ChrID[m].segn: m + 1);
 	}
 	DbsDt*	wdbf;
+	bool	isaa;
+	bool	istron;
+	SEQ_CODE*	defcode;
 public:
 	MakeBlk(Seq* sd, DbsDt* dd = 0);
 	~MakeBlk() {delete pwc; delete pbc; delete[] acomp;}
@@ -252,6 +255,14 @@ public:
 	int	dbsmolc() {return (molc);}
 	int	no_entry() {return pwc->ChrNo;}
 	void	delete_dbf() {delete wdbf; wdbf = 0;}
+template <typename file_t>
+	void	first_phase(file_t fd, int& entlen, CHROMO& chrbuf);
+template <typename file_t>
+	int	second_phase(file_t fd, CHROMO& chrbuf, int m,
+		DbsRec*& pr, CHAR*& ps, char*& pe,
+		DbsRec& prvrec, CHROMO*& pchrid);
+template <typename file_t>
+	void	writeBlkInfo(file_t fd, const char* fn);
 };
 
 #if TESTRAN
@@ -326,8 +337,10 @@ public:
 	void	setSegLen();
 	int	MinQuery();
 	int	MaxGene();
-	int	read_blk_dt(FILE* fd);
-	void	ReadBlkInfo(const char* fname);
+template <typename file_t>
+	int	read_blk_dt(file_t fd);
+template <typename file_t>
+	void	ReadBlkInfo(file_t fd, const char* fname);
 	int	findChrNo(INT n);
 	int	findblock(Seq* seqs[]);
 	int	findh(Seq* seqs[]);

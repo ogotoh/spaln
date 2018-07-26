@@ -23,7 +23,7 @@
 *	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
-#define	DEBUG	1
+#define	DEBUG	0
 
 #include "aln.h"
 #include "vmf.h"
@@ -655,7 +655,9 @@ VTYPE Aln2b1::centerB_ng(int* ml, int* mr, int* nl, int* nr,
 		if (mx->dir == NEWD) mx->lst = r;
 
 /*	Find optimal path	*/
+#if DEBUG
 		VTYPE	y = h->val;
+#endif
 		if (h != mx) {
 		    *h = *mx;
 		    if (h->upr < r) h->upr = r;
@@ -1264,7 +1266,9 @@ Colonies* Aln2b1::fwdswgB_ng(VTYPE* scr)
 /*	Diagonal	*/
 		CRECD*	mx = h;
 		f[0] = *h;	/* diag */
+#if DEBUG
 		VTYPE	diag = h->val;
+#endif
 		h->val += pwd->sim2(as, bs);
 		h->dir = isdiag(h)? DIAG: NEWD;
 

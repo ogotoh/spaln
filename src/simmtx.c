@@ -19,7 +19,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #include "aln.h"
@@ -47,7 +47,7 @@ ALPRM2	alprm2 = {30., DQUERY, DQUERY, 30., 8., 20., 0., -1., 10, 45};
 //		scnd, hydr, hpmt, hpwing, no_angle
 ALPRM3	alprm3 = {0., 0., 0., 3, 0};
 
-BPPRM	bpprm = {0., 100};
+BPPRM	bpprm = {0., 1., 1., 100};
 
 static	int	glocal = GLOBAL;
 static	float	smn[] = {2., 1., 0., -1., -2.};
@@ -645,6 +645,10 @@ const	char*	vl;
 	    case 'B': bpprm.factor = atof(vl); break;	// branch point
 	    case 'D': bpprm.maxb3d = atoi(vl); break;	// max distance bp to 3'ss
 	    case 'E': IntronPrm.elmt = atoi(vl); break;	// min exon len
+	    case 'G': bpprm.g_alpha = atof(vl); 
+		vl = strchr(vl, ',');
+		if (vl) bpprm.g_beta = atof(vl + 1); 
+		break;	// Gamma distribution parameters of pranch position
 	    case 'H':
 		setthr(*vl? atof(vl): (double) (INT_MIN + 3));
 		break;
@@ -659,8 +663,8 @@ const	char*	vl;
 		break;
 	    case 'J': alprm2.spb = atof(vl); break;	// matching intron position
 	    case 'K': alprm2.termk1 = atoi(vl); break;	// max terminal gap length without penalty
-	    case 'M': IntronPrm.maxl = int(ktof(vl)); break;	// maximum expected length of intron
 	    case 'L': IntronPrm.llmt = atoi(vl); break;	// lower limit of intron
+	    case 'M': IntronPrm.maxl = int(ktof(vl)); break;	// maximum expected length of intron
 //	    case 'N': alprm2.nrmlipot = 1; break;	// normalize intron potential
 	    case 'S': alprm2.sss = *vl? atof(vl): 100.; 
 		if (alprm2.sss >= 1.) alprm2.sss /= 100.; break;	// splice signal

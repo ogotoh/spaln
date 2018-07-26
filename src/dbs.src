@@ -36,6 +36,12 @@
 #define	BKA_EXT	".bka"
 #define	BKN_EXT	".bkn"
 #define	BKP_EXT	".bkp"
+#if USE_ZLIB
+#define SGZ_EXT ".seq.gz"
+#define AGZ_EXT ".bka.gz"
+#define NGZ_EXT ".bkn.gz"
+#define PGZ_EXT ".bkp.gz"
+#endif
 
 #ifndef	DBS_DIR
 #define	DBS_DIR		"#alndbs_dir#"
@@ -125,12 +131,12 @@ friend	class	SrchBlk;
 	char*	entry;
 	int*	gsipool;
 	DbsRec*	bisearch(const char* key);
-	void	readseq();
-	void	readgrp(FILE* fgrp);
-	void	readidx20(FILE* fd);
-	DbsRec*	readidx(FILE* fidx);
-	void	readentry(FILE* fent);
-	void	readodr(FILE* fodr);
+	void	readseq(char* fn);
+	size_t	readgrp(FILE* fgrp);
+	void	readidx20(FILE* fd, char* fn);
+	DbsRec*	readidx(FILE* fidx, char* fn);
+	void	readentry(FILE* fent, char* fn);
+	void	readodr(FILE* fodr, char* fn);
 public:
 const	char*	dbsid;
 	SeqDb*  curdb;
@@ -170,11 +176,22 @@ enum DBs {GenBank, EMBL, Swiss, TFDS, NBRF, ProDB,
 extern	DbsDt*	dbs_dt[];
 extern	SeqDb	SeqDBs[];
 
-extern	SeqDb*	whichdb(char* str, FILE* fin = 0);
 extern	SeqDb*	setform(int c);
 extern	void	setdefdbf(DbsDt* dbf);
 extern	void	EraDbsDt();
 extern	char*	path2dbf(char* str, const char* fn, const char* ext = 0);
+extern	bool	space_digit(const char* ps);
 extern	const	char*	finddbfpath(const char* fn, const char* ext = 0);
+extern	SeqDb*	whichdb(char* ps, FILE* fd = 0);
+
+template <typename file_t>
+char* dbs_header(char* str, file_t fin)
+{
+	char*	ps = str;
+	while (*ps == _LCOM || space_digit(ps))
+	    if (!fin || !(ps = fgets(str, MAXL, fin)))
+		return (0);
+	return (ps);
+}
 
 #endif

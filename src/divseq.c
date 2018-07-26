@@ -16,7 +16,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japang
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #include "cmn.h"
@@ -26,8 +26,83 @@ static	DistCal	ReAlignB = ThisAln;
 static	int	GapEval = 3;
 static	int	GapEvalB = 3;
 static	int	PickUpOneB = 0;
+static	FTYPE	gapfrac = 0.8;
 
 DISTPRM	distPrm = {0.5, 0.5, 0.0, 1.0, 0, ThisAln, 0};
+
+FTYPE pairdvn(Seq* sd, int i, int j)
+{
+	CHAR*   ps = sd->at(sd->left);
+	CHAR*   tt = sd->at(sd->right);
+
+	int     mch = 0, mmc = 0, unp = 0, gap = 0;
+	int     gsi = 0, gsj = 0;
+	for ( ; ps < tt; ps += sd->many) {
+	    if (IsGap(ps[i])) {
+		if (!IsGap(ps[j])) {
+		    ++unp;
+		    if (gsi <= gsj) ++gap;
+		    gsj = 0;
+		}
+		++gsi;
+	    } else {
+		if (IsGap(ps[j])) {
+		    ++unp;
+		    if (gsi >= gsj) ++gap;
+		    ++gsj;
+		} else {
+		    if (ps[i] == ps[j]) ++mch;
+		    else	++mmc;
+		    gsj = 0;
+		}
+		gsi = 0;
+	    }
+	}
+	FTYPE	gapunp = gapfrac * gap + (1 - gapfrac) * unp;
+	return (1. - (FTYPE) mch / (gapunp + mch + mmc));
+}
+
+FTYPE pairdvn(Seq* sd, int* gi, int* gj)
+{
+	CHAR*   ps = sd->at(sd->left);
+	CHAR*   tt = sd->at(sd->right);
+
+	int	ni = 0, nj = 0;
+	for (int* g = gi; *g >= 0; ++g) ++ni;
+	for (int* g = gj; *g >= 0; ++g) ++nj;
+	int*	gsi = new int[ni]; vclear(gsi, ni);
+	int*	gsj = new int[nj]; vclear(gsj, nj);
+	int	mch = 0, mmc = 0, unp = 0, gap = 0;
+	for ( ; ps < tt; ps += sd->many) {
+	  for (int i = 0; gi[i] >= 0; ++i) {
+	    for (int j = 0; gj[j] >= 0; ++j) {
+	      if (IsGap(ps[gi[i]])) {
+		if (!IsGap(ps[gj[j]])) {
+		    ++unp;
+		    if (gsi[i] <= gsj[j]) ++gap;
+		    gsj[j] = 0;
+		}
+		++gsi[i];
+	      } else {
+		if (IsGap(ps[gj[j]])) {
+		    ++unp;
+		    if (gsi[i] >= gsj[j]) ++gap;
+		    ++gsj[j];
+		} else {
+		    if (ps[gi[i]] == ps[gj[j]]) ++mch;
+		    else	++mmc;
+		    gsj[j] = 0;
+		}
+		gsi[i] = 0;
+	      }
+	    }
+	  }
+	}
+	delete[] gsi;
+	delete[] gsj;
+	FTYPE	gapunp = gapfrac * gap + (1 - gapfrac) * unp;
+	return (1. - (FTYPE) mch / (gapunp + mch + mmc));
+}
 
 double jukcan(double nid)
 {

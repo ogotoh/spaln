@@ -12,20 +12,24 @@ RANLIB=${RANLIB-"ranlib"}
 exec_prefix=${exec_prefix-${PWD}/../bin}
 table_dir=${table_dir-${PWD}/../table}
 alndbs_dir=${alndbs_dir-${PWD}/../seqdb}
+use_zlib=0
+LLIB="-lpthread -lm"
 
 while test $# -ge 1
 do
 case "$1" in
     -h* | --h*)
       echo 'usage:'
-      echo '  configure [--exec_prefix=EXPREFIX] [--table_dir=TBLDIR] [--alndbs_dir=ALN_DBS]'
+      echo '  configure [--exec_prefix=EXPREFIX] [--table_dir=TBLDIR] [--alndbs_dir=ALN_DBS]i [use_zlib=1]'
         exit 0;;
     -e*=* | --e*=*) exec_prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
     -t*=* | --table_dir=*) table_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
     -d*=* | --alndbs_dir=*) alndbs_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
+    -z*=* | --use_zlib=*) use_zlib=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
     -e* | --e*) exec_prefix="$2"; shift; shift;;
     -t* | --t*) table_dir="$2"; shift; shift;;
-    -t* | --t*) alndbs_dir="$2"; shift; shift;;
+    -d* | --d*) alndbs_dir="$2"; shift; shift;;
+    -z* | --z*) use_zlib="$2"; shift; shift;;
     esac
 done
 
@@ -58,6 +62,12 @@ else
   echo "use CXX=$CXX CFLAGS=$CFLAGS"
 fi
 
+if [ $use_zlib == "1" ] ; then
+  CFLAGS="${CFLAGS} -DUSE_ZLIB=1"
+  LLIB="${LLIB} -lz"
+echo "$use_zlib $CFLAGS"
+fi
+
 if ($RANLIB -V) >/dev/null 2>/dev/null; then
   RANLIB="$RANLIB";
 else
@@ -76,6 +86,7 @@ echo "alndbs install to $alndbs_dir"
 sed < Makefile.in "
 /^CXX *=/s%=.*%= $CXX%
 /^CFLAGS *=/s%=.*%= $CFLAGS%
+/^LLIB *=/s%=.*%= $LLIB%
 /^LD *=/s%=.*%= $LD%
 /^AR *=/s%=.*%= $AR%
 /^RANLIB *=/s%=.*%= $RANLIB%

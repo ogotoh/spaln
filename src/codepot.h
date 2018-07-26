@@ -15,7 +15,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #ifndef  _CODEPOT_H_
@@ -86,6 +86,8 @@ public:
 	    (int53[d].cano5 == 1 && int53[a].cano3) ||
 	    (int53[d].cano5 && int53[a].cano3 == 1);}
 	bool	within(Seq* sd);
+	int	lplay(int n) {return (n - bias);}
+	int	rplay(int n) {return (bias + size - n);}
 friend	void Intron53(Seq* sd, PwdB* pwd);
 friend	void Intron53N(Seq* sd, FTYPE ff, PwdB* pwd);
 friend	void BoundarySeq(FILE* fd, Seq* sd, RANGE* rng);

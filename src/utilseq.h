@@ -16,7 +16,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #ifndef _UTILSEQ_H_
@@ -37,18 +37,26 @@ struct	ExpectMmm {float min, mean, max;};
 
 class PatMat {
 	void	readPatMat(FILE* fd);
+	CHAR*	redctab;
 protected:
-	int	rows, cols, offset;
-	int	maxidx, minidx, nsupport;
+	int	maxidx, minidx, nsupport, nalpha;
 public:
+	int	rows, cols, offset;
 	float	tonic;
 	ExpectMmm	mmm;	// min, mean, max
 	double* mtx;
+	PatMat(PatMat& src);	// copy constructor
 	PatMat(FILE* fd);
 	PatMat(const char* fname = 0);
 	PatMat(const int r, const int c, const int o = 0, float* m = 0);
 	~PatMat() {delete[] mtx;}
+	float	pwm_score(Seq* sd, CHAR* ps);
 	float*	calcPatMat(Seq* sd);
+	int	columns() {return cols;}
+	void	clearmtx() {vclear(mtx, rows * cols);}
+	void	setredctab(Seq* sd);
+	void	increment(Seq* sd, int pos);
+	PatMat&	operator=(const PatMat& src);
 };
 
 class CodePot {
@@ -102,7 +110,7 @@ struct SpbInfo {
 	~SpbInfo() {delete codepot; delete eijpat;}
 };
 
-extern	void	setorf(int len, int ic);
+extern	void	setorf(int len, int ic = SILENT);
 extern	int	setcodon(int c);
 extern	int	codon_id(CHAR* s, int byte);
 extern	void	de_codon_4(CHAR* ncs, int n);

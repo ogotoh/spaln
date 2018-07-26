@@ -17,7 +17,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #define EDEBUG	0
@@ -425,7 +425,7 @@ void Intron53N(Seq* sd, FTYPE ff, PwdB* pwd)
 const	static	INT	jlevelac[4] = {0, 2, 3, 1};
 const	static	INT	jlevelgt[4] = {0, 0, 3, 1};
 	int	nc = 1;		/* reduced numeric code for 'C' */
-	CHAR*	redctab = sd->istron()? tnredctab: ncelements;
+	CHAR*	redctab = sd->istron()? tnredctab: ncredctab;
 	FTYPE	fS = alprm2.y * ff;
 	Exinon*	exin = sd->exin;
 
@@ -445,7 +445,9 @@ const	static	INT	jlevelgt[4] = {0, 0, 3, 1};
 	CHAR*	ss = sd->at(sd->left);
 	CHAR*	ts = sd->at(sd->right);
 	for ( ; ss < ts; ++ss, wk5++, wk3++) {
-	    nc = ((nc << 2) + redctab[*ss]) & 0xf;
+	    int	c = redctab[*ss];
+	    if (c >= 4) c = 1;	// 'C'
+	    nc = ((nc << 2) + c) & 0xf;
 	    wk5->dinc5 = wk3->dinc3 = nc;
 	    wk5->cano5 = wk3->cano3 = algmode.any == 3? 1: 0;
 	    switch (nc) {
@@ -488,8 +490,9 @@ void Intron53(Seq* sd, PwdB* pwd)
 #endif
 
 	--sd->left; ++sd->right;
-	VTYPE	th3 = (VTYPE) (-fS * pwd->eijpat->tonic3);
-	VTYPE	th5 = (VTYPE) (-fS * pwd->eijpat->tonic5);
+	VTYPE	th3 = (VTYPE) (fS * pwd->eijpat->tonic3);
+	VTYPE	th5 = (VTYPE) (fS * pwd->eijpat->tonic5);
+	VTYPE	thB = (VTYPE) (pwd->eijpat->tonicB);
 	float*	pref5 = pwd->eijpat->pattern5? pwd->eijpat->pattern5->calcPatMat(sd): 0;
 	float*	pref3 = pwd->eijpat->pattern3? pwd->eijpat->pattern3->calcPatMat(sd): 0;
 	float*	prefS = pwd->eijpat->patternI? pwd->eijpat->patternI->calcPatMat(sd): 0;
@@ -538,7 +541,7 @@ void Intron53(Seq* sd, PwdB* pwd)
 	    if (prefB) {
 		sig3 += sigB;
 		FTYPE	sigb = *prfB++;
-		if (sigb + pwd->eijpat->tonicB > 0) {	// stronger than given threshold
+		if (sigb > thB) {	// stronger than given threshold
 		    sigB = (VTYPE) (fB * sigb);
 		    posB = ss;
 		}	// reset bp signal if bp-3'ss distance exeeds the threshold

@@ -17,7 +17,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #ifndef	_ALBH_
@@ -26,11 +26,11 @@
 #include "seq.h"
 #include "simmtx.h"
 
-#define	NOL	3
-#define	NOD	(2 * NOL + 1)
-#define	MAX_COLONY	512
-#define	Def_COLONY	16
-#define	MAX_PARALOG	4
+static	const	int	NOL = 3;
+static	const	int	NOD = 2 * NOL + 1;
+static	const	int	MAX_COLONY = 512;
+static	const	int	Def_COLONY = 16;
+static	const	int	MAX_PARALOG = 4;
 #define	MARGIN(m, A)	((m) == (A)->left || (m) == (A)->right)
 #define	AlnParam	"AlnParam"
 
@@ -72,7 +72,7 @@ enum Skl3M {AlgnTrb = 0x1, JuncTrb = 0x2, STEP3m = 0x4, STEP3n = 0x8};
 enum {GLOBAL, LOCAL};
 
 struct	ISLAND {VTYPE val; long upr, lwr;};
-struct	BPPRM {float factor; int maxb3d;};
+struct	BPPRM {float factor, g_alpha, g_beta; int maxb3d;};
 
 /*********
 	x: frameshift; y: splice signal; z: coding potential; o: termination codon; 
@@ -203,12 +203,13 @@ extern	void	Intron53N(Seq* sd, VTYPE f, PwdB* pwd);
 extern	SKL*	alignB_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr);
 extern	SKL*	alignH_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr);
 extern	SKL*	alignS_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr);
+extern	SKL*	nogap_skl(const Seq* a, const Seq* b = 0);
 extern	VTYPE	skl_rngB_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd);
 extern	VTYPE	skl_rngH_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd);
 extern	VTYPE	skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd);
 
 extern	VTYPE	alnScoreD(Seq* seqs[], Simmtx* sm, int* ends = 0);
-extern	FTYPE	alnscore2dist(Seq* sqs[], PwdB* pwd, int* ends = 0);
+extern	FTYPE	alnscore2dist(Seq* sqs[], PwdB* pwd, int* ends = 0, FTYPE denom = 0);
 
 /*	Header to sqpr.c	*/
 

@@ -20,159 +20,12 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
-#include "aln.h"
+#include "sortgrcd.h"
 
 #if M_THREAD
-#include <pthread.h>
-#include <unistd.h>
-#include <sched.h>
-#endif
-
-#if MONITOR
-#include <sys/types.h>
-#include <sys/times.h>
-#include <sys/time.h>
-#include <sys/timeb.h>
-#endif
-
-#define	MAXRECD	1024 * 1024
-#define	OPTCHAR	'-'
-
-enum InOrder {INPUT_ODR, ALPHABETIC, ABUNDANCE};
-
-struct GRFn {
-	GeneRecord	gr;	// G-record No.
-	INT		fn;	// file No.
-};
-
-struct GERecN  {
-	size_t	grn;		// G-record No.
-	size_t	ern;		// E-record No.
-	INT	gcn;		// cumulative
-	INT	ecn;		// cumulative 
-	Strlist* sname;
-};
-
-struct ChrInf {
-	int	key;
-	INT	gcount;
-	INT	ecount;
-};
-
-typedef int (*CMPCIF)(ChrInf*, ChrInf*);
-
-struct Chash {
-	INT	size;
-	INT	nelm;
-	ChrInf*	hash;
-	Chash(INT n);
-	~Chash() {delete[] hash;}
-	void	clear() {vclear(hash, size);}
-	ChrInf*	resize(int wkey);
-	ChrInf*	chashv(int wkey, bool incr);
-	ChrInf*	scream();
-};
-
-struct ExnInf {
-	int	left;
-	int	right;
-	INT	count;
-	INT	exonID;
-};
- 
-class Ehash {
-	INT	size;
-	ExnInf*	hash;
-public:
-	Ehash(INT n);
-	~Ehash() {delete[] hash;}
-	void	clear() {memset(hash, '\0', size * sizeof(ExnInf));}
-	ExnInf*	ehashv(int left, int right);
-	ExnInf*	resize(int left, int right);
-};
-
-struct IntronInf {
-	int     left;
-	int     right;
-	INT     count;
-	int	Gleft;
-	int	Gright;
-	int	Rleft;
-	int	Rright;
-	int	mch;
-	int	mmc;
-	int	unp;
-	int	ilen;
-	int	Rid;
-	char	intends[8];
-};
-
-class Ihash {
-	INT	size;
-	IntronInf*	hash;
-public:
-	Ihash(INT n);
-	~Ihash() {delete[] hash;}
-	void	clear() {vclear(hash, size);}
-	IntronInf* ihashv(int left, int right, ExonRecord* ewrk, 
-		ExonRecord* fwrk, int mch, int mmc, int unp, 
-		char* intends, int rid);
-	IntronInf* resize(int left, int right, ExonRecord* ewrk,
-		ExonRecord* fwrk, int mch, int mmc, int unp, 
-		char* intends, int rid);
-	INT	sortihash();
-	IntronInf*	begin() {return hash;}
-};
-
-struct FiltParam {
-	int     bmmc;
-	int     bunp;
-	int     ncan;
-	int     Bmmc;
-	int     Bunp;
-	int     ng;
-	float   Gscore;
-	float   Pmatch;
-	float   Pcover;
-};
-
-class Sortgrcd {
-	int	argc;		// total # of .grd files
-	INT	ngrcd;		// total # of G-record
-	INT	nercd;		// total # of E-record
-	INT	nchr;		// total # of chromosomes
-	GERecN*	nrcd;		// [argc]
-	GRFn*	grcd;		// [ngrcd]
-	ChrInf*	chrlist;	// [ncrh];
-	void	assort_by_chr(Chash* hh);
-public:
-	void	printGrcd();
-	void	readGrcd(int ac, const char** av, INT hashsize);
-	ExonRecord* ReadRcd(int ac, const char** av);
-	ExonRecord* ReadChrRcd(int ac, const char** av, INT nercd, GRFn* frcd, INT grn);
-	void	Exonform(ExonRecord* ercd, GRFn* grfn = 0, INT gcn = 0);
-	void	Intronform(ExonRecord* ercd, GRFn* grfn = 0, INT gcn = 0);
-	void	Gff3form(ExonRecord* ercd, GRFn* grfn = 0, INT gcn = 0);
-	GRFn*	begin() {return (grcd);}
-	INT	nGrcd() {return (ngrcd);}
-	INT	nErcd() {return (nercd);}
-	ChrInf*	chrbegin() {return (chrlist);}
-	ChrInf*	chrend() {return (chrlist + nchr);}
-	Sortgrcd(int ac, const char** av);
-	~Sortgrcd();
-};
-
-#if M_THREAD
-
-struct thread_arg_t {
-	int	cpuid;
-	GRFn*	grcd;
-	int*	occr;
-	INT	nchr;
-};
 
 static	void*	worker_func(void* targ);
 static	void	MasterWorker(GRFn* grcd, int* uppr, INT nchr);
@@ -189,7 +42,7 @@ static	int	compf(GRFn* a, GRFn* b);
 inline	int	cmpcif_lex(ChrInf* a, ChrInf* b) {return strcmp(gdbs->entname(a->key), gdbs->entname(b->key));}
 inline	int	cmpcif_hit(ChrInf* a, ChrInf* b) {return (b->gcount - a->gcount);}
 inline	int	cmpcif_did(ChrInf* a, ChrInf* b) {return (a->key - b->key);}
-static	char*	fname(char* str, const char* head, const char* ext);
+static	char*	fname(char* str, const char* head, const char* ext, int nth = 1);
 static	GRFn*	findGeneEnd(int* nexon, GRFn* elocus, GRFn* llocus, int* GeneEnd);
 
 static	INT	MaxeRcd = MAXRECD;
@@ -216,19 +69,23 @@ static	bool	reverse = false;
 
 static void usage()
 {
-	fputs("sortgrcd version 2.0.1: read binary grds and erds and sort them\n", stderr);
+	fputs("sortgrcd version 2.2: read binary grds and erds and sort them\n", stderr);
 	fputs("\tin the order of chromosomal location in each direction\n", stderr);
 	fputs("Usage: sortgrcd [options] *.grd\n", stderr);
-	fputs("Warning: version 2 supports outputs from spaln 2.1.0 or later!!\n", stderr);
+	fputs("Note: version 2 supports outputs from spaln 2.1.0 or later\n", stderr);
+	fputs("Note: version 2.1 supports -O3, 6, 7, and 8 options\n", stderr);
 	fputs("Options:\n", stderr);
 	fputs("\t-CN:\tMinimum % of coverage (0-100)\n", stderr);
 	fputs("\t-FN:\tFilter Level (0 -> 3: no -> stringent)\n", stderr);
 	fputs("\t-HN:\tMinimum spaln score\n", stderr);
+	fputs("\t-JN:\tMinimum ORF length (300)\n", stderr);
 	fputs("\t-MN:\tMaximum total number of missmatches\n", stderr);
 	fputs("\t-NN:\tMaximum total number of non-canonical boundaries\n", stderr);
-	fputs("\t-ON:\tOutput format. 0:Gff3, 4:Native, 5:Intron 15: unique intron\n", stderr);
+	fputs("\t-ON:\tOutput format. 0:Gff3, 3:BED, 4:Native, 5:Intron, \n", stderr);
+	fputs("\t\t\t6:cDNA, 7:translate, 8:CDS, 15:unique intron\n", stderr);
 	fputs("\t-PN:\tMinimum Overall % identity (0-100)\n", stderr);
 	fputs("\t-UN:\tMaximum total number of unpaired bases in gaps\n", stderr);
+	fputs("\t-lN:\tNumber of residues per line for -O6 or -O7 (60)\n", stderr);
 	fputs("\t-mN:\tMaximum allowed missmatches at both exon boundaries\n", stderr);
 	fputs("\t-nN:\tallow non-canonical boundary? [0: no; 1: AT-AN; 2: 1bp mismatch; 3: any]\n", stderr);
 	fputs("\t-uN:\tMaximum allowed unpaired bases in gaps at both exon boundaries\n", stderr);
@@ -420,6 +277,220 @@ static	const	char	sfmt[] = "%s\t%s\t%7.2f\t%7d\t%7d\t%7d\t%7d\t%7d\t%7d\t"
 		gwrk->mmc, gwrk->unp, gwrk->bmmc, gwrk->bunp, gwrk->ng);
 	}
 	if (OutMode < 8 && niso) fprintf(out_fd, GeneDelim, niso);
+}
+
+static void cdsrng(RANGE* exon, Seq* sd)
+{
+	int&	n_cds = exon->left;
+	RANGE*	cds = exon + 1;
+	int	exonlen = 0;
+	while (neorng(++exon)) {
+	    exonlen += exon->right - exon->left;
+	    if (exonlen >= sd->left) break;
+	}
+	cds->left = exon->right - exonlen + sd->left;
+	cds->right = exon->right;
+	n_cds = 0;
+	while (neorng(++exon)) {
+	    ++n_cds;
+	    exonlen += exon->right - exon->left;
+	    *++cds = *exon;
+	    if (exonlen >= sd->right) break;
+	}
+	cds->right = exon->right - exonlen + sd->right;
+	*++cds = endrng;
+}
+
+void Sortgrcd::print_cds(GeneRecord* gwrk, RANGE* exon, const char* Rname)
+{
+	Seq	gene(1);
+	char	str[MAXL];
+	int	l = gwrk->Gstart;
+	int	r = gwrk->Gend;
+	int	Glen = r - l;
+
+	sprintf(str, "Dbs%d %d %d", gwrk->Cid, l, r);
+	gene.getdbseq(gdbs, str, gwrk->Cid);
+	if (gwrk->Csense) gene.comrev();
+	for (RANGE* rng = fistrng(exon); neorng(rng); ++rng) {
+	    rng->left = gene.SiteOn(rng->left);
+	    rng->right = gene.SiteOn(rng->right) + 1;
+	}
+	Seq*	cds = gene.splice(0, exon);
+	ORF*	orfs = (OutMode != 6)? cds->getorf(): 0;
+	if (OutMode == 6 || orfs) {
+	  const char*	cid = gdbs->entname(gwrk->Cid);
+	  fprintf(out_fd, ">%s.%d %s %c [1:%d] ( %d - %d ) ",
+	    cid, (l + r) / 2000, cid, gwrk->Csense? '-': '+', 
+	    Glen, gwrk->Gstart, gwrk->Gend);
+	}
+	if (OutMode == 6) {
+	    fprintf(out_fd, "%s %c 1:%d ( %d - %d ) N %7.2f\n",
+		Rname, gwrk->Csense? '-': '+', gwrk->Rlen,
+		gwrk->Rstart, gwrk->Rend, gwrk->Gscore);
+	    GBcdsForm(exon, &gene);
+	    cds->typeseq(out_fd);
+	} else if (orfs) {		// translated
+	    cds->left = orfs->pos;
+	    cds->right = orfs->pos + orfs->len;
+	    fprintf(out_fd, "%s %c 1:%d ( %d - %d ) N %7.2f\n",
+		Rname, gwrk->Csense? '-': '+', orfs->len,
+		gwrk->Rstart, gwrk->Rend, gwrk->Gscore);
+	    cdsrng(exon, cds);
+	    GBcdsForm(exon, &gene);
+	    if (OutMode == 7)
+		cds->transout(out_fd, STOP, 0);
+	    else {
+		cds->left = orfs->pos;
+		cds->right = orfs->pos + orfs->len;
+		cds->typeseq(out_fd);
+	    }
+	    delete[] orfs;
+	}
+	delete cds;
+}
+
+static int gposition(Seq* gene, RANGE* exon, int cdspos)
+{
+	int	cdslen = 0;
+	while (neorng(++exon)) {
+	    cdslen += exon->right - exon->left;
+	    if (cdslen >= cdspos) break;
+	}
+	cdspos = exon->right - cdslen + cdspos;
+	return gene->SiteNz(cdspos);
+}
+
+void Sortgrcd::print_bed(GeneRecord* gwrk, RANGE* exon, const char* Rname)
+{
+static	const	char*	BedFrom = "%s\t%d\t%d\t%s\t%d\t%c\t%d\t%d\t%-11s\t%d\t";
+
+	Seq	gene(1);
+	char	str[MAXL];
+	int	l = gwrk->Gstart;
+	int	r = gwrk->Gend;
+	int&	n_exon = exon->left;
+
+	sprintf(str, "Dbs%d %d %d", gwrk->Cid, l, r);
+	gene.getdbseq(gdbs, str, gwrk->Cid);
+	if (gwrk->Csense) gene.comrev();
+	for (RANGE* rng = fistrng(exon); neorng(rng); ++rng) {
+	    rng->left = gene.SiteOn(rng->left);
+	    rng->right = gene.SiteOn(rng->right) + 1;
+	}
+	Seq*	cds = gene.splice(0, exon);
+	ORF*	orfs = cds->getorf();
+	const	char*	cid = gdbs->entname(gwrk->Cid);
+	const	char*	rgb = (gwrk->Csense)? RGB_BLUE: RGB_RED;
+	RANGE*	exn = fistrng(exon);
+	RANGE*	txn = exn + n_exon - 1;
+	int	rend = exon[n_exon].right;
+	int	cl = orfs? gposition(&gene, exon, orfs->pos): l;
+	int	cr = orfs? gposition(&gene, exon, orfs->pos + orfs->len): r;
+	if (gwrk->Csense && orfs) gswap(cl, cr);
+	if (gwrk->Csense) vreverse(exon + 1, n_exon);
+	fprintf(out_fd, BedFrom, cid, l - 1, r, Rname,
+	    int(10 * gwrk->Pcover),
+	    gwrk->Csense? '-': '+', cl, cr, rgb, n_exon);
+	for (exn = fistrng(exon); exn <= txn; ++exn)
+	    fprintf(out_fd, "%d,", abs(exn->right - exn->left));
+	putc('\t', out_fd);
+	for (exn = fistrng(exon); exn <= txn; ++exn)
+	    fprintf(out_fd, "%d%c", gwrk->Csense? rend - exn->right: exn->left,
+		(exn < txn)? ',': '\n' );
+	delete[] orfs;
+	delete cds;
+}
+
+void Sortgrcd::Cdsform(ExonRecord* ercd, GRFn* grfn, INT gcn)
+{
+static	int	visit = 0;
+static	const	char*	BedHeader = 
+	"track name=Spaln description=\"%s\" useScore=1\n";
+
+	if (OutMode == 3 && !visit++) // UCSC BED format
+	    fprintf(out_fd, BedHeader, grdname);
+	bool	bundle = !grfn;
+	if (bundle) {
+	    grfn = grcd;
+	    gcn = ngrcd;
+	}
+	INT	niso = 0;
+	GeneRecord* pwrk = &grfn->gr;
+	char*	Rname = 0;
+	int	GeneRB = pwrk->Gend;	// gene right end
+	GRFn*	glst = grfn + gcn;
+	RANGE	cds[max_no_exon] = {{0, 0}, {0, 0}};
+	int&	n_cds = cds->left;
+	int&	cdslen = cds->right;
+
+	for ( ; grfn < glst; ++grfn) {
+	    GeneRecord* gwrk = &grfn->gr;
+	    if (gwrk->ng < 0) gwrk->ng = 0;
+	    if (gwrk->Pmatch < filter.Pmatch || gwrk->Pcover < filter.Pcover || 
+		gwrk->Gscore < filter.Gscore || gwrk->bmmc > filter.Bmmc ||
+		gwrk->bunp > filter.Bunp || gwrk->ng > filter.ng) continue;
+	    GERecN*	nwrk = nrcd + grfn->fn;
+	    char*	rname = (*nwrk->sname)[gwrk->Rid];
+	    ExonRecord* ewrk = ercd + gwrk->Nrecord;
+	    if (bundle) ewrk += nwrk->ecn;
+	    bool chrchange = gwrk->Csense != pwrk->Csense || gwrk->Cid != pwrk->Cid;
+	    if (chrchange || gwrk->Gstart > GeneRB) {
+		if (niso && algmode.mlt != 2) {
+		    if (OutMode == 3) print_bed(pwrk, cds, Rname);
+		    else	print_cds(pwrk, cds, Rname);
+		}
+		niso = n_cds = cdslen = cds[1].left = cds[1].right = 0;
+		Rname = 0; pwrk = gwrk;
+		GeneRB = gwrk->Gend;
+	    } else if (gwrk->Gend > GeneRB) GeneRB = gwrk->Gend;
+	    RANGE	exon[max_no_exon] = {{0, 0}, {0, 0}};
+	    int&	n_exon = exon->left;
+	    int&	exnlen = exon->right;;
+	    INT	m = 0;
+	    for ( ; m < gwrk->nexn; ++m, ++ewrk) {
+		if (m == 0 && gwrk->nexn > 1) {
+		    if (filter.ncan < 3) {
+			int	i = 0;
+			for ( ; i < 3; ++i)
+			    if (!strncmp(ewrk[1].Iends, canonical[i], 2)) break;
+			if (i == 3) continue;
+		    }
+		    if (ewrk->Bmmc > filter.bmmc || ewrk->Bunp > filter.bunp)
+			continue;
+		}
+		if (m > 1 && m == gwrk->nexn - 1) {
+		    if (filter.ncan < 3) {
+			int	i = 0;
+			for ( ; i < 3; ++i)
+			    if (!strncmp(ewrk->Iends + 2, canonical[i] + 2, 2)) break;
+			if (i == 3) continue;
+		    }
+		    if (ewrk->Bmmc > filter.bmmc || ewrk->Bunp > filter.bunp)
+			continue;
+		}
+		if (++n_exon == max_no_exon)
+		    fatal("Too many exons %d !\n", n_exon);
+		exon[n_exon].left = ewrk->Gleft;
+		exon[n_exon].right = ewrk->Gright;
+		exnlen += abs(ewrk->Gright - ewrk->Gleft) + 1;
+	    }
+	    if (n_exon < (int) gwrk->nexn) continue;		// has defects
+	    exon[n_exon + 1] = endrng; 
+	    niso++;
+	    if (algmode.mlt == 2) {
+		if (OutMode == 3) print_bed(gwrk, exon, rname);
+		else print_cds(gwrk, exon, rname);
+	    } else if (exnlen > cdslen) {
+		vcopy(cds, exon, n_exon + 2);
+		Rname = rname;
+		pwrk = gwrk;
+	    }
+	}
+	if (niso && algmode.mlt != 2) {
+	    if (OutMode == 3) print_bed(pwrk, cds, Rname);
+	    else	print_cds(pwrk, cds, Rname);
+	}
 }
 
 Ihash::Ihash(INT n)
@@ -719,55 +790,95 @@ static int compf(GRFn* a, GRFn* b)
 	return (a->gr.nexn - b->gr.nexn);
 }
 
-static char* fname(char* str, const char* head, const char* ext)
+static char* fname(char* str, const char* head, const char* ext, int nth)
 {
 	strcpy(str, head);
-	if (char* pdot = strrchr(str, '.'))
-		strcpy(pdot, ext);
-	else
-		strcat(str, ext);
+	char* pdot = str + strlen(str);
+	while (nth && --pdot >= str)
+	    if (*pdot == '.') --nth;
+	if (nth) strcat(str, ext);
+	else	strcpy(pdot, ext);
 	return (str);
 }
 
 // read all E-records at once
 ExonRecord* Sortgrcd::ReadRcd(int ac, const char** av)
 {
-	ExonRecord*	ercd = new ExonRecord[nercd];
+	ercd = new ExonRecord[nercd];
 	GERecN*	nwrk = nrcd;
 	char	str[MAXL];
 
 	for (ExonRecord* ewrk = ercd; ac--; ++nwrk) {
-	    FILE*	fe = fopen(fname(str, *av++, erext), "r");
-	    if (fread(ewrk, sizeof(ExonRecord), nwrk->ern, fe) != nwrk->ern) 
-		fatal(refmt, str);
+	    int	nth = 1;
+#if USE_ZLIB
+	    if (is_gz(*av)) nth = 2;
+#endif
+	    FILE*	fe = fopen(fname(str, *av++, erext, nth), "r");
+	    if (fe) {
+		if (fread(ewrk, sizeof(ExonRecord), nwrk->ern, fe) != nwrk->ern) 
+		    fatal(refmt, str);
+		fclose(fe);
+	    } else {
+#if USE_ZLIB
+		strcat(str, gz_ext);
+		gzFile	gzfe = gzopen(str, "rb");
+		if (!gzfe) fatal(not_found, str);
+		if (fread(ewrk, sizeof(ExonRecord), nwrk->ern, gzfe) <= 0)
+		    fatal(refmt, str);
+		fclose(gzfe);
+#else
+		fatal(not_found, str);
+#endif
+	    }
 	    ewrk += nwrk->ern;
-	    fclose(fe);
 	}
 	return (ercd);
+}
+
+template <typename file_t>
+int Sortgrcd::read_chr_rec(file_t fe, ExonRecord*& ewrk, GRFn* frcd, INT grn, INT fn)
+{
+	GRFn*	ftrm = frcd + grn;
+	for (GRFn* grfn = frcd; grfn < ftrm; ++grfn) {
+	    if (grfn->fn == fn) {
+		GeneRecord*	gwrk = &grfn->gr;
+		fseek(fe, gwrk->Nrecord * sizeof(ExonRecord), SEEK_SET);
+		gwrk->Nrecord = ewrk - ercd;
+		if (fread(ewrk, sizeof(ExonRecord), gwrk->nexn, fe) <= 0)
+		    return (ERROR);
+		ewrk += gwrk->nexn;
+	    }
+	}
+	return (OK);
 }
 
 // read E-records with a specific Cid
 ExonRecord* Sortgrcd::ReadChrRcd(int ac, const char** av, 
 	INT nercd, GRFn* frcd, INT grn)
 {
-	ExonRecord*	ercd = new ExonRecord[nercd];
-	ExonRecord*	ewrk = ercd;
-	GRFn*	ftrm = frcd + grn;
+	ExonRecord* ewrk = ercd = new ExonRecord[nercd];
 	char	str[MAXL];
 
 	for (INT fn = 0; ac--; ++fn) {
-	    FILE* fe = fopen((const char*) fname(str, *av++, erext), "r");
-	    for (GRFn* grfn = frcd; grfn < ftrm; ++grfn) {
-		if (grfn->fn == fn) {
-		    GeneRecord*	gwrk = &grfn->gr;
-		    fseek(fe, gwrk->Nrecord * sizeof(ExonRecord), SEEK_SET);
-		    gwrk->Nrecord = ewrk - ercd;
-		    if (fread(ewrk, sizeof(ExonRecord), gwrk->nexn, fe) != gwrk->nexn)
-			fatal(refmt, str);
-		    ewrk += gwrk->nexn;
-		}
+	    int	nth = 1;
+#if USE_ZLIB
+	    if (is_gz(av[fn])) nth = 2;
+#endif
+	    FILE* fe = fopen(fname(str, av[fn], erext, nth), "r");
+	    if (fe) {
+		read_chr_rec(fe, ewrk, frcd, grn, fn);
+		fclose(fe);
+	    } else {
+#if USE_ZLIB
+		strcat(str, gz_ext);
+		gzFile	gzfe = gzopen(str, "rb");
+		if (gzfe) read_chr_rec(gzfe, ewrk, frcd, grn, fn);
+		else	fatal(refmt, str);
+		fclose(gzfe);
+#else
+		fatal(refmt, str);
+#endif
 	    }
-	    fclose(fe);
 	}
 	return (ercd);
 }
@@ -859,47 +970,74 @@ void Sortgrcd::assort_by_chr(Chash* hh)
 	delete[] occr;
 }
 
+static int count_record(const char* bdy, const char* ext, size_t rcdsize)
+{
+const	char*	errmsg = "%s may be obolete or corrupted!\n";
+	char	str[MAXL];
+	int	nth = 1;
+#if USE_ZLIB
+	if (is_gz(bdy)) nth = 2;
+#endif	    
+	FILE*	fd = fopen(fname(str, bdy, ext, nth), "r");
+	if (fd) {
+	    fseek(fd, 0L, SEEK_END);
+	    long	fsz = ftell(fd);
+	    if (fsz % rcdsize) fatal(errmsg, str);
+	    fclose(fd);
+	    return (fsz / rcdsize);
+	}
+#if USE_ZLIB
+	strcat(str, gz_ext);
+	gzFile	gzfd = gzopen(str, "rb");
+	if (gzfd) {
+	    INT	nr = 0;
+	    char	buf[rcdsize];
+	    while (fread(buf, rcdsize, 1, gzfd) > 0) ++nr;
+	    fclose(gzfd);
+	    return (nr);
+	}
+#endif
+	fatal(errmsg, str);
+	return (0);
+}
+
 // Count the numbers of records
-Sortgrcd::Sortgrcd(int ac, const char** av) : argc(ac)
+Sortgrcd::Sortgrcd(int ac, const char** av) : argc(ac), grdname(*av)
 {
 	GERecN	gerNo = {0, 0, 0, 0, 0};
-	Mfile*	mfd = new Mfile(sizeof(GERecN));
+	Mfile	mfd(sizeof(GERecN));
 	char	str[MAXL];
-const	char*	errmsg = "%s may be obolete or corrupted!\n";
 
 	for ( ; ac--; ++av) {
-	    FILE*	fd = fopen(fname(str, *av, grext), "r");
-	    if (!fd) fatal(refmt, str);
-	    fseek(fd, 0L, SEEK_END);
-	    gerNo.grn = ftell(fd);
-	    if (gerNo.grn % sizeof(GeneRecord))
-		fatal(errmsg, str);
-	    gerNo.grn /= sizeof(GeneRecord);
-	    fclose(fd);
-
-	    fd = fopen(fname(str, *av, erext), "r");
-	    if (!fd) fatal(refmt, str);
-	    fseek(fd, 0L, SEEK_END);
-	    gerNo.ern = ftell(fd);
-	    if (gerNo.ern % sizeof(ExonRecord))
-		fatal(errmsg, str);
-	    gerNo.ern /= sizeof(ExonRecord);
-	    fclose(fd);
-
-	    fd = fopen(fname(str, *av, qrext), "r");
-	    if (!fd) fatal(refmt, str);
-	    gerNo.sname = new Strlist(fd, gerNo.ern);
-	    fclose(fd);
-
-	    mfd->write(&gerNo);
+	    gerNo.grn = count_record(*av, grext, sizeof(GeneRecord));
+	    gerNo.ern = count_record(*av, erext, sizeof(ExonRecord));
+	    int	nth = 1;
+#if USE_ZLIB
+	    if (is_gz(*av)) nth = 2;
+#endif
+	    FILE*	fd = fopen(fname(str, *av, qrext, nth), "r");
+	    if (fd) {
+		gerNo.sname = new Strlist(fd, gerNo.ern);
+		fclose(fd);
+	    } else {
+#if USE_ZLIB
+		strcat(str, gz_ext);
+		gzFile	gzfd = gzopen(str, "rb");
+		if (!gzfd) fatal(refmt, str);
+		gerNo.sname = new Strlist(gzfd, gerNo.ern);
+		fclose(gzfd);
+#else
+		fatal(refmt, str);
+#endif
+	    }
+	    mfd.write(&gerNo);
 	    gerNo.gcn += gerNo.grn;
 	    gerNo.ecn += gerNo.ern;
 	}
-	nrcd = (GERecN*) mfd->flush();
+	nrcd = (GERecN*) mfd.flush();
 	ngrcd = gerNo.gcn;
 	nercd = gerNo.ecn;
 	gdbs = new DbsDt((*gerNo.sname)[0]);
-	delete mfd;
 }
 
 Sortgrcd::~Sortgrcd()
@@ -917,15 +1055,36 @@ void Sortgrcd::readGrcd(int ac, const char** av, INT hashsize)
 	char	str[MAXL];
 
 	for (INT fn = 0; ac--; ++fn, ++av) {
-	    FILE* fd = fopen(fname(str, *av, grext), "r");
-	    while (fread(&grfn->gr, sizeof(GeneRecord), 1, fd) == 1) {
-		GeneRecord* gwrk = &grfn->gr;
-		if (gwrk->Csense) gswap(gwrk->Gstart, gwrk->Gend);
-		ChrInf*	hv = hh->chashv(gwrk->Cid, true);
-		hv->ecount += gwrk->nexn;
-		(grfn++)->fn = fn;
+	    int	nth = 1;
+#if USE_ZLIB
+	    if (is_gz(*av)) nth = 2;
+#endif
+	    FILE* fd = fopen(fname(str, *av, grext, nth), "r");
+	    if (fd) {
+		while (fread(&grfn->gr, sizeof(GeneRecord), 1, fd) == 1) {
+		    GeneRecord* gwrk = &grfn->gr;
+		    if (gwrk->Csense) gswap(gwrk->Gstart, gwrk->Gend);
+		    ChrInf*	hv = hh->chashv(gwrk->Cid, true);
+		    hv->ecount += gwrk->nexn;
+		    (grfn++)->fn = fn;
+		}
+		fclose(fd);
+	    } else {
+#if USE_ZLIB
+		strcat(str, gz_ext);
+		gzFile	gzfd = gzopen(str, "rb");
+		while (fread(&grfn->gr, sizeof(GeneRecord), 1, gzfd) > 0) {
+		    GeneRecord* gwrk = &grfn->gr;
+		    if (gwrk->Csense) gswap(gwrk->Gstart, gwrk->Gend);
+		    ChrInf*	hv = hh->chashv(gwrk->Cid, true);
+		    hv->ecount += gwrk->nexn;
+		    (grfn++)->fn = fn;
+		}
+		fclose(gzfd);
+#else
+		fatal(not_found, str);
+#endif
 	    }
-	    fclose(fd);
 	}
 
 // sort G-records by chromosomal position
@@ -975,51 +1134,36 @@ const	char*	grpfn = 0;
 // Get options
 	while (--argc && (++argv)[0][0] == OPTCHAR) {
 	    const char*	val = argv[0] + 2;
-	    int	nxt = argc > 1? argv[1][0]: 0;
 	    int	flevel = 0;
 	    switch (argv[0][1]) {
-		case 'F':	// filter level
-		    if (*val) flevel = atoi(val); else
-		    if (isdigit(nxt))
-			{flevel = atoi(*++argv); --argc;}
+		case 'F': if ((val = getarg(argc, argv, true)))	// filter level
+		    flevel = atoi(val);
 		    if (0 > flevel || flevel > 3) flevel = 3;
 		    filter = Filters[flevel];
 		    break;
-		case 'C':	// minimum coverage
-		    if (*val) filter.Pcover = atof(val); else
-		    if (nxt == '.' || isdigit(nxt))
-			{filter.Pcover = atof(*++argv); --argc;}
+		case 'C': if ((val = getarg(argc, argv, true)))	// minimum coverage
+		    filter.Pcover = atof(val);
 		    if (filter.Pcover < 1.) filter.Pcover *= 100.;
 		    break;
+		case 'E': if ((val = getarg(argc, argv, true)))	// isoforms
+		    algmode.mlt = atoi(val); break;
 		case 'G':	// print grcd records only
 		    printgrcd = 1; break;
-		case 'H':	// minimum spaln score
-		    if (*val) filter.Gscore = atof(val); else
-		    if (nxt == '.' || isdigit(nxt))
-			{filter.Gscore = atof(*++argv); --argc;}
-		    break;
-		case 'M':	// max total number of mismatches near junction
-		    if (*val) filter.Bmmc = atoi(val); else
-		    if (isdigit(nxt))
-			{filter.Bmmc = atoi(*++argv); --argc;}
-		    break;
-		case 'N':	// max number of non-canonical ends
-		    if (*val) filter.ng = atoi(val); else
-		    if (isdigit(nxt))
-			{filter.ng = atoi(*++argv); --argc;}
-		    break;
-		case 'O':	// output format
-		    if (*val) OutMode = atoi(val); else
-		    if (isdigit(nxt))
-			{OutMode = atoi(*++argv); --argc;}
-		    break;
-		case 'P':	// Minimum total % sequnce identity
-		    if (*val) filter.Pmatch = atof(val); else
-		    if (nxt == '.' || isdigit(nxt))
-			{filter.Pmatch = atof(*++argv); --argc;}
+		case 'H': if ((val = getarg(argc, argv, true)))	// minimum spaln score
+		    filter.Gscore = atof(val); break;
+		case 'J': if ((val = getarg(argc, argv, true)))	// minimum ORF length
+		    setorf(atoi(val)); break;
+		case 'M': if ((val = getarg(argc, argv, true)))	// max total number of
+		    filter.Bmmc = atoi(val); break;		// mismatches near junction
+		case 'N': if ((val = getarg(argc, argv, true)))	// max number of non-canonical ends
+		    filter.ng = atoi(val); break;
+		case 'O': if ((val = getarg(argc, argv, true)))	// output format
+		    OutMode = atoi(val); break;
+		case 'P': if ((val = getarg(argc, argv, true)))	// Minimum total % sequnce identity
+		    filter.Pmatch = atof(val);
 		    if (filter.Pmatch < 1.) filter.Pmatch *= 100.;
 		    break;
-		case 'S':
+		case 'S': if ((val = getarg(argc, argv)))
 		  switch (*val) {
 		    case 'a': sort_by = ALPHABETIC; break;
 		    case 'b': sort_by = ABUNDANCE; break;
@@ -1027,59 +1171,42 @@ const	char*	grpfn = 0;
 		    case 'r': reverse = true; break;
 		    default: break;	// no action
 		  }
-		case 'U':	// max total number of gaps near junction
-		    if (*val) filter.Bunp = atoi(val); else
-		    if (isdigit(nxt))
-			{filter.Bunp = atoi(*++argv); --argc;}
-		    break;
-		case 'V':	// Maximum internal memory size used for core sort
-		    if (*val) MaxeRcd = atoi(val); else
-		    if (isdigit(nxt))
-			{MaxeRcd = atoi(*++argv); --argc;}
-		    switch (argv[0][strlen(*argv) - 1]) {
+		case 'U': if ((val = getarg(argc, argv, true)))	// max total number of gaps
+		    filter.Bunp = atoi(val);			// near junction break;
+		case 'V': if ((val = getarg(argc, argv))) {	// Maximum internal memory
+		    MaxeRcd = atoi(val);			// size used for core sort
+		    switch (val[strlen(val) - 1]) {
 			case 'k': case 'K': MaxeRcd *= KILO; break;
 			case 'm': case 'M': MaxeRcd *= MEGA; break;
 			default: break;
 		    }
 		    break;
-		case 'g':	// .grp file name
-		    if (*val)	grpfn = val;
-		    else	{grpfn = *++argv; --argc;}
-		    break;
-		case 'h':	// hash size
-		    if (*val) HashSize = atoi(val); else
-		    if (isdigit(nxt))
-			{HashSize = atoi(*++argv); --argc;}
-		    break;
-		case 'm':	// max number of mismatches near each junction
-		    if (*val) filter.bmmc = atoi(val); else
-		    if (isdigit(nxt))
-			{filter.bmmc = atoi(*++argv); --argc;}
-		    break;
-		case 'n':	// 0: disallow; 1: allow non-canonical ends
-		    if (*val) filter.ncan = atoi(val); else
-		    if (isdigit(nxt))
-			{filter.ncan = atoi(*++argv); --argc;}
+		  }
+		case 'g': if ((val = getarg(argc, argv)))	// .grp file name
+		    grpfn = val; break;
+		case 'h': if ((val = getarg(argc, argv, true)))	// hash size
+		    HashSize = atoi(val); break;
+		case 'l': if ((val = getarg(argc, argv)))	// max number of mismatches
+		    setlpw(atoi(val)); break;			// near each junction
+		case 'm': if ((val = getarg(argc, argv)))	// max number of mismatches
+		    filter.bmmc = atoi(val); break;		// near each junction
+		case 'n': if ((val = getarg(argc, argv)))	// 0: disallow; 1: allow
+		    filter.ncan = atoi(val);			// non-canonical ends
 		    else	filter.ncan = 0;
 		    break;
 #if M_THREAD
-		case 't':
-		    if (*val) thread_num = atoi(val);
-		    else if (argc > 1 && isdigit(argv[1][0]))
-			{thread_num = atoi(*++argv); --argc;}
-		    else thread_num = -1;
-		    break;
+		case 't': if ((val = getarg(argc, argv)))	// number of thread
+		        thread_num = atoi(val);
+		    else thread_num = -1; break;
 #endif
-		case 'u':	// max total number of gaps near each junction
-		    if (*val) filter.bunp = atoi(val); else
-		    if (isdigit(nxt))
-			{filter.bunp = atoi(*++argv); --argc;}
-		    break;
+		case 'u': if ((val = getarg(argc, argv)))	// max total number of gaps
+		    filter.bunp = atoi(val); break;		// near each junction
 		default:
 		    break;
 	    }
 	}
 	if (!argc) usage();
+	setup_output(OutMode);
 	if (grpfn) {	// get seq size from *.grp 
 	    FILE*	fd = fopen(grpfn, "r");
 	    if (!fd) fatal("%s not found !\n", grpfn);
@@ -1131,6 +1258,8 @@ const	char*	grpfn = 0;
 	    	case 0: srtgrcd.Gff3form(ercd); break;
 	    	case 5: case 13: case 15:
 			srtgrcd.Intronform(ercd); break;
+		case 3: case 6:	case 7: case 8:
+			srtgrcd.Cdsform(ercd); break;
 		case 4:	default:
 			srtgrcd.Exonform(ercd); break;
 	    }
@@ -1160,6 +1289,8 @@ const	char*	grpfn = 0;
 			    srtgrcd.Gff3form(ercd, grfn, ng); break;
 			case 5: case 13: case 15:
 			    srtgrcd.Intronform(ercd, grfn, ng); break;
+			case 3: case 6: case 7: case 8:
+			    srtgrcd.Cdsform(ercd, grfn, ng); break;
 			case 4:	default:
 			   srtgrcd. Exonform(ercd, grfn, ng); break;
 		    }
@@ -1178,6 +1309,8 @@ const	char*	grpfn = 0;
 			srtgrcd.Gff3form(ercd, grfn, ng); break;
 		    case 5: case 13: case 15:
 			srtgrcd.Intronform(ercd, grfn, ng); break;
+		    case 3: case 6: case 7: case 8:
+			srtgrcd.Cdsform(ercd, grfn, ng); break;
 		    case 4:	default:
 			srtgrcd.Exonform(ercd, grfn, ng); break;
 		}

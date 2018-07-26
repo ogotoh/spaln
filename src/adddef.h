@@ -17,7 +17,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #ifndef  _ADDDEF_
@@ -81,6 +81,54 @@ static	const	char	OPTCHAR = '-';
 #define strrchr(s, c)	rindex(s, c)
 #endif
 
+//	if no zlib.h #define USE_ZLIB 0
+
+#ifndef USE_ZLIB
+#define USE_ZLIB 0
+#endif
+#if USE_ZLIB
+#include <zlib.h>
+#if ZLIB_VERNUM < 0x1240
+inline	size_t  fread(void* buf, size_t s, size_t c, gzFile gzfd) {
+	int	rv = gzread(gzfd, buf, s * c);
+	return (rv < 0? 0: rv / s);
+}
+inline	size_t fwrite(const void* buf, size_t s, size_t c, gzFile gzfd) {
+	return (gzwrite(gzfd, buf, s * c) / s);
+}
+inline	int fputs(const char* buf, gzFile gzfd) {
+	return (gzputs(gzfd, buf));
+}
+inline	char* fgets(char* buf, int len, gzFile gzfd) {
+	return (gzgets(gzfd, buf, len));
+}
+inline	int fputc(int c, gzFile gzfd) {
+	return (gzputc(gzfd, c));
+}
+inline	int fgetc(gzFile gzfd) {
+	return (gzgetc(gzfd));
+}
+inline	int ungetc(int c, gzFile gzfd) {
+	return (gzungetc(c, gzfd));
+}
+inline	int rewind(gzFile gzfd) {
+	return (gzrewind(gzfd));
+}
+inline	int fseek(gzFile gzfd, long offset, int whence) {
+	return (gzseek(gzfd, offset, whence));
+}
+inline	long ftell(gzFile gzfd) {
+	return (gztell(gzfd));
+}
+/*inline	int feof(gzFile gzfd) {
+	return (gzeof(gzfd));
+}*/
+inline	int fclose(gzFile gzfd) {
+	return (gzclose(gzfd));
+}
+#endif	// ZLIB_VERNUM
+#endif	// USE_ZLIB
+
 /*	Others	*/
 
 #ifdef VMS
@@ -99,13 +147,13 @@ static	const	char	OPTCHAR = '-';
 
 /*	Error messages  */
 
-extern const	char*	no_space;
-extern const	char*	no_file;
-extern const	char*	not_found;
+extern	const	char*	no_space;
+extern	const	char*	no_file;
+extern	const	char*	not_found;
 
 /*	etc.	*/
 
-extern const	char*	stddelim;   /* = " \t\n\r\f"    */
+extern	const	char*	stddelim;
 
 /*  End of adddef.h  */
 

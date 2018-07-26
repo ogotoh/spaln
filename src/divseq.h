@@ -16,7 +16,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #ifndef  _DIVSEQ_H_
@@ -47,6 +47,8 @@ extern	DISTPRM	distPrm;
 extern	void	setdivseq(int realn, int geval, int pick);
 extern	void	setexprm_z(const char* s);
 extern	double	degdiv(FSTAT* stt);
+extern	FTYPE	pairdvn(Seq* sd, int i, int j);
+extern	FTYPE	pairdvn(Seq* sd, int* g1, int* g2);
 extern	void	put_stat(FILE* fd, FSTAT* fstt, double* ppc = 0);
 extern	double	degdiv(Gsinfo* gsi);
 extern	void	put_stat(FILE* fd, Gsinfo* gsi);

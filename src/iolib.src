@@ -22,7 +22,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #ifndef  _IOLIB_
@@ -66,6 +66,7 @@ static	const	int	QUERY = INT_MIN;
 static	const	int	SILENT = QUERY + 1;
 static	const	int	POPUP = QUERY + 2;
 static	const	double	DQUERY = QUERY + 0.L;
+static	const	int	n_tabpath = 3;
 static	const	double	DSILENT = DQUERY + 1.L;
 static	const	double	DPOPUP = DQUERY + 2.L;
 static	const	char*	esc_code = "\x1b[";
@@ -146,6 +147,7 @@ public:
 		subdir = strrealloc(subdir, dir);
 	}
 	void	setpath(const char* ps, const char* convtab = 0);
+	char*	getpath(char* fullpath, const char* fname);
 	DIR*	dopen(const char* dname, bool test);
 	FILE*	fopen(const char* fname, const char* mode);
 	FILE*	fopen(const char* fname, const char* envpath, const char* defpath);
@@ -188,11 +190,25 @@ extern	int	getiarray(int* array, int size, const char* ps);
 extern	size_t	file_size(FILE* fd);
 extern	size_t	file_size(const char* fn);
 extern	FILE*	out_fd;
+extern	const	char*	gz_unsupport;
+
+#if USE_ZLIB
+extern	gzFile	gzopenpbe(const char* path, const char* name, const char* extent, 
+			const char* opt, int lvl = 0, char* buf = 0);
+#endif
 
 inline	FILE* outfd(const char* fn)
 {
 	if (!fn || !(out_fd = fopen(fn, "w"))) out_fd = stdout;
 	return (out_fd);
+}
+
+// Is xxx.gz file?
+
+inline bool is_gz(const char* fn)
+{
+	const	char*	dot = strrchr(fn, '.');
+	return (dot && !strcmp(dot + 1, "gz"));
 }
 
 /*  End of iolib.h  */

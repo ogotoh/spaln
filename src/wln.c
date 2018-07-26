@@ -16,7 +16,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #include "aln.h"
@@ -37,6 +37,10 @@ static	HSPPRM	hspprm = {20, 10};
 static	Wlprms*	wlparams = 0;
 static  int     max_no_jxts = 128;
 static  int     max_stuck = 2;
+static	int	play = 10;
+static	const	char*	WlnDefBitPat[MaxBitPat] = {"", "1", "101", "1101",
+	"11011","1101011", "110011011", "1101101011", "110010110111",
+	"11101100101011", "110110010110111", "1111011001011011"};
 
 void	makeWlprms(int dvsp)
 	{if (!wlparams) wlparams = new Wlprms(dvsp);}
@@ -88,7 +92,7 @@ static	WLPRM	trprm[] =
 	if (wlprm->bitpat) {
 	    if (!*wlprm->bitpat) {	/* default bit pattern */
 		if (wlprm->tpl < MaxBitPat)
-		    wlprm->bitpat = DefBitPat[wlprm->tpl];
+		    wlprm->bitpat = WlnDefBitPat[wlprm->tpl];
 		else
                     fatal("Ktuple must be < %d\n", MaxBitPat);
             } else if (*wlprm->bitpat != '1')  /* continuous pattern */
@@ -614,22 +618,20 @@ WLUNIT* Wlp::jxtcore(int* num, JUXT** jxt)
 	HSP*	ccl = mkhsps(*jxt, *num);
 	HSP*	lcl = ccl + *num;
 	HSP*	ncl = ccl;
-	VTYPE	maxh = 0;
 	VTYPE	sumh = 0;
 	int	maxclny = *num + *num;
-	VTYPE*	clny = new VTYPE[maxclny];
-	vclear(clny, maxclny);
+	int*	maxx = new int[maxclny];
+	vclear(maxx, maxclny);
 	for ( ; ncl < lcl; ++ncl) {
 	    ncl->ulnk = 0;
 	    VTYPE	sscr = 0;
-	    VTYPE	iscr = 0;
 	    HSP*	qcl = ncl;
 	    for (HSP* mcl = ncl; --mcl >= ccl; ) {
 		if (ncl->rx <= mcl->rx || ncl->ry <= mcl->ry ||
 		    ncl->lx <= mcl->lx || mcl->ux <= ncl->lx ||
-		    (mcl->rx - ncl->lx) * 2 > ncl->rx - mcl->lx)
+		    (mcl->rx - ncl->lx) * 2 > ncl->rx - mcl->lx ||
+		    maxx[mcl->irno] > ncl->lx + play)
 		    continue;
-		if (iscr <  clny[mcl->irno]) iscr =  clny[mcl->irno];
 		VTYPE	h = mcl->sscr + LinkHspScr(mcl, ncl);
 		if (h > sscr) {
 		    sscr = h;
@@ -637,7 +639,6 @@ WLUNIT* Wlp::jxtcore(int* num, JUXT** jxt)
 		}
 	    }
 	    ncl->sscr = sscr += ncl->jscr;
-	    if (sscr > maxh) maxh = sscr;
 	    if (qcl != ncl) {		// link to
 		ncl->ulnk = qcl;
 		ncl->irno = qcl->irno;
@@ -651,17 +652,18 @@ WLUNIT* Wlp::jxtcore(int* num, JUXT** jxt)
 	    if (ncl->irno >= maxclny) {
 		int	n = maxclny;
 		maxclny += maxclny;
-		VTYPE*	t = new VTYPE[maxclny];
-		vcopy(t, clny, n);
-		delete[] clny;
-		clny = t;
+		int*	t = new int[maxclny];
+		vclear(t + n, n);
+		vcopy(t, maxx, n);
+		delete[] maxx;
+		maxx = t;
 	    }
-	    clny[ncl->irno] = sscr;
+	    if (ncl->rx > maxx[ncl->irno]) maxx[ncl->irno] = ncl->rx;
 	}
 	HSP*	qcl = ccl;
 	for (ncl = ccl; ncl < lcl; ++ncl)
 	    if (ncl->sscr > qcl->sscr) qcl = ncl;
-	maxh = (!algmode.lsg && algmode.mlt < 2)?
+	VTYPE	maxh = (!algmode.lsg && algmode.mlt < 2)?
 		qcl->sscr - wlprm->vthr: wlprm->vthr;
 	WLUNIT	wbf;
 	wbf.num = 0;
@@ -704,7 +706,7 @@ nextchain:
 	wmfd.write(&wbf);
 	*num = wmfd.size() - 1;
 	delete[] ccl;
-	delete[] clny;
+	delete[] maxx;
 // set lower and upper bounds
 	WLUNIT*	wlu = (WLUNIT*) wmfd.flush();
 	WLUNIT*	wlul = wlu;

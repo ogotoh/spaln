@@ -9,7 +9,7 @@
 *	isBlankLine   car	cdr
 *	chop	replace
 *	fbisrch
-*	comp2	comp3	decomp
+*	comb2	comb3	decomb
 *
 *	Osamu Gotoh, ph.D.	(-2001)
 *	Saitama Cancer Center Research Institute
@@ -25,18 +25,18 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #include <stdio.h>
 #include <ctype.h>
 #include <limits.h>
-#include "adddef.h"
 #include "clib.h"
 #include "iolib.h"
 #include "cmn.h"
 
-const	char* no_space = "No more memory!";
+const	char*	no_space = "No more memory !\n";
+const	char*	stddelim = " \t\n\r";
 
 int ipower(int x, int n)
 {
@@ -229,14 +229,14 @@ UPTR fbisrch( UPTR found, const UPTR key, FILE* fd, long left, long right, int w
 	return (0);
 }
 
-int comp2(int i, int j)
+int comb2(int i, int j)
 {
 	if (i == j) return(-1);
 	if (i > j) gswap(i, j);
 	return (j*(j-1)/2 + i);
 }
 
-int comp3(int i, int j, int k)
+int comb3(int i, int j, int k)
 {
 	if (i == j || j == k || k == i) return(-1);
 	if (i > j) gswap(i, j);
@@ -257,12 +257,12 @@ INT mCn(INT m, INT n)
 	return (c);
 }
 
-void decomp(int i, int* t, int n)
+void decomb(int* t, int n, int i)
 {
 	while (i-- > 0) {
 	    int	r = 0;
 	    int k = i;
-	    for (int s = 0; (s = mCn(k + 1, i + 1)) <= n; k++)
+	    for (int s = 0; (s = mCn(k + 1, i + 1)) <= n; ++k)
 		r = s;
 	    t[i] = k;
 	    n -= r;
@@ -326,7 +326,7 @@ Strlist::Strlist(int m, int len)
 	}
 	if (m > 1) {
 	    punitsize = (m + defpunit - 1) / defpunit * defpunit;
-	    idxlst = new int[punitsize];
+	    idxlst = new INT[punitsize];
 	    *idxlst = 0;
 	} else {
 	    punitsize = 0; idxlst = 0;
@@ -335,10 +335,10 @@ Strlist::Strlist(int m, int len)
 
 void Strlist::reset(int m)
 {
-	if (m > 1 && m > punitsize) {
+	if (m > 1 && (INT) m > punitsize) {
 	    punitsize = (m + defpunit - 1) / defpunit * defpunit;
 	    delete[] idxlst;
-	    idxlst = new int[punitsize];
+	    idxlst = new INT[punitsize];
 	    *idxlst = 0;
 	}
 	*strbuf = '\0';
@@ -366,12 +366,12 @@ Strlist::Strlist(char* str, const char* delim)
 	totallen = sunitsize = strlen(str) + 1;
 	strbuf = new char[totallen];
 	punitsize = (many + defpunit - 1) / defpunit * defpunit;
-	idxlst = new int[punitsize + 1];
+	idxlst = new INT[punitsize + 1];
 
 	char*	ps = str;
 	char*	pb = strbuf;
-	for (int ttl = many = 0; *ps; ) {
-	    idxlst[many] = ttl;
+	for (INT ttl = 0, m = 0; *ps; ) {
+	    idxlst[m] = ttl;
 	    if (spc)
 		while (*ps && isspace(*ps)) ++ps;
 	    else
@@ -383,10 +383,33 @@ Strlist::Strlist(char* str, const char* delim)
 		while (*ps && !strchr(delim, *ps)) *pb++ = *ps++;
 	    *pb++ = '\0';
 	    if ((lastlen = pb - qb)) {
-		++many;
+		++m;
 		ttl += lastlen;
 		if (lastlen > maxlen) maxlen = lastlen;
 	    }
+	}
+	filled = true;
+}
+
+void Strlist::format()
+{
+	char*	ps = strbuf;
+	if (!many) {
+	    for (INT ttl = 0; ttl < totallen; ++many) {
+		lastlen = strlen(ps) + 1;
+		ttl += lastlen;
+		ps += lastlen;
+	    }
+	    ps = strbuf;
+	}
+	punitsize = (many + defpunit - 1) / defpunit * defpunit;
+	idxlst = new INT[punitsize];
+	for (INT ttl = many = 0; ttl < totallen; ++many) {
+	    idxlst[many] = ttl;
+	    lastlen = strlen(ps) + 1;
+	    if (lastlen > maxlen) maxlen = lastlen;
+	    ttl += lastlen;
+	    ps += lastlen;
 	}
 	filled = true;
 }
@@ -401,26 +424,23 @@ Strlist::Strlist(FILE* fd, int m)
 	fseek(fd, 0L, SEEK_SET);
 	if (fread(strbuf, sizeof(char), totallen, fd) != (INT) totallen)
 	    fatal("Strlist file may be corupped !\n");
-	char*	ps = strbuf;
-	if (!many) {
-	    for (int ttl = 0; ttl < totallen; ++many) {
-		lastlen = strlen(ps) + 1;
-		ttl += lastlen;
-		ps += lastlen;
-	    }
-	    ps = strbuf;
-	}
-	punitsize = (many + defpunit - 1) / defpunit * defpunit;
-	idxlst = new int[punitsize];
-	for (int ttl = many = 0; ttl < totallen; ++many) {
-	    idxlst[many] = ttl;
-	    lastlen = strlen(ps) + 1;
-	    if (lastlen > maxlen) maxlen = lastlen;
-	    ttl += lastlen;
-	    ps += lastlen;
-	}
-	filled = true;
+	format();
 }
+
+#if USE_ZLIB
+Strlist::Strlist(gzFile gzfd, int m) 
+	: totallen(0), lastlen(0), maxlen(0), many(m)
+{
+	int	c;
+	while ((c = gzgetc(gzfd)) != EOF) ++totallen;
+	sunitsize = (totallen + defsunit - 1) / defsunit * defsunit;
+	strbuf = new char[sunitsize];
+	fseek(gzfd, 0L, SEEK_SET);
+	if (fread(strbuf, sizeof(char), totallen, gzfd) <= 0)
+	    fatal("Strlist file may be corupped !\n");
+	format();
+}
+#endif
 
 char* Strlist::assign(const Strlist& src)
 {
@@ -436,7 +456,7 @@ char* Strlist::assign(const Strlist& src)
 	if (punitsize < src.punitsize) {
 	    punitsize = src.punitsize;
 	    delete[] idxlst;
-	    idxlst = new int[punitsize];
+	    idxlst = new INT[punitsize];
 	    *idxlst = 0;
 	}
 	many = src.many;
@@ -449,7 +469,7 @@ Strlist::Strlist(Strlist& src)
 	*this = src;
 	strbuf = new char[sunitsize];
 	memcpy(strbuf, src.strbuf, totallen);
-	idxlst = punitsize? new int[punitsize]: 0;
+	idxlst = punitsize? new INT[punitsize]: 0;
 	if (src.idxlst) vcopy(idxlst, src.idxlst, many);
 }
 
@@ -470,7 +490,7 @@ char* Strlist::push(const char* str)
 	if (!str) str = "";
 	if (many >= punitsize) {
 	    punitsize = (many + defpunit) / defpunit * defpunit;
-	    int*	tmp = new int[punitsize];
+	    INT*	tmp = new INT[punitsize];
 	    if (idxlst) {
 		vcopy(tmp, idxlst, many);
 		delete[] idxlst;
@@ -480,7 +500,7 @@ char* Strlist::push(const char* str)
 	idxlst[many++] = totallen;
 	lastlen = strlen(str) + 1;
 	if (lastlen > maxlen) maxlen = lastlen;
-	int	sumlen = totallen + lastlen;
+	INT	sumlen = totallen + lastlen;
 	char*	word = 0;
 	if (sumlen >= sunitsize) {
 	    if (lastlen > totallen)
@@ -543,61 +563,53 @@ AddExt::AddExt(int argc, const char** argv, const char* ext)
 }
 
 //      distribute into bins
+//      Input must be sorted on x
 
 PutIntoBins::PutIntoBins(int n, double l, double u, double (*t)(double x), 
-	double (*it)(double x), int m)
-	: ndiv(n), llmt(l), ulmt(u), width(0), transform(t), invtransform(it), 
-	  data(0), vrtl(false) {
+	double (*it)(double x), bool savedata)
+	: ndiv(n), llmt(l), ulmt(u), width(0), nlitransform(t), invtransform(it), 
+	  n_data(0), idx(0), sample_size(0), 
+	  vrtl(false), xval(0), freq(0) {
 	if (ndiv <= 0) fatal("number of bins <= 0 !\n");
 	if (ulmt < llmt) gswap(llmt, ulmt);
 	width = (ulmt - llmt) / ndiv;
-	data = new double[(ndiv + 2)];
-	vclear(data++, (ndiv + 2));
+	xval = new int[ndiv + 2] + 1;
+	size();
+	if (savedata) {
+	    freq = new double[(ndiv + 2)];
+	    vclear(freq++, (ndiv + 2));
+	}
 }
 
-void PutIntoBins::accumulate(int x, double y, int m)
+int PutIntoBins::size()
 {
-	double*	dt = data;
-	double	nx = x;
-	int	n = x2n(nx);
-	if (n < 0) n = -1;
-	if (n >= ndiv) dt[ndiv] = y;
-	else {
-	    double	xm = x - 1;
-	    double	xp = x + 1;
-	    int	nm = x2n(xm);
-	    int	np = x2n(xp);
-	    if (nm == np) dt[n] += y;
-	    else if (nm == n) {
-		y /= (xp - nx);
-		dt[n] += (np - nx) * y;
-		dt[np] += (xp - np) * y;
-	    } else if (n == np) {
-		y /= (nx - xm);
-		dt[n] += (nx - n) * y;
-		dt[nm] += (n - xm) * y;
-	    } else {
-		y /= (xp - xm);
-		dt[np] += (xp - np) * y;
-		dt[nm] += (n - xm) * y;
-		dt[n] += y;
-	    }
+	if (n_data) return (n_data);
+	double	dx = llmt;
+	int	px = int(invtransform? invtransform(dx + epsilon): dx) - 1;
+	xval[-1] = px;
+	for (int i = n_data = 0; i < ndiv; ++i, dx += width) {
+	    int	x = int(invtransform? invtransform(dx + epsilon): dx);
+	    if (x == px) continue;
+	    xval[n_data++] = px = x;
 	}
+	return (n_data);
+}
+
+void PutIntoBins::accumulate(int x, double y)
+{
+	double	dx = x;
+	if (nlitransform) dx = nlitransform(dx);
+	while (idx < n_data && xval[idx] < x) ++idx;
+	freq[idx] += y;
+	sample_size += int(y);
 }
 
 void PutIntoBins::normalize(double to, double psc)
 {
-	double*	dt = data;
-	double	sum = 0;
-	for (int n = -1; n <= ndiv; ++n) {
-	    if (invtransform) dt[n] *= normcoef(n);
-	    sum += dt[n];
-	}
-	sample_size = int(sum);
-	if (sum <= 0) return;
-	to /= (1. + psc * (ndiv + 2));
-	for (int n = -1; n <= ndiv; ++n)
-	    dt[n] = to * (dt[n] / sum + psc);
+	if (sample_size == 0) return;
+	to /= (1. + psc * (n_data + 2));
+	for (int n = 0; n < n_data; ++n)
+	    freq[n] = to * (freq[n] / sample_size + psc);
 }
 
 static float CriticalValues[98][7] = {

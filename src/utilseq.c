@@ -16,7 +16,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #include "aln.h"
@@ -115,7 +115,7 @@ static	int	minorf = 300;
 static	CHAR*	de_codon(CHAR* ncs, int n);
 static	int	lcomp(ORF* a, ORF* b);
 static	int	evenusage();
-static	int	kmer(CHAR* s, int m, CHAR* elements, int k);
+static	int	kmer(CHAR* s, int m, CHAR* elements, int k, int* x = 0);
 
 static	int	curcode = 0;
 static	int	ChangeCodon = 1;
@@ -482,7 +482,7 @@ static	const	int	tm[14][4] = {
 
 void Seq::passcom(FILE* fo)
 {
-	FILE*	fi = fopen((*spath)[0], "r");
+	FILE*	fi = fopen(spath, "r");
 	char	str[MAXL];
 
 	if (!fi) return;
@@ -530,7 +530,7 @@ void Seq::ftranslate(FILE* fd, int at_term, SeqDb* form, int orfn)
 	switch (form->FormID) {
 	  case	GenBank: form = &TransGB; break;
 	  case	EMBL:	form = &TransEB; break;
-	  case Bare:	break;
+	  case	Bare:	break;
 	  default:
 	    if (form->DbName)
 		fprintf(fd, "%-9s %s", form->EntLabel, sqname());
@@ -729,7 +729,7 @@ void PatMat::readPatMat(FILE* fd)
 	int	t = 0;
 	int	skip = 0;
 	char	str[MAXL];
-	double	maxval = FLT_MIN;
+	double	maxval = -FLT_MAX;
 	double	minval = FLT_MAX;
 
 	mtx = 0; tonic = 0;
@@ -737,13 +737,12 @@ void PatMat::readPatMat(FILE* fd)
 	do {
 	    if (!fgets(str, MAXL, fd)) return;
 	} while (isBlankLine(str));
-	if (sscanf(str, "%d %d %d %d %d %f %f %f",
+	if (sscanf(str, "%d %d %d %d %d %f %f %f %d",
 	    &rows, &cols, &offset, &t, &skip, 
-	    &mmm.min, &mmm.mean, &mmm.max) < 3 ||
+	    &mmm.min, &mmm.mean, &mmm.max, &nsupport) < 3 ||
 	    rows <= 0 || cols <= 0) return;
 	tonic = mmm.min;
-	if (tonic < 0) tonic = -tonic;
-	if (tonic > maxtonic) tonic = maxtonic; 
+	if (-tonic > maxtonic) tonic = -maxtonic; 
 	mtx = new double[rows * cols];
 	while (skip-- > 0) {
 	    int rc;
@@ -760,16 +759,45 @@ void PatMat::readPatMat(FILE* fd)
 	    if (*wk < minval) {minval = *wk; minidx = rc;}
 	}
 	if (t) gswap(rows, cols);
+	if (rows % 23 == 0) {redctab = tnredctab; nalpha = 23;}
+	else if (rows % 4 == 0) {redctab = ncredctab; nalpha = 4;}
+	else {redctab = 0; nalpha = rows;}
 	while ((skip = getc(fd)) != EOF && skip != '\n');
 }
 
+PatMat& PatMat::operator=(const PatMat& src)
+{
+	rows = src.rows; cols = src.cols; 
+	offset = src.offset; nalpha = src.nalpha;
+	maxidx = src.maxidx; minidx = src.minidx; nsupport = src.nsupport;
+	redctab = src.redctab; tonic = src.tonic; mmm = src.mmm;
+	int	mtxsize = rows * cols;
+	if (mtxsize != (src.rows * src.cols)) {
+	    delete[] mtx;
+	    mtx = new double[mtxsize];
+	}
+	vcopy(mtx, src.mtx, rows * cols);
+	return (*this);
+}
+
+PatMat::PatMat(PatMat& src)
+{
+	rows = src.rows; cols = src.cols; 
+	offset = src.offset; nalpha = src.nalpha;
+	maxidx = src.maxidx; minidx = src.minidx; nsupport = src.nsupport;
+	redctab = src.redctab; tonic = src.tonic; mmm = src.mmm;
+	int	mtxsize = rows * cols;
+	mtx = new double[mtxsize];
+	vcopy(mtx, src.mtx, mtxsize);
+}
+
 PatMat::PatMat(const int r, const int c, const int o, float* m)
-	: rows(r), cols(c), offset(o),
-	  maxidx(0), minidx(0), tonic(0), mtx(0)
+	: redctab(0), maxidx(0), minidx(0), nsupport(0),
+	  rows(r), cols(c), offset(o),tonic(0), mtx(0)
 {
 	if (r <= 0 || c <= 0) return;
 	mmm.min = mmm.mean = mmm.max = 0;
-	double	maxval = FLT_MIN;
+	double	maxval = -FLT_MAX;
 	double	minval = FLT_MAX;
 	mtx = new double[r * c];
 	if (!m) return;
@@ -778,14 +806,17 @@ PatMat::PatMat(const int r, const int c, const int o, float* m)
 	    if (mtx[i] > maxval) {maxval = mtx[i]; maxidx = i;}
 	    if (mtx[i] < minval) {minval = mtx[i]; minidx = i;}
 	}
+	if (rows % 4 == 0) {redctab = ncredctab; nalpha = 4;}
+	else if (rows == 23) {redctab = tnredctab; nalpha = 23;}
+	else	{redctab = 0; nalpha = cols;}
 }
 
-PatMat::PatMat(FILE* fd)
+PatMat::PatMat(FILE* fd) : redctab(0)
 {
 	readPatMat(fd);
 }
 
-PatMat::PatMat(const char* fname)
+PatMat::PatMat(const char* fname) : redctab(0)
 {
 	char	str[MAXL];
 	FILE*	fd;
@@ -802,18 +833,46 @@ retry:
 	fclose(fd);
 }
 
-float* PatMat::calcPatMat(Seq* sd)
+void PatMat::setredctab(Seq* sd)
 {
-	int	k = sd->right - sd->left;
-	int	Mrkv = 0;
-	CHAR*	redctab = 0;
-
+	redctab = 0;
 	switch (sd->inex.molc) {
 	    case DNA: case RNA: case GENOME:
 		if (!sd->inex.cmpc) redctab = ncredctab; break;
  	    case TRON:
-		if (rows != 23) redctab = tnredctab; break;
+		if (rows % 23) redctab = tnredctab; break;
 	}
+}
+
+void PatMat::increment(Seq* sd, int pos)
+{
+	CHAR*	ps = sd->at(pos);
+	CHAR*	ts = sd->at(pos + cols);
+	double*	ptn = mtx;
+	for ( ; ps < ts; ++ps, ptn += rows) {
+	    int	k = redctab? redctab[*ps]: (*ps - sd->code->base_code);
+	    if (k >= 0 && k < rows) ++ptn[k];
+	}
+}
+
+float PatMat::pwm_score(Seq* sd, CHAR* ps)
+{
+	double*	ptn = mtx;
+	CHAR*	ts = min(sd->at(sd->right), ps + cols);
+	double	fit = 0;
+	for ( ; ps < ts; ++ps, ptn += rows) {
+	    int	k = redctab? redctab[*ps]: (*ps - sd->code->base_code);
+	    if (k >= 0 && k < rows) fit += ptn[k];
+	}
+	return (float) fit;
+}
+   
+float* PatMat::calcPatMat(Seq* sd)
+{
+	int	k = sd->right - sd->left;
+	int	Mrkv = 0;
+
+	setredctab(sd);
 	if (rows == 20) Mrkv = 1;	// 1st-order Markov/
 	else if (rows == 84) Mrkv = 2;	// 2nd-order Markov/
 	else if (rows == 67) Mrkv = 3;	// Should be MODIFIED !!!
@@ -837,13 +896,13 @@ float* PatMat::calcPatMat(Seq* sd)
 		    CHAR*	rr = ss + sd->many;
 		    for ( ; ss < rr; ++ss) {
 			k = redctab? redctab[*ss]: (*ss - sd->code->base_code);
-			if (k < 0 || k >= 4) ++q;
+			if (k < 0 || k >= nalpha) ++q;
 			if (Mrkv && !q) {
 			    if (m == 0) fit += ptn[k];
 			    int j = redctab? redctab[ss[sd->many]]:
 				(ss[sd->many] - sd->code->base_code);
-			    if (j < 0 || j >= 4) ++q;
-			    k = 4 * k + j + 4;
+			    if (j < 0 || j >= nalpha) ++q;
+			    k = nalpha * k + j + nalpha;
 			}
 			double	tabval = q? 0: ptn[k];
 //			double	tabval = q? minval: ptn[k];
@@ -871,14 +930,14 @@ float* PatMat::calcPatMat(Seq* sd)
 			i = redctab? redctab[*s1]: (*s1 - sd->code->base_code);
 			if (i > 3) ++q;
 			else if (q == 0) {
-			    k = 4 * k + i;
-			    if (m == 0) fit += ptn[k + 4];	// 1st order
+			    k = nalpha * k + i;
+			    if (m == 0) fit += ptn[k + nalpha];	// 1st order
 			}
 			++s1;
 			i = redctab? redctab[*s1]: (*s1 - sd->code->base_code);
 			if (i > 3) ++q;
 			else if (q == 0) {
-			    k = 4 * k + i;
+			    k = nalpha * k + i;
 			    fit += ptn[k + 20];			// 2nd oder
 			}
 		    } else {
@@ -892,13 +951,13 @@ float* PatMat::calcPatMat(Seq* sd)
 			i = redctab? redctab[*s1]: (*s1 - sd->code->base_code);
 			if (i > 3) ++q;
 			else if (q == 0) {
-			    k = 4 * k + i;
-			    if (m == 0) fit += ptn[k + 4];	// 1st order
+			    k = nalpha * k + i;
+			    if (m == 0) fit += ptn[k + nalpha];	// 1st order
 			}
 			i = redctab? redctab[*s2]: (*s2 - sd->code->base_code);
 			if (i > 3) ++q;
 			else if (q == 0) {
-			    k = 4 * k + i;
+			    k = nalpha * k + i;
 			    fit += ptn[k + 20];			// 2nd oder
 			}
 		      }
@@ -931,7 +990,7 @@ float* PatMat::calcPatMat(Seq* sd)
 			    flag = 1;
 			    break;
 			}
-			fit += ptn[16 * k + 4 * i + j + 3];
+			fit += ptn[16 * k + nalpha * i + j + 3];
 		    }
 		    if (flag == 1) {
 			fit = 3 * ptn[minidx];
@@ -995,12 +1054,26 @@ fail_to_read:
 	fclose(fd);
 }
 
-static int kmer(CHAR* s, int m, CHAR* elements, int k)
+static int kmer(CHAR* s, int m, CHAR* elements, int k, int* x)
 {
-	int	d = elements[*s];
+	int	c = elements[*s];
+	int	d = c;
+	if (c >= 4) {
+	    d = 0;
+	    if (x) *x = 0;
+	}
 	CHAR*	t = s + k * m;
 
-	while ((s += m) < t) d = CP_NTERM * d + elements[*s];
+	while ((s += m) < t) {
+	    c = elements[*s];
+	    if (c < 4) {
+		d = CP_NTERM * d + c;
+		++*x;
+	    } else {
+		d = 0;
+		if (x) *x = 0;
+	    }
+	}
 	return (d);
 }
 
@@ -1008,45 +1081,56 @@ static int kmer(CHAR* s, int m, CHAR* elements, int k)
 
 float* CodePot::calc5MMCodePot(Seq* sd, int phase)
 {
-	CHAR*   elements = sd->inex.molc == TRON? tnredctab: ncelements;
-	int	i = sd->right;
+	CHAR*   redctab = sd->inex.molc == TRON? tnredctab: ncredctab;
+	CHAR*   elements = sd->inex.molc == TRON? trelements: ncelements;
 	int	k = sd->right - sd->left;
-	FTYPE	val;
 	FTYPE	prf;
 	CHAR*	ss = sd->at(sd->left);
 	CHAR*	tt = sd->at(sd->right);
 
 	float*	result = new float[k];
 	float*	rest = result;
+	int	x = 0;
 	if (sd->left < 0)	*rest++ = 0;	/* fill pat */
 	else	ss -= sd->many;
 	if (sd->many == 1) {			/* in most cases */
-	    int	d = kmer(ss, 1, elements, 6);	/* dummy when phase != 0 */
+	    int	d = kmer(ss, 1, redctab, 6, &x);	/* dummy when phase != 0 */
 	    int	dm = d / CP_NTERM;
 	    ss += 6;
 	    while (ss < tt) {
+		int	c = redctab[*ss++];
+		FTYPE	val = 0;
 		if (phase == 0) {
-		    val = CodePotTab[2][dm] + CodePotTab[0][d]; /* -1 + 0 */
-		    d = (CP_NTERM * (dm = d) + elements[*ss++]) % 4096;
-		    val += CodePotTab[1][d];			/* +1 */
+		    if (c < 4) {
+			val = CodePotTab[2][dm] + CodePotTab[0][d]; /* -1 + 0 */
+			d = (CP_NTERM * (dm = d) + c) % 4096;
+			++x;
+		    } else d = dm = x = 0;
+		    if (x >= 6) val += CodePotTab[1][d];			/* +1 */
+		    else	val = 0;
 		} else {
-		    if (phase <= CodePotClmn) {
-			val = CodePotTab[phase - 1][d];
-		    } else if (phase == CP_NTERM + 1 && CodePotClmn >= CP_NTERM) {
-			val = CodePotTab[0][d] - CodePotTab[1][d] 
-			    - CodePotTab[2][d] - CodePotTab[3][d];
-		    } else {
-			val = CodePotTab[0][d] - CodePotTab[1][d] - CodePotTab[2][d];
+		    if (x >= 6) {
+			if (phase <= CodePotClmn) {
+			    val = CodePotTab[phase - 1][d];
+			} else if (phase == CP_NTERM + 1 && CodePotClmn >= CP_NTERM) {
+			    val = CodePotTab[0][d] - CodePotTab[1][d] 
+				- CodePotTab[2][d] - CodePotTab[3][d];
+			} else {
+			    val = CodePotTab[0][d] - CodePotTab[1][d] - CodePotTab[2][d];
+			}
 		    }
-		    d = (CP_NTERM * d + elements[*ss++]) % 4096;
+		    if (c < 4) {
+			d = (CP_NTERM * d + c) % 4096;
+			++x;
+		    } else d = x = 0;
 		}
 		*rest++ = val;
 	    }
-	    ss -= 4;
 	} else {
 	    tt -= 6 * sd->many;
 	    while (ss < tt) {
-		for (val = i = 0; i++ < sd->many; ++ss) {
+		FTYPE	val = 0;
+		for (int i = 0; i++ < sd->many; ++ss) {
 		    int	d = kmer(ss, sd->many, elements, 6);
 		    if (phase == 0) {
 			prf = CodePotTab[0][d];
@@ -1068,9 +1152,7 @@ float* CodePot::calc5MMCodePot(Seq* sd, int phase)
 		*rest++ = val;
 	    }
 	}
-	tt = sd->at(sd->right);
-	for ( ; ss < tt; ss += sd->many) *rest++ = 0.;
-	if (phase == 0) *rest = 0.;
+	while (rest < result + k) *rest++ = 0.;
 	return (result);
 }
 
@@ -1176,10 +1258,9 @@ fail_to_read:
 }
 
 ExinPot::ExinPot(int zZ, const char* fname)
+	: morder(0), size(0), lm(0), rm(0), 
+	  avpot(0), avlen(0), ExonPot(0), IntronPot(0)
 {
-	ExonPot = IntronPot = 0;
-	morder = size = lm = rm = 0;
-	avpot = avlen = 0;
 	if (zZ & 1 && !readExinPot(fname? fname: EXONPOT)) return;
 	if (zZ & 2) readExinPot(fname? fname: INTRONPOT);
 }
@@ -1193,15 +1274,24 @@ float* ExinPot::calcExinPot(Seq* sd, bool exon)
 	double	acc = 0.;
 	CHAR*	ss = sd->at(sd->left);
 	CHAR*	tt = sd->at(sd->right);
+	CHAR*   redctab = sd->inex.molc == TRON? tnredctab: ncredctab;
 
 	float*	result = new float[sd->right - sd->left];
 	float*	rest = result;
 	if (sd->left < 0)	*rest++ = 0;	/* fill pat */
 	else	--ss;
-	int	d = ncelements[*ss];
+	INT	c = redctab[*ss];
+	int	x = c < 4;
+	int	d = x? c: 0;
 	while (++ss < tt) {
-	    d = (CP_NTERM * d + ncelements[*ss]) % size;
-	    *rest++ = (float) (exon? pot[d]: acc += pot[d]);
+	    if ((c = redctab[*ss]) < 4) {
+		++x;
+	        d = (CP_NTERM * d + c) % size;
+	    } else {
+		d = x = 0;
+	    }
+	    float	pt = (x < morder)? 0: pot[d];
+	    *rest++ = exon? pt: acc += pt;
 	}
 	return (result);
 }

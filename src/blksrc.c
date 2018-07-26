@@ -84,6 +84,7 @@ static	float	RbsBase = 3.;
 static	float	RbsBaseX = 0.5;
 static	float	RbsFact = DQUERY;
 static	int	Nascr = 2;
+const	char*	writeerrmssg = "Fail to write to %s !\n";
 
 void setQ4prm(const char*  ps)
 {
@@ -263,15 +264,15 @@ bool WordTab::c2w(int c, int  mode, INT i)	// letter to word
 		INT	w = bpp[k]->word(uc);
 		if (bpp[k]->flawless()) {
 		    if (tcount && (mode == 0 || mode == 2)) ++tcount[w];
-		    if (!(++ss[k] %= Nshift)) {
+		    if (!ss[k]) {
 			switch (mode) {
 			  case 1: idx[k][count[w]] = i;
 			  case 0: ++count[w]; break;
 			  case 2: 
 			  case 3: ch->incr(w); break;
 			}
-			ss[k] = 0;
 		    }
+		    if (++ss[k] == Nshift) ss[k] = 0;
 		}
 	    }
 	}
@@ -315,15 +316,15 @@ bool WordTab::c2w6(int c, int& p,int  mode, INT i)	// letter to word
 		if (bpp[k]->flawless(q)) {
 		    INT	w = ww[k];
 		    if (tcount && (mode == 0 || mode == 2)) ++tcount[w];
-		    if (!(++ss6[q][k] %= Nshift)) {
+		    if (!ss6[q][k]) {
 			switch (mode) {
 			  case 1: idx[k][count[w]] = i;
 			  case 0: ++count[w]; break;
 			  case 2: 
 			  case 3: ch->incr(w); break;
 			}
-			++ss6[q][k];
 		    }
+		    if (++ss6[q][k] == Nshift) ss6[q][k] = 0;
 		}
 	    }
 	}
@@ -359,7 +360,8 @@ void WordTab::countwd(const char* argv[])
 		    while ((c = fgetc(fd)) != EOF && c != '\n');
 		    break;
 		  case '/':
-		    if ((c = fgetc(fd)) == '/') while ((c = fgetc(fd)) != EOF && c != '>');
+		    if ((c = fgetc(fd)) == '/')
+			while ((c = fgetc(fd)) != EOF && c != '>');
 		    ungetc(c, fd);
 		  default: break;
 		}
@@ -382,6 +384,32 @@ void MakeBlk::findChrBbound()
 	pbc->BCup /= B;
 }
 
+template <typename file_t>
+void MakeBlk::writeBlkInfo(file_t fd, const char* fn)
+{
+	if (!fd) fatal(writeerrmssg, fn);
+	size_t	chrn = pwc->ChrNo + 1;
+	if (!pwc->ChrID) ++pwc->VerNo;
+	if (fwrite(&wcp, sizeof(WCPRM), 1, fd) != 1 ||
+	    fwrite(pwc, sizeof(ContBlk), 1, fd) != 1 ||
+	    fwrite(pbc, sizeof(Block2Chr), 1, fd) != 1 ||
+	    (pwc->ChrID && fwrite(pwc->ChrID, sizeof(CHROMO), chrn, fd) != chrn) ||
+	    fwrite(pwc->Nblk, sizeof(SHORT), wcp.TabSize, fd) != wcp.TabSize)
+		fatal(writeerrmssg, fn);
+	INT*	blkidx = new INT[wcp.TabSize];
+	for (INT w = 0; w < wcp.TabSize; ++w)
+	    blkidx[w] = pwc->blkp[w]? pwc->blkp[w] - pwc->blkb + 1: 0;
+	if (fwrite(blkidx, sizeof(INT), wcp.TabSize, fd) != wcp.TabSize)
+		fatal(writeerrmssg, fn);
+	delete[] blkidx;
+	SHORT*	sblkb = (SHORT*) pwc->blkb;
+	if (fwrite(sblkb, sizeof(SHORT), pwc->WordSz, fd) != pwc->WordSz ||
+	    fwrite(pwc->wscr, sizeof(short), wcp.TabSize, fd) != wcp.TabSize ||
+	    fwrite(iConvTab, sizeof(int), pwc->ConvTS, fd) != pwc->ConvTS)
+		fatal(writeerrmssg, fn);
+	fclose(fd);
+}
+
 void MakeBlk::WriteBlkInfo()
 {
 static	const char* wfmt =
@@ -391,11 +419,7 @@ static	const char* wfmt =
 	if (!fn) fatal("Specify write file !\n");
 	prompt(wfmt, chrblk(pwc->ChrNo) - 1,
 	    wcp.TabSize, pwc->WordNo, pwc->glen, pwc->ChrNo);
-	FILE*	fd = fopen(fn, "wb");
-	size_t	chrn = pwc->ChrNo + 1;
-const	char*	errmssg = "Fail to write to %s !\n";
 
-	if (!fd) fatal(errmssg, fn);
 	SHORT*	sblkb = (SHORT*) pwc->blkb;
 	if (pwc->BytBlk == 2) {
 	    SHORT*	sblk = sblkb;
@@ -404,18 +428,17 @@ const	char*	errmssg = "Fail to write to %s !\n";
 		*sblk++ = (SHORT) *iblk++;
 	}
 	findChrBbound();
-	if (!pwc->ChrID) ++pwc->VerNo;
-	if (fwrite(&wcp, sizeof(WCPRM), 1, fd) != 1 ||
-	    fwrite(pwc, sizeof(ContBlk), 1, fd) != 1 ||
-	    fwrite(pbc, sizeof(Block2Chr), 1, fd) != 1 ||
-	    (pwc->ChrID && fwrite(pwc->ChrID, sizeof(CHROMO), chrn, fd) != chrn) ||
-	    fwrite(pwc->Nblk, sizeof(SHORT), wcp.TabSize, fd) != wcp.TabSize ||
-	    fwrite(pwc->blkp, sizeof(INT*), wcp.TabSize, fd) != wcp.TabSize ||
-	    fwrite(sblkb, sizeof(SHORT), pwc->WordSz, fd) != pwc->WordSz ||
-	    fwrite(pwc->wscr, sizeof(short), wcp.TabSize, fd) != wcp.TabSize ||
-	    fwrite(iConvTab, sizeof(int), pwc->ConvTS, fd) != pwc->ConvTS)
-		fatal(errmssg, fn);
-	fclose(fd);
+#if USE_ZLIB
+	if (is_gz(fn)) {
+	    gzFile	gzfd = gzopen(fn, "wb");
+	    if (!gzfd) fatal(no_file, fn);
+	    writeBlkInfo(gzfd, fn);
+	    return;
+	}
+#endif
+	FILE*	fd = fopen(fn, "wb");
+	if (!fd) fatal(no_file, fn);
+	writeBlkInfo(fd, fn);
 }
 
 MakeBlk::MakeBlk(Seq* sd, DbsDt* dd) :
@@ -433,6 +456,11 @@ MakeBlk::MakeBlk(Seq* sd, DbsDt* dd) :
 	deltaa = 0.;
 	acomp = 0;
 	ch = new Chash(int(hfact * wcp.blklen), pwc);
+	int	molc = sd->inex.molc;
+	if (!molc && dd) molc = dd->curdb->defmolc;
+	isaa = molc == PROTEIN;
+	istron = molc == TRON;
+	defcode = setSeqCode(0, isaa? PROTEIN: DNA);
 }
 
 static void setupbitpat(int molc, size_t gnmsz)
@@ -691,36 +719,22 @@ void MakeBlk::blkscrtab(size_t segn, INT blksz)
 
 // Read from amino or nucleotide sequence files
 
-void MakeBlk::idxblk(int argc, const char** argv, int molc)
+template <typename file_t>
+void MakeBlk::first_phase(file_t fd, int& entlen, CHROMO& chrbuf)
 {
-// first phase
-
-	bool	isaa = molc == PROTEIN;
-	bool	istron = molc == TRON;
-	if (istron) prepacomp();
-	SEQ_CODE*	defcode = setSeqCode(0, isaa? PROTEIN: DNA);
-	int	bias = A - 1;
-	if (isaa) bias = ALA - 1;
-	int	entlen = 0;
-	pwc->ChrNo = pwc->glen = 0;
-	CHROMO	chrbuf = {0L, 0, 0};
-	const char**	seqdb = argv;
-	for (int ac = 0; ac++ < argc && *seqdb; ++seqdb) {
-	    FILE*	fd = fopen(*seqdb, "r");
-	    if (!fd) fatal("%s not found!\n", *seqdb);
-	    INT	i = 0; int p = 0; reset();
-	    int	c;
-	    while ((c = fgetc(fd)) != EOF) {
-		if (isalpha(c)) {
-		    bool ok = istron? c2w6(c, p, 2): c2w(c, 2);
-		    if (ok && ++i == wcp.blklen) {
-			ch->countBlk();	// block boundary
-			++chrbuf.segn;
-			pwc->glen += i;
-			i = 0;
-		    }
-		} else switch (c) {
-		  case '>':		// FASTA Header
+	INT	i = 0; int p = 0; reset();
+	int	c;
+	while ((c = fgetc(fd)) != EOF) {
+	    if (isalpha(c)) {
+		bool ok = istron? c2w6(c, p, 2): c2w(c, 2);
+		if (ok && ++i == wcp.blklen) {
+		    ch->countBlk();	// block boundary
+		    ++chrbuf.segn;
+		    pwc->glen += i;
+		    i = 0;
+		}
+	    } else switch (c) {
+		case '>':		// FASTA Header
 		    ++pwc->ChrNo;
 		    if (i) {
 			ch->countBlk();
@@ -734,68 +748,54 @@ void MakeBlk::idxblk(int argc, const char** argv, int molc)
 			    ++entlen;
 			if (c == '\n') break;
 		    }
-		  case ';': case '#':	// comments
+		case ';': case '#':	// comments
 		    while ((c = fgetc(fd)) != EOF && c != '\n');
 		    break;
-		  case '/': 
-		    if ((c = fgetc(fd)) == '/') while ((c = fgetc(fd)) != EOF && c != '>');
+		case '/': 
+		    if ((c = fgetc(fd)) == '/')
+			while ((c = fgetc(fd)) != EOF && c != '>');
 		    ungetc(c, fd);
 		    break;
-		  default: break;
-		}
+		default: break;
 	    }
+	}
 // last block
-	    if (i) {
-		ch->countBlk();
-		++chrbuf.segn;
-		pwc->glen += i;
-	    }
-	    fclose(fd);
+	if (i) {
+	    ch->countBlk();
+	    ++chrbuf.segn;
+	    pwc->glen += i;
 	}
-	pwc->ChrID = new CHROMO[pwc->ChrNo + 1];
-	pwc->blkp = new INT*[wcp.TabSize];
-	pwc->wscr = new short[wcp.TabSize];
-	if (wdbf) {
-	    size_t	sz = isaa? pwc->glen: (pwc->glen / 2 + pwc->ChrNo);
-	    wdbf->prepare(entlen + pwc->ChrNo, pwc->ChrNo, sz + pwc->ChrNo);
-	}
-	if (istron)	blkscrtab(chrbuf.segn);
-	else	blkscrtab(chrbuf.segn, pwc->glen / chrbuf.segn);
+	fclose(fd);
+}
 
-// second phase
-
-	INT	m = 0;
-	chrbuf.segn = 1;	// skip 0
-	DbsRec*	pr = wdbf? wdbf->recidx: 0;
-	CHAR*	ps = wdbf? wdbf->dbsseq: 0;
-	char*	pe = wdbf? wdbf->entry: 0;
-	DbsRec	prvrec = {0L, 0, 0};
-	if (wdbf) pr->seqptr = 0;
-	CHROMO*	pchrid = pwc->ChrID;
-	seqdb = argv;
-	for (int ac = 0; ac++ < argc && *seqdb; ++seqdb) {
-	    FILE*	fd = fopen(*seqdb, "r");
-	    size_t	n = 0, i = 0; int b = 0, p = 0;
-	    int	c;
-	    while ((c = fgetc(fd)) != EOF) {
-		if (isalpha(c)) {
-		    if (istron? c2w6(c, p, 3): c2w(c, 3)) {
-			++n;
-			if (++i == wcp.blklen) {
-			    ch->registBlk(++m);	// block boundary
-			    ++chrbuf.segn;
-			    chrbuf.spos += i;
-			    i = 0;
-			}
-			if (wdbf) {
-			    c = defcode->encode[toupper(c) - 'A'] - bias;
-			    if (isaa)	*ps++ = c;
-			    else if (n & 1)	b = c << 4;
-			    else 	*ps++ = b + c;
-			}
+template <typename file_t>
+int MakeBlk::second_phase(file_t fd, CHROMO& chrbuf, int m,
+		DbsRec*& pr, CHAR*& ps, char*& pe,
+		DbsRec& prvrec, CHROMO*& pchrid)
+{
+	int	bias = A - 1;
+	if (isaa) bias = ALA - 1;
+	size_t	n = 0, i = 0; int b = 0, p = 0;
+	int	c;
+	while ((c = fgetc(fd)) != EOF) {
+	    if (isalpha(c)) {
+		if (istron? c2w6(c, p, 3): c2w(c, 3)) {
+		    ++n;
+		    if (++i == wcp.blklen) {
+			ch->registBlk(++m);	// block boundary
+			++chrbuf.segn;
+			chrbuf.spos += i;
+			i = 0;
 		    }
-		} else switch (c) {
-		  case '>':
+		    if (wdbf) {
+			c = defcode->encode[toupper(c) - 'A'] - bias;
+			if (isaa)	*ps++ = c;
+			else if (n & 1)	b = c << 4;
+			else 	*ps++ = b + c;
+		    }
+		}
+	    } else switch (c) {
+		case '>':
 		    if (i) {
 			ch->registBlk(++m);
 			++chrbuf.segn;
@@ -820,31 +820,94 @@ void MakeBlk::idxblk(int argc, const char** argv, int molc)
 		    }
 		    n = b = 0; reset();
 		    if (c == '\n') break;
-		  case ';': case '#':	// comments
+		case ';': case '#':	// comments
 		    while ((c = fgetc(fd)) != EOF && c != '\n');
 		    break;
-		  case '/': 
-		    if ((c = fgetc(fd)) == '/') while ((c = fgetc(fd)) != EOF && c != '>');
+		case '/': 
+		    if ((c = fgetc(fd)) == '/')
+			while ((c = fgetc(fd)) != EOF && c != '>');
 		    ungetc(c, fd);
 		    break;
-		  default: break;
-		}
+		default: break;
 	    }
+	}
 // last block
-	    if (i) {
-		ch->registBlk(++m);
-		++chrbuf.segn;
-		chrbuf.spos += i;
+	if (i) {
+	    ch->registBlk(++m);
+	    ++chrbuf.segn;
+	    chrbuf.spos += i;
+	}
+	chrbuf.fpos = ftell(fd);
+	if (wdbf && n) {
+	    if (isaa)	*ps++ = SEQ_DELIM;
+	    else if (n & 1) *ps++ = b + SEQ_DELIM;
+	    else	*ps++ = ddelim;
+	    prvrec.seqlen = n;
+	    *pr++ = prvrec;
+	}
+	fclose(fd);
+	return (m);
+}
+
+void MakeBlk::idxblk(int argc, const char** argv, int molc)
+{
+// first phase
+
+	if (istron) prepacomp();
+	int	entlen = 0;
+	pwc->ChrNo = pwc->glen = 0;
+	CHROMO	chrbuf = {0L, 0, 0};
+	const char**	seqdb = argv;
+	for (int ac = 0; ac++ < argc && *seqdb; ++seqdb) {
+	    bool	gz = is_gz(*seqdb);
+	    if (gz) {
+#if USE_ZLIB
+		gzFile	gzfd = gzopen(*seqdb, "rb");
+		if (gzfd)
+	            first_phase(gzfd, entlen, chrbuf);
+		else	fatal("%s not found!\n", *seqdb);
+#else
+		fatal(gz_unsupport);
+#endif
+	    } else {
+		FILE*	fd = fopen(*seqdb, "r");
+		if (!fd) fatal("%s not found!\n", *seqdb);
+	        first_phase(fd, entlen, chrbuf);
 	    }
-	    chrbuf.fpos = ftell(fd);
-	    if (wdbf && n) {
-		if (isaa)	*ps++ = SEQ_DELIM;
-		else if (n & 1) *ps++ = b + SEQ_DELIM;
-		else	*ps++ = ddelim;
-		prvrec.seqlen = n;
-		*pr++ = prvrec;
+	}
+	pwc->ChrID = new CHROMO[pwc->ChrNo + 1];
+	pwc->blkp = new INT*[wcp.TabSize];
+	pwc->wscr = new short[wcp.TabSize];
+	if (wdbf) {
+	    size_t	sz = isaa? pwc->glen: (pwc->glen / 2 + pwc->ChrNo);
+	    wdbf->prepare(entlen + pwc->ChrNo, pwc->ChrNo, sz + pwc->ChrNo);
+	}
+	if (istron)	blkscrtab(chrbuf.segn);
+	else	blkscrtab(chrbuf.segn, pwc->glen / chrbuf.segn);
+
+// second phase
+
+	INT	m = 0;
+	chrbuf.segn = 1;	// skip 0
+	DbsRec*	pr = wdbf? wdbf->recidx: 0;
+	CHAR*	ps = wdbf? wdbf->dbsseq: 0;
+	char*	pe = wdbf? wdbf->entry: 0;
+	DbsRec	prvrec = {0L, 0, 0};
+	if (wdbf) pr->seqptr = 0;
+	CHROMO*	pchrid = pwc->ChrID;
+	seqdb = argv;
+	for (int ac = 0; ac++ < argc && *seqdb; ++seqdb) {
+	    bool	gz = is_gz(*seqdb);
+	    if (gz) {
+#if USE_ZLIB
+		gzFile	gzfd = gzopen(*seqdb, "rb");
+	        m = second_phase(gzfd, chrbuf, m, pr, ps, pe, prvrec, pchrid);
+#endif
+	    } else {
+		FILE*	fd = fopen(*seqdb, "r");
+		if (!fd) fatal("%s not found!\n", *seqdb);
+	        m = second_phase(fd, chrbuf, m, pr, ps, pe, prvrec, pchrid);
 	    }
-	    fclose(fd);
 	}
 	*pchrid++ = chrbuf;
 }
@@ -1019,38 +1082,51 @@ void MakeBlk::idxblk(Seq* sd)
 	}
 }
 
-int SrchBlk::read_blk_dt(FILE* fd)
+template <typename file_t>
+int SrchBlk::read_blk_dt(file_t fd)
 {
+	if (fread(pwc->Nblk, sizeof(SHORT), wcp.TabSize, fd) != wcp.TabSize)
+	    return (ERROR);
 	SHORT** sblkp = (SHORT**) pwc->blkp;
 	SHORT*  sblkb = pwc->BytBlk == 3?
 	    new SHORT[pwc->WordSz]: (SHORT*) pwc->blkb;
-	if (fread(pwc->Nblk, sizeof(SHORT), wcp.TabSize, fd) != wcp.TabSize ||
-	    fread(sblkp, sizeof(SHORT*), wcp.TabSize, fd) != wcp.TabSize ||
-	    fread(sblkb, sizeof(SHORT), pwc->WordSz, fd) != pwc->WordSz ||
+	if (pwc->VerNo >= 25) {
+	    INT*	blkidx = new INT[wcp.TabSize];
+	    if (fread(blkidx, sizeof(INT), wcp.TabSize, fd) != wcp.TabSize) {
+		delete[] blkidx;
+		return (ERROR);
+	    }
+	    // Assume pwc->WordNo < UINT_MAX
+	    for (INT w = 0; w < wcp.TabSize; ++w) 
+		pwc->blkp[w] = blkidx[w]? pwc->blkb + blkidx[w] - 1: 0;
+	    delete[] blkidx;
+	} else {
+	    if (fread(sblkp, sizeof(SHORT*), wcp.TabSize, fd) != wcp.TabSize)
+		return (ERROR);
+	    long	offset = LONG_MAX;
+	    for (INT w = 0; w < wcp.TabSize; ++w) {
+	        if (pwc->Nblk[w] && sblkp[w]) {
+		    if (pwc->BytBlk == 3) {
+			if (offset == LONG_MAX) offset = sblkp[w] - sblkb;
+			sblkp[w] -= offset;
+		    } else if (pwc->VerNo < 23) {
+			long    idx = sblkp[w] - sblkb;
+			if (offset == LONG_MAX) offset = idx;
+			pwc->blkp[w] = pwc->blkb + idx - offset;
+		    } else {
+			if (offset == LONG_MAX) offset = pwc->blkp[w] - pwc->blkb;
+			pwc->blkp[w] -= offset;
+		    }
+		} else {
+		    if (pwc->BytBlk == 3) sblkp[w] = 0;
+		    else pwc->blkp[w] = 0;
+		}
+	    }
+	}
+	if (fread(sblkb, sizeof(SHORT), pwc->WordSz, fd) != pwc->WordSz ||
 	    fread(pwc->wscr, sizeof(short), wcp.TabSize, fd) != wcp.TabSize ||
  	    fread(ConvTab, sizeof(int), pwc->ConvTS, fd) != pwc->ConvTS)
 		return (ERROR);
-	long	offset = LONG_MAX;
-	for (INT w = 0; w < wcp.TabSize; ++w) {
-	    if (pwc->Nblk[w] && sblkp[w]) {
-		if (pwc->BytBlk == 3) {
-		    if (offset == LONG_MAX) offset = sblkp[w] - sblkb;
-		    sblkp[w] -= offset;
-		} else if (pwc->VerNo < 23) {
-		    long    idx = sblkp[w] - sblkb;
-		    if (offset == LONG_MAX) offset = idx;
-		    pwc->blkp[w] = pwc->blkb + idx - offset;
-		} else {
-		    if (offset == LONG_MAX) offset = pwc->blkp[w] - pwc->blkb;
-		    pwc->blkp[w] -= offset;
-		}
-	    } else {
-		if (pwc->BytBlk == 3)
-		    sblkp[w] = 0;
-		else
-		    pwc->blkp[w] = 0;
-	    }
-	}
 	if (pwc->BytBlk == 4) return (OK);
 	if (pwc->BytBlk == 2) {
 	    SHORT*	sblk = sblkb + pwc->WordSz;
@@ -1089,10 +1165,11 @@ int SrchBlk::read_blk_dt(FILE* fd)
 	return (OK);
 }
 
-static void read_pwc(ContBlk* cb, FILE* fd, const char* fn)
+template <typename file_t>
+static void read_pwc(ContBlk* cb, file_t fd, const char* fn)
 {
 	size_t	fpos = ftell(fd);
-	if (fread(cb, sizeof(ContBlk), 1, fd) != 1 || cb->VerNo < BsVersion) {
+	if (fread(cb, sizeof(ContBlk), 1, fd) != 1 || cb->VerNo < 24) {
 	    fseek(fd, fpos, SEEK_SET);
 	    ContBlk22	tmp;
 	    if (fread(&tmp, sizeof(ContBlk22), 1, fd) == 1) {
@@ -1114,11 +1191,9 @@ static void read_pwc(ContBlk* cb, FILE* fd, const char* fn)
 	}
 }
 
-void SrchBlk::ReadBlkInfo(const char* fn)
+template <typename file_t>
+void SrchBlk::ReadBlkInfo(file_t fd, const char* fn)
 {
-	FILE*	fd = fopen(fn, "rb");
-
-	if (!fd) fatal("Can't read %s !\n", fn);
 	INT	GivenMaxGene = wcp.MaxGene;
 	pwc = new ContBlk;
 	pbc = new Block2Chr;
@@ -1130,7 +1205,7 @@ void SrchBlk::ReadBlkInfo(const char* fn)
 	if (fread(pbc, sizeof(Block2Chr), 1, fd) != 1)
 	    fatal(emssg, fn);
 	if (wcp.Ktuple == wcp.BitPat) wcp.BitPat = bitmask(wcp.BitPat);
-	INT	i = pwc->ChrNo + 1;
+	size_t	i = pwc->ChrNo + 1;
 	pwc->ChrID = (pwc->VerNo <= BsVersion)? new CHROMO[i]: 0;
 	pwc->Nblk = new SHORT[wcp.TabSize];
 	pwc->blkp = new INT*[wcp.TabSize];
@@ -1154,30 +1229,49 @@ void SrchBlk::ReadBlkInfo(const char* fn)
 	fclose(fd);
 }
 
+template <typename file_t>
+static void readBlkInfo (file_t fd, const char* fn, ContBlk* pwc, Block2Chr* pbc)
+{
+	if (fread(&wcp, sizeof(WCPRM), 1, fd) != 1) fatal(emssg, fn);
+	read_pwc(pwc, fd, fn);
+	if (pwc->VerNo >= 14 && fread(pbc, sizeof(Block2Chr), 1, fd) != 1)
+	    fatal(emssg, fn);
+	if (pwc->VerNo < 14) --pwc->ChrNo;
+	size_t	chrn = pwc->ChrNo + 1;
+	pwc->ChrID = (pwc->VerNo <= BsVersion)? new CHROMO[chrn]: 0;
+	if (pwc->ChrID && (fread(pwc->ChrID, sizeof(CHROMO), chrn, fd) != chrn))
+	    fatal(emssg, fn);
+	fclose(fd);
+}
+
 void ReportBlkInfo(const char* fn)
 {
-const	char*	path;
-	FILE*	fd = fopen(fn, "rb");
 	ContBlk	wc;
 	Block2Chr  bc;
-
-	if (!fd) {
-	    path = getenv(ALN_DBS);
-	    if (!path) path = DBS_DIR;
-	    if (!(fd = fopenpbe(path, fn, BKN_EXT, "rb", -1)) &&
+const	char*	path = getenv(ALN_DBS);
+	if (!path) path = DBS_DIR;
+	if (is_gz(fn)) {
+#if USE_ZLIB
+	    gzFile	gzfd = gzopen(fn, "rb");
+	    if (!gzfd &&
+	        !(gzfd = gzopenpbe(path, fn, NGZ_EXT, "rb", -1)) &&
+		!(gzfd = gzopenpbe(path, fn, PGZ_EXT, "rb", -1)) &&
+		!(gzfd = gzopenpbe(path, fn, AGZ_EXT, "rb", -1))) 
+		    fatal("Can't read %s !\n", fn);
+	    readBlkInfo(gzfd, fn, &wc, &bc);
+#else
+	    fatal(gz_unsupport, fn);
+#endif
+	} else {
+	    FILE*	fd = fopen(fn, "rb");
+	    if (!fd &&
+	  	!(fd = fopenpbe(path, fn, BKN_EXT, "rb", -1)) &&
 		!(fd = fopenpbe(path, fn, BKP_EXT, "rb", -1)) &&
 		!(fd = fopenpbe(path, fn, BKA_EXT, "rb", -1))) 
 		    fatal("Can't read %s !\n", fn);
+	    readBlkInfo(fd, fn, &wc, &bc);
 	}
-	if (fread(&wcp, sizeof(WCPRM), 1, fd) != 1) fatal(emssg, fn);
-	read_pwc(&wc, fd, fn);
-	if (wc.VerNo >= 14 && fread(&bc, sizeof(Block2Chr), 1, fd) != 1)
-	    fatal(emssg, fn);
-	if (wc.VerNo < 14) --wc.ChrNo;
 	size_t	chrn = wc.ChrNo + 1;
-	wc.ChrID = (wc.VerNo <= BsVersion)? new CHROMO[chrn]: 0;
-	if (wc.ChrID && (fread(wc.ChrID, sizeof(CHROMO), chrn, fd) != chrn))
-	    fatal(emssg, fn);
 	int	MaxBlock = wc.VerNo < 21? wcp.MaxGene / wcp.blklen: wcp.Nbitpat;
 	const	char*	ms = wc.VerNo < 21? "MaxBlock": "BitpatNo";
 	printf("Versioin %d, Elem %u, Tuple %u, TabSize %u, BlockSize %u, MaxGene %u, %s %u, afact %u\n",
@@ -1221,8 +1315,8 @@ void SrchBlk::init4(Seq* a)
 	    bh4->prqueue_b[d]->reset();
 	}
 	CHAR*	ss = a->at(a->left);
-	CHAR*	ts = a->at(a->right - (bpp[0]->width + wcp.Nshift) + 1);	// last cycle
-	INT	q = (ts - ss) % wcp.Nshift;	// phase
+	CHAR*	ts = a->at(a->right - (bpp[0]->width + wcp.Nshift));	// last cycle
+	INT	q = (ts-- - ss) % wcp.Nshift;	// phase
 	for (INT p = 0; p < wcp.Nshift; ++p) {
 	    bh4->as[0][p] = bh4->as[2][p] = ss++;
 	    bh4->as[1][q] = bh4->as[3][q] = ts++;
@@ -1345,7 +1439,7 @@ static int gcmpf(GeneRng* a, GeneRng* b)
 	return 0;
 }
 
-Randbs::Randbs(double avr, bool gdb) : transform(gdb? log: sqrt)
+Randbs::Randbs(double avr, bool gdb) : trans_form(gdb? log: sqrt)
 {
 	if (gdb) {
 	    if (RbsFact == DQUERY) RbsFact = RbsFactLog;
@@ -1357,14 +1451,14 @@ Randbs::Randbs(double avr, bool gdb) : transform(gdb? log: sqrt)
 	RlnCoef = RlnFact * avr * wcp.Nbitpat;
 	Phase1T = (int) (RbsBias * avr);
 	for (INT i = 0; i < NRTAB; ++i) 
-	    rscrtab[i] = (int) (RbsCoef * (*transform)((double) (i + 1)) + RbsCons);
+	    rscrtab[i] = (int) (RbsCoef * (*trans_form)((double) (i + 1)) + RbsCons);
 }
 
 int Randbs::randbs(INT mmc)
 {
 	if (mmc < NRTAB) return (rscrtab[mmc]);
 	if (RbsCoef == 0) return ((int) RbsCons);
-	return ((int) (RbsCoef * (*transform)((double) (mmc + 1)) + RbsCons));
+	return ((int) (RbsCoef * (*trans_form)((double) (mmc + 1)) + RbsCons));
 }
 
 int genemergin(int apos, int mingap, Seq* sd, bool rend)
@@ -1413,7 +1507,19 @@ SrchBlk::SrchBlk(Seq* seqs[], const char* fn, bool gdb)
 	: gnmdb(gdb), pwc(0), pbc(0), bh2(0),bh4(0), master(0), 
 	  pwd(0), dbf(dbs_dt[0]), rdbt(0), bpp(0)
 {
-	ReadBlkInfo(fn);
+	if (is_gz(fn)) {
+#if USE_ZLIB
+	    gzFile	gzfd = gzopen(fn, "rb");
+	    if (!gzfd) fatal(not_found, fn);
+	    ReadBlkInfo(gzfd, fn);
+#else
+	    fatal(gz_unsupport, fn);
+#endif
+	} else {
+	    FILE*	fd = fopen(fn, "r");
+	    if (!fd) fatal(not_found, fn);
+	    ReadBlkInfo(fd, fn);
+	}
 	initialize(seqs, fn);
 }
 
@@ -1902,9 +2008,7 @@ static	char	ofmt2[] = "%-7s %c %5d %5d %-7s %5d %5d %6.2f %6.2f %3d %3d %2d %2d 
 		}
 		for (wrkbp = curbp; --wrkbp >= bh4->bpair; ) {
 		    if (wrkbp[1].bscr > wrkbp->bscr) {
-			*lstbp = wrkbp[1];
-			wrkbp[1] = *wrkbp;
-			*wrkbp = *lstbp;
+			gswap(wrkbp[0], wrkbp[1]);
 		    } else break;	// sort in decending order
 		}
 		if (curbp < lstbp) ++curbp;
@@ -2250,7 +2354,7 @@ int SrchBlk::findblock(Seq* seqs[])
 	int	nohit = 0;
 	int	sigpr = 0;
 	int	c = (a->right - a->left) / (wcp.Nshift + wcp.Nshift) - 1;
-	int	rms = wcp.Nshift * ((c < ptpl)? c: ptpl);
+	CHAR*	rms = a->at(a->right) - wcp.Nshift * ((c < ptpl)? c: ptpl);
 	int	meet[2] = {0, 0};
 	Chash	hh(2 * pwc->MaxBlk, pwc);
 	INT	nmmc = 0;
@@ -2271,7 +2375,7 @@ int SrchBlk::findblock(Seq* seqs[])
 	    for (INT s = 0; s < wcp.Nshift; s++) {
 		CHAR**	ws = bh4->as[d] + s;
 		CHAR*	ms = bh4->as[e][s];
-		if (!prty) ms -= rms;
+		if (!prty && ms > rms) ms = rms;
 		int	cscr = 0, q = 0, p = 0;
 		hh.clear();
 		do {				// continueous hits
@@ -2342,7 +2446,7 @@ int SrchBlk::findblock(Seq* seqs[])
 	  }
 	}	// end of mmc loop
 // significant pair was not found
-	if (totalsign == 0) {
+	if (!((bh4->sign[0] && bh4->sign[1]) || (bh4->sign[2] && bh4->sign[3]))) {
 	    c = ERROR;
 	    for (SHORT d = 0; d < 4; ++d) {
 		for (int i = 0; i < Nascr; ++i) {
@@ -2465,7 +2569,7 @@ int SrchBlk::findh(Seq* seqs[])
 	  qwd.reset(a);
 	  c = (a->right - a->left) / (wcp.Nshift + wcp.Nshift) - 1;
 	  init2(a);
-	  int	rms = wcp.Nshift * ((c < ptpl)? c: ptpl);
+	  CHAR*	rms = a->at(a->right) - wcp.Nshift * ((c < ptpl)? c: ptpl);
 	  INT	nmmc = 0;
 	  int	sigpr = 0;
 	  for ( ; nmmc < maxmmc && meet == 0; ++nmmc) {
@@ -2475,7 +2579,7 @@ int SrchBlk::findh(Seq* seqs[])
 	      for (INT s = 0; s < wcp.Nshift; s++) {
 		CHAR**	ws = bh2->as[d] + s;
 		CHAR*	ms = bh2->as[e][s];
-		if (!d) ms -= rms;
+		if (ms > rms) ms = rms;
 		int	cscr = 0;
 		int	p = 0;
 		int	q = 0;
@@ -2548,7 +2652,7 @@ int SrchBlk::finds(Seq* seqs[])
 	Chash	hh(int(2 * pwc->MaxBlk), pwc);
 	Qwords	qwd(kk,  DRNA, ConvTab, pwc, bpp, a);
 	int	c = (a->right - a->left) / (wcp.Nshift + wcp.Nshift) - 1;
-	int	rms = wcp.Nshift * ((c < ptpl)? c: ptpl);
+	CHAR*	rms = a->at(a->right) - wcp.Nshift * ((c < ptpl)? c: ptpl);
 #if TESTRAN
 	int	sigpr = 0;
 #endif
@@ -2560,7 +2664,7 @@ int SrchBlk::finds(Seq* seqs[])
 	      for (INT s = 0; s < wcp.Nshift; s++) {
 		CHAR**	ws = bh2->as[d] + s;
 		CHAR*	ms = bh2->as[e][s];
-		if (!d) ms -= rms;
+		if (ms > rms) ms =  rms;
 		int	cscr = 0;
 		int	p = 0;
 		int	q = 0;

@@ -17,7 +17,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #include "aln.h"
@@ -103,6 +103,7 @@ SigII::SigII(int p, int l, int s) :
 	lst = l? new int[l]: 0;
 	if (p) vclear(pfq, p + 1);
 	if (l) vclear(lst, l);
+	else	lstnum = pfqnum;
 }
 
 SigII::SigII(int* poss, int nn, int s) : 
@@ -467,10 +468,10 @@ FTYPE* eijdmx(Seq* sd)
 	return(dist);
 }
 		
-void fouteijdmx(FILE* fd, Seq* sd)
+void fouteijdmx(FILE* fd, Seq* sd, bool dmx)
 {
-	PrintMember	prm(sd->sname, false, algmode.nsa == 9? "\n": " ");
-	if (algmode.nsa == 9) {
+	PrintMember	prm(sd->sname, false, dmx? "\n": " ");
+	if (dmx) {
 	    for (int i = 0; i < sd->many; ++i)
 		prm.put_member(fd, i);
 	    fputc('\n', fd);
@@ -482,7 +483,7 @@ void fouteijdmx(FILE* fd, Seq* sd)
 	    for (int i = 0; i < j; ++i) {
 		int abc[3];
 		float	d = 100. * sgi->eij_dist(i, j, abc);
-		if (algmode.nsa == 9) {
+		if (dmx) {
 		    sprintf(str, " %7.3f", d);
 		    if (clm >= MaxClm) {
 			fputc('\n', fd);
@@ -496,7 +497,7 @@ void fouteijdmx(FILE* fd, Seq* sd)
 		    fputc('\n', fd);
 		}
 	    }
-	    if (algmode.nsa == 9) fputc('\n', fd);
+	    if (dmx) fputc('\n', fd);
 	}
 }
 
@@ -543,7 +544,7 @@ static void fouteij_sumary(FILE* fd, Seq* sd, PrintMember& prm)
 		if (sgi->eijtab[i][j]) sh.incr(prm[i]);
 	    int	c = 0;
 	    for (KVpair<INT, int>* kv = sh.begin(); kv < sh.end(); ++kv)
-		if (kv->val) ++c;
+		if (kv->val != sh.undef()) ++c;
 	    if (c < 10) c += '0';
 	    else if (c < 36) c += 'a' - 10;
 	    else if (c < 52) c += 'A' - 36;
@@ -570,11 +571,11 @@ void fouteij(FILE* fd, Seq* sd)
 	sgi->mkeijtab(sd->many);
 	int	buf[2] = {0, -1};
 	Seq*	memsd = 0;
-	if (algmode.nsa == 8 || algmode.nsa == 10) {
-	    memsd = new Seq(1);
-	} else if (algmode.nsa == 9 || algmode.nsa == 11) {
-	    fouteijdmx(fd, sd);
+	if (algmode.nsa == 14 || algmode.nsa == 15) {
+	    fouteijdmx(fd, sd, algmode.nsa == 14);
 	    return;
+	} else if (algmode.nsa >= 8 && algmode.nsa <= 11) {
+	    memsd = new Seq(1);
 	} else if ((algmode.nsa == 0 || algmode.nsa == 2) && OutPrm.deflbl) {
 	    PFQ*	pfq = sgi->pfq;
 	    fputs("SPB\t", fd);
@@ -586,35 +587,36 @@ void fouteij(FILE* fd, Seq* sd)
 	PrintMember	prm(sd->sname, true, "\t");
 	for (int i = 0; i < sd->many; ++i) {
 	    prm.put_member(fd, i);
-	    if (algmode.nsa & 4) {
+	    if (4 <= algmode.nsa && algmode.nsa < 8) {
 		int	nint = 0;
 		for (int j = 0; j < sgi->pfqnum; ++j)
 		    if (sgi->eijtab[i][j]) ++nint;
 		fprintf(fd, "%3d %3d %3d : ", i + 1, nint, sgi->lone[i]);
-		if (algmode.nsa == 4) sgi->printlones(fd, i, sd->many);
-		if (algmode.nsa == 5) sgi->printmates(fd, i, sd->many);
 	    }
+	    if (algmode.nsa == 4) sgi->printlones(fd, i, sd->many);
+	    if (algmode.nsa == 5) sgi->printmates(fd, i, sd->many);
 	    PFQ*	pfq = sgi->pfq;
 	    Seq*	msd = memsd? memsd->getseq((*sd->sname)[i]): 0;
 	    PFQ*	mfq = (msd && msd->sigII)? msd->sigII->pfq: 0;
 	    bool	anti = !mfq || (mfq[0].gps >  mfq[1].gps);
-	    int		cds = anti? 0: mfq->pos;
+	    int		cds = ((algmode.nsa == 8 || algmode.nsa == 9) && !anti)? mfq->pos: 0;
+	    int 	prp = 0;
 	    for (int j = 0; j < sgi->pfqnum; ++j, ++pfq) {
 		switch (algmode.nsa) {
-		  case 0: case 12:
+		  case 0:
 		    fprintf(fd, "%d", sgi->eijtab[i][j] != 0); break;
 		  case 1: 
 		    if (sgi->eijtab[i][j]) fprintf(fd, " %d", pfq->pos); break;
-		  case 2: case 6: case 14:
+		  case 2: case 6:
 		    if (sgi->eijtab[i][j]) fprintf(fd, "%d", pfq->pos % 3);
 		    else	fprintf(fd, "-"); break;
-		  case 3: case 7: 
+		  case 3: case 7:
 		    if (sgi->eijtab[i][j]) fprintf(fd, " %3d %d",
 			pfq->pos / 3, pfq->pos % 3); break;
-		  case 8: case 10:
+		  case 8: case 9:
 		    if (j) fputc('\t', fd);
 		    if (mfq && sgi->eijtab[i][j]) {
-			int	intlen = (anti? mfq->gps - mfq[1].gps -mfq->pos:
+			int	intlen = (anti? mfq->gps - mfq[1].gps - mfq->pos:
 				mfq[1].gps - mfq->gps - mfq[1].pos) + cds;
 			if (algmode.nsa == 8)
 			    fprintf(fd, "%7d", intlen);
@@ -623,14 +625,34 @@ void fouteij(FILE* fd, Seq* sd)
 			cds = anti? (mfq++)->pos: (++mfq)->pos;
 		    } else	fputs("      -", fd);
 		    break;
-		  case 13:
+		  case 10:
+		    if (j) fputc('\t', fd);
+		    if (mfq && sgi->eijtab[i][j]) {
+			fprintf(fd, "%7d", mfq->pos - cds);
+			cds = (mfq++)->pos;
+		    } else	fputs("      -", fd);
+		    break;
+		  case 11:
+		    if (j) fputc('\t', fd);
+		    if (sgi->eijtab[i][j]) {
+			int	nogap = sd->countgap(i, (prp + 1) / 3, (pfq->pos + 1) / 3);
+			int	exlen = pfq->pos - prp - 3 * nogap;
+			if (mfq) {
+			    exlen -= (mfq->pos - cds);
+			    cds = (mfq++)->pos;
+			}
+			fprintf(fd, "%7d", exlen);
+			prp = pfq->pos;
+		    } else	fputs("      -", fd);
+		    break;
+		  case 12:
 		    if (sgi->eijtab[i][j]) {
 			*buf = (pfq->pos + 1) / 3;
 			sd->pos2num(i, buf);
 			fprintf(fd, " %d", 3 * *buf + (pfq->pos + 1) % 3 - 1);
 		    }
 		    break;
-		  case 15:
+		  case 13:
 		    if (sgi->eijtab[i][j]) {
 			*buf = (pfq->pos + 1) / 3;
 			sd->pos2num(i, buf);
@@ -639,6 +661,10 @@ void fouteij(FILE* fd, Seq* sd)
 		    break;
 		  default: break;
 		}
+	    }
+	    if (algmode.nsa == 6) {
+		if (mfq && mfq->num) 
+		    fprintf(fd, "\t%7d", mfq->pos - cds);
 	    }
 	    fputc('\n', fd);
 	}
@@ -681,7 +707,7 @@ VTYPE Iiinfo::StoreIIinfo(int m, int n)
 #endif
 		*cpi->wfq++ = pfqbf;
 	    }
-	    if (anend && (!bnend || apos <= bpos)) {
+	    if (anend && apos <= bpos) {
 		if (cpi) {
 		    if (api->wst) {
 			for (int j = 0; j < api->wfq->num; ++j)
@@ -693,7 +719,7 @@ VTYPE Iiinfo::StoreIIinfo(int m, int n)
 		++(*api);
 		anend = !api->end() && *api < m;
 	    }
-	    if (bnend && (!anend || bpos <= apos)) {
+	    if (bnend && bpos <= apos) {
 		if (cpi) {
 		    if (bpi->wst) {
 			for (int j = 0; j < bpi->wfq->num; ++j) {
@@ -738,9 +764,9 @@ void Gsinfo::SaveGsInfo(Iiinfo* iif, int len)
 	sigII = iif? iif->finalize(len): 0;
 }
 
-Gsinfo::Gsinfo() :
+Gsinfo::Gsinfo(SKL* s) :
 	end_error_thr(int(alprm2.jneibr * 0.8)), scr(0), rscr(0),
-	skl(0), noeij(0), CDSrng(0), eijnc(0), cigar(0), vlgar(0),
+	skl(s), noeij(0), CDSrng(0), eijnc(0), cigar(0), vlgar(0),
 	samfm(0), sigII(0)
 {
 	vclear(&fstat);

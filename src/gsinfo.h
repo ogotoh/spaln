@@ -20,7 +20,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #ifndef _GSINFO_H_
@@ -323,7 +323,7 @@ struct Gsinfo {
 	Samfmt*	samfm;
 	SigII*	sigII;
 	bool	intronless();
-	Gsinfo();
+	Gsinfo(SKL* s = 0);
 	~Gsinfo();
 	void	SaveGsInfo(Iiinfo* iif, int len);
 	RANGE*	eiscr2rng();
@@ -340,7 +340,7 @@ extern	SigII*	extSigII(Seq* sorc, int* which, FTYPE nfact = 1, bool renum_lst = 
 extern	void	cutSigII(Seq* dstseq, Seq* srcseq);
 extern	void	catSigII(Seq* dstseq, Seq* srcseq, int bias);
 extern	FTYPE*	eijdmx(Seq* sd);
-extern	void	fouteijdmx(FILE* fd, Seq* sd);
+extern	void	fouteijdmx(FILE* fd, Seq* sd, bool dmx = true);
 extern	void	fouteij(FILE* fd, Seq* sd);
 extern	VTYPE	spb_fact();
 extern	void	unfoldPfq(PFQ* pfq, int num, GAPS* gg, int step);

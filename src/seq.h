@@ -16,7 +16,7 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@i.kyoto-u.ac.jp>>
+*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
 #ifndef  _BSEQ_H_
@@ -30,11 +30,6 @@ extern	ALPRM2	alprm2;
 extern	ALPRM3	alprm3;
 
 #include "cmn.h"
-#include "dbs.h"
-#include "gsinfo.h"
-#include "gaps.h"
-#include "codepot.h"
-#include "utilseq.h"
 
 #define	USE_ETHER 	FVAL
 
@@ -58,6 +53,12 @@ static	const	char	_DELG = '#';		/* Eliminate del sites	*/
 static	const	char	_LABL = '|';		/* Label to seq.	*/
 static	const	char	_WGHT = '%';		/* Weight	       */
 static	const	char	GBKID = '$';		/* GenBank Seq.		*/
+
+#include "dbs.h"
+#include "gsinfo.h"
+#include "gaps.h"
+#include "codepot.h"
+#include "utilseq.h"
 
 static	const	int	DEFSEQLEN = 1024;
 static	const	int	MAXCR = 128;
@@ -187,6 +188,7 @@ const	char*	out_file;
 	INT	asterisk:	1;	// add asterisk as the eos mark
 	INT	trimendgap:	1;	// suppress tail gap characters
 	INT	taxoncode:	3;	// add taxinomic code field X in gnm2tab
+	INT	printweight:	1;	// output seq weights in MSA
 };
 
 extern	OUTPRM	OutPrm;
@@ -210,7 +212,6 @@ protected:
 	StrHash<int>*	mnhash;
 	void	fillpad();
 	RANGE*	setrange(const char* pa, int* ncr = 0);
-	int	getcds(FILE* fd, char* str, int cdscolumn);
 	char*	readanno(FILE* fd, char* str, SeqDb* db, Mfile& gapmfd);
 	void	estimate_len(FILE* fd, int nos);
 	void	header_nat_aln(int n, FTYPE sumwt);
@@ -231,7 +232,8 @@ public:
 	VTYPE	jscr;		// sum of weight2s
 	int*	nbr;		// position of the first residue
 	SEQ_CODE*	code;	// code table
-	Strlist*	spath;	// path name read from
+	char*	spath;		// path name read from
+	char*	msaname;	// msa name
 	Strlist*	sname;	// sequence name
 	Strlist*	descr;	// descrption
 	FTYPE*	cmps;		// composition
@@ -266,12 +268,13 @@ const	char	Strand()	{return inex.sens? '-': '+';}
 const	char*	path2fn(const char* pname);
 const	char*	sqname(bool fpri = false) {
 		if (!fpri) fpri = many > 1;
-		if (sname && *(*sname)[0] && !(fpri && spath)) return (*sname)[0];
-		if (spath) return path2fn((*spath)[0]);
+		if (sname && *(*sname)[0] && !(fpri && msaname)) return (*sname)[0];
+		if (msaname && *msaname) return (msaname);
+		if (spath) return path2fn(spath);
 		return ("");
 	}
 	Seq*	attrseq(const char* pa);
-	Seq*	splice(Seq* dest, RANGE* rng, int edit);
+	Seq*	splice(Seq* dest, RANGE* rng, int edit = 0);
 	int	siteno(int n)	{return base_ + n;}
 	int	SiteNm(int n)	{return base_ + ((inex.sens & REVERS)? len - 1 - n: n);}
 	int	SiteNz(int n)	{return base_ + ((inex.sens & REVERS)? len - n: n);}
@@ -321,21 +324,23 @@ const	char*	sqname(bool fpri = false) {
 	CHAR*	seq_readin(FILE* fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd = 0);
 	CHAR*	get_seq_aln(FILE* fd, char* str, RANGE* pcr);
 	CHAR*	get_mfasta(FILE* fd, long fpos, char* str, RANGE* pcr, SeqDb* dbf);
-	int	infermolc(FILE* fd, char* str, bool msf = false);
+template <typename file_t>
+	int	infermolc(file_t fd, char* str, bool msf = false);
 	CHAR*	ToInferred(CHAR* src, CHAR* lastseq, int step);
 	Seq*	fgetseq(FILE* fd, const char* attr = 0, const char* attr2 = 0);
 	int	fget(FILE* fd, const char* fn = 0) {return (fgetseq(fd)? 1: EOF);}	// alias 
 	Seq*	getseq(const char* str, DbsDt* dbf = 0);
+	int	getcds(FILE* fd, char* str, int cdscolumn);
 	char*	sqline(int i, char* ps);
-	CHAR*	get_nat_aln(FILE* fd, RANGE* pcr);
-	CHAR*	get_msf_aln(FILE* fd, RANGE* pcr);
+	CHAR*	get_nat_aln(FILE* fd, char* str, RANGE* pcr);
+	CHAR*	get_msf_aln(FILE* fd, char* str, RANGE* pcr);
 	CHAR*	read_dbres(FILE* fd, RANGE* rng);
 	CHAR*	read_dbres(CHAR* dbs, RANGE* rng);
 	Seq*	read_dbseq(DbsDt* dbf, DbsRec* rec, RANGE* rng);
 	Seq*	read_dbseq(DbsDt* dbf, long pos);
 	Seq*	getdbseq(DbsDt* dbf, const char* code, int c = -1, bool readin = true);
 	Seq*	apndseq(char* aname);
-	void	fphseq(int n, FILE* fd = 0);
+	void	fphseq(int n = 2, FILE* fd = 0);
 	FTYPE*	composition();
 	void	printseq(FILE* fdi, int);
 	void	fpmem_len(FILE* fd);
@@ -360,6 +365,7 @@ const	char*	sqname(bool fpri = false) {
 	void	pregap(int* gl);
 	bool	isgap(CHAR* ps);
 	bool	nogap(CHAR* ps);
+	int	countgap(int mem = 0, int from = 0, int to = INT_MAX);
 	VTYPE	countunps();
 	int	pfqPos(int n) {return isprotein()? 3 * n: n;}
 	int	sname2memno(const char* memid);
@@ -676,6 +682,11 @@ extern	void	pralnseq(GAPS* gaps[], Seq* seqs[], int seqnum);
 inline	VTYPE axbscale(Seq* seqs[])
 {
 	return (VTYPE) (alprm.scale * seqs[0]->many * seqs[1]->many);
+}
+
+inline	char*	withinline(char* str, INT maxl, FILE* fd)
+{
+	return ((strlen(str) + 1) == maxl? fgets(str, maxl, fd): 0);
 }
 
 #endif	// _BSEQ_H_
