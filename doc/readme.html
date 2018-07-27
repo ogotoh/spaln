@@ -27,15 +27,15 @@
 <ul>
 	<li><a href='#Ov'>Overview</a>
 	<li><a href="#Ref">References</a>
-	<li><a href="../cgi-bin/spaln.pl">Online Server</a>
+<!--	<li><a href="../cgi-bin/spaln.pl">Online Server</a> -->
 <!--	<li><a href="./pr_tut.html">Tutorial</a> -->
-	<li><a href="#Ver2">Major changes in Version2</a>
 	<li><a href="#In">Install</a>
 	<li><a href="#Seq">Sequence data formation</a>
 	<li><a href="#Usr">Execution</a>
 	<li><a href="#Exl">Example</a>
 	<li><a href="#Chg">Change from previous version</a>
-	<li><a href="#Dwn">Download</a>
+	<li><a href="#Ver2">Major changes in Version2</a>
+<!--	<li><a href="#Dwn">Download</a> -->
 </ul>
 </H2>
 <SPAN style="padding-bottom:20px;"></SPAN>
@@ -121,38 +121,6 @@ To modify the location of executables and/or other settings, run 'configure --he
  <li> Proceed to <a href="#Seq">Sequence data formation</a>.
 </ol>
 <BR>
-<h3>From binaries</h3>
-Binaries for a 32 bit (<a href="../archive/spaln2.0.4.linux32.tar.gz">spaln2.0.4.linux32</a>) or 64 bit (<a href="../archive/spaln2.3.2.linux64.tar.gz">spaln2.3.2.linux64</a>) Linux machine are available. To use the binaries, follow the instructions below. 
-<p>
-Case I: Assume the directory <font color="#40A040"><em>work</em></font> is your workspace where every material is stored. In this case, <font color="#40A040"><em>seqdb</font></em>=<em><font color="#40A040">work</font></em>.
-<ol>
- <li> <TT>% mkdir <em><font color="#40A040">work</font></em></TT>
- <li> <TT>% cd <em><font color="#40A040">work</font></em></TT>
- <li> Download spalnXX.PC.tar.gz, where PC is a platform code
- <li> <TT>% tar xfz spalnXX.PC.tar.gz</TT>
- <li> Add <em><font color="#40A040">work</font>/bin</em> to your PATH <BR>
-      Or move or copy <em><font color="#40A040">work</font>/bin/*</em> to a directory on your PATH
- <li> <TT>% mv ./table/* .; rmdir ./table</TT>
- <li> <TT>% mv ./seqdb/* .; rmdir ./seqdb</TT>
- <li> Now proceed to <a href="#Seq">Sequence data formation</a>.
-</ol> 
-<p>
-Case II: Assume your workspace <font color="#40A040"><em>work</em></font> is distinct from <font color="#40A040"><em>seqdb</em></font>
-<ol>
- <li> <TT>% mkdir <em><font color="#40A040">download</font></em></TT>
- <li> <TT>% cd <em><font color="#40A040">download</font></em></TT>
- <li> Download spalnXX.PC.tar.gz, where PC is a platform code
- <li> <TT>% tar xfz spalnXX.PC.tar.gz</TT>
- <li> Add <em><font color="#40A040">download</font>/bin</em> to your PATH<BR>
-  Or move or copy <font color="#40A040"><em>download</font>/bin/*</em> to a directory on your PATH
- <li> <TT>% setenv ALN_TAB <font color="#40A040"><em>download</em></font>/table</TT> (csh/tsh)
- <BR> <TT>$ export ALN_TAB=<font color="#40A040"><em>download</em></font>/table</TT> (sh/bsh)
- <li> <TT>% setenv ALN_DBS <font color="#40A040"><em>download</em></font>/seqdb</TT> (csh/tsh)
- <BR> <TT>$ export ALN_DBS=<font color="#40A040"><em>download</em></font>/seqdb</TT> (sh/bsh)
- <li> Add the above lines to your rc file, so that you don't have to repeat the commands at every login time.
- <li> Now proceed to <a href="#Seq">Sequence data formation </a>
-</ol>
-
 <p> 
 <h2><a name="Seq">Sequence data formation</a></h2>
 If you do not need genome mapping or database search, you may skip this section. All sequence files should be in (multi-)fasta format.<BR>
@@ -658,34 +626,6 @@ Added/modified in Ver. 1.3.0
  <li> Combination of relevant blocks has been modified to improve sensitivity.
  <li> The 'Salvage' procedure was added to find homologues that are missed by the formal criteria.
 </ol> 
-
-<h2><a name="Dwn">Download</a></h2>
-  Source<ul>
-    <li><a href="../archive/spaln2.3.2.tar.gz">spaln2.3.2</a>
-    <li><a href="../archive/spaln2.3.1.tar.gz">spaln2.3.1</a>
-    <li><a href="../archive/spaln2.2.2a.tar.gz">spaln2.2.2a</a>
-    <li><a href="../archive/spaln2.1.4.tar.gz">spaln2.1.4</a>
-    <li><a href="../archive/spaln2.0.6.tar.gz">spaln2.0.6</a>
-    <li><a href="../archive/spaln1.4.5b.tar.gz">spaln1.4.5</a>
-  </ul>
-  Binaries<ul>
-    <li><a href="../archive/spaln2.3.2.linux64.tar.gz">spaln2.3.2.linux64</a>
-    <li><a href="../archive/spaln2.3.1.linux64.tar.gz">spaln2.3.1.linux64</a>
-    <li><a href="../archive/spaln2.2.2a.linux64.tar.gz">spaln2.2.2a.linux64</a>
-    <li><a href="../archive/spaln2.1.4.linux64.tar.gz">spaln2.1.4.linux64</a>
-    <li><a href="../archive/spaln2.0.6.linux64.tar.gz">spaln2.0.6.linux64</a>
-    <li><a href="../archive/spaln2.0.4.linux32.tar.gz">spaln2.0.4.linux32</a>
-  </ul>
-  Data<ul>
-    <li><a href="../archive/G3CYP.data.tar.gz">G3CYPData</a>
-    <li><a href="../archive/SPAliBASE.tar.gz">SPAliBASE</a>
-    <li><a href="../archive/spalnData.txt">Data document</a>
-    <li><a href="../archive/C756Data.tar.gz">C756Data</a>
-    <li><a href="../archive/G178Data.tar.gz">G178Data</a>
-    <li><a href="../archive/P491Data.tar.gz">P491Data</a>
-    <li><a href="../archive/spaln_data.tar.gz">spaln_data</a>
-  </ul>
-<hr>
 <p>
 Copyright (c) 2007-2018 Osamu Gotoh all rights reserved
 <p>
