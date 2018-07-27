@@ -1439,12 +1439,14 @@ static int gcmpf(GeneRng* a, GeneRng* b)
 	return 0;
 }
 
-Randbs::Randbs(double avr, bool gdb) : trans_form(gdb? log: sqrt)
+Randbs::Randbs(double avr, bool gdb)
 {
 	if (gdb) {
 	    if (RbsFact == DQUERY) RbsFact = RbsFactLog;
+	    trans_form = log;
 	} else {
 	    if (RbsFact == DQUERY) RbsFact = algmode.crs? RbsFactSqrX: RbsFactSqr;
+	    trans_form = sqrt;
 	}
 	RbsCoef = RbsFact * avr;
 	RbsCons = ((!gdb && algmode.crs)? RbsBaseX: RbsBase) * avr;

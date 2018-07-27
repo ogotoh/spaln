@@ -88,7 +88,7 @@ static	const	char	OPTCHAR = '-';
 #endif
 #if USE_ZLIB
 #include <zlib.h>
-#if ZLIB_VERNUM < 0x1240
+#if ZLIB_VERNUM < 0x1290
 inline	size_t  fread(void* buf, size_t s, size_t c, gzFile gzfd) {
 	int	rv = gzread(gzfd, buf, s * c);
 	return (rv < 0? 0: rv / s);
