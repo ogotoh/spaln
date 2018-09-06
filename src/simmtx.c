@@ -41,9 +41,9 @@ static	const	char*	Badpam = "Illegal pam = %d !\n";
 static	const	char*	strscale = "scale";
 
 //		   u,      v,   u0, u1, v0, tgapf, thr, sclase, maxsp, gamma, k1, ls, sh, mtx_no
-ALPRM	alprm = {DQUERY, DQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 0};
+ALPRM	alprm = {FQUERY, FQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 0};
 //		   x,   y,      z,   o, bti, spb, Z, sss, jneibr termk1
-ALPRM2	alprm2 = {30., DQUERY, DQUERY, 30., 8., 20., 0., -1., 10, 45};
+ALPRM2	alprm2 = {30., FQUERY, FQUERY, 30., 8., 20., 0., -1., 10, 45};
 //		scnd, hydr, hpmt, hpwing, no_angle
 ALPRM3	alprm3 = {0., 0., 0., 3, 0};
 
@@ -554,19 +554,19 @@ void setNpam(int q, float v)
 void setdefNprm(float n, float u, float v, float b, int c)
 {
 	if (c < 0 || c > 1) return;
-	if (n > DPOPUP) defNprm[c].n = n;
-	if (u > DPOPUP) defNprm[c].u = u;
-	if (v > DPOPUP) defNprm[c].v = v;
-	if (b > DPOPUP) defNprm[c].b = b;
+	if (n > FPOPUP) defNprm[c].n = n;
+	if (u > FPOPUP) defNprm[c].u = u;
+	if (v > FPOPUP) defNprm[c].v = v;
+	if (b > FPOPUP) defNprm[c].b = b;
 }
 
 void setdefPprm(int p, float u, float v, float b, int c)
 {
 	if (c < 0 || c > 1) return;
 	if (p > POPUP)  defPprm[c].p = p;
-	if (u > DPOPUP) defPprm[c].u = u;
-	if (v > DPOPUP) defPprm[c].v = v;
-	if (b > DPOPUP) defNprm[c].b = b;
+	if (u > FPOPUP) defPprm[c].u = u;
+	if (v > FPOPUP) defPprm[c].v = v;
+	if (b > FPOPUP) defNprm[c].b = b;
 }
 
 void setalprm()
@@ -667,7 +667,8 @@ const	char*	vl;
 	    case 'M': IntronPrm.maxl = int(ktof(vl)); break;	// maximum expected length of intron
 //	    case 'N': alprm2.nrmlipot = 1; break;	// normalize intron potential
 	    case 'S': alprm2.sss = *vl? atof(vl): 100.; 
-		if (alprm2.sss >= 1.) alprm2.sss /= 100.; break;	// splice signal
+		if (alprm2.sss >= 1.) alprm2.sss /= 100.;
+		break;
 	    case 'T': IntronPrm.tlmt = atoi(vl); break;	// 
 	    case 'V': alprm.maxsp = atof(vl); break;	// max traceback volume
 	    case 'X': algmode.crs = 1; break;		// toggle cross-species switch
@@ -681,8 +682,8 @@ void setSimmtxes(ComPmt ab, bool mdm, DefPrm* dp)
 {
 	int	upto = dp? 1: max_simmtxes;
 	if (!dp) dp = ab == DxD? defNprm: defPprm;
-	if (alprm.v == DQUERY) alprm.v = dp->v;
-	if (alprm.u == DQUERY) alprm.u = dp->u;
+	if (alprm.v == FQUERY) alprm.v = dp->v;
+	if (alprm.u == FQUERY) alprm.u = dp->u;
 	Simmtx**	psm = simmtxes.storedSimmtx;
 	for (int mid = 0; mid < upto; ++mid, ++psm, ++dp) {
 	    if (!*psm) {

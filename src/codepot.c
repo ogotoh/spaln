@@ -36,7 +36,7 @@ enum {Ad, Cy, Gu, Ty};
 enum {AA, AC, AG, AT, CA, CC, CG, CT, GA, GC, GG, GT, TA, TC, TG, TT};
 
 //		     ip, fact, mean, llmt, mu, rlmt, minexon, tlmt, maxl, array, table
-INTRONPEN IntronPrm = {DQUERY, DQUERY, -2.767, 20, 224, 825, 2, 5, 0, 0, 0,
+INTRONPEN IntronPrm = {FQUERY, FQUERY, -2.767, 20, 224, 825, 2, 5, 0, 0, 0,
 	0.2767, -22.80, 83.35, 5.488, 21.870, 223.95, 0.7882,
 //	a1      m1      t1     k1     m2      t2      k2
 	0, 0, 0, 0};
@@ -174,8 +174,8 @@ static double ProbDist(int i, double mu, double th, double kk)
 IntronPenalty::IntronPenalty(VTYPE f, int hh, EijPat* eijpat, ExinPot* exinpot)
 	: array(0), table(0), optlen(0)
 {
-	if (IntronPrm.fact == DQUERY) IntronPrm.fact = defprm2[hh > 0][algmode.crs].Y;
-	if (alprm2.y == DQUERY) alprm2.y = defprm2[hh > 0][algmode.crs].y;
+	if (IntronPrm.fact == FQUERY) IntronPrm.fact = defprm2[hh > 0][algmode.crs].Y;
+	if (alprm2.y == FQUERY) alprm2.y = defprm2[hh > 0][algmode.crs].y;
 
 	if (IntronPrm.maxl <= 0)
 	    IntronPrm.maxl = int (imaxfact * (IntronPrm.t2 > 0.? IntronPrm.t2: IntronPrm.t1));
@@ -194,7 +194,7 @@ IntronPenalty::IntronPenalty(VTYPE f, int hh, EijPat* eijpat, ExinPot* exinpot)
 	if (exinpot) expsig +=  exinpot->avrpot(f * alprm2.Z);
 	AvrSig = (VTYPE) expsig;
 	VTYPE	IntPen = (VTYPE) (expsig + fY * IntronPrm.mean +
-		f * ((IntronPrm.ip == DQUERY)? GapPenalty(Ip_equ_k): IntronPrm.ip));
+		f * ((IntronPrm.ip == FQUERY)? GapPenalty(Ip_equ_k): IntronPrm.ip));
 	GapWI = (VTYPE) (fY * IntronPrm.mean) - IntPen;
 	int	i = IntronPrm.rlmt - IntronPrm.llmt + 1;
 	array = new VTYPE[i];
@@ -247,7 +247,7 @@ EijPat::EijPat(int hh)
 {
 const	char*	fn;
 
-	if (alprm2.y == DQUERY) alprm2.y = defprm2[hh > 0][algmode.crs].y;
+	if (alprm2.y == FQUERY) alprm2.y = defprm2[hh > 0][algmode.crs].y;
 	if (alprm2.y > 0.) {
 	    pattern5 = new PatMat(fn = SPLICE5PAT);
 	    if (!pattern5->mtx) fatal("Can't open %s file!", fn);

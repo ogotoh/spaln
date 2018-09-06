@@ -947,7 +947,7 @@ VTYPE Aln2s1::centerS_ng(int* ml, int* mr, int* nl, int* nr,
 #endif
 	    bool	a_in_zone = api_size && (api == m);
 	    for ( ; --n >= n9; ) {
-		VTYPE	x, y;
+		VTYPE	x;
 		--bs; --g; --r;
 		hb[0] = --h;
 		if (g2) --g2;
@@ -1057,7 +1057,9 @@ HorizonB:
 		}
 
 /*	Find optimal path	*/
-		y = h->val;
+#if DEBUG
+		VTYPE	y = h->val;
+#endif
 		if (h != mx) {
 		    *h = *mx;
 		    if (h->upr < r) h->upr = r;

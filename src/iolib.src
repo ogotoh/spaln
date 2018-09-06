@@ -65,10 +65,10 @@
 static	const	int	QUERY = INT_MIN;
 static	const	int	SILENT = QUERY + 1;
 static	const	int	POPUP = QUERY + 2;
-static	const	double	DQUERY = QUERY + 0.L;
+static	const	float	FQUERY = QUERY + 0.L;
 static	const	int	n_tabpath = 3;
-static	const	double	DSILENT = DQUERY + 1.L;
-static	const	double	DPOPUP = DQUERY + 2.L;
+static	const	float	FSILENT = FQUERY + 1.L;
+static	const	float	FPOPUP = FQUERY + 2.L;
 static	const	char*	esc_code = "\x1b[";
 static	const	char*	font_end = "</font></b>";
 

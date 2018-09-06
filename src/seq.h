@@ -22,14 +22,19 @@
 #ifndef  _BSEQ_H_
 #define  _BSEQ_H_
 
+#include "cmn.h"
+
 struct	ALPRM {float u, v, u0, u1, v0, tgapf, thr, scale, maxsp, gamma; int k1, ls, sh, mtx_no;};
 struct	ALPRM2 {float x, y, z, o, bti, spb, Z, sss; int jneibr, termk1;};
 struct	ALPRM3 {float scnd, hydr, hpmt; int hpwing, no_angle;};
+struct	DefSetup {int defmolc, delamb; InputMode def_input_mode;};
 
+enum {SINGLE_SQ, NATIVE_MF, SEQUENTIAL_MF, SEQUENTIAL_FA, GCG_MSF};
+
+extern	int 	noseq;
 extern	ALPRM2	alprm2;
 extern	ALPRM3	alprm3;
-
-#include "cmn.h"
+extern	ALPRM	alprm;
 
 #define	USE_ETHER 	FVAL
 
@@ -81,6 +86,10 @@ static	const	int	TSIMD = 23+2+USE_EXG;
 static	const	int	RSIMD = 20+2+USE_EXG;
 static	const	int	NAMB = A + 4;
 static	const	int	NUCDIM = 4+2+USE_EXG;
+#if USE_ZLIB
+static	const	char	gz_ext[] = ".gz";
+#endif
+extern	RANGE	fullrng;
 
 static	const	CHAR	t2atab[] = 
 {NIL,UNP,AMB,ALA,ARG,ASN,ASP,CYS,GLN,GLU,GLY,HIS,ILE,LEU,LYS,MET,
@@ -149,8 +158,6 @@ inline	int	isDRNA(int a) {
 	return (a == DNA || a == RNA || a == GENOME);
 }
 
-extern	ALPRM	alprm;
-
 static	const	char	SensChar[] = {NM, CM, RV, CR, '\0'};
 static	const	INEX	def_inex = {0};
 
@@ -189,11 +196,14 @@ const	char*	out_file;
 	INT	trimendgap:	1;	// suppress tail gap characters
 	INT	taxoncode:	3;	// add taxinomic code field X in gnm2tab
 	INT	printweight:	1;	// output seq weights in MSA
+	INT	gzipped:	1;	// gzipped output for spaln
 };
 
-extern	OUTPRM	OutPrm;
-
 #define strmatch(str, pat) (!strncmp(str, pat, sizeof(pat) - 1))
+
+extern	OUTPRM	OutPrm;
+extern	DefSetup def_setup;
+extern	SEQ_CODE* setSeqCode(Seq* sd, int molc);
 
 inline	bool	IsGap(CHAR x) {return (x <= gap_code);}
 inline	bool	IsTrueGap(CHAR x) {return (x == gap_code);}
@@ -212,8 +222,12 @@ protected:
 	StrHash<int>*	mnhash;
 	void	fillpad();
 	RANGE*	setrange(const char* pa, int* ncr = 0);
-	char*	readanno(FILE* fd, char* str, SeqDb* db, Mfile& gapmfd);
+template <typename file_t>
+	char*	readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd);
 	void	estimate_len(FILE* fd, int nos);
+#if USE_ZLIB
+	void	estimate_len(gzFile fd, int nos);
+#endif
 	void	header_nat_aln(int n, FTYPE sumwt);
 	CHAR*	seq_realloc();
 	int	calcResNum(int i);
@@ -321,20 +335,29 @@ const	char*	sqname(bool fpri = false) {
 		    if (ps >= end_) ps = seq_realloc();
 		    *ps = c; ps += step;
 		}
-	CHAR*	seq_readin(FILE* fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd = 0);
-	CHAR*	get_seq_aln(FILE* fd, char* str, RANGE* pcr);
-	CHAR*	get_mfasta(FILE* fd, long fpos, char* str, RANGE* pcr, SeqDb* dbf);
+template <typename file_t>
+	CHAR*	seq_readin(file_t fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd = 0);
+template <typename file_t>
+	CHAR*	get_seq_aln(file_t fd, char* str, RANGE* pcr);
+template <typename file_t>
+	CHAR*	get_mfasta(file_t fd, long fpos, char* str, RANGE* pcr, SeqDb* dbf);
 template <typename file_t>
 	int	infermolc(file_t fd, char* str, bool msf = false);
 	CHAR*	ToInferred(CHAR* src, CHAR* lastseq, int step);
-	Seq*	fgetseq(FILE* fd, const char* attr = 0, const char* attr2 = 0);
-	int	fget(FILE* fd, const char* fn = 0) {return (fgetseq(fd)? 1: EOF);}	// alias 
+template <typename file_t>
+	Seq*	fgetseq(file_t fd, const char* attr = 0, const char* attr2 = 0);
+template <typename file_t>
+	int	fget(file_t fd, const char* fn = 0) {return (fgetseq(fd)? 1: EOF);}	// alias 
 	Seq*	getseq(const char* str, DbsDt* dbf = 0);
-	int	getcds(FILE* fd, char* str, int cdscolumn);
+template <typename file_t>
+	int	getcds(file_t fd, char* str, int cdscolumn);
 	char*	sqline(int i, char* ps);
-	CHAR*	get_nat_aln(FILE* fd, char* str, RANGE* pcr);
-	CHAR*	get_msf_aln(FILE* fd, char* str, RANGE* pcr);
-	CHAR*	read_dbres(FILE* fd, RANGE* rng);
+template <typename file_t>
+	CHAR*	get_nat_aln(file_t fd, char* str, RANGE* pcr);
+template <typename file_t>
+	CHAR*	get_msf_aln(file_t fd, char* str, RANGE* pcr);
+template <typename file_t>
+	CHAR*	read_dbres(file_t fd, RANGE* rng);
 	CHAR*	read_dbres(CHAR* dbs, RANGE* rng);
 	Seq*	read_dbseq(DbsDt* dbf, DbsRec* rec, RANGE* rng);
 	Seq*	read_dbseq(DbsDt* dbf, long pos);
@@ -344,7 +367,11 @@ template <typename file_t>
 	FTYPE*	composition();
 	void	printseq(FILE* fdi, int);
 	void	fpmem_len(FILE* fd);
-	FILE*	openseq(const char* str);// read from named file
+#if USE_ZLIB
+	FILE*	openseq(const char* str, gzFile* gzfd = 0);// read from named file
+#else
+	FILE*	openseq(const char* str);
+#endif
 	int	calcnbr(int gp, int i);
 	void	listseq(int j, bool sub = false);
 	void	num2pos(int which, int* array);
@@ -381,6 +408,148 @@ template <typename file_t>
 friend	void 	antiseq(Seq** seqs);
 };
 
+template <typename file_t>
+SeqDb* seq_NandL(int& num, int& len, int& mode, char* str, file_t fd, int molc)
+{
+// Force to single sequence
+
+	if (mode == IM_SNGL) {
+	    num = 1; mode = SINGLE_SQ;
+	    return (0);
+	}
+// Givien Number & Length
+	if ((num = atoi(str))) {
+	    char*       ps = cdr(str);
+	    if (ps && isdigit(*ps)) len = atoi(ps);	     // Phylip like
+	    else if (ps && *ps) fatal("Unsupported format:\n%s\n", str);
+	    if (num > 1) mode = SEQUENTIAL_MF;
+	    else	mode = SINGLE_SQ;
+	    return (whichdb(str, fd));
+	}
+// spaln output?
+	int     m;
+	char    c;
+	int     n = sscanf(str, "%*s %*s %c [%d", &c, &m);
+	if (n == 2 && m == 1 && (c == '+' || c == '-')) {
+	    num = 1; mode = SINGLE_SQ;
+	    Strlist     stl(str, stddelim);
+	    int k = stl.size();
+	    len = (stl[k - 2][0] == 'N' || stl[k - 2][0] == 'Q')?
+		atoi(stl[k - 4]): 0;
+	    return (0);
+	}
+// native mfa ?
+	for (const char* ps = str; (ps = strchr(ps, '[')); ) {
+	    num += atoi(++ps);
+	    const char* qs = strchr(ps, ':');
+	    int tl = qs? len += atoi(ps = ++qs): 0;
+	    if (tl > len) len = tl;
+	}
+	if (num > 1) {mode = NATIVE_MF; return (0);}
+	SeqDb*  dbf = whichdb(str, fd);
+// MSF format ?
+	if (dbf->FormID == MSF) {
+	    mode = GCG_MSF;
+	    return (dbf);
+	}
+// sequential mfa unkonw # of seqs
+	if (mode == IM_MULT && dbf && dbf->FormID <= FASTA) {
+	    num = 0;
+	    mode = SEQUENTIAL_FA;
+	    return (dbf);
+	}
+// single seq
+	num = 1; mode = SINGLE_SQ;
+	return (0);
+}
+
+template <typename file_t>
+Seq* Seq::fgetseq(file_t fd, const char* attr, const char* attr2)
+{
+	int     dm = def_setup.defmolc;
+	int     dela = def_setup.delamb;
+	int     mode = def_setup.def_input_mode;
+const   char*   attrs[3] = {attr, attr2, 0};
+	for (const char** ars = attrs; *ars; ++ars) {
+	    for (const char* as = *ars; as && *as; ++as) {
+	      switch (toupper(*as)) {
+		case 'N': dela = 1;
+		case 'D': dm = DNA; break;
+		case 'R': dm = RNA; break;
+		case 'X': dela = 1;
+		case 'A':
+		case 'P': dm = PROTEIN; break;
+		case 'T': dm = TRON; break;
+		case 'G': dm = GENOME;
+		case 'S': mode = IM_SNGL; break;
+		case 'M': mode = IM_MULT; break;
+		default:  break;
+	      }
+	    }
+	}
+
+	int     nos = len = 0;
+	char    str[MAXL];
+	long    fpos = 0L;
+// skip comment lines
+	do {
+	    fpos = ftell(fd);
+	    if (!fgets(str, MAXL, fd)) return (0);      // empty
+	} while (*str == _LCOM || isBlankLine(str));
+	if ((strlen(str) + 1) == MAXL) {
+	    int c;
+	    while ((c = fgetc(fd)) != EOF && c != '\n') ;
+	}
+// infer input sequence format
+	SeqDb*  dbf = seq_NandL(nos, len, mode, str, fd, dm);
+	if (nos) {
+	    if (!len) estimate_len(fd, nos);
+	    refresh(nos, len);
+	}
+	setSeqCode(this, dm);
+	inex.dela = dela;
+	CHAR*   lastseq;
+	RANGE   rng = {1, 0};
+	int     ncr = 0;
+	RANGE*  slices = setrange(attr, &ncr);
+	RANGE*  pcr = slices? slices: &fullrng;
+	switch (mode) {   // Multiple seqs ?
+	    case SEQUENTIAL_FA:  // Sequential: unknown # of seqs
+		lastseq = get_mfasta(fd, fpos, str, pcr, dbf); break;
+	    case SEQUENTIAL_MF:  // Sequential: given # of seqs
+		lastseq = get_seq_aln(fd, str, pcr); break;
+	    case NATIVE_MF:       // Native
+		lastseq = get_nat_aln(fd, str, pcr); break;
+	    case GCG_MSF:	     // GCG MSF format
+		lastseq = get_msf_aln(fd, str, pcr); break;
+	    default:	    // Single seq
+		lastseq = seq_readin(fd, str, 0, pcr, 0);
+		while (lastseq > seq_ && IsGap(lastseq[-1]))
+		    --lastseq;    // trim the end gaps
+		break;
+	}
+	if (lastseq <= seq_) return (0);
+	base_ = left;
+	postseq(lastseq);
+	if (sigII) {
+	    sigII->step = isprotein()? 3: 1;
+	    sigII->resetend(len);
+	    sigII->pfqrepos(slices);
+	}
+	delete[] slices;
+	if (rng.left < rng.right) {
+	    dm = --rng.left - base_;
+	    if (dm > 0) left = dm;
+	    dm = rng.right - base_;
+	    if (dm < right) right = dm;
+	}
+	if (spath) {
+	    if (!sname)  sname = new Strlist(path2fn(spath));
+	    else if (sname->empty()) sname->assign(path2fn(spath));
+	}
+	return attrseq(attr);
+}
+
 // supplier of one or two sets of sequences in series
 
 class SeqServer {
@@ -389,6 +558,9 @@ class SeqServer {
 const	char**	argv;
 const	char**	argv0;
 	FILE*	fd[2];
+#if USE_ZLIB
+	gzFile	gzfd[2];
+#endif
 	FILE*	fc;
 	int	nfrom;
 	int	nto;
@@ -612,7 +784,7 @@ public:
 	~PrintAln();
 };
 
-extern	int 	noseq;
+
 extern	CHAR	ncredctab[];
 extern	CHAR	ncelements[];
 extern	CHAR	tnredctab[];
@@ -684,7 +856,8 @@ inline	VTYPE axbscale(Seq* seqs[])
 	return (VTYPE) (alprm.scale * seqs[0]->many * seqs[1]->many);
 }
 
-inline	char*	withinline(char* str, INT maxl, FILE* fd)
+template <typename file_t>
+inline	char*	withinline(char* str, INT maxl, file_t fd)
 {
 	return ((strlen(str) + 1) == maxl? fgets(str, maxl, fd): 0);
 }

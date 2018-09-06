@@ -60,8 +60,7 @@ static	int	raw_scn(char* str, char* format, va_list args);
 static	void	display(const char* s, va_list args);
 
 #if LEAKTRACE
-#include "MemoryTrace.hpp"
-LeakTrace	lt;
+LeakTrace	leak_trace;
 #endif
 
 char* fgets_wocr(char* str, INT maxl, FILE* fd)
@@ -541,7 +540,8 @@ static void display(const char* s, va_list args)
 		    else if (*i_ptr == INT_MIN)
 			fprintf(stderr, str, "---");
 		    else
-			fprintf(stderr, str, *i_ptr); break;
+			fprintf(stderr, str, *i_ptr);
+		    break;
 		case 'u':
 		    u_ptr = va_arg(args, INT *);
 		    fprintf(stderr, str, *u_ptr); break;
@@ -555,7 +555,8 @@ static void display(const char* s, va_list args)
 			fprintf(stderr, str, "+++");
 		    else if (*l_ptr == LONG_MIN)
 			fprintf(stderr, str, "---");
-		    else fprintf(stderr, str, *l_ptr); break;
+		    else fprintf(stderr, str, *l_ptr);
+		    break;
 		case 'e':
 		case 'f':
 		case 'g':
@@ -567,7 +568,8 @@ static void display(const char* s, va_list args)
 			frmts(str);
 			fprintf(stderr, str, "*");
 		    } else
-			fprintf(stderr, str, *d_ptr); break;
+			fprintf(stderr, str, *d_ptr);
+		    break;
 		default:  fputs(str, stderr); break;
 	    }
 	}

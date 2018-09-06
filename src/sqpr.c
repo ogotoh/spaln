@@ -63,7 +63,7 @@ static	void	CigarForm(Gsinfo* gsinf, Seq* gene, Seq* qry);
 static	void	VulgarForm(Gsinfo* gsinf, Seq* gene, Seq* qry);
 static	void	SamForm(Gsinfo* gsinf, Seq* gene, Seq* qry);
 		//lpw blk Nout Ncolony eij ovl fnm rm trim lg lbl dsc odr spj olr color self
-OUTPRM	OutPrm = {60, 0, 1, MAX_COLONY, 10, 5, 0, 1, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0};
+OUTPRM	OutPrm = {60, 0, 1, MAX_COLONY, 10, 5, 0, 1, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0};
 static	char	ditto = _IBID;
 static	Row_Mode	prmode = Row_Last;
 static	int	prtrc = TRON;
@@ -825,6 +825,11 @@ static	const	char*	BedFrom = "%s\t%d\t%d\t%s\t%d\t%c\t%d\t%d\t%s\t%d\t";
 static	FILE*	fg = 0;
 static	FILE*	fe = 0;
 static	FILE*	fq = 0;
+#if USE_ZLIB
+static	gzFile	gzfg = 0;
+static	gzFile	gzfe = 0;
+static	gzFile	gzfq = 0;
+#endif
 static void ExonForm(Gsinfo* gsinf, Seq* gene, Seq* qry)
 {
 	int	cds = 0;
@@ -859,14 +864,34 @@ static	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		    OutPrm.out_file = qry->spath;
 		partfnam(str, OutPrm.out_file, "b");
 		strcat(str, grext);
-		if (!(fg = fopen(str, "wb"))) fatal(efmt, str, 0);
+#if USE_ZLIB
+		if (OutPrm.gzipped) {
+		    strcat(str, gz_ext);
+		    if (!(gzfg = gzopen(str, "wb"))) fatal(efmt, str, 0);
+		} else 
+#endif
+		    if (!(fg = fopen(str, "wb"))) fatal(efmt, str, 0);
 		partfnam(str, OutPrm.out_file, "b");
 		strcat(str, erext);
-		if (!(fe = fopen(str, "wb"))) fatal(efmt, str, 0);
+#if USE_ZLIB
+		if (OutPrm.gzipped) {
+		    strcat(str, gz_ext);
+		    if (!(gzfe = gzopen(str, "wb"))) fatal(efmt, str, 0);
+		} else 
+#endif
+		    if (!(fe = fopen(str, "wb"))) fatal(efmt, str, 0);
 		partfnam(str, OutPrm.out_file, "b");
 		strcat(str, qrext);
-		if (!(fq = fopen(str, "wb"))) fatal(efmt, str, 0);
-		if ((fputs(dbs_dt[0]->dbsid, fq) == EOF) || (putc('\0', fq) == EOF))
+#if USE_ZLIB
+		if (OutPrm.gzipped) {
+		    strcat(str, gz_ext);
+		    if (!(gzfq = gzopen(str, "wb"))) fatal(efmt, str, 0);
+		    if ((fputs(dbs_dt[0]->dbsid, gzfq) == EOF) || (fputc('\0', gzfq) == EOF))
+		    fatal(efmt, qrext, gr.Nrecord);
+		} else 
+#endif
+		    if (!(fq = fopen(str, "wb"))) fatal(efmt, str, 0);
+		if (fq && ((fputs(dbs_dt[0]->dbsid, fq) == EOF) || (fputc('\0', fq) == EOF)))
 		    fatal(efmt, qrext, gr.Nrecord);
 		++qryidx;	// o-th q-recode contains the database name
 	    } else {
@@ -904,8 +929,12 @@ static	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		if (binary) {
 		    er.Nmmc = wkr->mmc;
 		    er.Nunp = wkr->unp;
-		    if (fwrite(&er, sizeof(ExonRecord), 1, fe) != 1)
+		    if (fe && fwrite(&er, sizeof(ExonRecord), 1, fe) != 1)
 			fatal(efmt, erext, gr.Nrecord);
+#if USE_ZLIB
+		    if (gzfe && fwrite(&er, sizeof(ExonRecord), 1, gzfe) != 1)
+			fatal(efmt, erext, gr.Nrecord);
+#endif
 		} else {
 		    fprintf(out_fd, fmt, 
 		    (*qry->sname)[0], (*gene->sname)[0], er.Pmatch, er.Elen,
@@ -947,10 +976,18 @@ static	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 	    gr.Rsense = qry->inex.sens;
 	    gr.Rlen = qry->len;
 	    if (qry->isprotein() && gr.ng == 0) gr.ng = -1;
-	    if (fwrite(&gr, sizeof(GeneRecord), 1, fg) != 1)
+	    if (fg && fwrite(&gr, sizeof(GeneRecord), 1, fg) != 1)
 		fatal(efmt, grext, gr.Nrecord);
-	    if ((fputs((*qry->sname)[0], fq) == EOF) || (putc('\0', fq) == EOF))
+#if USE_ZLIB
+	    if (gzfg && fwrite(&gr, sizeof(GeneRecord), 1, gzfg) != 1)
+		fatal(efmt, grext, gr.Nrecord);
+#endif
+	    if (fq && (fputs((*qry->sname)[0], fq) == EOF || fputc('\0', fq) == EOF))
 		fatal(efmt, qrext, gr.Nrecord);
+#if USE_ZLIB
+	    if (gzfq && (fputs((*qry->sname)[0], gzfq) == EOF || fputc('\0', gzfq) == EOF))
+		fatal(efmt, qrext, gr.Nrecord);
+#endif
 	} else {
 	    fprintf(out_fd, tfmt, (*gene->sname)[0], gr.Csense? '-': '+', 
 	    gr.Gstart, gr.Gend,
@@ -967,6 +1004,11 @@ void closeGeneRecord()
 	if (fg) {fclose(fg); fg = 0;}
 	if (fe) {fclose(fe); fe = 0;}
 	if (fq) {fclose(fq); fq = 0;}
+#if USE_ZLIB
+	if (gzfg) {fclose(gzfg); gzfg = 0;}
+	if (gzfe) {fclose(gzfe); gzfe = 0;}
+	if (gzfq) {fclose(gzfq); gzfq = 0;}
+#endif
 }
 
 static void IntronForm(Gsinfo* gsinf, Seq* gene, Seq* qry)

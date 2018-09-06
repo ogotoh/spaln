@@ -77,6 +77,7 @@ static void usage()
 	fputs("Options:\n", stderr);
 	fputs("\t-CN:\tMinimum % of coverage (0-100)\n", stderr);
 	fputs("\t-FN:\tFilter Level (0 -> 3: no -> stringent)\n", stderr);
+	fputs("\t-GN:\tGenetic code (0: universal)\n", stderr);
 	fputs("\t-HN:\tMinimum spaln score\n", stderr);
 	fputs("\t-JN:\tMinimum ORF length (300)\n", stderr);
 	fputs("\t-MN:\tMaximum total number of missmatches\n", stderr);
@@ -1147,8 +1148,10 @@ const	char*	grpfn = 0;
 		    break;
 		case 'E': if ((val = getarg(argc, argv, true)))	// isoforms
 		    algmode.mlt = atoi(val); break;
-		case 'G':	// print grcd records only
-		    printgrcd = 1; break;
+		case 'G': if ((val = getarg(argc, argv, true))) // genetic code
+			    initcodon(atoi(val));
+			  else	printgrcd = 1;			// print grcd records only
+		    break;
 		case 'H': if ((val = getarg(argc, argv, true)))	// minimum spaln score
 		    filter.Gscore = atof(val); break;
 		case 'J': if ((val = getarg(argc, argv, true)))	// minimum ORF length

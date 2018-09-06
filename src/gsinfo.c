@@ -124,59 +124,6 @@ SigII::SigII(int* poss, int nn, int s) :
 	} else	pfq = 0;
 }
 
-SigII::SigII(FILE* fd, char* str, FTYPE* wt) :	// read from seq file
-	pfqnum(0), lstnum(0), step(0), 
-	pfq(0), lst(0), eijtab(0), lone(0)
-{
-	sscanf(str, "%*s %d %d", &pfqnum, &lstnum);
-	if (pfqnum == 0) return;
-	pfq = new PFQ[pfqnum + 1];
-	PFQ*	wfq = pfq;
-	int	i = 0;
-	while (fgets(str, MAXL, fd)) {
-	    if (wordcmp(str, ";b")) break;
-	    for (char* ps = cdr(str); ps && *ps; ps = cdr(ps)) {
-		wfq->pos = atoi(ps);
-		ps = cdr(ps);
-		wfq->num = atoi(ps);
-		wfq->gps = 0;
-#if USE_WEIGHT
-		wfq->dns = (lstnum && wt)? 0: wfq->num;
-#endif
-		++wfq;
-		if (++i >= pfqnum) goto readlst;
-	    }
-	}
-	prompt("Insufficient SP boundaries: %d %d\n", i, pfqnum);
-readlst:
-	*wfq = pfqend;
-	if (!lstnum) return;
-	lst = new int[lstnum];
-	int*	wst = lst;
-	i = 0;
-#if USE_WEIGHT
-	int	n = 0;
-#endif
-	wfq = pfq;
-	while (fgets(str, MAXL, fd)) {
-	    if (wordcmp(str, ";m")) break;
-	    for (char* ps = cdr(str); ps && *ps; ps = cdr(ps)) {
-		int	m = atoi(ps) - 1;
-		*wst++ = m;
-#if USE_WEIGHT
-		if (wt) {
-		    wfq->dns += (VTYPE) wt[m];
-		    if (++n == wfq->num) {
-			++wfq; n = 0;
-		    }
-		}
-#endif
-		if (++i >= lstnum) return;
-	    }
-	}
-	prompt("Insufficient SP boundary list: %d %d\n", i, lstnum);
-}
-
 SigII::SigII(Seq** slist, GAPS** gsrc, FTYPE* wtlst)
 	: pfqnum(0), lstnum(0), step(0), pfq(0), lst(0), eijtab(0), lone(0)
 {
@@ -606,13 +553,16 @@ void fouteij(FILE* fd, Seq* sd)
 		  case 0:
 		    fprintf(fd, "%d", sgi->eijtab[i][j] != 0); break;
 		  case 1: 
-		    if (sgi->eijtab[i][j]) fprintf(fd, " %d", pfq->pos); break;
+		    if (sgi->eijtab[i][j]) fprintf(fd, " %d", pfq->pos);
+		    break;
 		  case 2: case 6:
 		    if (sgi->eijtab[i][j]) fprintf(fd, "%d", pfq->pos % 3);
-		    else	fprintf(fd, "-"); break;
+		    else	fprintf(fd, "-");
+		    break;
 		  case 3: case 7:
 		    if (sgi->eijtab[i][j]) fprintf(fd, " %3d %d",
-			pfq->pos / 3, pfq->pos % 3); break;
+			pfq->pos / 3, pfq->pos % 3);
+		    break;
 		  case 8: case 9:
 		    if (j) fputc('\t', fd);
 		    if (mfq && sgi->eijtab[i][j]) {

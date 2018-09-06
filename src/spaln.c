@@ -159,8 +159,8 @@ static	PolyA	polyA;
 static	int	no_seqs = 0;
 static	bool	pairedends = false;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.3.2";
-static	const	int	date = 170726;
+static	const	char*	version = "2.3.2a";
+static	const	int	date = 180906;
 
 static void usage(const char* messg)
 {
@@ -181,7 +181,8 @@ static void usage(const char* messg)
 	fputs("\t-Xk#\t; Word size (11)\n", stderr);
 	fputs("\t-Xb#\t; Block size (4096)\n", stderr);
 	fputs("\t-XG#\t; Maximum expected gene size (262144)\n", stderr);
-	fputs("\t-Xa#\t; Abundance factor (10)\n\n", stderr);
+	fputs("\t-Xa#\t; Abundance factor (10)\n", stderr);
+	fputs("\t-g\t; gzipped output\n\n", stderr);
 	fputs("R_Options (representatives):\n", stderr);
 	fputs("\t-H#\t; Minimum score for report (35)\n", stderr);
 	fputs("\t-L or -LS or -L#\t; semi-global or local alignment (-L)\n", stderr);
@@ -197,6 +198,7 @@ static void usage(const char* messg)
 	fputs("\t-A$\t; Same as -a but db sequences are stored in memory\n", stderr);
 	fputs("\t-d$\t; Specify genome. Must run `makeidx.pl -i[n|p]' breforehand\n", stderr);
 	fputs("\t-D$\t; Same as -d but db sequences are stored in memory\n", stderr);
+	fputs("\t-g\t; gzipped output in combination with -O12\n", stderr);
 	fputs("\t-iC\t; paired inputs. C=a: alternative; C=p: parallel\n", stderr);
 	fputs("\t-l#\t; Number of characters per line in alignment (60)\n", stderr);
 	fputs("\t-o$\t; File where results are written (stdout)\n", stderr);
@@ -266,6 +268,7 @@ const	char**	argbs = argv;
 		case 'f':
 		    if ((val = getarg(argc, argv))) catalog = val;
 		    break;
+		case 'g': OutPrm.gzipped = 1; break;
 		case 'F':
 		    if (('a' <= *val && *val <= 'z') ||
 			('0' <= *val && *val <= '9'))
@@ -1627,6 +1630,7 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 	eraStrPhrases();
 postproc:
 	EraStdSig53();
+	closeGeneRecord();
 	clearseq(seqs, no_seqs);
 	delete[] seqs;
 	EraDbsDt();

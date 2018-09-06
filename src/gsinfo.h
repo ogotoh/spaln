@@ -36,6 +36,7 @@ struct	PFQ	{int pos, num, gps;};
 #endif
 
 extern  VTYPE   SpbFact;
+extern	PFQ	pfqend;
 
 struct SigII {
 	int	pfqnum;
@@ -51,7 +52,8 @@ struct SigII {
 	SigII(int p, int l, int s);	// known properties
 	SigII(const Iiinfo& iif);
 	SigII(Seq** sq, GAPS** gsrc, FTYPE* wtlst = 0);
-	SigII(FILE* fd, char* str, FTYPE* wt = 0);	// read from seq file
+template <typename file_t>
+	SigII(file_t fd, char* str, FTYPE* wt = 0);	// read from seq file
 	SigII(int* poss, int num, int step);	// list of positions
 	~SigII();
 	void	rmGapPfq(GAPS* gg);
@@ -73,6 +75,59 @@ struct SigII {
 	void	reset_dns(FTYPE wt);
 #endif
 };
+
+template <typename file_t>
+SigII::SigII(file_t fd, char* str, FTYPE* wt)
+	: pfqnum(0), lstnum(0), step(0), pfq(0), lst(0), eijtab(0), lone(0)
+{
+	sscanf(str, "%*s %d %d", &pfqnum, &lstnum);
+	if (pfqnum == 0) return;
+	pfq = new PFQ[pfqnum + 1];
+	PFQ*    wfq = pfq;
+	int     i = 0;
+	while (fgets(str, MAXL, fd)) {
+	    if (wordcmp(str, ";b")) break;
+	    for (char* ps = cdr(str); ps && *ps; ps = cdr(ps)) {
+		wfq->pos = atoi(ps);
+		ps = cdr(ps);
+		wfq->num = atoi(ps);
+		wfq->gps = 0;
+#if USE_WEIGHT
+		wfq->dns = (lstnum && wt)? 0: wfq->num;
+#endif
+		++wfq;
+		if (++i >= pfqnum) goto readlst;
+	    }
+	}
+	prompt("Insufficient SP boundaries: %d %d\n", i, pfqnum);
+readlst:
+	*wfq = pfqend;
+	if (!lstnum) return;
+	lst = new int[lstnum];
+	int*    wst = lst;
+	i = 0;
+#if USE_WEIGHT
+	int     n = 0;
+#endif
+	wfq = pfq;
+	while (fgets(str, MAXL, fd)) {
+	    if (wordcmp(str, ";m")) break;
+	    for (char* ps = cdr(str); ps && *ps; ps = cdr(ps)) {
+		int     m = atoi(ps) - 1;
+		*wst++ = m;
+#if USE_WEIGHT
+		if (wt) {
+		    wfq->dns += (VTYPE) wt[m];
+		    if (++n == wfq->num) {
+			++wfq; n = 0;
+		    }
+		}
+#endif
+		if (++i >= lstnum) return;
+	    }
+	}
+	prompt("Insufficient SP boundary list: %d %d\n", i, lstnum);
+}
 
 class PfqItr {
 friend	class	SigII;
@@ -334,7 +389,6 @@ struct Gsinfo {
 	int	center(int k);		// center position
 };
 
-extern	PFQ	pfqend;
 extern	SigII*  copySigII(SigII* src);
 extern	SigII*	extSigII(Seq* sorc, int* which, FTYPE nfact = 1, bool renum_lst = false);
 extern	void	cutSigII(Seq* dstseq, Seq* srcseq);

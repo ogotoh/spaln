@@ -44,9 +44,6 @@ static	const	int	max_no_exon = 1024;
 static	const	int	MAXRECD = 1024 * 1024;
 static	const	char*	RGB_RED = "255,0,0";
 static	const	char*	RGB_BLUE = "0,255,255";
-#if USE_ZLIB
-static	const	char*	gz_ext = ".gz";
-#endif
 
 struct GRFn {
 	GeneRecord	gr;	// G-record No.

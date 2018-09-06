@@ -1171,7 +1171,6 @@ VTYPE Aln2h1::centerH_ng(int* ml, int* mr, int* nl, int* nr,
 	int	jb = 0;
 	int	rr[MAXR+1];
 	int	pp[MAXR+1];
-	int	phs3 = 0;
 #if INTR > 1
 	WRECD	hl[NOL][3][INTR+1];
 	int	nx[NOL][3][INTR+1]; // [DIA, HORI, HORL][phase][candidates]
@@ -1789,7 +1788,6 @@ AccFwd:
 		    	    }
 			}
 			if (maxphl) {
-			    phs3 = phs;
 		 	    from->jnc = maxphl->jnc;
 			    from->dir = maxphl->dir | SPJCI;
 			    if (phs == -1) from->dir |= SPF2;
@@ -1818,7 +1816,6 @@ AccFwd:
 			    }
 			}
 			if (y > from->val) {
-			    phs3 = phs;
 			    from->val = y;
 		 	    from->jnc = phl->jnc;
 			    from->dir = phl->dir | SPJCI;

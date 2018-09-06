@@ -1,5 +1,31 @@
 #!/usr/bin/perl
 
+#############################################################################
+#
+#	makblk.pl
+#
+#	make block data file (.bkn, .bkp, or .bka) from genomic sequence
+#	or protein sequence databas to be used by spaln
+#
+#
+#	Osamu Gotoh, ph.D.      (-2001)
+#	Saitama Cancer Center Research Institute
+#	818 Komuro, Ina-machi, Saitama 362-0806, Japan
+#
+#	Osamu Gotoh, Ph.D.      (2001-)
+#	National Institute of Advanced Industrial Science and Technology
+#	Computational Biology Research Center (CBRC)
+#	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
+#
+#	Osamu Gotoh, Ph.D.      (2003-2012)
+#	Department of Intelligence Science and Technology
+#	Graduate School of Informatics, Kyoto University
+#	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
+#
+#	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+#
+###############################################################################
+
 use strict;
 
 sub usage {
@@ -68,7 +94,8 @@ sub estimate {
 	my $lout = $out;
 	unless ($lout) {
 	    my @a = split('.', $seqs);
-	    pop(@a);
+	    my $e = pop(@a);
+	    $e = pop(@a) if ($e eq 'gz');
 	    $lout = join('.', @a) . '.'. $ext;
 	}
 	$gsz *= 2 if ($ext eq 'bkn' || $ext eq 'bkp');
@@ -98,7 +125,7 @@ sub estimate {
 		$xb = $Bitpat[$km3] unless ($xb);
 		$xopt .= " -XC$xc -XB$xb";
 	    } elsif ($xb) {
-	        $xopt .= " -XB$xb";
+		 $xopt .= " -XB$xb";
 	    }
 	    $opt = "$xopt -Xs$sht " . $opt;
 	} elsif ($ext eq 'bkp') {
@@ -139,7 +166,7 @@ sub estimate {
 	    $cmd .= " -Xb$blksz -XG$maxgene -Xg$maxblk";
 	}
 	$cmd .= " $opt$seqs";
-	print $cmd, "\n";
+	print STDERR $cmd, "\n";
 	exit(1) if (!$Debug && system($cmd));
 }
 
@@ -166,6 +193,7 @@ while (my $g = $ARGV[0]) {
 	my $e;
 	if (@a > 1) {
 	    $e = pop(@a);
+	    $e = pop(@a) if ($e eq 'gz');
 	    $b = join('\.', @a);
 	}
 	my $gfn = $b . ".grp";

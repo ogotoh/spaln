@@ -36,6 +36,7 @@ static	int	dbsch = 0;
 static	char	dbname[MAXL] = "";
 static	const	char*	srcpath = 0;
 static	const	char*	dstpath = "";
+static	bool	gzout = false;
 
 class Makdbs {
 	int	molc;
@@ -52,19 +53,22 @@ class Makdbs {
 	char	str[MAXL];
 	char	prv[MAXL];
 	bool	halfway;
+#if USE_ZLIB
+	gzFile	gzseq;
+#endif
 	int	encode(int c);
 	char*	getDbEntry(DbsRec* rec, int idf);
-template <typename file_t>
-	int	convert(file_t fsrc);
-template <typename file_t>
-	int	convert2(file_t fsrc);
+template <typename file_t, typename ofile_t>
+	int	convert(file_t fsrc, ofile_t);
+template <typename file_t, typename ofile_t>
+	int	convert2(file_t fsrc, ofile_t);
 	void	initialize(const char* av);
 template <typename file_t>
 	char*	get_str(file_t fsrc);
 template <typename file_t>
 	void	skip_till_nl(file_t fsrc);
-template <typename file_t>
-	void	makdbs(file_t fsrc);
+template <typename file_t, typename ofile_t>
+	void	makdbs(file_t fsrc, ofile_t);
 
 public:
 	Makdbs(int ac, const char** av, int mlc);
@@ -76,7 +80,12 @@ public:
 	    fwrite(&rec21, sizeof(DbsRec), 1, fidx);	// header record
 	}
 	void	wrtgrp(const char* ps) {
-	    fprintf(fgrp, "%8ld %u %s\n", ftell(fseq), (INT) recnbr, ps);
+	    long	fpos = 0L;
+	    if (fseq)	fpos = ftell(fseq);
+#if USE_ZLIB
+	    else	fpos = ftell(gzseq);
+#endif
+	    fprintf(fgrp, "%8ld %u %s\n", fpos, (INT) recnbr, ps);
 	}
 };
 
@@ -120,8 +129,8 @@ void Makdbs::skip_till_nl(file_t fsrc)
 	while ((c = fgetc(fsrc)) != EOF && c != '\n') ;
 }
 
-template <typename file_t>
-int Makdbs::convert(file_t fsrc)
+template <typename file_t, typename ofile_t>
+int Makdbs::convert(file_t fsrc, ofile_t f_seq)
 {
 	int	n = 0;
 
@@ -132,17 +141,17 @@ int Makdbs::convert(file_t fsrc)
 		int	c = encode(*pc);
 		if (0 <= c && c < ceil &&
 		!(ignoreamb && c == defcode->amb_code)) {
-		    putc(c, fseq);
+		    fputc(c, f_seq);
 		    ++n;
 		}
 	    }
 	}
-	putc(SEQ_DELIM, fseq);
+	fputc(SEQ_DELIM, f_seq);
 	return (n);
 }
 
-template <typename file_t>
-int Makdbs::convert2(file_t fsrc)
+template <typename file_t, typename ofile_t>
+int Makdbs::convert2(file_t fsrc, ofile_t f_seq)
 {
 	int	n = 0;
 	int	b = 0;
@@ -154,24 +163,24 @@ int Makdbs::convert2(file_t fsrc)
 		int	c = encode(*pc);
 		if (0 <= c && c < ceil &&
 		!(ignoreamb && c == defcode->amb_code)) {
-		    if (n++ & 1)	putc(b + c, fseq);
+		    if (n++ & 1)	fputc(b + c, f_seq);
 		    else	b = c << 4;
 		}
 	    }
 	}
-	if (n & 1)	putc(b + SEQ_DELIM, fseq);
-	else	putc(ddelim, fseq);
+	if (n & 1)	fputc(b + SEQ_DELIM, f_seq);
+	else	fputc(ddelim, f_seq);
 	return (n);
 }
 
-template <typename file_t>
-void Makdbs::makdbs(file_t fsrc)
+template <typename file_t, typename ofile_t>
+void Makdbs::makdbs(file_t fsrc, ofile_t f_seq)
 {
 	DbsRec	rec;
 	while (get_str(fsrc)) {
 	    if (db->is_DbEntry(str)) {
 newentry:
-		rec.seqptr = ftell(fseq);
+		rec.seqptr = ftell(f_seq);
 		rec.entptr = ftell(fent);
 		char*	ps = getDbEntry(&rec, idfy);
 		if (wordcmp(ps, prv) < 0) cridxf = true;
@@ -181,7 +190,7 @@ newentry:
 	    halfway = false;
 	    if (db->is_DbOrigin(str)) {
 		rec.seqlen = isDRNA(molc)? 
-		    convert2(fsrc): convert(fsrc);
+		    convert2(fsrc, f_seq): convert(fsrc, f_seq);
 		fwrite(&rec, sizeof(DbsRec), 1, fidx);
 		++recnbr;
 		if (db->is_DbEntry(str)) goto newentry;
@@ -267,7 +276,8 @@ void Makdbs::makdbs(const char* av)
 #if USE_ZLIB
 	    gzFile	gzfd = gzopenpbe(srcpath, av, 0, "r", -1);
 	    if (!gzfd) usage(not_found, av);
-	    makdbs(gzfd); 
+	    if (fseq)	makdbs(gzfd, fseq);
+	    else	makdbs(gzfd, gzseq); 
 	    fclose(gzfd);
 #else
 	    fatal(gz_unsupport, av);
@@ -275,15 +285,17 @@ void Makdbs::makdbs(const char* av)
 	} else {
 	    FILE* fsrc = fopenpbe(srcpath, av, 0, "r", -1);
 	    if (!fsrc) usage(not_found, av);
-	    makdbs(fsrc); 
+	    makdbs(fsrc, fseq); 
 	    fclose(fsrc);
 	}
 }
 
 Makdbs::Makdbs(int argc, const char** argv, int mlc) 
 	: molc(mlc), bias(0), cridxf(false), db(0), recnbr(0),
-	  fgrp(0), fseq(0), fidx(0), fent(0),
-	  halfway(false)
+	  fgrp(0), fseq(0), fidx(0), fent(0), halfway(false)
+#if USE_ZLIB
+	 , gzseq(0)
+#endif
 {
 	*str = *prv = '\0';
 	if (dbsch) db = setform(dbsch);
@@ -314,17 +326,28 @@ Makdbs::Makdbs(int argc, const char** argv, int mlc)
 
 	if (!*dbname && db->DbName) strcpy(dbname, db->DbName);
 	if (!*dbname) partfnam(dbname, *argv, "b");
-	fseq = fopenpbe(dstpath, dbname, SEQ_EXT, "w", 2);
+#if USE_ZLIB
+	if (gzout) {
+	    gzseq = gzopenpbe(dstpath, dbname, SGZ_EXT, "w", 2);
+	    fputc(SEQ_DELIM, gzseq);	// for compatibility with blast
+	} else
+#endif
+	{
+	    fseq = fopenpbe(dstpath, dbname, SEQ_EXT, "w", 2);
+	    fputc(SEQ_DELIM, fseq);	// for compatibility with blast
+	}
 	fidx = fopenpbe(dstpath, dbname, IDX_EXT, "w+", 2);
 	fgrp = fopenpbe(dstpath, dbname, GRP_EXT, "w", 2);
 	fent = fopenpbe(dstpath, dbname, ENT_EXT, "w+", 2);
-	putc(SEQ_DELIM, fseq);	// for compatibility with blast
 }
 
 Makdbs::~Makdbs()
 {
 	fclose(fgrp);
-	fclose(fseq);
+	if (fseq) fclose(fseq);
+#if USE_ZLIB
+	if (gzseq) fclose(gzseq);
+#endif
 	fclose(fidx);
 	fclose(fent);
 }
@@ -338,6 +361,7 @@ int main(int argc, const char** argv)
 	    case 'b': dbsch = atoi(getarg(argc, argv, true)); break;
 	    case 'c': comment = true; break;
 	    case 'd': strcpy(dbname, getarg(argc, argv)); break;
+	    case 'g': gzout = 1; break;
 	    case 'i': idfy = atoi(getarg(argc, argv, true)); break;
 	    case 'p':
 		dstpath = getarg(argc, argv);
@@ -362,8 +386,8 @@ int main(int argc, const char** argv)
 
 	Makdbs	md(argc, argv, defmolc);
 	for (int i = 0; i < argc; ++i) {
-	    md.makdbs(argv[i]);
 	    md.wrtgrp(argv[i]);
+	    md.makdbs(argv[i]);
 	}
 	md.stamp21();
 	md.wrtgrp("E_O_F");

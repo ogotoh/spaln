@@ -82,7 +82,7 @@ static	float	RbsBias = 3.;
 static	const	float	RbsFactSqrX = 0.0;
 static	float	RbsBase = 3.;
 static	float	RbsBaseX = 0.5;
-static	float	RbsFact = DQUERY;
+static	float	RbsFact = FQUERY;
 static	int	Nascr = 2;
 const	char*	writeerrmssg = "Fail to write to %s !\n";
 
@@ -415,8 +415,9 @@ void MakeBlk::WriteBlkInfo()
 static	const char* wfmt =
 	"#Segs %u, TabSize %u, Words: %lu, GenomeSize %lu, GIDs %d\n";
 
-	const char*	fn = WriteFile;
-	if (!fn) fatal("Specify write file !\n");
+	if (!WriteFile) fatal("Specify write file !\n");
+	char	fn[MAXL];
+	strcpy(fn, WriteFile);
 	prompt(wfmt, chrblk(pwc->ChrNo) - 1,
 	    wcp.TabSize, pwc->WordNo, pwc->glen, pwc->ChrNo);
 
@@ -429,6 +430,7 @@ static	const char* wfmt =
 	}
 	findChrBbound();
 #if USE_ZLIB
+	if (!is_gz(fn) && OutPrm.gzipped) strcat(fn, ".gz");
 	if (is_gz(fn)) {
 	    gzFile	gzfd = gzopen(fn, "wb");
 	    if (!gzfd) fatal(no_file, fn);
@@ -1442,10 +1444,10 @@ static int gcmpf(GeneRng* a, GeneRng* b)
 Randbs::Randbs(double avr, bool gdb)
 {
 	if (gdb) {
-	    if (RbsFact == DQUERY) RbsFact = RbsFactLog;
+	    if (RbsFact == FQUERY) RbsFact = RbsFactLog;
 	    trans_form = log;
 	} else {
-	    if (RbsFact == DQUERY) RbsFact = algmode.crs? RbsFactSqrX: RbsFactSqr;
+	    if (RbsFact == FQUERY) RbsFact = algmode.crs? RbsFactSqrX: RbsFactSqr;
 	    trans_form = sqrt;
 	}
 	RbsCoef = RbsFact * avr;
@@ -2051,7 +2053,7 @@ static	char	ofmt2[] = "%-7s %c %5d %5d %-7s %5d %5d %6.2f %6.2f %3d %3d %2d %2d 
 #endif
 	    if (ReportAln) return (sl.curgr - gener);
 	} else if (force < 2) return (0);	// next reccurence
-	else if (ReportAln && !DNA && algmode.slv) {	// examine all positive blocks
+	else if (ReportAln && a->isprotein() && algmode.slv) {	// examine all positive blocks
 	    sl.curgr = gener;
 	    curbp = bh4->bpair + 1;
 	    curbp->bscr = 0;

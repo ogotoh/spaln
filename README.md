@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.3.2
-#### Last updated: 2018-07-26
+#### Present Version 2.3.2a
+#### Last updated: 2018-09-06
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -20,15 +20,23 @@
 stand-alone program that maps and aligns a set of cDNA or protein sequences
 onto a whole genomic sequence in a single job. **Spaln** also performs spliced
 or ordinary alignment after rapid similarity search against a protein sequence
- database, if a genomic segment or an amino acid sequence is given as a query. From Version 1.4, spaln supports a combination of protein sequence database and a given genomic segment. From Version 2.2, spaln also performs rapid similarity search and (semi-)global alignment of a set of protein sequence queries against a protein sequence database. **Spaln** adopts multi-phase
+ database, if a genomic segment or an amino acid sequence is given as a query.
+From Version 1.4, spaln supports a combination of protein sequence database and
+a given genomic segment. From Version 2.2, spaln also performs rapid similarity
+search and (semi-)global alignment of a set of protein sequence queries against
+a protein sequence database. **Spaln** adopts multi-phase
 heuristics that makes it possible to perform the job on a conventional personal
-computer running under Unix/Linux and MacOS with limited memory. The program is written
-in C++ and distributed as source codes and also as executables for a few platforms.
-Unless binaries are not provided, users must compile the program on their
-own system. Although the program has been tested only on a Linux operating
+computer running under Unix/Linux and MacOS with limited memory. The program is
+written in C++ and distributed as source codes and also as executables for a few
+platforms. Unless binaries are not provided, users must compile the program on
+their own system. Although the program has been tested only on a Linux operating
 system, it is likely to be portable to most Unix systems with little or no
 modifications. The accessory program **sortgrcd** sorts the gene loci found
-by **spaln** in the order of chromosomal position and orientation. From version 2.3.2, **spaln** and **sortgrcd** can handle some gzipped files without prior expansion if USE_ZLIB mode is activated upon compilation.
+by **spaln** in the order of chromosomal position and orientation. From version
+2.3.2, **spaln** and **sortgrcd** can handle gzipped genome/database files and
+'block' files without prior expansion if USE_ZLIB mode is activated upon
+compilation. From version 2.3.2a, compressed query sequence file(s) may also be
+accepted.
 
 ## <a name="Inst">Install</a>
 
@@ -77,35 +85,40 @@ If you do not need genome mapping or database search, you may skip this section.
 To perform genome mapping, the genomic sequence must be formatted before use. Formatting is optional for amino acid sequence database search.
 
 1. `% cd seqdb`
-2. Download or copy genomic sequences or protein database sequence in multi-fasta format. If **spaln** is [compiled](#compile) accordingly, gzipped file need not be uncompressed (the file name must be X.gz).
+2. Download or copy genomic sequences or protein database sequence in multi-fasta format. If **spaln** is [compiled](#compile) accordingly, gzipped file need not be uncompressed (the file name must be _X_.gz).
 3. Chromosomal sequences should be concatenated into a single file. Alternatively, you can use multiple chromosomal files without concatenation. This procedure will be described at the end of this section. To render the 'make' command effective, the extension of the genomic sequence file should be '.mfa' or '.gf', and protein database sequence should be '.faa'. Hereafter, the file name is assumed to be xxxgnm.mfa or prosdb.faa.
-4. `% ./makeidx.pl -i[n|p|np] [spaln options] xxxgnm.mfa(.gz)` or  
-   `% ./makeidx.pl -i[a] [spaln options] prosdb.faa(.gz)`  
- These commands are shortcuts that replace the following series of operations 5-7, if the input is a single sequence file. In that case, you can skip following instructions. The block size and *k*-mer size are estimated from the genome size. The -ix option specifies the "block file(s)" .bkx to be constructed, where *x* is 'a', 'n' or 'p'. The -inp option will construct both .bkn and .bkp files together with the .idx and associated files. If -ix is omitted or *x* is empty, no block file is constructed.
+4. `% ./makeidx.pl -i[n|p|np] [-g] [spaln options] xxxgnm.mfa(.gz)` or  
+   `% ./makeidx.pl -i[a] [-g] [spaln options] prosdb.faa(.gz)`  
+ These commands are shortcuts that replace the following series of operations 
+5-7, if the input is a single sequence file. In that case, you can skip following 
+instructions. The block size and *k*-mer size are estimated from the 
+genome size. The -ix option specifies the "block file(s)" .bkx to be constructed, 
+where *x* is 'a', 'n' or 'p'. The -inp option will construct both .bkn and .bkp 
+files together with the .idx and associated files. If -ix is omitted or *x* is 
+empty, no block file is constructed. The -g option specifies gzipped output.
 5. `% make xxxgnm.idx` (for genomic sequence) or  
    `% make prosdb.idx` (for protein database sequence)  
   This command converts the sequence into a binary format. Four or five files, xxxgnm.seq, xxxgnm.idx, xxxgnm.ent, xxxgnm.grp, and optionally xxxgnm.odr are constructed (prosdb instead of xxxgnm in case of make prosdb.idx). It may take several tens of minutes to construct the files for mammalian genome.
 6. `% make xxxgnm.bkn` (for cDNA queries) or  
    `% make xxxgnm.bkp` (for protein queries) or  
    `% make prosdb.bka` (for protein database)  
- This command makes the block index table. This process may take another several tens of minutes.  
- Internally, the make command invokes  
+ * This command makes the block index table. This process may take another several tens of minutes.  
+ * Internally, the make command invokes  
     `spaln -Wxxxgnm.bkn -KD [Options] xxxgnm.mfa` or  
     `spaln -Wxxxgnm.bkp -KP [Options] xxxgnm.mfa`  or  
     `spaln -Wprosdb.bka -KA [Options] prosdb.faa`  
- If xxxgnm.grp or prosdb.grp were successfully constructed at step 5 above, the option values below would be automatically calculated by script makblk.pl.
-**WARNING:** The estimated maximal gene size can be inadequately small if only a part of the genome (*e.g* a single chromosome) is formatted. At that time, explicitly specify the maximal gene size by the -XG*N* option of makblk.pl or at the runtime of **spaln**. *N* can have suffix 'k' and 'M' to indicate that the number is measured in kbp and Mbp, respectively.  
- Options: (default value)
-   * -XA *N*: alphabet size of the reduced amino acids: 6 < *N* <= 20 (20)
-   * -XB *S*: bit patterns of the spaced seeds. The pattern should be asymmetric  when the number of patterns > 2.
-   * -XC *N*: number of seed patterns: 0 <= *N* <= 5 (0: contiguous seed)
-   * -XG *N*: maximum gene length (262144)
-   * -Xa *N*: a parameter used to filter excessively abundant words (10)
-   * -Xb *N*: block size (4096) An estimate of *N* is sqrt(genome size). For mammals, *N* is nearly equal 54000.
-   * -Xg *N*: maximal distance in block number between 5' terminal and 3' terminal blocks (16)
-   * -Xk *N*: word size (11 for DNA, 5 for protein)
-   * -Xs *N*: distance between neighboring seeds (= *k*)
-  7. It is possible to generate xxxgnm.idx and other three files directly from the input files without concatenation:  
+ * If xxxgnm.grp or prosdb.grp were successfully constructed at step 5 above, the option values below would be automatically calculated by script makblk.pl. **WARNING:** The estimated maximal gene size can be inadequately small if only a part of the genome (*e.g* a single chromosome) is formatted. At that time, explicitly specify the maximal gene size by the -XG*N* option of makblk.pl or at the runtime of **spaln**. *N* can have suffix 'k' and 'M' to indicate that the number is measured in kbp and Mbp, respectively.  
+ * Options: (default value)
+  * -XA *N*: alphabet size of the reduced amino acids: 6 < *N* <= 20 (20)
+  * -XB *S*: bit patterns of the spaced seeds. The pattern should be asymmetric  when the number of patterns > 2.
+  * -XC *N*: number of seed patterns: 0 <= *N* <= 5 (0: contiguous seed)
+  * -XG *N*: maximum gene length (262144)
+  * -Xa *N*: a parameter used to filter excessively abundant words (10)
+  * -Xb *N*: block size (4096) An estimate of *N* is sqrt(genome size). For mammals, *N* is nearly equal 54000.
+  * -Xg *N*: maximal distance in block number between 5' terminal and 3' terminal blocks (16)
+  * -Xk *N*: word size (11 for DNA, 5 for protein)
+  * -Xs *N*: distance between neighboring seeds (= *k*)
+7. It is possible to generate xxxgnm.idx and other three files directly from the input files without concatenation:  
     `% makdbs -nxxxgnm -KD file1 ... fileN` and  
     `% make xxxgnm.bkn` (for cDNA queries) or  
     `% make xxxgnm.bkp` (for protein queries)  
@@ -113,8 +126,10 @@ To perform genome mapping, the genomic sequence must be formatted before use. Fo
 
 ## <a name="Exec">Execution</a>
 
-1. Prepare protein, cDNA, or genomic segment sequence(s) in (multi-)fasta format (denoted by *query* below)
-2. Store *query* to _work_
+1. Prepare protein, cDNA, or genomic segment sequence(s) in (multi-)fasta format
+(denoted by *query* below). From 2.3.2a, zgipped fasta file(s) may be used as 
+the query without prior expansion. <u>Note, however, that compressed query can considerably slow down the execution rate.</u>
+2. Store *query* to _work_.
 3. `% cd work`
 4. Run **spaln** in one of the following four modes. **Spaln**
     does not support comparison between two genomic segments.  
@@ -150,7 +165,8 @@ To perform genome mapping, the genomic sequence must be formatted before use. Fo
         * *N*=12: Output the same information as -O4 in the
 	    binary format. If -oOutput is set, three files named
 	    Output.grd, Output.erd, and Output.qrd will be created. Otherwise,
-	    query.grd, query.erd, and query.qrd will be created.
+	    query.grd, query.erd, and query.qrd will be created. If the -g 
+            option is set, gzip-compressed outputs will be generated.
      * -Q *N*: Select algorithm (3)
         * 0<=*N*<=3: Genomic segment in the fasta format given by the first argument vs. *query* given by the second argument. One may skip the formatting step described above if only this mode of operation is used.
         * 4<=*N*<=7: Genome mapping and alignment. The genomic sequence must be formatted beforehand.
@@ -174,6 +190,7 @@ To perform genome mapping, the genomic sequence must be formatted before use. Fo
      * -T *xxx*:	Specify the species. For genome vs. DNA comparison, -yS flag should also be set in combination with this option. *xxx* corresponds to the subdirectory in the _table_ directory.
      * -V *N*:	Minimum space to induce Hirschberg's algorithm (16M)
      * -W *S*:	Write block index table to file *S*.
+     * -g: gzipped output used in combination with -W or -O12 option.
      * -i[a|p]: Input mode with -Q[0<=N<=3].
         * -ia: Alternative mode; a genomic segment of an odd numbered entry in the input file is aligned with the query of the following entry.
         * -ip: Parallel mode; the i-th entry in the file specified by the first argument is aligned with the i-th entry in the file specified by the second argument.
@@ -230,8 +247,8 @@ To perform genome mapping, the genomic sequence must be formatted before use. Fo
 
 5. **Sortgrcd**
   * **Sortgrcd** is used to recover the output of **spaln** with -O12 option, to apply some filtering, and also to rearrange the output of multiple **spaln** runs.
-  * Run **sortgrcd** as follows:
-      `% sortgrcd [options] xxx.grd`
+  * Run **sortgrcd** as follows:  
+      `% sortgrcd [options] xxx.grd(.gz)`
   * Options:
     * -C _N_: Minimum cover rate = % nucleotides in predicted exons / length of *query* (x 3 if query is protein) (0-100)
     * -F _N_: Filter level (*N*=0: no; *N*=1: mild; *N*=2: medium; *N*=3: stringent)
@@ -246,8 +263,15 @@ To perform genome mapping, the genomic sequence must be formatted before use. Fo
     * -n _N_:	Maximum number of non-canonical (other than GT..AG, GC..AG, AT..AC) intron ends
     * -u _N_:	Maximum number of unpaired (gap) sites within 20 bp from the nearest exon-intron boundary
   * By default, no filter listed above is applied.
-  * When the output of **spaln** is separated into several files, the combined results are subjected to the sorting. Although xxx.grd files are assigned as the argument, there must be corresponding xxx.erd and xxx.qrd files in the same directory.
-  * In the default output format, the gene structure corresponding to each transcript is delimited by a line starting with '@', whereas each gene locus is delimited by a line starting with '!'. Two transcripts belong to the same locus if their corresponding genomic regions overlap by at least one nucleotide on the same strand.
+  * When the output of **spaln** is separated into several files, the combined
+results are subjected to the sorting. Although xxx.grd (or xxx.grd.gz) files are assigned as the
+argument, there must be corresponding xxx.erd and xxx.qrd (or xxx.efd.gz and
+xxx.qrd.gz) files in the same directory.
+  * In the default output format, the gene structure corresponding to each
+transcript is delimited by a line starting with '@', whereas each gene locus is
+delimited by a line starting with '!' [4]. Two transcripts belong to the same
+locus if their corresponding genomic regions overlap by at least one nucleotide
+on the same strand.
   * With -O0 option, the outputs follow the instruction of [Gff3](http://www.sequenceontology.org/gff3.shtml) where a gene locus is defined as described above.
 
 
@@ -257,13 +281,26 @@ To perform genome mapping, the genomic sequence must be formatted before use. Fo
     % make dictdisc.cf
     % make dictdisc.faa
     % make dictdisc_g.gf
-    % ./makeidx.pl -inp dictdisc_g.gf
+    % perl makeidx.pl -inp dictdisc_g.gf
     % make dictdisc.srd
     % make dictdisc.spn
 ```
-
+  * Alternatively, you may try below if USE_ZLIB is activated..
+```
+    % perl makeidx.pl -inp [-g] dictdisc_g.gf.gz
+    % spaln -Q7 -d dictdisc_g -T dictdisc [-t10] dictdisc.faa.gz
+    % spaln -Q7 -d dictdisc_g -yS -T dictdisc -O12 -g [-t10] dictdisc.cf.gz
+    % sortgrcd -O15 -F2 dictdisc.grd.gz
+```
+    
 ## <a name="Changes">Changes from previous version</a>
-1. From this version, input fasta files (X.mfa, X.gf, or X.faa), formatted data files (X.seq,X.bka, X.bkn, and X.bkp) for **spaln**, and X.grd, X.erd, and X.qrd for **sortgrcd** may be gzipped if USE_ZLIB mode is activated upon [compilation](#compile). **Note:** other data files (X.ent, X.grp, X.idx, and X.odr) must not be compressed.
+1. From this version, query fasta file(s) may be compressed.
+2. The new option of <b>spaln</b> '-g' directly generates compressed output(s) when used in combination with -W or -O12 option.
+3. makeidx.pl and makblk.pl have been modified to accord with gzipped genome/database fasta files.
+4. A small bug in makdbs.c has been fixed.
+
+## Changes in version 2.3.2
+1. From this version, input genome/database fasta files (X.mfa, X.gf, or X.faa), formatted data files (X.seq,X.bka, X.bkn, and X.bkp) for **spaln**, and X.grd, X.erd, and X.qrd for **sortgrcd** may be gzipped if USE_ZLIB mode is activated upon [compilation](#compile). **Note:** other data files (X.ent, X.grp, X.idx, and X.odr) must not be compressed.
 2. A serious bug concerning with multiple queries has been fixed. This has considerably improved mapping sensitivity particularly when -M option is set under single thread operation mode.
 3. Fixation of several small bugs and fine tuning of codes further enhanced mapping sensitivity and specificity particularly for short protein queries.
 4. -O *N* option of **sortgrcd** has been extended. -O0: Gff3: -O3: BED; -O4: exon-oriented; -O5: intron-oriented; -O6: concatenated exons; -O7: translated amino acid sequence; -O15: unique introns.
@@ -276,8 +313,11 @@ A space-efficient and accurate method for mapping and aligning cDNA sequences on
 <a name="Ref2">[[2]](http://bioinformatics.oxfordjournals.org/cgi/content/abstract/btn460?ijkey=XajuzvyHlcQZoQd&keytype=ref) Gotoh, O.
 Direct mapping and alignment of protein sequences onto genomic sequence. *Bioinformatics* **24** (21) 2438-2444 (2008).
 
-<a name="Ref3">[[3]](http://nar.oxfordjournals.org/content/40/20/e161) Iwata, H. and Gotoh, O.,
+<a name="Ref3">[[3]](http://nar.oxfordjournals.org/content/40/20/e161) Iwata, H. and Gotoh, O.
 Benchmarking spliced alignment programs including  Spaln2, an extended version of Spaln that incorporates additional species-specific features. *Nucleic Acids Research* **40** (20) e161 (2012)
+
+<a name="Ref4">[[4]](https://academic.oup.com/bioinformatics/article/22/10/1211/236993) Nagasaki, H., Arita, M., Nishizawa, T., Suwa, M., Gotoh, O.
+Automated classification of alternative splicing and transcriptional initiation and construction of a visual database of the classified patterns. *Bioinformatics* **22** (10) 1211-1216 (2006).
 
 * * *
 

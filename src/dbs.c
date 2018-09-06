@@ -295,9 +295,8 @@ bool space_digit(const char* ps)
 	return (true);
 }
 
-SeqDb* whichdb(char* ps, FILE* fd)
+SeqDb* whichdb(char* ps)
 {
-	if (fd) ps = dbs_header(ps, fd);
 	SeqDb*	db = SeqDBs + FASTA;
 	if (*ps == *db->EntLabel) return (db);	// FASTA
 	db = SeqDBs + PIR;
@@ -610,7 +609,9 @@ static 	const	char	openmsg[] =
 		}
 // read "group" file
 		fd = fopenpbe(path, form, GRP_EXT, "r", 1, str);
+#if USE_ZLIB
 		size_t	rss = readgrp(fd);
+#endif
 		fclose(fd);
 // assign "seq" file
  		if ((fseq = fopenpbe(path, form, SEQ_EXT, "r", -1, str))) {
@@ -648,7 +649,8 @@ DbsDt::~DbsDt()
 	delete[] gsiidx; delete[] gsipool;
 }
 
-CHAR* Seq::read_dbres(FILE* fd, RANGE* rng)
+template <typename file_t>
+CHAR* Seq::read_dbres(file_t fd, RANGE* rng)
 {
 	int	c;
 	CHAR*	ps = at(0);

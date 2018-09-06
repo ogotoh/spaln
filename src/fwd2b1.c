@@ -1229,7 +1229,6 @@ Colonies* Aln2b1::fwdswgB_ng(VTYPE* scr)
 {
 	CRECD*	hhc[NOL];
 	CRECD   hl[NOL];
-	CRECD*	hf[NOL]; 	/* [DIAG, HORI, HORL] */
 	CRECD	f[NOL]; 	/* [DIAG, HORI, HORL] */
 	CRECD*	g2 = 0;
 	Colonies*	cl = new Colonies(0);
@@ -1238,7 +1237,6 @@ Colonies* Aln2b1::fwdswgB_ng(VTYPE* scr)
         hhc[0] = new CRECD[pwd->Noll * wdw->width] - wdw->lw + 1;
         for (int k = 1; k < pwd->Noll; ++k) hhc[k] = hhc[k-1] + wdw->width;
 	cinitB_ng(hhc);
-	for (int k = 1; k < pwd->Noll; ++k) hf[k] = f + k;
 	int	m  = a->left;
 	CHAR*	as = a->at(m);
 	int	n1 = m + wdw->lw;

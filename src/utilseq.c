@@ -216,9 +216,11 @@ int nuc2tron3(CHAR* ns, int inc)
 
 	switch (aa) {
 	    case SER:
-		if (ns[inc] == G) aa = SER2; break;
+		if (ns[inc] == G) aa = SER2;
+		break;
 	    case TRM:
-		if (ns[inc] == G) aa = TRM2; break;
+		if (ns[inc] == G) aa = TRM2;
+		break;
 	}
 	return (aa);
 }
@@ -838,9 +840,11 @@ void PatMat::setredctab(Seq* sd)
 	redctab = 0;
 	switch (sd->inex.molc) {
 	    case DNA: case RNA: case GENOME:
-		if (!sd->inex.cmpc) redctab = ncredctab; break;
+		if (!sd->inex.cmpc) redctab = ncredctab;
+		break;
  	    case TRON:
-		if (rows % 23) redctab = tnredctab; break;
+		if (rows % 23) redctab = tnredctab;
+		break;
 	}
 }
 
