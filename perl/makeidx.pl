@@ -88,7 +88,6 @@ close(DF);
 
 print STDERR "$fa $obj\n";
 my $fnm = $fa;
-my $bdy = $fa;
 my @ind = ('i', 'a', 'n', 'p');
 my @ext = ('idx', 'bka', 'bkn', 'bkp');
 
@@ -100,9 +99,9 @@ my $fnm = substr($fa, 0, $dot);
 if (($gz = $src_ext eq "gz")) {
 	$dot = rindex($fnm, '.');
 	&usage unless ($dot > 0);
-	$bdy = substr($fnm, 0, $dot);
 	$src_ext = substr($fnm, $dot + 1);
 }
+my $bdy = substr($fnm, 0, $dot);
 
 my @exp = ();
 for (my $i = 0; $i < @ind; ++$i) {
@@ -154,5 +153,6 @@ sub makeidx {
 sub makeblk {
 	my ($fa, $blk) = @_;
 	my $cmd = "makblk.pl -W$blk $opt $fa";
+	print STDERR "$cmd\n";
 	system($cmd);
 }
