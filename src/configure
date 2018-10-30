@@ -20,7 +20,7 @@ do
 case "$1" in
     -h* | --h*)
       echo 'usage:'
-      echo '  configure [--exec_prefix=EXPREFIX] [--table_dir=TBLDIR] [--alndbs_dir=ALN_DBS]i [use_zlib=1]'
+      echo '  configure [--exec_prefix=EXPREFIX] [--table_dir=TBLDIR] [--alndbs_dir=ALN_DBS] [--use_zlib=1]'
         exit 0;;
     -e*=* | --e*=*) exec_prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
     -t*=* | --table_dir=*) table_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
