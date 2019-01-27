@@ -26,6 +26,7 @@
 
 #define UPTR	void*
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -39,7 +40,7 @@ typedef int (*CMPF)(const UPTR, const UPTR);
 #define ERROR	(-1)
 #define OK	0
 #define ABORT	INT_MIN
-#define MAXL	256
+#define MAXL	_POSIX2_LINE_MAX
 #define NAMSIZ	MAXL
 #define ON	1
 #define OFF	0
