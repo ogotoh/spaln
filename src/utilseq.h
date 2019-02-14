@@ -37,7 +37,6 @@ struct	ExpectMmm {float min, mean, max;};
 
 class PatMat {
 	void	readPatMat(FILE* fd);
-	CHAR*	redctab;
 protected:
 	int	maxidx, minidx, nsupport, nalpha;
 public:
@@ -50,12 +49,12 @@ public:
 	PatMat(const char* fname = 0);
 	PatMat(const int r, const int c, const int o = 0, float* m = 0);
 	~PatMat() {delete[] mtx;}
-	float	pwm_score(Seq* sd, CHAR* ps);
+	float	pwm_score(Seq* sd, CHAR* ps, CHAR* redctab = 0);
 	float*	calcPatMat(Seq* sd);
 	int	columns() {return cols;}
 	void	clearmtx() {vclear(mtx, rows * cols);}
-	void	setredctab(Seq* sd);
-	void	increment(Seq* sd, int pos);
+	CHAR*	setredctab(Seq* sd);
+	void	increment(Seq* sd, int pos, CHAR* redctab = 0);
 	PatMat&	operator=(const PatMat& src);
 };
 
