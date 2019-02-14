@@ -86,10 +86,13 @@ static	float	RbsFact = FQUERY;
 static	int	Nascr = 2;
 const	char*	writeerrmssg = "Fail to write to %s !\n";
 
-void setQ4prm(const char*  ps)
+int setQ4prm(const char*  ps, const char* ss)
 {
 const	char*	val = ps + 1;
 
+	int	rv = 0;
+	if (ss && *ss == '-') ss = 0;
+	if (ss && !*val) {val = ss; rv = 1;}
 	switch (*ps) {
 	    case 'A':	// aa classification pattern
 		if (isdigit(*val)) wcp.Nalpha = atoi(val);
@@ -170,6 +173,7 @@ const	char*	val = ps + 1;
 		break;
 	    default: break;
 	}
+	return (rv);
 }
 
 ContBlk::ContBlk()
@@ -416,7 +420,7 @@ static	const char* wfmt =
 	"#Segs %u, TabSize %u, Words: %lu, GenomeSize %lu, GIDs %d\n";
 
 	if (!WriteFile) fatal("Specify write file !\n");
-	char	fn[MAXL];
+	char	fn[LINE_MAX];
 	strcpy(fn, WriteFile);
 	prompt(wfmt, chrblk(pwc->ChrNo) - 1,
 	    wcp.TabSize, pwc->WordNo, pwc->glen, pwc->ChrNo);
@@ -1370,7 +1374,6 @@ Seq* SrchBlk::setgnmrng(BPAIR* wrkbp, SeqList* sl)
 	INT	u = chrblk(c + 1) - 1;
 	INT	d = wrkbp->d? 3: 0;
 	INT	e = wrkbp->d? 2: 1;
-	char	str[MAXL];
 
 	INT	rb = wrkbp->rb;
 	INT	x = (chrblk(c))? lb - chrblk(c): 0;
@@ -1398,6 +1401,7 @@ Seq* SrchBlk::setgnmrng(BPAIR* wrkbp, SeqList* sl)
 	else if (x + y > l + r)	x = r;		// x < l < r << y
 	else			y = l;		// x << l < r < y
 	if (x + MinGeneLen > y) return (0);
+	char	str[LINE_MAX];
 	sprintf(str, "Dbs%d %d %d %c", c, x + 1, y, dir[wrkbp->d / 2]);
 	Seq*	sd = (*tgtgr)->getdbseq(dbf, str, c);
 	if (sd) {
@@ -1727,7 +1731,7 @@ bool extend_gene_rng(Seq* sqs[], PwdB* pwd, DbsDt* dbf)
 	    if (lrextend) extended = true;
 	    else	break;
 
-	    char	str[MAXL];
+	    char	str[LINE_MAX];
 	    if (rvs)
 		sprintf(str, "$%s %d %d <", (*b->sname)[0],     
 		    b->SiteNo(grng.right), b->SiteNo(grng.left));
