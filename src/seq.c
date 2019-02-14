@@ -50,8 +50,6 @@ DefSetup	def_setup = {UNKNOWN, 0, IM_NONE};
 RANGE	fullrng = {0, INT_MAX};
 int	noseq = 0;
 
-ALGMODE	algmode = {1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
 /*		   -  -  A C M G R S  V T W Y  H K  D  B  N 	*/
 CHAR ncredctab[]  = {15,15,0,1,4,2,5,6,10,3,7,8,10,9,12,13,14};
 CHAR ncelements[] = { 0, 0,0,1,2,2,0,2, 0,3,3,3, 1,1, 2, 3, 0};
@@ -349,13 +347,17 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 	return IS_END;
 }
 
-size_t SeqServer::total_seq_len(Seq* sd)
+size_t SeqServer::total_seq_len(Seq* sd, int* many)
 {
 	reset();
 	size_t	tsz = 0;
 	InSt	ist;
+	if (many) *many = 0;
 	while ((ist = nextseq(sd)) != IS_END)
-	    if (ist == IS_OK) tsz += sd->len;
+	    if (ist == IS_OK) {
+		tsz += sd->len;
+		if (many) ++(*many);
+	    }
 	reset();
 	return (tsz);
 }
@@ -592,8 +594,8 @@ FILE* Seq::openseq(const char* str, gzFile* gzfd)
 FILE* Seq::openseq(const char* str)
 #endif
 {
-	char	qname[MAXL];
-	char	pname[MAXL];
+	char	qname[LINE_MAX];
+	char	pname[LINE_MAX];
 
 	car(qname, str);
 	makefnam(qname, seqdfn, pname);
@@ -1240,7 +1242,7 @@ int Nprim_code(int c)
 	return (rn);
 }
 
-int en_code(int c, SEQ_CODE* code)
+int en_code(int c, const SEQ_CODE* code)
 {
 	if (isalpha(c)) {
 	    c = toupper(c);
@@ -1254,7 +1256,7 @@ int en_code(int c, SEQ_CODE* code)
 	}
 }
 
-CHAR* tosqcode(CHAR* ns, SEQ_CODE* code)
+CHAR* tosqcode(CHAR* ns, const SEQ_CODE* code)
 {
 	CHAR*	ps = ns;
 	CHAR*	bs = ns;
@@ -1745,7 +1747,7 @@ CHAR* Seq::seq_readin(file_t fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd)
 	    if (db->EndLabel && !wordcmp(str, db->EndLabel)) flag = -2;
 	    if (flag == -2) continue;
 	    while (int c = *ps++) {
-		if (c == _COMM || c == _LCOM) {
+		if (c == _COMM || c == _LCOMM) {
 		    while (withinline(str, MAXL, fd)) ;
 		    break;
 		}
@@ -1963,7 +1965,7 @@ int Seq::infermolc(file_t fd, char* str, bool msf)
 	do {
 	    char*	ps = str;
 	    if (*ps == _NHEAD || *ps == _CHEAD || *ps == _WGHT || 
-		*ps == _COMM || *ps == _LCOM || pending) {
+		*ps == _COMM || *ps == _LCOMM || pending) {
 		    pending = (strlen(str) + 1) == (INT) MAXL;
 		    continue;
 	    }
@@ -1977,7 +1979,7 @@ int Seq::infermolc(file_t fd, char* str, bool msf)
 		    ++cmp[aton(toupper(*ps))];
 		    if (++total >= MaxTestChar) goto eol;
 		} else if (msf && *ps == _LABL) break;
-		else if (*ps == _COMM || *ps == _LCOM) break;
+		else if (*ps == _COMM || *ps == _LCOMM) break;
 	    }
 	} while (fgets(str, MAXL, fd));
 eol:
@@ -2026,8 +2028,14 @@ void Seq::estimate_len(FILE* fd, int nos)
 	if (nos == 1) {		// FASTA single sequence
 	    char	str[MAXL];
 	    while (fgets(str, MAXL, fd)) {
-		if (*str == _NHEAD || *str == _CHEAD || *str == _EOS) break;
-		if (*str == _COMM || *str == _LCOM || *str == _WGHT) continue;
+		if (*str == _NHEAD || *str == _CHEAD || *str == _EOS) {
+		    flush_line(fd);
+		    break;
+		}
+		if (*str == _COMM || *str == _LCOMM || *str == _WGHT) {
+		    flush_line(fd);
+		    continue;
+		}
 		len += strlen(str) - 1;
 	    }
 	} else {
@@ -2046,9 +2054,19 @@ void Seq::estimate_len(gzFile gzfd, int nos)
 	int	many = 1;
 	while (fgets(str, MAXL, gzfd)) {
 	    if (nos == 1 &&
-		(*str == _NHEAD || *str == _CHEAD || *str == _EOS)) break;
-	    if (*str == _NHEAD || *str == _CHEAD) {++many; continue;}
-	    if (*str == _COMM || *str == _LCOM || *str == _WGHT || *str == _EOS) continue;
+		(*str == _NHEAD || *str == _CHEAD || *str == _EOS)) {
+		    flush_line(gzfd);
+		    break;
+	    }
+	    if (*str == _NHEAD || *str == _CHEAD) {
+		flush_line(gzfd);
+		++many;
+		continue;
+	    }
+	    if (*str == _COMM || *str == _LCOMM || *str == _WGHT || *str == _EOS) {
+		flush_line(gzfd);
+		continue;
+	    }
 	    len += strlen(str) - 1;
 	}
 	area_ = len;
