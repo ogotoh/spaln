@@ -43,6 +43,8 @@ static	const	int	gzCompress_rate = 10;
 
 const	char*	no_file = "\'%s\' cannot be created!\n";
 const	char*	not_found = "\'%s\' is not found!\n";
+const	char*	read_error = "\'%s\' read error!\n";
+const	char*	write_error = "\'%s\' write error!\n";
 const	char*	gz_unsupport = "compressed %s is not supported!\n";
 
 static	const	char*	gnm2tab = "gnm2tab";
@@ -111,7 +113,7 @@ char* makefnam(const char* fnam, const char* defn, char* result)
 {
 	char const*	sg[5];
 	char const*	sd[5];
-	char	buf[MAXL];
+	char	buf[LINE_MAX];
 	int 	i, l;
 
 	if (fnam == result) fnam = strcpy(buf, fnam);
@@ -174,20 +176,10 @@ size_t file_size(FILE* fd)
 	return (fs);
 }
 
-size_t file_size(const char* fn)
-{
-	FILE*	fd = fopen(fn, "r");
-	if (!fd) return (0);
-	fseek(fd, 0L, SEEK_END);
-	size_t	fs = ftell(fd);
-	fclose(fd);
-	return (fs);
-}
-	
 FILE* fopenpbe(const char* path, const char* name, 
 	const char* extent, const char* opt, int lvl, char* str)
 {
-	char	buf[MAXL];
+	char	buf[LINE_MAX];
 	if (!str) str = buf;
 
 	FILE*	fd = 0;
@@ -221,8 +213,8 @@ const 	char*	pt = path? path: "";
 
 FILE* qopen(const char* dfname, const char* mode)
 {
-	char	fname[MAXL];
-	char	pname[MAXL];
+	char	fname[LINE_MAX];
+	char	pname[LINE_MAX];
 	FILE*	fd;
 
 	topath(pname, dfname);
@@ -289,7 +281,7 @@ void setdblval(const char* mssg, double* pval, double* back, const double* given
 
 FILE*	Ftable::fopen(const char* fname, const char* mode)
 {
-	char	str[MAXL];
+	char	str[LINE_MAX];
 	FILE*	fd = 0;
 	for (int i = 0; i < n_tabpath; ++i) {
 	    if (tabpath[i]) {
@@ -316,7 +308,7 @@ char* Ftable::getpath(char* fullpath, const char* fname)
 	for (int i = 0; i < n_tabpath; ++i) {
 	    if (tabpath[i]) {
 		if (subdir) {
-		    char  str[MAXL];
+		    char  str[LINE_MAX];
 		    strcat(str, tabpath[i]);
 		    strcat(str, "/");
 		    strcat(str, subdir);
@@ -339,7 +331,7 @@ FILE*	Ftable::fopen(const char* fname, const char* envpath, const char* defpath)
 	FILE*	fd = this->fopen(fname, "r");
 	if (fd) return (fd);
 
-	char	str[MAXL];
+	char	str[LINE_MAX];
 	char*	path = envpath? getenv(envpath): 0;
 	if (path) {
 	    strcpy(str, path);
@@ -358,7 +350,7 @@ DIR* Ftable::dopen(const char* dname, bool test)
 {
 	for (int i = 0; i < 3; ++i) {
 	    if (tabpath[i]) {
-		char	str[MAXL];
+		char	str[LINE_MAX];
 		strcpy(str, tabpath[i]);
 		strcat(str, "/");
 		strcat(str, dname);
@@ -387,8 +379,8 @@ void Ftable::setpath(const char* ps, const char* convtab)
 	    prompt(not_found, convtab);
 	    return;
 	}
-	char    str[MAXL];
-	while (fgets(str, MAXL, fd)) {
+	char    str[LINE_MAX];
+	while (fgets(str, LINE_MAX, fd)) {
 	    if (*str == '#') continue;
 	    char*       qs = str;
 	    char*       gs = car(qs);
@@ -844,7 +836,7 @@ int Gnm2tab::taxon_code(const char* sqid, char** taxon)
 gzFile gzopenpbe(const char* path, const char* name, 
 	const char* extent, const char* opt, int lvl, char* str)
 {
-	char	buf[MAXL];
+	char	buf[LINE_MAX];
 	if (!str) str = buf;
 
 	gzFile	fd = 0;
