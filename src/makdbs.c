@@ -22,7 +22,6 @@
 #include <new>
 #include "seq.h"
 
-static	const	size_t	MAXL2K = 2048;
 static	const	INT	ddelim = SEQ_DELIM + (SEQ_DELIM << 4);
 static	bool	comment = false;
 static	void	usage(const char* fmt = 0, const char* arg = 0);
@@ -33,7 +32,7 @@ static	int	idfy = 0;
 static	int	monit = 0;
 static	int	ignoreamb = 0;
 static	int	dbsch = 0;
-static	char	dbname[MAXL] = "";
+static	char	dbname[LINE_MAX] = "";
 static	const	char*	srcpath = 0;
 static	const	char*	dstpath = "";
 static	bool	gzout = false;
