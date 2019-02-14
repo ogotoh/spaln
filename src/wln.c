@@ -37,7 +37,6 @@ static	HSPPRM	hspprm = {20, 10};
 static	Wlprms*	wlparams = 0;
 static  int     max_no_jxts = 128;
 static  int     max_stuck = 2;
-static	int	play = 10;
 static	const	char*	WlnDefBitPat[MaxBitPat] = {"", "1", "101", "1101",
 	"11011","1101011", "110011011", "1101101011", "110010110111",
 	"11101100101011", "110110010110111", "1111011001011011"};
@@ -67,7 +66,7 @@ static	WLPRM	aaprm[] =
 //	 {0,  20, 20, 2, 400, 2, 4, 4, 30, -1, 0, 0, 0}};
 static	WLPRM	trprm[] = 
 	{{"", DefConvPat[DefConvPatNo[16]], 23, 4, 279841, 5, 4, 8, 50, -1, 0, 0, 0},
-	 {"", DefConvPat[DefConvPatNo[14]], 14, 4, 38416, 5, 4, 8, 35, -1, 0, 0, 0},
+	 {"", DefConvPat[DefConvPatNo[14]], 14, 4, 38416, 5, 4, 8, 40, -1, 0, 0, 0},
 	 {"", DefConvPat[DefConvPatNo[12]], 12, 3, 1728, 4, 4, 8, 30, -1, 0, 0, 0}};
 
 	WLPRM*	wlprm = wlprms + level;
@@ -630,7 +629,7 @@ WLUNIT* Wlp::jxtcore(int* num, JUXT** jxt)
 		if (ncl->rx <= mcl->rx || ncl->ry <= mcl->ry ||
 		    ncl->lx <= mcl->lx || mcl->ux <= ncl->lx ||
 		    (mcl->rx - ncl->lx) * 2 > ncl->rx - mcl->lx ||
-		    maxx[mcl->irno] > ncl->lx + play)
+		    maxx[mcl->irno] > ncl->lx +  mcl->len / 2)
 		    continue;
 		VTYPE	h = mcl->sscr + LinkHspScr(mcl, ncl);
 		if (h > sscr) {
