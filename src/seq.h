@@ -38,16 +38,12 @@ extern	ALPRM	alprm;
 
 #define	USE_ETHER 	FVAL
 
-#ifndef _COMM
-#define	_COMM	';'
-#endif
 static	const	char	_NHEAD = '>';		/* Normal Strand	*/
 static	const	char	_CHEAD = '<';		/* Compl. Strand	*/
 static	const	char	_APPN = '+';		/* Append on 		*/
 static	const	char	_UNP = '-';		/* Gap			*/
 static	const	char	_TRM = '*';		/* Termination Code	*/
 static	const	char	_EOS = '/';		/* End of Seq.		*/
-static	const	char	_LCOM = '#';		/* Comment of list	*/
 static	const	char	_SAME = '~';		/* Same as 1st		*/
 static	const	char	_IBID = '^';		/* Same as above	*/
 static	const	char	_PEPT = '@';		/* Pept. Coding 	*/
@@ -86,9 +82,6 @@ static	const	int	TSIMD = 23+2+USE_EXG;
 static	const	int	RSIMD = 20+2+USE_EXG;
 static	const	int	NAMB = A + 4;
 static	const	int	NUCDIM = 4+2+USE_EXG;
-#if USE_ZLIB
-static	const	char	gz_ext[] = ".gz";
-#endif
 extern	RANGE	fullrng;
 
 static	const	CHAR	t2atab[] = 
@@ -265,20 +258,20 @@ public:
 	void	copyweight(Seq* dest);
 #endif
 	int	isAmb(CHAR r) const;
-	bool	isGap(CHAR r)	{return r == gap_code || r == nil_code;}
-	bool	isGap(CHAR* s) {
+	bool	isGap(CHAR r) const	{return r == gap_code || r == nil_code;}
+	bool	isGap(CHAR* s) const {
 	    int n = 0; int i = 0;
 	    for ( ; i < many; ++i) if (!IsGap(*s++)) break;
 	    return (i == n);
 	}
-	bool	isdrna()	{return inex.molc == DNA ||
+	bool	isdrna() const	{return inex.molc == DNA ||
 		inex.molc == RNA || inex.molc == GENOME;}
-	bool	isprotein()	{return inex.molc == PROTEIN;}
-	bool	istron()	{return inex.molc == TRON;}
-	bool	empty()		{return left == right;}
-	INT	r2s(INT r)	{return (isprotein()? r + ALA: ((1 << r) + _));}
+	bool	isprotein() const	{return inex.molc == PROTEIN;}
+	bool	istron() const	{return inex.molc == TRON;}
+	bool	empty()	const	{return left == right;}
+	INT	r2s(INT r) const	{return (isprotein()? r + ALA: ((1 << r) + _));}
 	void	setmolc(int molc);
-const	char	Strand()	{return inex.sens? '-': '+';}
+const	char	Strand() const	{return inex.sens? '-': '+';}
 const	char*	path2fn(const char* pname);
 const	char*	sqname(bool fpri = false) {
 		if (!fpri) fpri = many > 1;
@@ -309,7 +302,7 @@ const	char*	sqname(bool fpri = false) {
 	void	rev_attr();
 	void	reverse();
 	void	comple();
-	void	comrev() {reverse(); comple();}
+	void	comrev() {reverse(); if (!isprotein()) comple();}
 	void	comrev(Seq** sqs);
 	void	setanti(Seq** cmpl)	{anti_ = cmpl;}
 	void	copyattr(Seq* dest) const;
@@ -492,14 +485,13 @@ const   char*   attrs[3] = {attr, attr2, 0};
 	char    str[MAXL];
 	long    fpos = 0L;
 // skip comment lines
-	do {
+	for (;;) {
 	    fpos = ftell(fd);
 	    if (!fgets(str, MAXL, fd)) return (0);      // empty
-	} while (*str == _LCOM || isBlankLine(str));
-	if ((strlen(str) + 1) == MAXL) {
-	    int c;
-	    while ((c = fgetc(fd)) != EOF && c != '\n') ;
+	    if (*str != _LCOMM && !isBlankLine(str)) break;
+	    if ((strlen(str) + 1) == MAXL) flush_line(fd);
 	}
+
 // infer input sequence format
 	SeqDb*  dbf = seq_NandL(nos, len, mode, str, fd, dm);
 	if (nos) {
@@ -588,7 +580,7 @@ public:
 	InSt nextseq(Seq* sd, int which = 0);
 	void	reset();
 	int	getmolc(int i = 0) {return (molc[i]);}
-	size_t	total_seq_len(Seq* sd);
+	size_t	total_seq_len(Seq* sd, int* many = 0);
 };
 
 // phrases in headline comments that specify the orientation of the seq
@@ -827,8 +819,8 @@ extern	void	antiseq(Seq** seqs);
 extern	SEQ_CODE* setSeqCode(Seq* sd, int molc);
 extern	CHAR*	spliceTron(CHAR* spliced, CHAR* b5, CHAR* b3, int n);
 extern	int	Nprim_code(int c);
-extern	int	en_code(int c, SEQ_CODE* code);
-extern	CHAR*	tosqcode(CHAR* ns, SEQ_CODE* code);
+extern	int	en_code(int c, const SEQ_CODE* code);
+extern	CHAR*	tosqcode(CHAR* ns, const SEQ_CODE* code);
 extern	Seq*	inputseq(Seq* seqs[], char* str);
 extern	int	samerange(Seq* a, Seq* b);
 extern	void	swapseq(Seq** x, Seq** y);
