@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.3.2a
-#### Last updated: 2018-09-06
+#### Present Version 2.3.3
+#### Last updated: 2019-02-12
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -294,6 +294,13 @@ on the same strand.
 ```
     
 ## <a name="Changes">Changes from previous version</a>
+1. The maxmal path size has been extented from 255 to 2047 characters.
+2. The 'NEVSEL' constant value has been changed to avoid underflow of 2 * NEVSEL.
+3. In utilseq.c and .h, a member variable in class PatMat has been moved to a local variable
+to recover thread safety.
+4. When **Spaln** is run: `% spaln protein genome`, the order of the 1st and 2nd arguemnets is exchanged with a warning message.
+
+## Changes in version 2.3.2a</a>
 1. From this version, query fasta file(s) may be compressed.
 2. The new option of <b>spaln</b> '-g' directly generates compressed output(s) when used in combination with -W or -O12 option.
 3. makeidx.pl and makblk.pl have been modified to accord with gzipped genome/database fasta files.
