@@ -29,8 +29,6 @@
 
 static	void*	worker_func(void* targ);
 static	void	MasterWorker(GRFn* grcd, int* uppr, INT nchr);
-static	int	thread_num = 0;
-static	int	cpu_num = 0;
 
 #endif	// M_THREAD
 
@@ -807,7 +805,7 @@ ExonRecord* Sortgrcd::ReadRcd(int ac, const char** av)
 {
 	ercd = new ExonRecord[nercd];
 	GERecN*	nwrk = nrcd;
-	char	str[MAXL];
+	char	str[LINE_MAX];
 
 	for (ExonRecord* ewrk = ercd; ac--; ++nwrk) {
 	    int	nth = 1;
@@ -858,7 +856,7 @@ ExonRecord* Sortgrcd::ReadChrRcd(int ac, const char** av,
 	INT nercd, GRFn* frcd, INT grn)
 {
 	ExonRecord* ewrk = ercd = new ExonRecord[nercd];
-	char	str[MAXL];
+	char	str[LINE_MAX];
 
 	for (INT fn = 0; ac--; ++fn) {
 	    int	nth = 1;
@@ -974,7 +972,7 @@ void Sortgrcd::assort_by_chr(Chash* hh)
 static int count_record(const char* bdy, const char* ext, size_t rcdsize)
 {
 const	char*	errmsg = "%s may be obolete or corrupted!\n";
-	char	str[MAXL];
+	char	str[LINE_MAX];
 	int	nth = 1;
 #if USE_ZLIB
 	if (is_gz(bdy)) nth = 2;
@@ -1007,7 +1005,7 @@ Sortgrcd::Sortgrcd(int ac, const char** av) : argc(ac), grdname(*av)
 {
 	GERecN	gerNo = {0, 0, 0, 0, 0};
 	Mfile	mfd(sizeof(GERecN));
-	char	str[MAXL];
+	char	str[LINE_MAX];
 
 	for ( ; ac--; ++av) {
 	    gerNo.grn = count_record(*av, grext, sizeof(GeneRecord));
@@ -1053,7 +1051,7 @@ void Sortgrcd::readGrcd(int ac, const char** av, INT hashsize)
 	Chash*	hh = new Chash(hashsize);
 	grcd = new GRFn[ngrcd];
 	GRFn*	grfn = grcd;
-	char	str[MAXL];
+	char	str[LINE_MAX];
 
 	for (INT fn = 0; ac--; ++fn, ++av) {
 	    int	nth = 1;
@@ -1134,39 +1132,56 @@ const	char*	grpfn = 0;
 
 // Get options
 	while (--argc && (++argv)[0][0] == OPTCHAR) {
-	    const char*	val = argv[0] + 2;
-	    int	flevel = 0;
-	    switch (argv[0][1]) {
-		case 'F': if ((val = getarg(argc, argv, true)))	// filter level
-		    flevel = atoi(val);
-		    if (0 > flevel || flevel > 3) flevel = 3;
-		    filter = Filters[flevel];
-		    break;
-		case 'C': if ((val = getarg(argc, argv, true)))	// minimum coverage
-		    filter.Pcover = atof(val);
-		    if (filter.Pcover < 1.) filter.Pcover *= 100.;
-		    break;
-		case 'E': if ((val = getarg(argc, argv, true)))	// isoforms
-		    algmode.mlt = atoi(val); break;
-		case 'G': if ((val = getarg(argc, argv, true))) // genetic code
-			    initcodon(atoi(val));
-			  else	printgrcd = 1;			// print grcd records only
-		    break;
-		case 'H': if ((val = getarg(argc, argv, true)))	// minimum spaln score
-		    filter.Gscore = atof(val); break;
-		case 'J': if ((val = getarg(argc, argv, true)))	// minimum ORF length
-		    setorf(atoi(val)); break;
-		case 'M': if ((val = getarg(argc, argv, true)))	// max total number of
-		    filter.Bmmc = atoi(val); break;		// mismatches near junction
-		case 'N': if ((val = getarg(argc, argv, true)))	// max number of non-canonical ends
-		    filter.ng = atoi(val); break;
-		case 'O': if ((val = getarg(argc, argv, true)))	// output format
-		    OutMode = atoi(val); break;
-		case 'P': if ((val = getarg(argc, argv, true)))	// Minimum total % sequnce identity
-		    filter.Pmatch = atof(val);
-		    if (filter.Pmatch < 1.) filter.Pmatch *= 100.;
-		    break;
-		case 'S': if ((val = getarg(argc, argv)))
+	  const char*	val = argv[0] + 2;
+	  int	flevel = 0;
+	  switch (argv[0][1]) {
+	    case 'F': 
+		if ((val = getarg(argc, argv, true)))	// filter level
+		    {flevel = atoi(val);}
+		if (0 > flevel || flevel > 3) flevel = 3;
+		filter = Filters[flevel];
+		break;
+	    case 'C': 
+		if ((val = getarg(argc, argv, true)))	// minimum coverage
+		    {filter.Pcover = atof(val);}
+		if (filter.Pcover < 1.) filter.Pcover *= 100.;
+		break;
+	    case 'E':
+		if ((val = getarg(argc, argv, true)))	// isoforms
+		    {algmode.mlt = atoi(val);}
+		break;
+	    case 'G':
+		if ((val = getarg(argc, argv, true)))	// genetic code
+		    {initcodon(atoi(val));}
+		else	{printgrcd = 1;}		// print grcd records only
+		break;
+	    case 'H': 
+		if ((val = getarg(argc, argv, true)))	// minimum spaln score
+		    {filter.Gscore = atof(val);}
+		break;
+	    case 'J': 
+		if ((val = getarg(argc, argv, true)))	// minimum ORF length
+		    {setorf(atoi(val));}
+		break;
+	    case 'M':
+		if ((val = getarg(argc, argv, true)))	// max total number of
+		    {filter.Bmmc = atoi(val);}
+		break;		// mismatches near junction
+	    case 'N':
+		if ((val = getarg(argc, argv, true)))	// max number of non-canonical ends
+		    {filter.ng = atoi(val);}
+		break;
+	    case 'O': 
+		if ((val = getarg(argc, argv, true)))	// output format
+		    {OutMode = atoi(val);}
+		break;
+	    case 'P':
+		if ((val = getarg(argc, argv, true)))	// Minimum total % sequnce identity
+		    {filter.Pmatch = atof(val);}
+		if (filter.Pmatch < 1.) filter.Pmatch *= 100.;
+		break;
+	    case 'S': 
+		if ((val = getarg(argc, argv))) {
 		  switch (*val) {
 		    case 'a': sort_by = ALPHABETIC; break;
 		    case 'b': sort_by = ABUNDANCE; break;
@@ -1174,39 +1189,56 @@ const	char*	grpfn = 0;
 		    case 'r': reverse = true; break;
 		    default: break;	// no action
 		  }
-		case 'U': if ((val = getarg(argc, argv, true)))	// max total number of gaps
-		    filter.Bunp = atoi(val);			// near junction break;
-		case 'V': if ((val = getarg(argc, argv))) {	// Maximum internal memory
-		    MaxeRcd = atoi(val);			// size used for core sort
+		}
+		break;
+	    case 'U':
+		if ((val = getarg(argc, argv, true)))	// max total number of gaps
+		    {filter.Bunp = atoi(val);}		// near junction break;
+		break;
+	    case 'V':
+		if ((val = getarg(argc, argv))) {	// Maximum internal memory
+		    MaxeRcd = atoi(val);		// size used for core sort
 		    switch (val[strlen(val) - 1]) {
 			case 'k': case 'K': MaxeRcd *= KILO; break;
 			case 'm': case 'M': MaxeRcd *= MEGA; break;
 			default: break;
 		    }
-		    break;
 		  }
-		case 'g': if ((val = getarg(argc, argv)))	// .grp file name
-		    grpfn = val; break;
-		case 'h': if ((val = getarg(argc, argv, true)))	// hash size
-		    HashSize = atoi(val); break;
-		case 'l': if ((val = getarg(argc, argv)))	// max number of mismatches
-		    setlpw(atoi(val)); break;			// near each junction
-		case 'm': if ((val = getarg(argc, argv)))	// max number of mismatches
-		    filter.bmmc = atoi(val); break;		// near each junction
-		case 'n': if ((val = getarg(argc, argv)))	// 0: disallow; 1: allow
-		    filter.ncan = atoi(val);			// non-canonical ends
-		    else	filter.ncan = 0;
-		    break;
+		  break;
+	    case 'g':
+		if ((val = getarg(argc, argv)))		// .grp file name
+		    {grpfn = val;}
+		break;
+	    case 'h':
+		if ((val = getarg(argc, argv, true)))	// hash size
+		    {HashSize = atoi(val);}
+		break;
+	    case 'l':
+		if ((val = getarg(argc, argv)))		// max number of mismatches
+		    {setlpw(atoi(val));}		// near each junction
+		break;
+	    case 'm':
+		if ((val = getarg(argc, argv)))		// max number of mismatches
+		    {filter.bmmc = atoi(val);}		// near each junction
+		break;
+	    case 'n':
+		if ((val = getarg(argc, argv)))		// 0: disallow; 1: allow
+		    {filter.ncan = atoi(val);}		// non-canonical ends
+		else	{filter.ncan = 0;}
+		break;
 #if M_THREAD
-		case 't': if ((val = getarg(argc, argv)))	// number of thread
-		        thread_num = atoi(val);
-		    else thread_num = -1; break;
+	    case 't':
+		if ((val = getarg(argc, argv)))		// number of thread
+		    {thread_num = atoi(val);}
+		else {thread_num = -1;}
+		break;
 #endif
-		case 'u': if ((val = getarg(argc, argv)))	// max total number of gaps
-		    filter.bunp = atoi(val); break;		// near each junction
-		default:
-		    break;
-	    }
+	    case 'u':
+		if ((val = getarg(argc, argv)))		// max total number of gaps
+		    {filter.bunp = atoi(val);}		// near each junction
+		break;
+	    default: break;
+	  }
 	}
 	if (!argc) usage();
 	setup_output(OutMode);
