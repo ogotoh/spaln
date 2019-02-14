@@ -30,7 +30,6 @@ enum Triplet {AAA = 0, AGA = 8, AGG = 10, AUA = 12,
 
 #define DEF_CDI_PATH "/data2/seqdb/blast/cdi"
 #define DEF_CDI "BLASTCDI"
-#define COMMENT_CHAR '#'
 #define	PassCom	0x08
 
 #define	isNucAmb(c)	((c) != A && (c) != C && (c) != G && (c) != T)
@@ -485,11 +484,17 @@ static	const	int	tm[14][4] = {
 void Seq::passcom(FILE* fo)
 {
 	FILE*	fi = fopen(spath, "r");
-	char	str[MAXL];
-
 	if (!fi) return;
-	while (fgets(str, MAXL, fi))
-	    if (*str == _COMM) fputs(str, fo);
+
+	int	c;
+	while ((c = fgetc(fi)) != EOF) {
+	    if (c != _COMM) continue;
+	    for (;;) {
+		fputc(c, fo);
+		c = fgetc(fi);
+		if (c == EOF || c == '\n') break;
+	    }
+	}
 	fclose(fi);
 }
 
@@ -663,7 +668,7 @@ static int evenusage()
 
 int getCodonUsage(char* fname)
 {
-	char	str[MAXL];
+	char	str[LINE_MAX];
 	char*	ps;
 	FILE*	fd;
 static	char	errmsg[] = "Codon Usage File";
@@ -689,18 +694,20 @@ static	char	errmsg[] = "Codon Usage File";
 	    fprintf(stderr, "%s not found!\n", fname);
 	    return (ERROR);
 	}
-	*str = COMMENT_CHAR;
-	while (*str == COMMENT_CHAR)
-	    if (!fgets(str, MAXL, fd)) {
+	for (;;) {
+	    if (!fgets(str, LINE_MAX, fd)) {
 		fputs(errmsg, stderr);
 		fprintf(stderr, "%s incomplete!\n", fname);
 		return (ERROR);
 	    }
+	    if (*str == _LCOMM) flush_line(fd);
+	    else	break;
+	}
 	int	i = 0;
 	do {
 	    sscanf(str, "%*s %*s %*s %f", CodonUsage + i++);
 	    if (i == 64) return (OK);
-	} while (fgets(str, MAXL, fd));
+	} while (fgets(str, LINE_MAX, fd));
 /* readerr */
 	fputs(errmsg, stderr);
 	fprintf(stderr, "%s was incomplete!\n", fname);
@@ -734,8 +741,7 @@ void PatMat::readPatMat(FILE* fd)
 	double	maxval = -FLT_MAX;
 	double	minval = FLT_MAX;
 
-	mtx = 0; tonic = 0;
-	mmm.min = mmm.mean = mmm.max = 0;
+	vclear(&mmm);
 	do {
 	    if (!fgets(str, MAXL, fd)) return;
 	} while (isBlankLine(str));
@@ -761,9 +767,9 @@ void PatMat::readPatMat(FILE* fd)
 	    if (*wk < minval) {minval = *wk; minidx = rc;}
 	}
 	if (t) gswap(rows, cols);
-	if (rows % 23 == 0) {redctab = tnredctab; nalpha = 23;}
-	else if (rows % 4 == 0) {redctab = ncredctab; nalpha = 4;}
-	else {redctab = 0; nalpha = rows;}
+	if (rows % 23 == 0) nalpha = 23;
+	else if (rows % 4 == 0) nalpha = 4;
+	else	nalpha = rows;
 	while ((skip = getc(fd)) != EOF && skip != '\n');
 }
 
@@ -772,7 +778,7 @@ PatMat& PatMat::operator=(const PatMat& src)
 	rows = src.rows; cols = src.cols; 
 	offset = src.offset; nalpha = src.nalpha;
 	maxidx = src.maxidx; minidx = src.minidx; nsupport = src.nsupport;
-	redctab = src.redctab; tonic = src.tonic; mmm = src.mmm;
+	tonic = src.tonic; mmm = src.mmm;
 	int	mtxsize = rows * cols;
 	if (mtxsize != (src.rows * src.cols)) {
 	    delete[] mtx;
@@ -782,20 +788,19 @@ PatMat& PatMat::operator=(const PatMat& src)
 	return (*this);
 }
 
-PatMat::PatMat(PatMat& src)
+PatMat::PatMat(PatMat& src) :
+	maxidx(src.maxidx), minidx(src.minidx), nsupport(src.nsupport), 
+	nalpha(src.nalpha), rows(src.rows), cols(src.cols), offset(src.offset), 
+	tonic(src.tonic), mmm(src.mmm)
 {
-	rows = src.rows; cols = src.cols; 
-	offset = src.offset; nalpha = src.nalpha;
-	maxidx = src.maxidx; minidx = src.minidx; nsupport = src.nsupport;
-	redctab = src.redctab; tonic = src.tonic; mmm = src.mmm;
 	int	mtxsize = rows * cols;
 	mtx = new double[mtxsize];
 	vcopy(mtx, src.mtx, mtxsize);
 }
 
 PatMat::PatMat(const int r, const int c, const int o, float* m)
-	: redctab(0), maxidx(0), minidx(0), nsupport(0),
-	  rows(r), cols(c), offset(o),tonic(0), mtx(0)
+	: maxidx(0), minidx(0), nsupport(0),
+	  rows(r), cols(c), offset(o), tonic(0), mtx(0)
 {
 	if (r <= 0 || c <= 0) return;
 	mmm.min = mmm.mean = mmm.max = 0;
@@ -808,20 +813,24 @@ PatMat::PatMat(const int r, const int c, const int o, float* m)
 	    if (mtx[i] > maxval) {maxval = mtx[i]; maxidx = i;}
 	    if (mtx[i] < minval) {minval = mtx[i]; minidx = i;}
 	}
-	if (rows % 4 == 0) {redctab = ncredctab; nalpha = 4;}
-	else if (rows == 23) {redctab = tnredctab; nalpha = 23;}
-	else	{redctab = 0; nalpha = cols;}
+	if (rows % 4 == 0) nalpha = 4;
+	else if (rows == 23) nalpha = 23;
+	else	nalpha = cols;
 }
 
-PatMat::PatMat(FILE* fd) : redctab(0)
+PatMat::PatMat(FILE* fd) :
+	maxidx(0), minidx(0), nsupport(0),
+	rows(0), cols(0), offset(0), tonic(0), mtx(0)
 {
 	readPatMat(fd);
 }
 
-PatMat::PatMat(const char* fname) : redctab(0)
+PatMat::PatMat(const char* fname) :
+	maxidx(0), minidx(0), nsupport(0),
+	rows(0), cols(0), offset(0), tonic(0), mtx(0)
 {
-	char	str[MAXL];
-	FILE*	fd;
+	char	str[LINE_MAX];
+	FILE*	fd = 0;
 retry:
 	if (fname && *fname) {
 	    strcpy(str, fname);
@@ -835,9 +844,9 @@ retry:
 	fclose(fd);
 }
 
-void PatMat::setredctab(Seq* sd)
+CHAR* PatMat::setredctab(Seq* sd)
 {
-	redctab = 0;
+	CHAR*	redctab = 0;
 	switch (sd->inex.molc) {
 	    case DNA: case RNA: case GENOME:
 		if (!sd->inex.cmpc) redctab = ncredctab;
@@ -846,9 +855,10 @@ void PatMat::setredctab(Seq* sd)
 		if (rows % 23) redctab = tnredctab;
 		break;
 	}
+	return (redctab);
 }
 
-void PatMat::increment(Seq* sd, int pos)
+void PatMat::increment(Seq* sd, int pos, CHAR* redctab)
 {
 	CHAR*	ps = sd->at(pos);
 	CHAR*	ts = sd->at(pos + cols);
@@ -859,7 +869,7 @@ void PatMat::increment(Seq* sd, int pos)
 	}
 }
 
-float PatMat::pwm_score(Seq* sd, CHAR* ps)
+float PatMat::pwm_score(Seq* sd, CHAR* ps, CHAR* redctab)
 {
 	double*	ptn = mtx;
 	CHAR*	ts = min(sd->at(sd->right), ps + cols);
@@ -876,7 +886,7 @@ float* PatMat::calcPatMat(Seq* sd)
 	int	k = sd->right - sd->left;
 	int	Mrkv = 0;
 
-	setredctab(sd);
+	CHAR*	redctab = setredctab(sd);
 	if (rows == 20) Mrkv = 1;	// 1st-order Markov/
 	else if (rows == 84) Mrkv = 2;	// 2nd-order Markov/
 	else if (rows == 67) Mrkv = 3;	// Should be MODIFIED !!!
