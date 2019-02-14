@@ -843,7 +843,7 @@ static void ExonForm(Gsinfo* gsinf, Seq* gene, Seq* qry)
 	EISCR*	wkr = fst;
 	EISCR*	prv = wkr;
 	EISCR*	skp = wkr;
-	char	str[MAXL];
+	char	str[LINE_MAX];
 	char*	convt = gene->isdrna()? nucl: ncodon;
 	ExonRecord	er;
 static	GeneRecord	gr;
@@ -1823,7 +1823,7 @@ void PrintAln::seqline(const CHAR* qry, const CHAR* brc,
 		putc(' ', out_fd);
 	    int	ch;
 	    if (res == BLANK || (brc && *brc == BLANK))
-		ch =' ';
+		ch = ' ';
 	    else if (*cur & INTRONBIT)
 		ch = tolower(decode[res]);
 	    else if (qry)
@@ -1993,20 +1993,17 @@ void PrintAln::printaln()
 	int	gpos = 0;
 	int 	active = seqnum;
 	RANGE*	exon = 0;
-	pro = gene = -1;
+	gene = -1;
 	int	maxleft = 0;
 	for (int j = htl = 0; j < seqnum; ++j) {
 	    Seq*&	sd = seqs[j];
 	    if (sd->left > maxleft) maxleft = sd->left;
-	    if (sd->isprotein()) {
-		htl |= 1;
-		pro = k;
-	    } else if (seqs[j]->inex.molc == TRON)
-		htl |= 2;
+	    if (sd->isprotein()) htl |= 1;
 	    if (sd->inex.intr && sd->exons) {
-		exon = sd->exons + 1;
-		gene = j;
-		gpos = gaps[j]->gps;
+		htl |= 2;		// 0: CvsC
+		exon = sd->exons + 1;	// 1: AvsA
+		gene = j;		// 2: GvsC
+		gpos = gaps[j]->gps;	// 3: GvsA
 	    }
 	    for (int i = 0; i < sd->many; ++i, ++k, wbuf += OutPrm.lpw) {
 		nbr[k] = sd->calcnbr(gaps[j]->gps, i);
@@ -2017,6 +2014,7 @@ void PrintAln::printaln()
 	    if (!gp[j]->gln) ++gp[j];
 	    agap[j] = 0;
 	}
+	pro = (gene >= 0)? gene + 1: -1;
 	int	c_step = (htl == 1)? 3: 1;
 	if (markeij) {
 	    for (int j = 0; j < seqnum; ++j) {
@@ -2032,7 +2030,7 @@ void PrintAln::printaln()
 	}
 
 	int	z = 0, gph = 0, phs = 0, intlen = 0;
-	if (htl == 3) prmode = Row_None;
+	if (htl & 2) prmode = Row_None;
 	do {
 	    if (algmode.nsa == ALN_FORM && OutPrm.SkipLongGap) {
 		int	jj = 0;			//	skip long insert
@@ -2049,18 +2047,19 @@ void PrintAln::printaln()
 		int	upr = (gap - z - OutPrm.EijMergin) / OutPrm.lpw * OutPrm.lpw;
 		if (gap < INT_MAX && z - pos > OutPrm.EijMergin && upr > 0) {
 		    for (int j = k = 0; j < seqnum; k += seqs[j++]->many) {
+			Seq*&	sd = seqs[j];
 			if (j == jj) {
-			    if (seqs[j]->isprotein())
-				gph = phs = (phs + upr) % htl;
+			    if (!sd->inex.intr)
+				gph = phs = (phs + upr) % 3;
 			} else {
 			    int	inc = upr;
-			    if (seqs[j]->isprotein() && htl == 3) {
+			    if (!sd->inex.intr) {
 				int	r = upr % 3;
 				inc /= 3;
 				if (r && phs != 2 && (r + phs) > 1) ++inc;
 			    }
-			    wkr[j] += inc * seqs[j]->many;
-			    for (int i = 0; i < seqs[j]->many; ++i)
+			    wkr[j] += inc * sd->many;
+			    for (int i = 0; i < sd->many; ++i)
 				nbr[k + i] += inc;
 			}
 		    }
@@ -2078,13 +2077,13 @@ void PrintAln::printaln()
 		int	reij = 0;
 		if (exon) {
 		    while (exon->right <= gpos) {intlen = exon[1].left - exon->right; ++exon;}
-		    if ((exon->right == gpos + 1) && phs == 1) reij = 3;
+		    if (exon->right == gpos + 1 && phs == 1) reij = 3;
 		}
 		if (active) active = seqnum;
 		for (int j = k = 0; j < seqnum; k += seqs[j++]->many) {
 		    Seq*&	sd = seqs[j];
 		    bool	prot = sd->isprotein() && htl == 3;
-	loop:	    int	pos = gp[j]->gps - gaps[j]->gps;
+	loop:	    int		pos = gp[j]->gps - gaps[j]->gps;
 		    bool	neog = gaps_intr(gp[j]);
 		    int	gap = neog? gp[j]->gln: 0;
 		    if (!active) {
@@ -2100,24 +2099,27 @@ void PrintAln::printaln()
 				} else
 				    image[k+i][clm] = BLANK;
 			    }
-			    gph = phs = (phs + 1) % htl;
 			} else {
 			    for (int i = 0; i < sd->many; ++i) {
 				image[k+i][clm] = *wkr[j] == nil_code? gap_code: *wkr[j];
 				if (j == gene) {
 				    int	df = gpos - exon->left;
 				    if (df < 0) image[k+i][clm] |= INTRONBIT;
-				    else if (intlen > 2 && df <= 1 && pphs == 1) reij = 2 - df;
-				    if (markeij && reij) image[k+i][clm] |= (reij << 5);
+				    else if (intlen > 2 && df < 2 && (htl & 2) && pphs == 1)
+					reij = 2 - df;
+				    if (markeij && reij) 
+					image[k+i][clm] |= (reij << 5);
 				}
 				if (IsntGap(*wkr[j])) ++nbr[k+i];
 				++wkr[j];
 			    }
 			}
+			if ((htl & 2) && j == pro)    gph = phs = (phs + 1) % 3;
 			if (markeij && pfqs[j]) {
 			    int	niis = 0;
 			    while ((pfqs[j] + niis < tfqs[j]) &&
-				pfqs[j][niis].pos + agap[j] + (htl == 3? 1 - pfqs[j][niis].pos % 3: 0) < cpos) 
+				pfqs[j][niis].pos + agap[j] + ((htl & 2)? 
+				    1 - pfqs[j][niis].pos % 3: 0) < cpos) 
 				    ++niis;
 			    while (niis--) markiis(k, j, clm);
 			}
@@ -2129,12 +2131,12 @@ void PrintAln::printaln()
 				else
 				    image[k+i][clm] = BLANK;
 			    }
-			    gph = (gph + 1) % htl;
 			} else {
 			    for (int i = 0; i < sd->many; i++)
 				image[k+i][clm] = (!exon || gpos >= exon->left)?
 				    gap_code: BLANK;
 			}
+			if (htl & 2) gph = (gph + 1) % htl;
 			if (!neog && !--active && !clm--) return;
 		    } else {
 			agap[j] += gp[j]->gln * c_step;
