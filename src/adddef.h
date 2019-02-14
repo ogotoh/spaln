@@ -40,7 +40,9 @@ typedef int (*CMPF)(const UPTR, const UPTR);
 #define OK	0
 #define ABORT	INT_MIN
 #define MAXL	256
-#define NAMSIZ	MAXL
+#ifndef	LINE_MAX
+#define	LINE_MAX	2048
+#endif
 #define ON	1
 #define OFF	0
 #define YES	1
@@ -88,7 +90,8 @@ static	const	char	OPTCHAR = '-';
 #endif
 #if USE_ZLIB
 #include <zlib.h>
-#if ZLIB_VERNUM < 0x1290
+static	const	char	gz_ext[] = ".gz";
+#if ZLIB_VERNUM < 0x12c0
 inline	size_t  fread(void* buf, size_t s, size_t c, gzFile gzfd) {
 	int	rv = gzread(gzfd, buf, s * c);
 	return (rv < 0? 0: rv / s);
@@ -126,6 +129,9 @@ inline	long ftell(gzFile gzfd) {
 inline	int fclose(gzFile gzfd) {
 	return (gzclose(gzfd));
 }
+inline	int fflush(gzFile gzfd) {
+	return (gzflush(gzfd, Z_SYNC_FLUSH));
+}
 #endif	// ZLIB_VERNUM
 #endif	// USE_ZLIB
 
@@ -150,6 +156,8 @@ inline	int fclose(gzFile gzfd) {
 extern	const	char*	no_space;
 extern	const	char*	no_file;
 extern	const	char*	not_found;
+extern	const	char*	read_error;
+extern	const	char*	write_error;
 
 /*	etc.	*/
 
