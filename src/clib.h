@@ -33,7 +33,32 @@
 #include <math.h>
 #include "adddef.h"
 
+struct ALGMODE {
+	INT	nsa :   4;	// no/single/all alignments
+	INT	alg :   4;	// regor in group sequnece
+	INT	bnd :   1;	// banded dp space
+	INT	mlt :   3;	// multiple output
+	INT	aut :	1;	// automatic param set
+	INT	lcl :   5;	// local or global
+	INT	lsg :   1;	// # of line pieces > 1 ?
+	INT	mns :   2;	// minus strand as well
+	INT	thr :   1;	// cutoff if < thr
+	INT	rng :   1;	// output range
+	INT	qck :   2;	// quick calculation
+	INT	lvl :	2;	// wilip initial level
+	INT	blk :	1;	// rapid genome scan
+	INT	any :	2;	// accept non-consensus spj
+	INT	crs :	1;	// cross species comparison
+	INT	slv :	1;	// salvage all positive blocks
+	INT	dim:	1;	// database seq in memory
+};
+
+extern	int	thread_num;
+extern	int	cpu_num;
+extern	int	max_queue_num;
 extern	INT	supprime(INT n);
+extern	INT	str2uint(const char* str);
+extern	ALGMODE	algmode;
 
 static	const	int	KILO = 1024;
 static	const	int	MEGA = 1048576;
@@ -47,15 +72,14 @@ static	const	float	DefHashFact = 1.2;
 static	const	double	epsilon = 1e-6;
 static	const	int	HashovLS = 12;
 static	const	int	def_un_def = (INT_MIN / 8 * 7);
+static	const	float	FACT_QUEUE = 1.5;
 
-extern	INT	str2uint(const char* str);
-
-template <typename X> X max(X x, X y)
+template <typename X> inline X max(X x, X y)
 {
 	return (x > y)? x: y;
 }
 
-template <typename X> X min(X x, X y)
+template <typename X> inline X min(X x, X y)
 {
 	return (x < y)? x: y;
 }
@@ -76,7 +100,7 @@ template <typename X> X* vset(X* dst, const X& val, int n)
 	return (head);
 }
 
-template  <typename X> void vclear(X* ary, const int n = 1)
+template  <typename X> inline void vclear(X* ary, const int n = 1)
 {
 	memset(ary, '\0', n * sizeof(X));
 }
@@ -95,13 +119,18 @@ template <typename X> X* vmin(const X* array, int n)
 	return ((X*) temp);
 }
 
+template <typename X> inline void gswap(X& x, X& y)
+{
+	X temp = x;
+	x = y;
+	y = temp;
+}
+
 template <typename X> X* vreverse(X* array, int n)
 {
-	for (int i = 0, j = n - 1; i < j; ++i, --j) {
-	    X	tmp = array[i];
-	    array[i] = array[j];
-	    array[j] = tmp;
-	}
+	X*	f = array;
+	X*	b = array + n - 1;
+	while (f < b) gswap(*f++, *b--);
 	return (array);
 }
 
@@ -121,37 +150,30 @@ template <typename X> X vavsd(X& sd, X* array, int n)
 	return ((X) av);
 }
 
-template <typename X> X max3(X x, X y, X z)
+template <typename X> inline X max3(X x, X y, X z)
 {
 	if (y > x) x = y;
 	return (max(x, z));
 }
 
-template <typename X> X min3(X x, X y, X z)
+template <typename X> inline X min3(X x, X y, X z)
 {
 	if (y < x) x = y;
 	return (min(x, z));
 }
 
-template <typename X> X max4(X x, X y, X z, X w)
+template <typename X> inline X max4(X x, X y, X z, X w)
 {
 	if (y > x) x = y;
 	if (w > z) z = w;
 	return (max(x, z));
 }
 
-template <typename X> X min4(X x, X y, X z, X w)
+template <typename X> inline X min4(X x, X y, X z, X w)
 {
 	if (y < x) x = y;
 	if (w < z) z = w;
 	return (min(x, z));
-}
-
-template <typename X> void gswap(X& x, X& y)
-{
-	X temp = x;
-	x = y;
-	y = temp;
 }
 
 // key-value pair used by Dhash
