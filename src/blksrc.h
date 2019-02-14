@@ -372,7 +372,7 @@ public:
 extern	MakeBlk*	makeblock(int argc, const char** argv, int molc = UNKNOWN);
 extern	MakeBlk*	makeblock(SeqServer* svr);
 extern	MakeBlk*	makeblock(Seq* sd);
-extern	void	setQ4prm(const char* s);
+extern	int	setQ4prm(const char* s, const char* ss = 0);
 extern	void	ReportBlkInfo(const char* fn);
 extern	int	genemergin(int agap, int mingap, Seq* sd, bool rend);
 extern	bool	extend_gene_rng(Seq* sqs[], PwdB* pwd, DbsDt* dbf);
