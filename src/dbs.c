@@ -537,7 +537,7 @@ char* path2dbf(char* str, const char* fn, const char* ext)
 #if USE_ZLIB
 	char	extgz[10];
 	strcpy(extgz, ext);
-	strcat(extgz, ".gz");
+	strcat(extgz, gz_ext);
 #endif
 	for (int i = 0; i < 3; ++i) {
 	    const char*	path = dbstab[i];
@@ -560,8 +560,8 @@ DbsDt::DbsDt(const char* form) : dbsid(form)
 {
 static 	const	char	openmsg[] = 
 	    "Form [F]asta/[E]mbl/[S]wiss/[N]brf/[G]bk/[P]db/[C]lose : ";
-	char	str[MAXL];
-	char	buf[MAXL];
+	char	str[LINE_MAX];
+	char	buf[LINE_MAX];
 
 	clean();
 	if (form == 0) form = progets(buf, openmsg);
@@ -767,7 +767,7 @@ Seq* Seq::read_dbseq(DbsDt* dbf, long pos)
 	DbsRec*	rec = dbf->dbsrec(pos);
 
 	if (!rec) return (0);
-	RANGE	rng[2] = {{0, rec->seqlen}, endrng};
+	RANGE	rng[2] = {{0, int(rec->seqlen)}, endrng};
 	return (read_dbseq(dbf, rec, rng));
 }
 
