@@ -26,21 +26,21 @@
 #define _COMM	';'
 #endif 
 
-#define	SRC_EXT	".dt"
-#define	SEQ_EXT	".seq"
-#define	IDX_EXT	".idx"
-#define	HED_EXT	".hed"
-#define	GRP_EXT	".grp"
-#define	ENT_EXT	".ent"
-#define	ODR_EXT	".odr"
-#define	BKA_EXT	".bka"
-#define	BKN_EXT	".bkn"
+static	const	char 	SEQ_EXT[] = ".seq";
+static	const	char 	IDX_EXT[] = ".idx";
+static	const	char 	HED_EXT[] = ".hed";
+static	const	char 	GRP_EXT[] = ".grp";
+static	const	char 	ENT_EXT[] = ".ent";
+static	const	char 	ODR_EXT[] = ".odr";
+static	const	char 	BKA_EXT[] = ".bka";
+static	const	char 	BKN_EXT[] = ".bkn";
+static	const	char 	BKP_EXT[] = ".bkp";
 #define	BKP_EXT	".bkp"
 #if USE_ZLIB
-#define SGZ_EXT ".seq.gz"
-#define AGZ_EXT ".bka.gz"
-#define NGZ_EXT ".bkn.gz"
-#define PGZ_EXT ".bkp.gz"
+static	const	char	SGZ_EXT[] = ".seq.gz";
+static	const	char	AGZ_EXT[] = ".bka.gz";
+static	const	char	NGZ_EXT[] = ".bkn.gz";
+static	const	char	PGZ_EXT[] = ".bkp.gz";
 #endif
 
 #ifndef	DBS_DIR
@@ -188,7 +188,7 @@ template <typename file_t>
 char* dbs_header(char* str, file_t fin)
 {
 	char*	ps = str;
-	while (*ps == _LCOM || space_digit(ps))
+	while (*ps == _LCOMM || space_digit(ps))
 	    if (!fin || !(ps = fgets(str, MAXL, fin)))
 		return (0);
 	return (ps);
