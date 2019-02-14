@@ -33,27 +33,31 @@
 #include <limits.h>
 #include "clib.h"
 #include "iolib.h"
-#include "cmn.h"
 
 const	char*	no_space = "No more memory !\n";
 const	char*	stddelim = " \t\n\r";
 
+int	thread_num = 0;
+int	cpu_num = 1;
+int	max_queue_num = 0;
+
+ALGMODE	algmode = {1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+//	{nsa, alg, bnd, mlt, lcl, aut, lsg, mns, thr, rng, qck, blk, any, slv, crs, lvl}
+
 int ipower(int x, int n)
 {
-	int v;
-
 	if (n < 0) return(0);
-	for (v = 1; n; n /= 2, x *= x)
+	int v = 1;
+	for ( ; n; n /= 2, x *= x)
 		if (n % 2) v *= x;
 	return (v);
 }
 
 long lpower(long x, int n)
 {
-	long v;
-
 	if (n < 0) return(0L);
-	for (v = 1L; n; n /= 2, x *= x)
+	long v = 1L;
+	for ( ; n; n /= 2, x *= x)
 		if (n % 2) v *= x;
 	return (v);
 }
