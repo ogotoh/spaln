@@ -929,7 +929,6 @@ VTYPE Aln2b1::pincersB_ng(long *ptr, int cmode)
 	bool	endb = b->inex.exgl && algmode.lcl < 16;
 	LRECD*	hhg[pNrow];
 	LRECD*	hhl = new LRECD[a->right - a->left + 1] - a->left;
-	LRECD*	hf[Nedge];
 	LRECD	f[pNoll];
 	LRECD*	f1 = f + 1;
 	LRECD*	b1 = f1;
@@ -944,7 +943,6 @@ VTYPE Aln2b1::pincersB_ng(long *ptr, int cmode)
 
 	hhg[0] = new LRECD[pNrow * wdw->width] - wdw->lw + 1;
 	for (int d = 1; d < pNrow; ++d) hhg[d] = hhg[d-1] + wdw->width;
-	for (int d = 1; d < pNoll; ++d) hf[2 * d] = f + d;
 	hhl[a->right] = ooml;
 	vmf->add(0, 0, 0);      /* Skip 0-th record */
 	if (cmode == 2) {
@@ -980,10 +978,7 @@ VTYPE Aln2b1::pincersB_ng(long *ptr, int cmode)
 #endif
 	    while (--n >= n9) {
 		VTYPE	x;
-		--bs;
-		--r;
-		hf[0] = --h;
-		hf[1] = --g;
+		--bs; --r; --h; --g;
 
 /*	Diagonal	*/
 		LRECD*	from = h;
@@ -1088,9 +1083,7 @@ forward:
 #endif
 	    for ( ; ++n <= n9; ++bs) {
 		VTYPE	x;
-		++r;
-		hf[0] = ++h;
-		hf[1] = ++g;
+		++r; ++h; ++g;
 
 /*	Diagonal	*/
 		LRECD*	from = h;
