@@ -31,6 +31,7 @@
 #include "adddef.h"
 #include <stdarg.h>
 #include <dirent.h>
+#include <sys/stat.h>
 
 /*	Default Paths/Names of FIles	*/
 
@@ -188,9 +189,28 @@ extern	int	sgetiarray(int* array, int size, const char** pps);
 extern	int	fgetiarray(int* array, int size, FILE* fd);
 extern	int	getiarray(int* array, int size, const char* ps);
 extern	size_t	file_size(FILE* fd);
-extern	size_t	file_size(const char* fn);
 extern	FILE*	out_fd;
 extern	const	char*	gz_unsupport;
+
+inline	size_t	file_size(const char* fn) {
+	struct	stat buf;
+	return (stat(fn, &buf)? 0: buf.st_size);
+}
+
+inline	time_t	access_time(const char* fn) {
+	struct	stat buf;
+	return (stat(fn, &buf)? 0: buf.st_atime);
+}
+
+inline	time_t	modify_time(const char* fn) {
+	struct	stat buf;
+	return (stat(fn, &buf)? 0: buf.st_mtime);
+}
+
+inline	time_t	change_time(const char* fn) {
+	struct	stat buf;
+	return (stat(fn, &buf)? 0: buf.st_ctime);
+}
 
 #if USE_ZLIB
 extern	gzFile	gzopenpbe(const char* path, const char* name, const char* extent, 
@@ -209,6 +229,16 @@ inline bool is_gz(const char* fn)
 {
 	const	char*	dot = strrchr(fn, '.');
 	return (dot && !strcmp(dot + 1, "gz"));
+}
+
+// read through until new line
+
+template <typename file_t>
+int	flush_line(file_t fd)
+{
+	int	c;
+	while ((c = fgetc(fd)) != EOF && c != '\n') ;
+	return (c);
 }
 
 /*  End of iolib.h  */
