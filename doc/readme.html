@@ -75,7 +75,7 @@ Benchmarking spliced alignment programs including  Spaln2, an extended version o
 <i>Nucleic Acids Research</i> <b>40</b> (20) e161 (2012)
 <BR>
 <p>
-<h2><a href="#Chg">Present Version: 2.3.2</a>, Last update: 2018-07-26 </h2>
+<h2><a href="#Chg">Present Version: 2.3.3</a>, Last update: 2019-02-14 </h2>
 <p>
 <h2><a name="In">Install</a></h2>
 <h3>From source</h3>
@@ -361,6 +361,15 @@ used as follows:<br>
 <p>
 
 <h2><a name="Chg">Change from previous versions</a></h2>
+Added/modified in Ver. 2.3.3 (2019-02-12):
+<p>
+<ol>
+ <li>The maxmal path size has been extented from 255 to 2047 characters..</li>
+ <li>The <i>NEVSEL</i> constant value has been changed to avoid underflow of 2 * <i>NEVSEL</i>.
+ <li>In utilseq.c and .h, a member variable in class <i>PatMat</i> has been moved to a local variable to recover thread safety.</li>
+ <li>When <b>Spaln</b> is run: <TT>% spaln protein genome</TT>, the order of the 1st and 2nd arguemnets is exchanged with a warning message.</li>
+</ol>
+
 Added/modified in Ver. 2.3.2 (2018-07-26):
 <p>
 <ol>
