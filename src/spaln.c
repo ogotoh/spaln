@@ -43,7 +43,6 @@
 #define	TESTRAN		0
 #define	QDEBUG	0
 
-static	const	float	FACT_QUEUE = 1.5;
 static	const	int	MAX_ARGS = 128;
 static	const	int	MAX_ARGTEXT = 4096;
 static	const	int	DefPam = 150;
@@ -51,6 +50,7 @@ static	const	int	WlpPam = 50;
 static	const	int	DefOrfLen = 75;
 static	const	int	spacer = 32;
 static	const	int	def_max_extend_gene_rng = 3;
+static	const	long	MaxWordNoSpace = 1 << 30;	// 1GB
 
 enum QvsD {UNDF, AvsA, AvsG, CvsC, CvsG, FvsG, GvsA, GvsC, GvsG};
 
@@ -119,8 +119,6 @@ static	void*	master_func(void* targ);
 static	void*	mistress_func(void* arg);
 static	void*	worker_func(void* targ);
 static	void 	MasterWorker(Seq** sqs, SeqServer* svr, void* prm);
-static	int	max_queue_num = 0;
-static	int	thread_num = 0;
 #else
 class	ThQueue;
 #endif
@@ -159,8 +157,8 @@ static	PolyA	polyA;
 static	int	no_seqs = 0;
 static	bool	pairedends = false;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.3.2a";
-static	const	int	date = 180906;
+static	const	char*	version = "2.3.3";
+static	const	int	date = 190214;
 
 static void usage(const char* messg)
 {
@@ -245,6 +243,7 @@ const	char**	argbs = argv;
 	    if (!c) break;
 	    const char*	val = argv[0] + 2;
 	    int	k = 0;
+	    int	rv = 0;
 	    switch (c) {
 		case '?': case 'h': usage(0);
 		case 'a': case 'A':
@@ -309,13 +308,19 @@ const	char**	argbs = argv;
 		case 'K':
 		    switch (*val) {
 			case 'A': case 'a':
-			    QryMolc = TgtMolc = PROTEIN; break;
+			    QryMolc = TgtMolc = PROTEIN;
+			    algmode.lsg = 0;
+			    break;
+			case 'C': case 'c': 
+			    QryMolc = TgtMolc = DNA; break;
+			    algmode.lsg = 0;
+			    break;
 			case 'T': case 't':
 			    QryMolc = TgtMolc = TRON; break;
 			case 'P': case 'p':
-			case 'X': case 'x':
 			    QryMolc = PROTEIN; 
 			    TgtMolc = TRON; break;
+			case 'D': case 'd':
 			default:
 			    QryMolc = TgtMolc = DNA; break;
 		    }
@@ -444,10 +449,17 @@ const	char**	argbs = argv;
 			setVmfSpace(ktol(val));
 		    break;
 		case 'W': setQ4prm(opt);
+		    if (!*val) val = argv[1];
+		    rv = setQ4prm(opt, val);
+		    if (rv && argc > 1) {++argv; --argc;}
 		    WriteMolc = true; break;
 		case 'y': readalprm(val); break;
 		case 'x': setexprm_x(val); break;
-		case 'X': setQ4prm(val); break;
+		case 'X': 
+		    if (!*++val) val = argv[1];
+		    rv = setQ4prm(opt + 1, val);
+		    if (rv) {++argv; --argc;}
+		    break;
 		case 'z': setexprm_z(val); break;
 		default: break;
 	    }
@@ -538,8 +550,8 @@ static int spalign2(Seq* sqs[], PwdB* pwd, Gsinfo* GsI)
 		if (QRYvsDB == CvsG || QRYvsDB == GvsC)
 			GsI->scr = skl_rngS_ng(sqs, GsI, pwd);
 		else	GsI->scr = skl_rngH_ng(sqs, GsI, pwd);
-		GsI->eiscr2rng();
-		GsI->scr -= pwd->GapPenalty(Ip_equ_k) * GsI->noeij;
+		GsI->eiscr2rng();		// raise score for each intron
+		GsI->scr -= pwd->GapPenalty(Ip_equ_k) * (GsI->noeij - 1);
 	    } else {
 		GsI->CDSrng = skl2exrng(GsI->skl);
 	    }
@@ -683,6 +695,11 @@ static	PwdB* SetUpPwd(Seq* sqs[])
 	int	ap = a->isprotein();
 	int	bp = b->isprotein();
 
+	if (!ap && bp) {
+	    prompt("Has exchanged the input order of %s and %s !\n",
+		b->spath, a->spath);
+	    gswap(a, b); gswap(ap, bp);
+	}
 	if (ap && bp)	{QRYvsDB = AvsA; algmode.lsg = 0;}
 	else if (ap)	QRYvsDB = AvsG;
 	else if (bp)	QRYvsDB = GvsA;
@@ -1053,7 +1070,7 @@ static SrchBlk* getblkinf(Seq* sqs[], const char* dbs, MakeBlk* mb)
 	Seq*	b = sqs[1];	// database
 	int	ap = a->isprotein();
 	int	bp = mb? mb->dbsmolc() == PROTEIN: ((dbs && (dbs == aadbs))? 1: b->isprotein());
-	char	str[MAXL];
+	char	str[LINE_MAX];
 
 	if (genomedb) {
 	    b->inex.molc = DNA;
@@ -1377,7 +1394,7 @@ static void* mistress_func(void* arg)
 	Seq**		fsd = q->sinp;
 	HalfGene*	whf = targ->hfg;
 	HalfGene*	thf = whf + targ->nhf - 1;
-	char		str[MAXL];
+	char		str[LINE_MAX];
 
 	qsort((UPTR) whf, (INT) targ->nhf, sizeof(HalfGene), (CMPF) hcmp);
 	for ( ; whf < thf; ++whf) {
@@ -1429,10 +1446,7 @@ static void MasterWorker(Seq** sqs, SeqServer* svr, void* prm)
 	mast_arg_t	maarg;
 	mist_arg_t	miarg;
 	pthread_t	master;
-	int	cpu_num = sysconf(_SC_NPROCESSORS_CONF);
 
-	if (thread_num <= 0) thread_num = cpu_num;
-	if (max_queue_num == 0) max_queue_num = int(FACT_QUEUE * thread_num);
 	max_queue_num = (max_queue_num + svr->input_ns - 1) / svr->input_ns * svr->input_ns;
 	thread_arg_t*	targ = new thread_arg_t[thread_num];
 	pthread_t*	worker = new pthread_t[thread_num];
@@ -1557,6 +1571,11 @@ const	char*	insuf = "No input seq file !\n";
 	    return (0);
 	}
 	if (!catalog && argc <= 0) usage(insuf);
+#if M_THREAD
+	cpu_num = sysconf(_SC_NPROCESSORS_CONF);
+	if (thread_num < 0) thread_num = cpu_num;
+	if (max_queue_num == 0) max_queue_num = int(FACT_QUEUE * thread_num);
+#endif	// M_THREAD
 	pairedends = genomedb && input_form != IM_SNGL;
 	if (QryMolc == TRON) QryMolc = PROTEIN;
 	if (!algmode.mlt) OutPrm.MaxOut = 1;
