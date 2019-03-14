@@ -833,8 +833,6 @@ static	gzFile	gzfq = 0;
 static void ExonForm(Gsinfo* gsinf, Seq* gene, Seq* qry)
 {
 	int	cds = 0;
-	int	exon = 0;
-	int	clen = 0;
 	int	mch = 0;
 	bool	binary = algmode.nsa == BIN_FORM;
 	float	fscr = gsinf->scr / alprm.scale;
@@ -902,20 +900,20 @@ static	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 	    }
 	}
 	while (neoeij(wkr)) {
-	    if (qry->isdrna() && exon) {
-		gr.bmmc += prv->mmc3 + wkr->mmc5;
-		gr.bunp += prv->unp3 + wkr->unp5;
-	    }
-	    exon = wkr->mch + wkr->mmc + wkr->unp;
-	    cds += exon;
-	    if (wkr->iscr > NEVSEL) {
-		clen += wkr->right - skp->left;
+	    if (wkr->iscr > NEVSEL) {	// normal
+		if (qry->isdrna() && gr.nexn) {
+		    gr.bmmc += prv->mmc3 + wkr->mmc5;
+		    gr.bunp += prv->unp3 + wkr->unp5;
+		}
+		int	exon = wkr->right - skp->left;
+		int	rlen = wkr->rright - skp->rleft;
+		cds += exon;
 		mch += wkr->mch;
 		gr.mmc += wkr->mmc;
 		gr.unp += wkr->unp;
 		++gr.nexn;
-		er.Pmatch = exon? 100. * wkr->mch / exon: 0;
-		er.Elen   = wkr->right - skp->left;
+		er.Pmatch = rlen? 100. * wkr->mch / rlen: 0;
+		er.Elen   = exon;
 		er.Rleft  = qry->SiteNo(skp->rleft);
 		er.Rright = qry->SiteNo(wkr->rright - 1);
 		er.Gleft  = gene->SiteNo(skp->left);
@@ -953,22 +951,22 @@ static	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		intends[1] = er.Iends[1] = convt[*gene->at(prv->right+1)];
 		intends[3] = er.Iends[2] = convt[*gene->at(wkr->left-2)];
 		intends[4] = er.Iends[3] = convt[*gene->at(wkr->left-1)];
-	    } else {
+	    } else {		// frame shift
 		gr.ng++;
-		skp = wkr++;
+		if ((wkr++)->iscr > NEVSEL) skp = wkr;
 		if (!neoeij(wkr)) break;
 		er.miss = wkr->left - skp->right;
 	    }
 	}
+	if (qry->isprotein()) cds /= 3;
 	er.Ilen = qry->right - qry->left;
 	gr.Gstart = gene->SiteNo(fst->left);
 	gr.Gend   = gene->SiteNo(prv->right - 1);
 	gr.Rstart = qry->SiteNo(qry->left);
 	gr.Rend   = qry->SiteNo(qry->right - 1);
 	gr.Gscore = fscr;
-	gr.Pmatch = 100. * mch / cds;
-	gr.Pcover = 100. * clen / er.Ilen;
-	if (qry->isprotein()) gr.Pcover /= 3.;
+	gr.Pmatch = 100. * mch / er.Ilen;
+	gr.Pcover = 100. * cds / er.Ilen;
 	gr.Csense = gr.Gstart > gr.Gend;
 	if (binary) {
 	    gr.Cid = gene->did;
@@ -1993,8 +1991,8 @@ void PrintAln::printaln()
 	int	gpos = 0;
 	int 	active = seqnum;
 	RANGE*	exon = 0;
-	gene = -1;
 	int	maxleft = 0;
+	gene = -1;
 	for (int j = htl = 0; j < seqnum; ++j) {
 	    Seq*&	sd = seqs[j];
 	    if (sd->left > maxleft) maxleft = sd->left;
@@ -2114,12 +2112,12 @@ void PrintAln::printaln()
 				++wkr[j];
 			    }
 			}
-			if ((htl & 2) && j == pro)    gph = phs = (phs + 1) % 3;
+			if ((htl & 2) && j == pro) gph = phs = (phs + 1) % 3;
 			if (markeij && pfqs[j]) {
 			    int	niis = 0;
 			    while ((pfqs[j] + niis < tfqs[j]) &&
-				pfqs[j][niis].pos + agap[j] + ((htl & 2)? 
-				    1 - pfqs[j][niis].pos % 3: 0) < cpos) 
+				pfqs[j][niis].pos + agap[j] + ((htl & 2)?
+				    1 - pfqs[j][niis].pos % 3: 0) < cpos)
 				    ++niis;
 			    while (niis--) markiis(k, j, clm);
 			}

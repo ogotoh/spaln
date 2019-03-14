@@ -50,7 +50,7 @@ void Mfile::write(const UPTR pi)
 	    size_t	offbrk = brk - ptr;
 	    char*	tmp = new char[offbrk];
 	    memcpy(tmp, ptr, offset);
-	    delete ptr;
+	    delete[] ptr;
 	    ptr = tmp;
 	    cur = ptr + offset;
 	    brk = ptr + offbrk;
