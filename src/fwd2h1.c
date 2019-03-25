@@ -28,14 +28,13 @@
 #include "vmf.h"
 #include "wln.h"
 
-#define isEIJ(phs) (algmode.lsg && (phs) > -2)
+static	const	int	INTR = 2;
+static	const	int	NCANDS = INTR * NOL;
+static	const	int	NQUE = 3;
+static	const	int	MAXR = 4;
+static	const	VTYPE	SKIP = INT_MIN;
 
-#define	INTR	2
-#define	NCANDS	(INTR * NOL)
-#define	NQUE	3
-#define	MAXR	4
-
-struct RECD {
+struct JRECD {
 	VTYPE	val;
 	int	dir;
 	long	ptr;
@@ -77,7 +76,6 @@ typedef int	EIJODRP[3][NCANDS+1];
 struct BOUND {int la, lb, ua, ub;};
 
 // alignment parameters independent of each sequence
-// the base class is described in fwd2b1.C
 
 class Aln2h1 {
 protected:
@@ -92,12 +90,17 @@ protected:
 	VTYPE	pinthr;
 	VTYPE	spjthr;
 	INT	lowestlvl;
+	int	elmt;
+	int	term;
+	VTYPE	slmt;
+	int	wlmt;
+	bool	island;
 public:
 	Aln2h1(Seq** _seqs, PwdB* _pwd, WINDOW* _wdw);
 	~Aln2h1() {delete mfd; delete spjcs;}
-	void	initH_ng(RECD* hf[]);
-	RECD*	lastH_ng(RECD* hhb[]);
-	VTYPE	forwardH_ng(long pp[]);
+	void	initH_ng(JRECD* hf[]);
+	JRECD*	lastH_ng(JRECD* hhb[]);
+	VTYPE	forwardH_ng(long pp[], bool spj = true);
 	void	finitH_ng(WRECD* hhf[], int mm);
 	void	binitH_ng(WRECD* hhf[], int mm);
 	VTYPE	centerH_ng(int* ml, int* mr, int* nl, int* nr, 
@@ -109,19 +112,22 @@ public:
 	bool	pincerTrcbkH_ng(int cmode, VTYPE& iscore);
 	bool	indelfreespjH(int agap, VTYPE& scr);
 	Colonies*	fwdswgH_ng(VTYPE* scr);
+	bool	isEIJ(int phs) {return (b->inex.intr && phs > -2);}
 	VTYPE	diagonalH_ng();
 	VTYPE	backforth(int n, BOUND& lub);
-	VTYPE	trcbkalignH_ng();
+	VTYPE	trcbkalignH_ng(bool spj = true);
 	VTYPE	lspH_ng();
 	VTYPE	cds5end(int x, int y);
 	VTYPE	cds3end(int x, int y);
+	VTYPE	interpolateH(INT level, int agap, int bgap, int cmode, 
+		JUXT* wjxt, BOUND& ba);
 	VTYPE	seededH_ng(INT level, int cmode, BOUND& lub);
 	SKL*	globalH_ng(VTYPE* scr);
 	VTYPE	creepback(int ovr, VTYPE bscr, BOUND& lub);
 	VTYPE	creepfwrd(int& ovr, VTYPE bscr, BOUND& lub);
 };
 
-static	RECD	oom = {NEVSEL, 0, 0L, 0};
+static	JRECD	oom = {NEVSEL, 0, 0L, 0};
 static	LRECD	ooml = {NEVSEL, 0, 0L, 0, 0};
 static	WRECD	oomW = {NEVSEL, 0, INT_MIN, INT_MAX, 0, 0};
 static	CRECD	oomC = {NEVSEL, 0, INT_MIN, INT_MAX, 0, 0, 0, 0};
@@ -133,26 +139,29 @@ static	void	addsigEjxt(JUXT* jxt, int num, Seq* b);
 
 Aln2h1::Aln2h1(Seq* _seqs[], PwdB* _pwd, WINDOW* _wdw) :
 	seqs(_seqs), a(seqs[0]), b(seqs[1]), wdw(_wdw), pwd(_pwd), 
-	mfd(0), vmf(0), lowestlvl(b->wllvl)
+	mfd(0), vmf(0), lowestlvl(b->wllvl),
+	elmt(algmode.crs? (IntronPrm.elmt + 2) / 3: 1),
+	term((int) (pwd->Vthr / pwd->BasicGEP)),
+	slmt(pwd->Vthr / 2), island(false)
 {
 	pinthr = pwd->GapPenalty(1);
 	spjthr = pinthr + pwd->IntPen->Penalty();
 	spjcs = new SpJunc(b);
 }
 
-void Aln2h1::initH_ng(RECD* hh[])
+void Aln2h1::initH_ng(JRECD* hh[])
 {
 	int	n = b->left;
 	int	r = b->left - 3 * a->left;
 	int	rr = b->right - 3 * a->left;
 	int	dir = a->inex.exgl? DEAD: DIAG;
-	RECD*	hf[NOL + 1];
+	JRECD*	hf[NOL + 1];
 	EXIN*	bb = b->exin->score(n);
 
 	for (int k = 0; k < pwd->Nrow; ++k) hf[k] = hh[k] + r;
 	if (wdw->up < rr) rr = wdw->up;
 	for (int i = 0; r <= wdw->up + 3; ++r, ++bb, ++n, ++i) {
-	    RECD* h = hf[0]++;
+	    JRECD* h = hf[0]++;
  	    for (int k = 1; k < pwd->Nrow; ++k) *hf[k]++ = oom;
 	    if (i == 0 || (a->inex.exgl && i < 3)) {
  		h->val = 0;
@@ -194,8 +203,8 @@ void Aln2h1::initH_ng(RECD* hh[])
 	for (int k = 0; k < pwd->Nrow; ++k) hf[k] = hh[k] + r;
 	if (wdw->lw > rr) rr = wdw->lw;
 	for (int i = 1; --r >= wdw->lw - 3; ++i) {
-	    RECD*	h = --hf[0];
-	    RECD*	g = --hf[1];
+	    JRECD*	h = --hf[0];
+	    JRECD*	g = --hf[1];
 	    for (int k = 2; k < pwd->Nrow; ++k) *--hf[k] = oom;
 	    if (r < rr) *h = *g = oom;
 	    else if (b->inex.exgl) {
@@ -219,7 +228,7 @@ void Aln2h1::initH_ng(RECD* hh[])
 	}
 }
 
-RECD* Aln2h1::lastH_ng(RECD* hh[])
+JRECD* Aln2h1::lastH_ng(JRECD* hh[])
 {
 	int	glen[3];
 	int	rw = wdw->lw;
@@ -227,9 +236,9 @@ RECD* Aln2h1::lastH_ng(RECD* hh[])
 	int	rf = b->left - m3;
 	if (rf > rw) rw = rf;
 	else	rf = rw;
-	RECD*	h = hh[0] + rw;
-	RECD*	h9 = hh[0] + b->right - m3;
-	RECD*	f = h9;
+	JRECD*	h = hh[0] + rw;
+	JRECD*	h9 = hh[0] + b->right - m3;
+	JRECD*	f = h9;
 	VTYPE	mx = h9->val;
 	EXIN*	bb = b->exin->score(rw + m3);
 
@@ -287,28 +296,24 @@ RECD* Aln2h1::lastH_ng(RECD* hh[])
 	    rf -= (p + 2) / 3;
 	    if (p %= 3) rw -= (3 - p); 
 	} else if (p < 0) rw += p;
-	if (vmf && a->inex.exgr) f->ptr = vmf->add(rf, rw, f->ptr);
+	if (vmf) f->ptr = vmf->add(rf, rw, f->ptr);
 	return (f);
 }
 
-VTYPE Aln2h1::forwardH_ng(long* pp)
+VTYPE Aln2h1::forwardH_ng(long* pp, bool spj)
 {
-	RECD*	hh[NOL];
-	RECD*	hf[NOL];	// [DIAG, HORI, HORL]
-	RECD	e1[NQUE];
-	RECD	e2[NQUE];
-#if INTR > 1
-	RECD	hl[NOL][3][INTR+1]; // [DIA, HORI, HORL][phase][candidates]
+	JRECD*	hh[NOL];
+	JRECD*	hf[NOL];	// [DIAG, HORI, HORL]
+	JRECD	e1[NQUE];
+	JRECD	e2[NQUE];
+	JRECD	hl[NOL][3][INTR+1]; // [DIA, HORI, HORL][phase][candidates]
 	int	nl[NOL][3][INTR+1]; // [DIA, HORI, HORL][phase][candidates]
-#else
-	RECD    hl[NOL][3];
-#endif
 	VSKLP   maxh = {NEVSEL, a->left, b->left, 0L};
 	int     Local = algmode.lcl & 16;
 	int     LocalL = Local && a->inex.exgl && b->inex.exgl;
 	int     LocalR = Local && a->inex.exgr && b->inex.exgr;
 
-	RECD*	buf = new RECD[pwd->Nrow * wdw->width];
+	JRECD*	buf = new JRECD[pwd->Nrow * wdw->width];
 	hh[0] = buf - wdw->lw + 3;
 	for (int k = 1; k < pwd->Nrow; ++k) hh[k] = hh[k-1] + wdw->width;
 	if (vmf) vmf->add(0, 0, 0);	// Skip 0-th record
@@ -322,7 +327,7 @@ VTYPE Aln2h1::forwardH_ng(long* pp)
 	int	n2 = 3 * m + wdw->up;
 	CHAR*	as = a->at(m);
 	for ( ; ++m <= a->right; ++as) {
-	    bool	internal = !a->inex.exgr || m < a->right;
+	    bool	internal = spj && (!a->inex.exgr || m < a->right);
 	    n1 += 3;
 	    n2 += 3;
 	    int		n0 = max(n1, b->left);
@@ -337,22 +342,18 @@ VTYPE Aln2h1::forwardH_ng(long* pp)
 	    }
 	    CHAR*	bs = b->at(n);
 	    EXIN*	bb = b->exin->score(n);
-	    RECD*	h = hh[0] + r;
-	    RECD*	g = hh[1] + r;
-	    RECD*	g2 = (pwd->Noll == 3)? hh[2] + r: 0;
-	    RECD*	sj = algmode.lsg? hh[pwd->Noll] + r: &oom;
-	    RECD	hq[NOL] = {oom};	// previous state
+	    JRECD*	h = hh[0] + r;
+	    JRECD*	g = hh[1] + r;
+	    JRECD*	g2 = (pwd->Noll == 3)? hh[2] + r: 0;
+	    JRECD*	sj = algmode.lsg? hh[pwd->Noll] + r: &oom;
+	    JRECD	hq[NOL] = {oom};	// previous state
 	    for (int k = 0; k < pwd->Noll; ++k) {
 	      for (int p = 0; p < 3; ++p) {
-#if INTR > 1
-		RECD*	phl = hl[k][p];
+		JRECD*	phl = hl[k][p];
 		for (int l = 0; l <= INTR; ++l, ++phl) {
 		  nl[k][p][l] = l;
 		  *phl = oom;
 		}
-#else
-		hl[k][p] = oom;
-#endif
 	      }
 	    }
 #if DEBUG
@@ -368,8 +369,8 @@ VTYPE Aln2h1::forwardH_ng(long* pp)
 		++bb; ++g;
 		if (algmode.lsg) ++sj;
 		hf[0] = ++h;
-		RECD*	eq1 = e1 + q;
-		RECD*	eq2 = 0;
+		JRECD*	eq1 = e1 + q;
+		JRECD*	eq2 = 0;
 		hf[1] = eq1;
 		if (g2) {
 		    g2++;
@@ -379,8 +380,8 @@ VTYPE Aln2h1::forwardH_ng(long* pp)
 
 //	diagonal match
 		VTYPE	sigE = bb[-2].sigE;
-		RECD*	from = h;
-		RECD*	mx = h;
+		JRECD*	from = h;
+		JRECD*	mx = h;
 		if (m == a->left) goto Horizon;
 		if (n > b->left + 2) {
 		    *hq = *h;
@@ -495,21 +496,20 @@ Horizon:
 		if (++q == NQUE) q = 0;
 
 //	intron 3' boundary, assume no overlapping signals
-		if (isEIJ(bb->phs3) && internal) {
+		if (internal && isEIJ(bb->phs3)) {
 		    int phs = (bb->phs3 == 2)? 1: bb->phs3;
 Acceptor:
 		    if (phs == -1)
 			sj->val =  mx->val + pwd->sim2(as + 1, bs + 2);
 		    int nb = n - phs;
 		    VTYPE sigJ = a_in_zone? api.match_score(3 * m - phs): 0;
-		    RECD*	maxdhl = 0;
+		    JRECD*	maxdhl = 0;
 		    for (int d = 0; d < pwd->Noll; ++d) {
 			from = hf[d];
-#if INTR > 1
-			RECD*	maxphl = 0;
+			JRECD*	maxphl = 0;
 			int*	pnl = nl[d][phs + 1];
 			for (int l = 0; l < INTR; ++l) {
-			    RECD*	phl = hl[d][phs + 1] + pnl[l];
+			    JRECD*	phl = hl[d][phs + 1] + pnl[l];
 			    if (!phl->dir) break;
 			    y = phl->val + sigJ +
 				pwd->IntPen->Penalty(nb - phl->jnc) +
@@ -541,36 +541,6 @@ Acceptor:
 			    if (phs == -1) from->dir |= SPF2;
 			    if (from->val > mx->val) mx = from;
 			}
-#else
-			RECD*	phl = hl[d] + phs + 1;
-			if (!phl->dir) break;
-			y = phl->val + sigJ + 
-			    pwd->IntPen->Penalty(nb - phl->jnc) + 
-			    b->exin->sig53(phl->jnc, nb, IE53);
-			if (phs == 1) {
-			    CHAR*	cs = spjcs->spjseq(phl->jnc, nb);
-			    y += pwd->pmt->prematT(cs);
-			    if (isdiag(phl)) y += pwd->sim2(as, cs);
-			} else if (phs == -1) {
-			    CHAR*	cs = spjcs->spjseq(phl->jnc, nb) + 1;
-			    y += pwt->pmt->prematT(cs);
-			    VTYPE	x = y + pwd->sim2(as + 1, cs);
-			    if (x > sj->val) {
-				maxdhl = phl;
-				sj->val = x;
-			    }
-			}
-			if (y > from->val) {
-			    from->val = y;
-		 	    if (vmf)
-				from->ptr = vmf->add(m, n, 
-				vmf->add(m, phl->jnc + phs, phl->ptr));
-		 	    from->jnc = nb;
-			    from->dir = phl->dir | SPJCI;
-			    if (phs == -1) from->dir |= SPF2;
-			    if (from->val > mx->val) mx = from;
-			}
-#endif
 		    }
 		    if (maxdhl) {
 			sj->jnc = nb;
@@ -603,7 +573,7 @@ Acceptor:
 		    h->ptr = vmf->add(m - 1, n - 3, h->ptr);
 
 //	intron 5' boundary
-		if (isEIJ(bb->phs5) && internal) {
+		if (internal && isEIJ(bb->phs5)) {
 		    int	phs = (bb->phs5 == 2)? 1: bb->phs5;
 Donor:
 		    int	nb = n - phs;
@@ -618,8 +588,7 @@ Donor:
 			if (phs == 1 && nb - from->jnc == 2 && bb[-2].sigS > 0)
 			    from->val -= bb[-2].sigS;
 			x = from->val + sigJ;
-#if INTR > 1
-			RECD*	phl = hl[d][phs + 1];
+			JRECD*	phl = hl[d][phs + 1];
 			int*	pnl = nl[d][phs + 1];
 			int	l = INTR;
 			while (--l >= 0) {
@@ -636,15 +605,6 @@ Donor:
 			    phl->dir = from->dir;
 			    phl->ptr = from->ptr;
 			}
-#else
-			phl = hl[d] + phs + 1;
-			if (x > phl->val) {
-			    phl->val = x;
-			    phl->jnc = nb;
-			    phl->dir = from->dir;
-			    phl->ptr = from->ptr;
-			}
-#endif
 		    }
 		    if (bb->phs5 - phs == 1) {	//	GTGT..
 			phs = -1;
@@ -661,15 +621,9 @@ Donor:
 		    putvar(g2->val); putvar(eq2->val);
 		}
 		if (algmode.lsg) {
-#if INTR > 1
 		    putvar(hl[0][2][nl[0][2][0]].val); 
 		    putvar(hl[0][1][nl[0][1][0]].val);
 		    putvar(hl[0][0][nl[0][0][0]].val);
-#else
-		    putvar(hl[0][2].val); 
-		    putvar(hl[0][1].val);
-		    putvar(hl[0][0].val);
-#endif
 		    printf(" %2d %2d %6.2f", bb->phs5, bb->phs3, (double) sigE);
 		    printf(" %6.1f %6.1f", (double) bb->sig5, (double) bb->sig3);
 		}
@@ -681,7 +635,7 @@ Donor:
 	    if (a_in_zone) ++api;	// has exon-exon junctions
 	}	// end of m-loop
 
-	RECD*	mx = lastH_ng(hh);
+	JRECD*	mx = lastH_ng(hh);
 	if (maxh.val > mx->val) {
 	    if (pp) *pp = vmf->add(maxh.m, maxh.n, maxh.p);
 	} else {
@@ -730,6 +684,7 @@ static	const char*	fswarn = "%s %s FrameShift: %d %d\n";
 	int	preint = 0;
 	int	phs = 0;
 	int	nb = 0;
+	int	maxexon = IntronPrm.rlmt;
 	EISCR	rbuf;
 	FSTAT*	fst = &gsi->fstat;
 	FSTAT	pst;
@@ -771,7 +726,7 @@ static	const char*	fswarn = "%s %s FrameShift: %d %d\n";
 	    ++wsk;
 	    bool	term = num == 1;		// tail gap?
 	    int	mi = (wsk->m - m) * 3;
-	    if (insert && (mi || term)) {
+	    if (insert && (mi || (h > NEVSEL && hi > NEVSEL) || term)) {
 		term =  (a->inex.exgl && m == a->left) ||
 			(a->inex.exgr && m == a->right);
 		h += term? pwd->UnpPenalty3(insert):	// not intron
@@ -877,9 +832,7 @@ static	const char*	fswarn = "%s %s FrameShift: %d %d\n";
 		if (cigar) cigar->push('I', i);
 	    } else if (i < 0) {
 		EXIN*	b3 = bb + (i = -i);
-		if (hi > NEVSEL) {			// after intron
-		    hi += SumCodePot(bb, i, cs? cs + 1: 0, pwd);
-		} else if (i >= IntronPrm.llmt && wsk->n < b->right) {	// intron?
+		if (hi <= NEVSEL && i >= IntronPrm.llmt && wsk->n < b->right) {	// intron?
 		    int	n3 = n + i;
 		    int	phs5 = (bb->phs5 == 2)? b3->phs3: bb->phs5;
 		    int	phs3  = (b3->phs3 == 2)? bb->phs5: b3->phs3;
@@ -943,7 +896,8 @@ static	const char*	fswarn = "%s %s FrameShift: %d %d\n";
 			pst = *fst;
 		    }
 		}
-		h += SumCodePot(bb, i, 0, pwd);
+		if (i < maxexon) h += SumCodePot(bb, i, 0, pwd);
+		else	h = NEVSEL;
 		bb = b3;
 		bs += i;
 		insert += i;
@@ -1171,12 +1125,8 @@ VTYPE Aln2h1::centerH_ng(int* ml, int* mr, int* nl, int* nr,
 	int	jb = 0;
 	int	rr[MAXR+1];
 	int	pp[MAXR+1];
-#if INTR > 1
 	WRECD	hl[NOL][3][INTR+1];
 	int	nx[NOL][3][INTR+1]; // [DIA, HORI, HORL][phase][candidates]
-#else
-	WRECD   hl[NOL][3];
-#endif
 	WRECD*	hhf[NOL+1];
 	WRECD*	hhb[2 * NOL];
 	WRECD*	hf[NOL+1];
@@ -1233,15 +1183,11 @@ VTYPE Aln2h1::centerH_ng(int* ml, int* mr, int* nl, int* nr,
 	    }
 	    for (int k = 0; k < pwd->Noll; ++k) {
 	      for (int p = 0; p < 3; ++p) {
-#if INTR > 1
 		WRECD*	phl = hl[k][p];
 		for (int l = 0; l <= INTR; ++l, ++phl) {
 		  nx[k][p][l] = l;
 		  *phl = oomW;
 		}
-#else
-		hl[k][p] = oomW;
-#endif
 	      }
 	    }
 #if DEBUG
@@ -1394,7 +1340,6 @@ DonRev:
 		    WRECD*	maxdhl = 0;
 		    for (int d = 0; d < pwd->Noll; ++d) {
 			from = hb[d];
-#if INTR > 1
 			WRECD*	maxphl = 0;
 			int*	pnx = nx[d][phs + 1];
 			for (int l = 0; l < INTR; ++l) {
@@ -1431,37 +1376,6 @@ DonRev:
 			    from->lst = maxphl->lst + nb - maxphl->jnc;
 			    if (from->val > mx->val) mx = from;
 			}
-#else
-			WRECD*	phl = hl[d] + phs + 1;
-			if (!phl->dir) break;
-			y = phl->val + sigJ +
-			    b->exin->sig53(nb, phl->jnc, IE53) + 
-			    (b->exin->sig53(nb, 0, IE5) - phl->sig) +
-			    pwd->IntPen->Penalty(phl->jnc - nb);
-			if (phs == -1) {
-			    CHAR*	cs = spjcs->spjseq(nb, phl->jnc) + 1;
-			    y += pwd->pmt->prematT(cs);
-			    if (isdiag(phl)) y += pwd->sim2(as, cs);
-			} else if (phs == 1) {
-			    CHAR*	cs = spjcs->spjseq(nb, phl->jnc);
-			    y += pwd->pmt->prematT(cs);
-			    x = y + pwd->sim2(as - 1, cs);
-			    if (x > sj->val) {
-				maxdhl = phl;
-				sj->val = x;
-			    }
-			}
-			if (y > from->val) {
-			    from->val = y;
-	 		    from->jnc = phl->jnc;
-			    from->dir = phl->dir | SPJCI;
-			    if (phs == 1) from->dir |= SPF2;
-			    from->upr = max(phl->upr, r);
-			    from->lwr = min(phl->lwr, r);
-			    from->lst = phl->lst + nb - phl->jnc;
-			    if (from->val > mx->val) mx = from;
-			}
-#endif
 		    }
 		    if (maxdhl) {
 			sj->jnc = maxdhl->jnc;
@@ -1501,7 +1415,6 @@ AccRev:
 			// An orphan exon is disallowed
 			if (!from->dir || from->dir & SPIN) continue;
 			x = from->val + sigJ;
-#if INTR > 1
 			WRECD*	phl = hl[d][phs + 1];
 			int*	pnx = nx[d][phs + 1];
 			int	l = INTR;
@@ -1519,15 +1432,6 @@ AccRev:
 			    phl->jnc = nb;
 			    phl->sig = sigJ;
 			}
-#else
-			phl = hl[d] + phs + 1;
-			if (x > phl->val) {
-			    *phl = *from;
-			    phl->val = x;
-			    phl->jnc = nb;
-			    phl->sig = sigJ;
-			}
-#endif
 		    }
 		    if (bb->phs3 - phs == 1) {
 			phs = -1;
@@ -1544,15 +1448,9 @@ AccRev:
 		    putvar(g2->val); putvar(eq2->val);
 		}
 		if (algmode.lsg) {
-#if INTR > 1
 		    putvar(hl[0][2][nx[0][2][0]].val); 
 		    putvar(hl[0][1][nx[0][1][0]].val);
 		    putvar(hl[0][0][nx[0][0][0]].val);
-#else
-		    putvar(hl[0][2].val); 
-		    putvar(hl[0][1].val);
-		    putvar(hl[0][0].val);
-#endif
 		    printf(" %2d %2d %6.2f", bb->phs5, bb->phs3, (double) sigE);
 		    printf(" %6.1f %6.1f", (double) bb->sig5, (double) bb->sig3);
 		}
@@ -1600,15 +1498,11 @@ AccRev:
 	    WRECD	hq[NOL] = {oomW};
 	    for (int d = 0; d < pwd->Noll; ++d) {
 	      for (int p = 0; p < 3; ++p) {
-#if INTR > 1
 		WRECD*	phl = hl[d][p];
 		for (int l = 0; l <= INTR; ++l, ++phl) {
 		  nx[d][p][l] = l;
 		  *phl = oomW;
 		}
-#else
-		hl[d][p] = oomW;
-#endif
 	      }
 	    }
 #if DEBUG
@@ -1760,7 +1654,6 @@ AccFwd:
 		    WRECD*	maxdhl = 0;
 		    for (int d = 0; d < pwd->Noll; ++d) {
 			from = hf[d];
-#if INTR > 1
 			WRECD*	maxphl = 0;
 			int*	pnx = nx[d][phs + 1];
 			for (l = 0; l < INTR; ++l) {
@@ -1796,36 +1689,6 @@ AccFwd:
 			    from->lst = maxphl->lst + nb - maxphl->jnc;
 			    if (ge(from->val, mx->val)) mx = from;
 			}
-#else
-			WRECD*	phl = hl[d] + phs + 1;
-			if (!phl->dir) break;
-			y = sigJ + phl->val + 
-			    b->exin->sig53(phl->jnc, nb, IE53) +
-			    pwd->IntPen->Penalty(nb - phl->jnc);
-			if (phs == 1) {
-			    CHAR*	cs = spjcs->spjseq(phl->jnc, nb);
-			    y += pwd->pmt->prematT(cs);
-			    if (isdiag(phl)) y += pwd->sim2(as, cs);
-			} else if (phs == -1) {
-			    CHAR*	cs = spjcs->spjseq(phl->jnc, nb) + 1;
-			    y += pwd->pmt->prematT(cs);
-			    x = y + pwd->sim2(as + 1, cs);
-			    if (x > sj->val) {
-				maxdhl = phl;
-				sj->val = x;
-			    }
-			}
-			if (y > from->val) {
-			    from->val = y;
-		 	    from->jnc = phl->jnc;
-			    from->dir = phl->dir | SPJCI;
-			    if (phs == -1) from->dir |= SPF2;
-			    from->upr = max(phl->upr, r);
-			    from->lwr = min(phl->lwr, r);
-			    from->lst = phl->lst + nb - phl->jnc;
-			    if (ge(from->val, mx->val)) mx = from;
-			}
-#endif
 		    }
 		    if (maxdhl) {
 			sj->jnc = maxdhl->jnc;
@@ -1864,7 +1727,6 @@ Donor:
 			x = from->val + sigJ;
 			if (phs == 1 && nb - from->jnc == 2 && bb[-2].sigS > 0)
 			    x -= bb[-2].sigS;
-#if INTR > 1
 			WRECD*	phl = hl[d][phs + 1];
 			int*	pnx = nx[d][phs + 1];
 			int	l = INTR;
@@ -1881,14 +1743,6 @@ Donor:
 			    phl->val = x;
 			    phl->jnc = nb;
 			}
-#else
-			phl = hl[d] + phs + 1;
-			if (x > phl->val) {
-			    *phl = *from;
-			    phl->val = x;
-			    phl->jnc = nb;
-			}
-#endif
 		    }
 		    if (bb->phs5 == 2 && phs == 1) {	//	GTGT..
 			phs = -1;
@@ -1904,15 +1758,9 @@ Donor:
 		    putvar(g2->val); putvar(eq2->val);
 		}
 		if (algmode.lsg) {
-#if INTR > 1
 		    putvar(hl[0][2][nx[0][2][0]].val); 
 		    putvar(hl[0][1][nx[0][1][0]].val);
 		    putvar(hl[0][0][nx[0][0][0]].val);
-#else
-		    putvar(hl[0][2].val); 
-		    putvar(hl[0][1].val);
-		    putvar(hl[0][0].val);
-#endif
 		    printf(" %2d %2d %6.2f", bb->phs5, bb->phs3, (double) sigE);
 		    printf(" %6.1f %6.1f", (double) bb->sig5, (double) bb->sig3);
 		}
@@ -2769,12 +2617,8 @@ Colonies* Aln2h1::fwdswgH_ng(VTYPE* scr)
 	CRECD*	hf[NOL];	// [DIAG, HORI, HORL]
 	CRECD	e1[NQUE];
 	CRECD	e2[NQUE];
-#if INTR > 1
 	CRECD	hl[NOL][3][INTR+1]; // [DIA, HORI, HORL][phase][candidates]
 	int	nl[NOL][3][INTR+1]; // [DIA, HORI, HORL][phase][candidates]
-#else
-	CRECD   hl[NOL][3];
-#endif
 	Colonies*	cl = new Colonies(0);
 	COLONY*	clny = cl->at();
 
@@ -2804,15 +2648,11 @@ Colonies* Aln2h1::fwdswgH_ng(VTYPE* scr)
 	    for (int q = 0; q < NQUE; ++q) e1[q] = e2[q] = oomC;
 	    for (int d = 0; d < pwd->Noll; ++d) {
 	      for (int p = 0; p < 3; ++p) {
-#if INTR > 1
 		CRECD*	phl = hl[d][p];
 		for (int l = 0; l <= INTR; ++l, ++phl) {
 		  nl[d][p][l] = l;
 		  *phl = oomC;
 		}
-#else
-		hl[d][p] = oomC;
-#endif
 	      }
 	    }
 #if DEBUG
@@ -2953,7 +2793,6 @@ Acceptor:
 		    CRECD*	maxdhl = 0;
 		    for (int d = 0; d < pwd->Noll; ++d) {
 			from = hf[d];
-#if INTR > 1
 			CRECD*	maxphl = 0;
 			int*	pnl = nl[d][phs + 1];
 			for (int l = 0; l < INTR; ++l) {
@@ -2990,37 +2829,6 @@ Acceptor:
 			    from->nlb = maxphl->nlb;
 			    if (from->val > mx->val) mx = from;
 			}
-#else
-			CRECD*	phl = hl[d] + phs + 1;
-			if (!phl->dir) break;
-			y = sigJ + phl->val + 
-			    pwd->IntPen->Penalty(nb - phl->jnc) +
-			    b->exin->sig53(phl->jnc, nb, IE53);
-			if (phs == 1) {
-			    CHAR*	cs = spjcs->spjseq(phl->jnc, nb);
-			    y += pwd->pmt->prematT(cs);
-			    if (isdiag(phl)) y += pwd->sim2(as, cs);
-			} else if (phs == -1) {
-			    CHAR*	cs = spjcs->spjseq(phl->jnc, nb) + 1;
-			    y += pwd->pmt->prematT(cs);
-			    x = y + pwd->sim2(as + 1, cs);
-			    if (x > sj->val) {
-				maxdhl = phl;
-				sj->val = x;
-			    }
-			}
-			if (y > from->val) {
-			    from->val = y;
-		 	    from->jnc = nb;
-			    from->dir = phl->dir | SPJCI;
-			    if (phs == -1) from->dir |= SPF2;
-			    from->upr = max(phl->upr, r);
-			    from->lwr = min(phl->lwr, r);
-			    from->mlb = phl->mlb;
-			    from->nlb = phl->nlb;
-			    if (from->val > mx->val) mx = from;
-			}
-#endif
 		    }
 		    if (maxdhl) {
 			sj->jnc = nb;
@@ -3102,7 +2910,6 @@ Donor:
 			x = from->val + sigJ;
 			if (phs == 1 && nb - from->jnc == 2 && bb[-2].sigS > 0)
 			    x -= bb[-2].sigS;
-#if INTR > 1
 			CRECD*	phl = hl[d][phs + 1];
 			int*	pnl = nl[d][phs + 1];
 			int	l = INTR;
@@ -3119,14 +2926,6 @@ Donor:
 			    phl->val = x;
 			    phl->jnc = nb;
 			}
-#else
-			CRECD*	phl = hl[d] + phs + 1;
-			if (x > phl->val) {
-			    *phl = *from;
-			    phl->val = x;
-			    phl->jnc = nb;
-			}
-#endif
 		    }
 		    if (bb->phs5 == 2 && phs == 1) {	//	GTGT..
 			phs = -1;
@@ -3143,15 +2942,9 @@ Donor:
 			putvar(g2->val); putvar(eq2->val);
 		    }
 		    if (algmode.lsg) {
-#if INTR > 1
 			putvar(hl[0][2][nl[0][2][0]].val); 
 			putvar(hl[0][1][nl[0][1][0]].val);
 		 	putvar(hl[0][0][nl[0][0][0]].val);
-#else
-			putvar(hl[0][2].val); 
-			putvar(hl[0][1].val);
-			putvar(hl[0][0].val);
-#endif
 			printf(" %2d %2d %6.2f", bb->phs5, bb->phs3, (double) sigE);
 			printf(" %6.1f %6.1f", (double) bb->sig5, (double) bb->sig3);
 		    }
@@ -3203,12 +2996,12 @@ VTYPE Aln2h1::diagonalH_ng()
 	return (LocalR? maxh: scr);
 }
 
-VTYPE Aln2h1::trcbkalignH_ng()
+VTYPE Aln2h1::trcbkalignH_ng(bool spj)
 {
 	long	ptr;
 
 	vmf = new Vmf();
-	VTYPE	scr = forwardH_ng(&ptr);
+	VTYPE	scr = forwardH_ng(&ptr, spj);
 	if (ptr) {
 	    SKL* lskl = vmf->traceback(ptr);
 	    if (!lskl) {
@@ -3498,20 +3291,109 @@ bool Aln2h1::indelfreespjH(int agap, VTYPE& iscr)
 	    return (false);
 }
 
+VTYPE Aln2h1::interpolateH(INT level, int agap, int bgap, int cmode, 
+	JUXT* wjxt, BOUND& bab)
+{
+	int	ovr = min(3 * agap, bgap);
+	int	dgap = bgap - 3 * agap;
+	bool	cont = ovr < 3;				// connect adjacent HSPs
+	VTYPE	iscore = NEVSEL;
+	VTYPE	scr = 0;
+	Mfile*	save_mfd = 0;
+
+	if (cmode == 1 && cont && wjxt) {		// 5' end
+	    if (dgap < 0)
+		mfd->write((UPTR) wjxt);
+	    else
+		scr += cds5end(wjxt->jx, wjxt->jy);
+	    iscore = 0;
+	} else if (cmode == 2 && cont && wjxt) {	// 3' end
+	    if (dgap < 0) {
+		SKL	tmp = {a->left, b->left};
+		mfd->write(&tmp);
+	    } else
+		scr += cds3end(wjxt->jx, wjxt->jy - bgap);
+	    iscore = 0;
+	} else if (cmode == 3 && cont && bgap >= IntronPrm.llmt &&
+	    indelfreespjH(agap, iscore)) {		// indel-free spj
+	    scr += iscore;
+	    iscore = 0;
+	} else if (cont && bgap < IntronPrm.llmt) {
+	    scr += backforth(-ovr, bab);		// ordinary gap
+	    iscore = 0;
+	} else if (dgap < IntronPrm.llmt) {
+	    stripe31(seqs, wdw, abs(dgap) + 3);
+	    scr += trcbkalignH_ng(false);		// ordinary alignment
+	    iscore = 0;
+	} else if (level < algmode.qck && ovr >= wlmt) {
+	    save_mfd = new Mfile(*mfd);			// recursive search
+	    island = false;
+	    iscore = seededH_ng(level, cmode, bab);
+	    if (!island) {
+		scr += iscore;
+		iscore = 0;
+	    }
+	}
+	if (iscore < 0) {
+	    if (save_mfd) gswap(mfd, save_mfd);
+	    scr -= creepback(ovr, slmt, bab);
+	    scr -= creepfwrd(ovr, slmt, bab);
+	    if (ovr < 0 && wjxt) return (SKIP);	// excessive overlap skip this hsp
+	    float	dpspace = (float) agap * (float) bgap / MEGA;
+	    VTYPE	kscore = NEVSEL;
+	    if (cmode == 3 && agap < elmt && bgap >= IntronPrm.llmt &&
+		pincerTrcbkH_ng(cmode, kscore))	{// Sandwitch
+		    scr += kscore;
+		    kscore = 0;
+	    } else if (dpspace < alprm.maxsp) {
+		stripe31(seqs, wdw, alprm.sh);
+		kscore = trcbkalignH_ng();	// DP
+	    } else if (cmode == 1) {
+		if (wjxt) {			// near 5' end
+		    int	bl = wjxt->jy + term;
+		    if (bl > b->left) b->left = bl;
+		}
+		pincerTrcbkH_ng(cmode, kscore);
+	    } else if (cmode == 2) {
+		if (wjxt) {			// near 3' end
+		    int	br = bgap - wjxt->jy - term;
+		    if (br > b->left && br < b->right) b->right = br;
+		}
+		pincerTrcbkH_ng(cmode, kscore);
+	    } else { 	// cmode == 3, give up alignment
+		if (wjxt) {
+		    mfd->write((UPTR) wjxt);
+		    mfd->write((UPTR) (wjxt + 1));
+		} else {
+		    SKL	tmp = {a->left, b->left};
+		    mfd->write((UPTR) &tmp);
+		    tmp.m = a->right; tmp.n = b->right;
+		    mfd->write((UPTR) &tmp);
+		}
+		kscore = 0;
+	    }
+	    if (iscore > kscore) {
+		if (save_mfd) gswap(mfd, save_mfd);
+		scr += iscore;
+	    } else
+		scr += kscore;
+	}
+	delete save_mfd;
+	return (scr);
+}
+
 VTYPE Aln2h1::seededH_ng(INT level, int eimode, BOUND& lub)
 {
 	INEX	ainex = a->inex;
 	INEX	binex = b->inex;
 	RANGE	rng[2];
 	int	cmode = eimode;
-	bool	qck = algmode.blk && algmode.crs && level == algmode.qck && algmode.lcl < 16;
-	int	elmt = algmode.crs? (IntronPrm.elmt + 2) / 3: 1;
 	int	agap = a->right - a->left;
 	int	bgap = b->right - b->left;
+	int	num = 0;
 	VTYPE	scr = 0;
-	JUXT*	wjxt = 0;
 	JUXT*	jxt = 0;
-	int	num;
+	JUXT*	wjxt = 0;
 	Wilip*	wl = 0;
 	WLUNIT*	wlu = 0;
 
@@ -3525,18 +3407,17 @@ VTYPE Aln2h1::seededH_ng(INT level, int eimode, BOUND& lub)
 	    if (wlu) {
 		num = wlu->num;
 		jxt = wlu->jxt;
+		island = true;
 	    } else	num = 0;
 	}
 	save_range(seqs, rng, 2);
 	WLPRM*	wlprm = setwlprm(level);
-	VTYPE	slmt = pwd->Vthr / 2;
-	int	term = (int) (pwd->Vthr / pwd->BasicGEP);
 	int	backstep = wlprm->width;
 	if (++level < algmode.qck) {
 	    wlprm = setwlprm(level);
 	    backstep = wlprm->width;
 	}
-	int	wlmt = (int) (3 * wlprm->tpl);
+	wlmt = (int) (3 * wlprm->tpl);
 	BOUND	bab = lub;
 	if (num) {
 	    jxt[num].jx = a->right;
@@ -3546,6 +3427,7 @@ VTYPE Aln2h1::seededH_ng(INT level, int eimode, BOUND& lub)
 	    agap = jxt->jx - a->left;
 	    bgap = jxt->jy - b->left;
 	    for (wjxt = jxt; num--; ++wjxt) {
+		scr += wjxt->jscr;
 		a->right = wjxt->jx;
 		b->right = wjxt->jy;
 		bab.ua = wjxt->jx + wjxt->jlen;
@@ -3554,53 +3436,20 @@ VTYPE Aln2h1::seededH_ng(INT level, int eimode, BOUND& lub)
 		int	lx  = wjxt->jx + wjxt->jlen / 2;
 		if (bab.ua < lx) bab.ua = lx;
 		bab.ub = wjxt->jy + 3 * (bab.ua - wjxt->jx);
-		int	ovr = min(3 * agap, bgap);
-		VTYPE	iscore;
-		scr += wjxt->jscr;
-		if (cmode == 1 && agap == 0) scr += cds5end(wjxt->jx, wjxt->jy);
-		else if (cmode == 3 && agap <= 0 && bgap >= IntronPrm.llmt &&
-			indelfreespjH(agap, iscore))
+		if (cmode == 2) cmode = 3;
+		VTYPE	iscore = interpolateH(level, agap, bgap, cmode, wjxt, bab);
+		if (iscore != SKIP) {
+		    cmode = 3;
 		    scr += iscore;
-		else if (level < algmode.qck && ovr >= wlmt)
-		    scr += seededH_ng(level, cmode, bab);	// recursive search
-		else if (ovr <= 0 && bgap < IntronPrm.llmt)
-		    scr += backforth(-ovr, bab);
-		else {
-		    scr -= creepback(ovr, slmt, bab);
-		    scr -= creepfwrd(ovr, slmt, bab);
-		    if (ovr < 0) {	// excessive overlap skip this hsp
-			agap = wjxt[1].jx - a->left;
-			bgap = wjxt[1].jy - b->left;
-			continue;
-		    }
-		    float	dpspace = (float) agap * (float) bgap / MEGA;
-		    if (cmode == 1 && (qck || dpspace >= alprm.maxsp)) {
-			int	bl = wjxt->jy + term;	// 5' end
-			if (bl > b->left) b->left = bl;
-			pincerTrcbkH_ng(cmode, iscore);
-			scr += iscore;
-		    } else if (cmode == 3 && agap < elmt && bgap >= IntronPrm.llmt
-			&& pincerTrcbkH_ng(cmode, iscore)) {	// Sandwitch
-			scr += iscore;
-		    } else if (dpspace < alprm.maxsp) {
-			stripe31(seqs, wdw, alprm.sh);
-			if (wdw->up == wdw->lw) diagonalH_ng();
-			else	trcbkalignH_ng();
-		    } else { 		// give up alignment
-//			scr += pincerTrcbkH_ng(cmode, iscore);
-			mfd->write((UPTR) wjxt);
-			mfd->write((UPTR) (wjxt + 1));
-		    }
+		    a->left = wjxt->jx + wjxt->jlen;
+		    b->left = wjxt->jy + 3 * wjxt->jlen;
+		    a->inex.exgl = 0;
+		    b->inex.exgl = 0;
+		    bab.la = a->right;
+		    bab.lb = b->right;
 		}
-		cmode = 3;
-		a->left = wjxt->jx + wjxt->jlen;
-		b->left = wjxt->jy + 3 * wjxt->jlen;
-		a->inex.exgl = 0;
-		b->inex.exgl = 0;
 		agap = wjxt[1].jx - a->left;
 		bgap = wjxt[1].jy - b->left;
-		bab.la = a->right;
-		bab.lb = b->right;
 	    }
 	    a->inex.exgr = ainex.exgr;
 	    b->inex.exgr = binex.exgr;
@@ -3612,52 +3461,15 @@ VTYPE Aln2h1::seededH_ng(INT level, int eimode, BOUND& lub)
 		cmode = 2;
 	}
 
-	int	ovr = min(3 * agap, bgap);
-	VTYPE	iscore;
-	if (cmode == 2 && agap == 0)		// 3' end
-	    scr += cds3end(wjxt->jx, wjxt->jy - bgap);
-	else if (cmode == 3 && agap <= 0 && bgap >= IntronPrm.llmt &&
-	    indelfreespjH(agap, iscore))
-	    scr += iscore;
-	else if (level < algmode.qck && ovr >= wlmt)
-	    scr += seededH_ng(level, cmode, bab);	// recursive search
-	else if (ovr <= 0 && bgap < IntronPrm.llmt)
-	    scr += backforth(-ovr, bab);
-	else {
-	    scr -= creepback(ovr, slmt, bab);
-	    scr -= creepfwrd(ovr, slmt, bab);
-	    float	dpspace = (float) agap * (float) bgap / MEGA;
-	    if (cmode == 1 && (qck || dpspace >= alprm.maxsp)) {
-		pincerTrcbkH_ng(cmode, iscore);
-		scr += iscore;
-	    } else if (cmode == 2 && (qck || dpspace >= alprm.maxsp)) {
-		if (wjxt) {
-		    int	br = bgap - wjxt->jy - term;	// near 3' end
-		    if (br > b->left && br < b->right) b->right = br;
-		}
-		pincerTrcbkH_ng(cmode, iscore);
-		scr += iscore;
-	    } else if (cmode == 3 && agap < elmt && bgap >= IntronPrm.llmt
-		&& pincerTrcbkH_ng(cmode, iscore)) {	// Sandwitch
-		scr += iscore;
-	    } else if (dpspace < alprm.maxsp) {
-		stripe31(seqs, wdw, alprm.sh);
-		if (wdw->up == wdw->lw) diagonalH_ng();
-		else	trcbkalignH_ng();
-	    } else { 	// cmode == 3, give up alignment
-		SKL	tmp = {a->left, b->left};
-		mfd->write((UPTR) &tmp);
-		tmp.m = a->right; tmp.n = b->right;
-		mfd->write((UPTR) &tmp);
-	    }
-	}
+	VTYPE	iscore = interpolateH(level, agap, bgap, cmode, wjxt, bab);
+	if (iscore != SKIP) scr += iscore;
 	rest_range(seqs, rng, 2);
+	a->inex.exgl = ainex.exgl;
+	b->inex.exgl = binex.exgl;
 	if (--level == lowestlvl && jxt) {
 	    wjxt->jx = a->len;
 	    wjxt->jy = b->len;
 	}
-	a->inex.exgl = ainex.exgl;
-	b->inex.exgl = binex.exgl;
 	delete wl;
 	return (scr);
 }

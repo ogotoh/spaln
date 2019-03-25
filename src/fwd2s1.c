@@ -27,12 +27,13 @@
 #include "vmf.h"
 #include "wln.h"
 
-#define	INTR	2
-#define	NCANDS	(INTR * NOL)
-#define MAXR	4
-#define	CigarM	0
+static	const	int	INTR = 2;
+static	const	int	NCANDS = INTR * NOL;
+static	const	int	MAXR = 4;
+static	const	int	CigarM = 0;
+static	const	VTYPE	SKIP = INT_MIN;
 
-struct RECD {
+struct JRECD {
 	VTYPE	val;
 	int	dir;
 	long	ptr;
@@ -82,14 +83,19 @@ protected:
 	PwdB*	pwd;
 	Mfile*	mfd;
 	Vmf*	vmf;
+	VTYPE	pinthr;
 	Exinon*	exin;
 	INT	lowestlvl;
+	int	term;
+	VTYPE	slmt;
+	int	wlmt;
+	bool	island;
 public:
 	Aln2s1(Seq** _seqs, PwdB* _pwd, WINDOW* _wdw);
 	~Aln2s1() {delete mfd;}
-	void	initS_ng(RECD* hf[]);
-	RECD*	lastS_ng(RECD* hhb[]);
-	VTYPE	forwardS_ng(long pp[]);
+	void	initS_ng(JRECD* hf[]);
+	JRECD*	lastS_ng(JRECD* hhb[]);
+	VTYPE	forwardS_ng(long pp[], bool spj = true);
 	void	finitS_ng(WRECD* hhf[], int mm);
 	void	binitS_ng(WRECD* hhf[], int mm);
 	VTYPE	centerS_ng(int* ml, int* mr, int* nl, int* nr, 
@@ -97,13 +103,16 @@ public:
 	void	cinitS_ng(CRECD* hhc[]);
 	void	pfinitS_ng(LRECD* hhg[]);
 	void	pbinitS_ng(LRECD* hhg[]);
-	VTYPE	pincerTrcbkS_ng(int cmode);
 	VTYPE	pincersS_ng(long* ptr, int cmode);
+	bool	pincerTrcbkS_ng(int cmode, VTYPE& iscore);
 	Colonies*	fwdswgS_ng(VTYPE* scr);
 	VTYPE	diagonalS_ng();
-	VTYPE	trcbkalignS_ng();
+	VTYPE	trcbkalignS_ng(bool spj = true);
+	VTYPE	ordinaryS_ng();
 	VTYPE	backforth(int n, BOUND& lub);
 	VTYPE	lspS_ng();
+	VTYPE	interpolateS(INT level, int agap, int bgap, int cmode, 
+		JUXT* wjxt, BOUND& bab);
 	VTYPE	seededS_ng(INT level, int cmode, BOUND& lub);
 	SKL*	globalS_ng(VTYPE* scr);
 	VTYPE	creepback(int ovr, VTYPE bscr, BOUND& lub);
@@ -116,46 +125,40 @@ extern	VTYPE	HomScoreS_ng(Seq* seqs[], PwdB* pwd, long ptr[]);
 extern	SKL*	swg2ndS_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr, COLONY* clny);
 extern	SKL*	alignS_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr);
 
-static	RECD	oom = {NEVSEL, 0, 0, 0};
+static	JRECD	oom = {NEVSEL, 0, 0, 0};
 static	LRECD	ooml = {NEVSEL, 0, 0, 0, 0};
 static	WRECD	oomW = {NEVSEL, 0, INT_MIN, INT_MAX, 0, 0};
 static	CRECD	oomC = {NEVSEL, 0, INT_MIN, INT_MAX, 0, 0, 0, 0};
 
 Aln2s1::Aln2s1(Seq* _seqs[], PwdB* _pwd, WINDOW* _wdw) :
 	seqs(_seqs), a(seqs[0]), b(seqs[1]), wdw(_wdw), pwd(_pwd),
-	mfd(0), vmf(0), exin(b->exin), lowestlvl(b->wllvl)
-{ }
+	mfd(0), vmf(0), exin(b->exin), lowestlvl(b->wllvl),
+	term((int) ((pwd->Vthr + pwd->BasicGOP) / pwd->BasicGEP)),
+	slmt(pwd->Vthr / 2), island(false)
+{
+	pinthr = pwd->GapPenalty(1);
+}
 
-void Aln2s1::initS_ng(RECD* hh[])
+void Aln2s1::initS_ng(JRECD* hh[])
 {
 	int	n = b->left;
 	int	r = b->left - a->left;
 	int	rr = b->right - a->left;
-	RECD*	hf[NOL];
+	JRECD*	hf[NOL];
 
 	for (int k = 0; k < pwd->Nrow; ++k) hf[k] = hh[k] + r;
 	if (wdw->up < rr) rr = wdw->up;
 	for (int i = 0; r <= wdw->up + 1; ++r, ++n, ++i) {
-	    RECD*	h = hf[0]++;
+	    JRECD*	h = hf[0]++;
  	    for (int k = 1; k < pwd->Nrow; ++k) *hf[k]++ = oom;
-	    if (i == 0) {
+	    if (i == 0 || (a->inex.exgl && r <= rr)) {
 		h->val = 0;
-	    } else if (!a->inex.exgl || r > rr) {
-		*h = oom;
-		continue;
-	    } else {
-		*h = h[-1];
-		int	k = n - h->jnc;
-		if (k == 1) h->val += pwd->BasicGOP;
-		h->val += pwd->GapExtPen(k);
-		h->dir = HORI;
-	    }
-	    VTYPE	x = 0;
-	    if (h->val <= x) {
-		h->val = x;
-		h->dir = i? DEAD: DIAG;
+		h->dir = DEAD;
 		h->jnc = n;
 		h->ptr = vmf? vmf->add(a->left, n, 0): 0;
+	    } else {
+		*h = oom;
+		continue;
 	    }
 	}
 
@@ -164,8 +167,8 @@ void Aln2s1::initS_ng(RECD* hh[])
 	for (int k = 0; k < pwd->Nrow; ++k) hf[k] = hh[k] + r;
 	if (wdw->lw > rr) rr = wdw->lw;
 	for (int i = 1; --r >= wdw->lw - 1; ++i) {
-	    RECD*	h = --hf[0];
-	    RECD*	g = --hf[1];
+	    JRECD*	h = --hf[0];
+	    JRECD*	g = --hf[1];
 	    for (int k = 2; k < pwd->Nrow; ++k) *--hf[k] = oom;
 	    if (r < rr) *h = *g = oom;
 	    else if (b->inex.exgl) {	/* local */
@@ -189,23 +192,23 @@ void Aln2s1::initS_ng(RECD* hh[])
 	}
 }
 
-RECD* Aln2s1::lastS_ng(RECD* hh[])
+JRECD* Aln2s1::lastS_ng(JRECD* hh[])
 {
-	RECD*	h9 = hh[0] + b->right - a->right;
-	RECD*	mx = h9;
+	JRECD*	h9 = hh[0] + b->right - a->right;
+	JRECD*	mx = h9;
 
 	if (b->inex.exgr) {
 	    int	rw = wdw->up;
 	    int	rf = b->right - a->left;
 	    if (rf < rw) rw = rf;
-	    for (RECD* h = hh[0] + rw; h > h9; --h)
+	    for (JRECD* h = hh[0] + rw; h > h9; --h)
 		if (h->val > mx->val) mx = h;
 	}
 	int	rw = wdw->lw;
 	int	rf = b->left - a->right;
 	if (rf > rw) rw = rf;
 	else	 rf = rw;
-	RECD*	h = hh[0] + rw;
+	JRECD*	h = hh[0] + rw;
 	if (a->inex.exgr)
 	    for (int i = 0; h <= h9; ++h, ++i)
 		if (h->val > mx->val) mx = h;
@@ -214,28 +217,24 @@ RECD* Aln2s1::lastS_ng(RECD* hh[])
 	rw = b->right;	/* n9 */
 	if (i > 0) rf -= i;
 	if (i < 0) rw += i;
-	if (vmf || a->inex.exgr) mx->ptr = vmf->add(rf, rw, mx->ptr);
+	if (vmf) mx->ptr = vmf->add(rf, rw, mx->ptr);
 	return (mx);
 }
 
-VTYPE Aln2s1::forwardS_ng(long* pp)
+VTYPE Aln2s1::forwardS_ng(long* pp, bool spj)
 {
-	RECD*	hh[NOL];	/* H matrix	 	*/
-	RECD*	hf[NOL];
-	RECD	f1, f2;
-	RECD*	g2 = 0;
-#if INTR > 1
-	RECD	hl[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
+	JRECD*	hh[NOL];	/* H matrix	 	*/
+	JRECD*	hf[NOL];
+	JRECD	f1, f2;
+	JRECD*	g2 = 0;
+	JRECD	hl[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
 	int	nl[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
-#else
-	RECD    hl[NOL];
-#endif
 	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
 	int	Local = algmode.lcl & 16;
 	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
 	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
 
-	hh[0] = new RECD[pwd->Nrow * wdw->width] - wdw->lw + 1;
+	hh[0] = new JRECD[pwd->Nrow * wdw->width] - wdw->lw + 1;
 	for (int k = 1; k < pwd->Noll; ++k) hh[k] = hh[k-1] + wdw->width;
 	if (vmf) vmf->add(0, 0, 0);	/* Skip 0-th record */
 	initS_ng(hh);
@@ -250,30 +249,26 @@ VTYPE Aln2s1::forwardS_ng(long* pp)
 	hf[1] = &f1;
 	hf[2] = &f2;
 	for ( ; ++m <= a->right; ++as) {
-	    bool	internal = !a->inex.exgr || m < a->right;
+	    bool	internal = spj && (!a->inex.exgr || m < a->right);
 	    n1++; n2++;
 	    int	n = max(n1, b->left);
 	    int	n9 = min(n2, b->right);
 	    CHAR*	bs = b->at(n);
 	    int	r = n - m;
 	    int k = 0;
-	    RECD*	h = hh[k] + r;
-	    RECD*	g = hh[++k] + r;
+	    JRECD*	h = hh[k] + r;
+	    JRECD*	g = hh[++k] + r;
 	    f1 = oom;
 	    if (pwd->Noll == 3) {
 		g2 = hh[++k] + r;
 		f2 = oom;
 	    }
 	    for (int k = 0; k < pwd->Noll; ++k) {
-#if INTR > 1
-		RECD*	phl = hl[k];
+		JRECD*	phl = hl[k];
 		for (int l = 0; l <= INTR; ++l, ++phl) {
 		    nl[k][l] = l;
 		    *phl = oom;
 	  	}
-#else
-		hl[k] = oom;
-#endif
 	    }
 #if DEBUG
 	if (algmode.nsa & 8) {
@@ -288,8 +283,8 @@ VTYPE Aln2s1::forwardS_ng(long* pp)
 		hf[0] = ++h;
 		if (g2) ++g2;
 /*	Diagonal	*/
-		RECD*	from = h;
-		RECD*	mx = h;
+		JRECD*	from = h;
+		JRECD*	mx = h;
 		VTYPE	diag = h->val;
 		if (m == a->left) goto HorizonS;
 		h->val += pwd->sim2(as, bs);
@@ -348,15 +343,14 @@ HorizonS:
 		}
 
 /*	intron 3' boundary, assume no overlapping signals	*/
-		if (exin->isAccpt(n) && internal) {
+		if (internal && exin->isAccpt(n)) {
 		    VTYPE	sigJ = a_in_zone? api.match_score(m): 0;
 		    for (int k = 0; k < pwd->Noll; ++k) {
 			from = hf[k];
-#if INTR > 1
-			RECD*	maxphl = 0;
+			JRECD*	maxphl = 0;
 			int*	pnl = nl[k];
 			for (int l = 0; l < INTR; ++l) {
-			    RECD*	phl = hl[k] + pnl[l];
+			    JRECD*	phl = hl[k] + pnl[l];
 			    if (!phl->dir) break;
 			    x = phl->val + sigJ +
 				pwd->IntPen->Penalty(n - phl->jnc) +
@@ -373,20 +367,6 @@ HorizonS:
 			    from->dir = maxphl->dir | SPJCI;
 			    if (from->val > mx->val) mx = from;
 			}
-#else
-			RECD*	phl = hl + k;
-			if (!phl->dir) break;
-			x = phl->val + pwd->IntPen->Penalty(n - phl->jnc)
-			    + exin->sig53(phl->jnc, n, IE53);
-			if (x > from->val) {
-			    from->val = x;
-			    if (vmf) from->ptr = vmf->add(m, n, 
-				vmf->add(m, phl->jnc, phl->ptr));
-			    from->jnc = n;
-			    from->dir = phl->dir | SPJCI;
-			    if (from->val > mx->val) mx = from;
-			}
-#endif
 		    }
 		}
 
@@ -408,7 +388,7 @@ HorizonS:
 
 
 /*	intron 5' boundary	*/
-		if (exin->isDonor(n) && internal) {
+		if (internal && exin->isDonor(n)) {
 		    VTYPE	sigJ = exin->sig53(n, 0, IE5);
 		    for (int k = 0; k < pwd->Noll; ++k) {
 				/* An orphan exon is disallowed */
@@ -418,8 +398,7 @@ HorizonS:
 				from->dir == VERT || from->dir == VERL)
 			    continue;
 			x = from->val + sigJ;
-#if INTR > 1
-			RECD*	phl = hl[k];
+			JRECD*	phl = hl[k];
 			int*	pnl = nl[k];
 			int	l = INTR;
 			for ( ; --l >= 0; ) {
@@ -436,15 +415,6 @@ HorizonS:
 			    phl->dir = from->dir;
 			    phl->ptr = from->ptr;
 			}
-#else
-			RECD*	phl = hl + k;
-			if (x > phl->val) {
-			    phl->val = x;
-			    phl->jnc = n;
-			    phl->dir = from->dir;
-			    phl->ptr = from->ptr;
-			}
-#endif
 		    }
 		}
 
@@ -457,15 +427,9 @@ HorizonS:
 			putvar(g2->val); putvar(f2.val);
 		    }
 		    if (algmode.lsg) {
-#if INTR > 1
 			putvar(hl[0][nl[0][0]].val);
 			putvar(hl[1][nl[1][0]].val);
 			if (g2) putvar(hl[2][nl[2][0]].val);
-#else
-			putvar(hl[0].val);
-			putvar(hl[1].val);
-			if (g2) putvar(hl[2].val);
-#endif
 		    }
 		    putchar('\n');
 		}
@@ -477,7 +441,7 @@ HorizonS:
 	if (LocalR) {
 	    if (vmf) *pp = vmf->add(maxh.m, maxh.n, maxh.p);
 	} else {
-	    RECD*	mx = lastS_ng(hh);
+	    JRECD*	mx = lastS_ng(hh);
 	    maxh.val = mx->val;
 	    if (pp) *pp = mx->ptr;
 	}
@@ -867,12 +831,8 @@ VTYPE Aln2s1::centerS_ng(int* ml, int* mr, int* nl, int* nr,
 	int	kb = 0;
 	int	jb = 0;
 	int	rr[MAXR+1];
-#if INTR > 1
 	WRECD	hl[NOL][INTR+1];
 	int	nx[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
-#else
-	WRECD   hl[NOL];
-#endif
 	WRECD*	hhf[NOL];
 	WRECD*	hhb[2 * NOL];
 	WRECD*	hf[NOL];
@@ -928,15 +888,11 @@ VTYPE Aln2s1::centerS_ng(int* ml, int* mr, int* nl, int* nr,
 	    if (m == mm) 
 		while (d++ < 2 * pwd->Noll - 1) hb[d] = hhb[d] + r;
 	    for (int k = 0; k < pwd->Noll; ++k) {
-#if INTR > 1
 		WRECD*	phl = hl[k];
 		for (int l = 0; l <= INTR; ++l, ++phl) {
 		    nx[k][l] = l;
 		    *phl = oomW;
 		}
-#else
-		hl[k] = oomW;
-#endif
 	    }
 
 #if DEBUG
@@ -1013,7 +969,6 @@ HorizonB:
 		    VTYPE	sigJ = a_in_zone? api.match_score(m): 0;
 		    for (int d = 0; d < pwd->Noll; ++d) {
 			from = hb[d];
-#if INTR > 1
 			WRECD*	maxphl = 0;
 			int*	pnx = nx[d];
 			for (int l = 0; l < INTR; ++l) {
@@ -1036,23 +991,6 @@ HorizonB:
 			    from->lst = maxphl->lst + n - maxphl->jnc;
 			    if (from->val > mx->val) mx = from;
 			}
-#else
-			WRECD*	phl = hl + d;
-			if (!phl->dir) break;
-/*			x = exin->sig53(n, phl->jnc, IE35) +	*/
-			x = exin->sig53(n, phl->jnc, IE53) + sigJ +
-			    (exin->sig53(n, 0, IE5) - phl->sig) +
-			    phl->val + pwd->IntPen->Penalty(phl->jnc - n);
-			if (x > from->val) {
-			    from->val = x;
-	 		    from->jnc = phl->jnc;
-			    from->dir = phl->dir | SPJCI;
-			    from->upr = max(phl->upr, r);
-			    from->lwr = min(phl->lwr, r);
-			    from->lst = phl->lst + n - phl->jnc;
-			    if (from->val > mx->val) mx = from;
-			}
-#endif
 		    }
 		}
 
@@ -1076,7 +1014,6 @@ HorizonB:
 			from = hb[d];
 			if (!from->dir || from->dir & SPIN) continue;
 			x = from->val + sigJ;
-#if INTR > 1
 			WRECD*	phl = hl[d];
 			int*	pnx = nx[d];
 			int	l = INTR;
@@ -1094,15 +1031,6 @@ HorizonB:
 			    phl->jnc = n;
 			    phl->sig = sigJ;
 			}
-#else
-			WRECD*	phl = hl + d;
-			if (x > phl->val) {
-			    *phl = *from;
-			    phl->val = x;
-			    phl->jnc = n;
-			    phl->sig = sigJ;
-			}
-#endif
 		    }
 		}
 
@@ -1115,15 +1043,9 @@ HorizonB:
 		    putvar(g2->val); putvar(b2->val);
 		}
 		if (algmode.lsg) {
-#if INTR > 1
 		    putvar(hl[0][nx[0][0]].val);
 		    putvar(hl[1][nx[1][0]].val);
 		    if (g2) putvar(hl[2][nx[2][0]].val);
-#else
-		    putvar(hl[0].val);
-		    putvar(hl[1].val);
-		    if (g2) putvar(hl[2].val);
-#endif
 		}
 		putchar('\n');
 	}
@@ -1172,15 +1094,11 @@ HorizonB:
 		if (b2) b2 = hhb[k] + r;
 	    }
 	    for (int d = 0; d < pwd->Noll; ++d) {
-#if INTR > 1
 		WRECD*	phl = hl[d];
 		for (int l = 0; l <= INTR; ++l, ++phl) {
 		    nx[d][l] = l;
 		    *phl = oomW;
 		}
-#else
-		hl[d] = oomW;
-#endif
 	    }
 	    bool	a_in_zone = api == m;
 	    for ( ; n <= n9; ++n, ++h, ++g, ++r, ++bs) {
@@ -1251,7 +1169,6 @@ HorizonF:
 		    VTYPE	sigJ = a_in_zone? api.match_score(m): 0;
 		    for (int d = 0; d < pwd->Noll; ++d) {
 			from = hf[d];
-#if INTR > 1
 			WRECD*	maxphl = 0;
 			int*	pnx = nx[d];
 			for (int l = 0; l < INTR; ++l) {
@@ -1272,21 +1189,6 @@ HorizonF:
 			    from->lst = maxphl->lst + n - maxphl->jnc;
 			    if (from->val > mx->val) mx = from;
 			}
-#else
-			WRECD*	phl = hl + d;
-			if (!phl->dir) break;
-			x = phl->val + exin->sig53(phl->jnc, n, IE53) +
-			    pwd->IntPen->Penalty(n - phl->jnc);
-			if (x > from->val) {
-			    from->val = x;
-		 	    from->jnc = phl->jnc;
-			    from->dir = phl->dir | SPJCI;
-			    from->upr = max(phl->upr, r);
-			    from->lwr = min(phl->lwr, r);
-			    from->lst = phl->lst + n - phl->jnc;
-			    if (from->val > mx->val) mx = from;
-			}
-#endif
 		    }
 		}
 
@@ -1308,7 +1210,6 @@ HorizonF:
 			if (!from->dir || (from->dir & SPIN) || isvert(from))
 			    continue;
 			x = from->val + sigJ;
-#if INTR > 1
 			WRECD*	phl = hl[d];
 			int*	pnx = nx[d];
 			int	l = INTR;
@@ -1325,14 +1226,6 @@ HorizonF:
 			    phl->val = x;
 			    phl->jnc = n;
 			}
-#else
-			WRECD*	phl = hl + d;
-			if (x > phl->val) {
-			    *phl = *from;
-			    phl->val = x;
-			    phl->jnc = n;
-			}
-#endif
 		    }
 		}
 
@@ -1345,15 +1238,9 @@ HorizonF:
 		    putvar(g2->val); putvar(f2->val);
 		}
 		if (algmode.lsg) {
-#if INTR > 1
 		    putvar(hl[0][nx[0][0]].val);
 		    putvar(hl[1][nx[1][0]].val);
 		    if (g2) putvar(hl[2][nx[2][0]].val);
-#else
-		    putvar(hl[0].val);
-		    putvar(hl[1].val);
-		    if (g2) putvar(hl[2].val);
-#endif
 		}
 		putchar('\n');
 	}
@@ -1984,12 +1871,8 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 	CRECD*	hhc[NOL];	/* local H matrix	*/
 	CRECD*	hf[NOL]; 	/* [DIAG, HORI, HORL] */
 	CRECD	f[NOL]; 	/* [DIAG, HORI, HORL] */
-#if INTR > 1
 	CRECD	hl[NOL][INTR+1];
 	int	nl[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
-#else
-	CRECD   hl[NOL];
-#endif
 	CRECD*	g2 = 0;
 	Colonies*	cl = new Colonies(0);
 	COLONY*	clny = cl->at();
@@ -2014,15 +1897,11 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 	    CRECD*	 g = hhc[1] + r;
 	    if (pwd->Noll == 3) g2 = hhc[2] + r;
 	    for (int d = 0; d < pwd->Noll; ++d) {
-#if INTR > 1
 		CRECD*	phl = hl[d];
 		for (int l = 0; l <= INTR; ++l, ++phl) {
 		    nl[d][l] = l;
 		    *phl = oomC;
 		}
-#else
-		hl[d] = oomC;
-#endif
 		f[d] = oomC;
 	    }
 
@@ -2097,7 +1976,6 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 		    VTYPE	sigJ = a_in_zone? api.match_score(m): 0;
 		    for (int d = 0; d < pwd->Noll; ++d) {
 			from = hf[d];
-#if INTR > 1
 			CRECD*	maxphl = 0;
 			int*	pnl = nl[d];
 			VTYPE	y = NEVSEL;
@@ -2120,21 +1998,6 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 			    if (r < from->lwr) from->lwr = r;
 			    if (from->val > mx->val) mx = from;
 			}
-#else
-			CRECD*	phl = hl + d;
-			if (!phl->dir) break;
-			x = phl->val + pwd->IntPen->Penalty(n - phl->jnc)
-			    + exin->sig53(phl->jnc, n, IE53);
-			if (x > from->val) {
-			    *from = *phl;
-			    from->val = x;
-		 	    from->jnc = n;
-			    from->dir |= SPJCI;
-			    if (r > from->upr) from->upr = r;
-			    if (r < from->lwr) from->lwr = r;
-			    if (from->val > mx->val) mx = from;
-			}
-#endif
 
 		    }
 		}
@@ -2150,7 +2013,6 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 				from->dir == VERT || from->dir == VERL)
 			    continue;
 			x = from->val + sigJ;
-#if INTR > 1
 			CRECD*	phl = hl[d];
 			int*	pnl = nl[d];
 			int	l = INTR;
@@ -2167,14 +2029,6 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 			    phl->val = x;
 			    phl->jnc = n;
 			}
-#else
-			CRECD*	phl = hl + d;
-			if (x > phl->val) {
-			    *phl = *from;
-			    phl->val = x;
-			    phl->jnc = n;
-			}
-#endif
 		    }
 		}
 
@@ -2231,15 +2085,9 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 		    putvar(g2->val); putvar(f[2].val);
 		}
 		if (algmode.lsg) {
-#if INTR > 1
 		    putvar(hl[0][nl[0][0]].val); 
 		    putvar(hl[1][nl[1][0]].val);
 		    if (g2) putvar(hl[2][nl[2][0]].val);
-#else
-		    putvar(hl[0].val); 
-		    putvar(hl[1].val);
-		    if (g2) putvar(hl[2].val);
-#endif
 		}
 		putchar('\n');
 	}
@@ -2299,12 +2147,12 @@ VTYPE Aln2s1::diagonalS_ng()
 	return (LocalR? maxh: scr);
 }
 
-VTYPE Aln2s1::trcbkalignS_ng()
+VTYPE Aln2s1::trcbkalignS_ng(bool spj)
 {
 	long	ptr = 0;
 
 	vmf = new Vmf();
-	VTYPE	scr = forwardS_ng(&ptr);
+	VTYPE	scr = forwardS_ng(&ptr, spj);
 	if (ptr) {
 	    SKL* lskl = vmf->traceback(ptr);
 	    if (!lskl) {
@@ -2337,7 +2185,7 @@ VTYPE Aln2s1::lspS_ng()  /* recursive */
 	int	q = b->right - a->left - wdw->up;
 	long	cvol =  m * n - (k * k + q * q) / 2;
 	if (cvol < MaxVmfSpace || m == 1 || n <= 1) {
-	    return (trcbkalignS_ng());
+	    return (trcbkalignS_ng(b->inex.intr));
 	}
 	save_range(seqs, rng, 2);
 	VTYPE	scr = centerS_ng(&m, &q, &n, &k, &wdwl, &wdwr);
@@ -2369,13 +2217,18 @@ VTYPE Aln2s1::lspS_ng()  /* recursive */
 	return scr;
 }
 
-VTYPE Aln2s1::pincerTrcbkS_ng(int cmode)
+bool Aln2s1::pincerTrcbkS_ng(int cmode, VTYPE& scr)
 {
 	vmf = new Vmf();
 	long	ptr[2];
-	VTYPE	scr = pincersS_ng(ptr, cmode);;
+	stripe(seqs, wdw, alprm.sh);
+	scr = pincersS_ng(ptr, cmode);;
 	SKLP    sv;
 
+	if (scr <= pinthr) {
+	    delete vmf;
+	    return (false);
+	}
 	sv.p = ptr[0];
 	while (sv.p) {
 	    vmf->readvmf(&sv, sv.p);
@@ -2388,7 +2241,7 @@ VTYPE Aln2s1::pincerTrcbkS_ng(int cmode)
 	}
 	delete vmf;
 	vmf = 0;
-	return (scr);
+	return (true);
 }
 
 VTYPE Aln2s1::backforth(int ovr, BOUND& lub)
@@ -2503,6 +2356,93 @@ VTYPE Aln2s1::creepfwrd(int& ovr, VTYPE bscr, BOUND& lub)
 	return (dscr);
 }
 
+VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode, 
+		JUXT* wjxt, BOUND& bab)
+{
+	int	ovr = min(agap, bgap);
+	int	dgap = bgap - agap;
+	bool	cont = ovr <= 0;			// connect adjacent HSPs
+	VTYPE	iscore = NEVSEL;
+	VTYPE	scr = 0;
+	Mfile*	save_mfd = 0;
+	if (dgap == 0) {
+	    if (agap == 0) return (0);
+	    iscore = diagonalS_ng();			// no gap
+	} else if (cmode == 1 && cont && wjxt) {	// 5' end
+	    mfd->write((UPTR) wjxt);
+	    iscore = 0;
+	} else if (cmode == 2 && cont) {
+	    SKL	tmp = {a->left, b->left};		// 3' end
+	    mfd->write((UPTR) &tmp);
+	    iscore = 0;
+	} else if (cmode == 3 && cont && bgap >= IntronPrm.llmt && 
+	    indelfreespjS(agap, iscore)) {		// indel-free spj
+	    scr += iscore;
+	    iscore = 0;
+	} else if (cont && bgap < IntronPrm.llmt) {
+	    scr += backforth(-ovr, bab);		// ordinary gap
+	    iscore = 0;
+	} else if (dgap < IntronPrm.llmt) {
+	    stripe(seqs, wdw, abs(dgap) + 3);
+	    scr += trcbkalignS_ng(false);		// ordinary alignment
+	    iscore = 0;
+	} else if (level < algmode.qck && ovr >= wlmt) {
+	    save_mfd = new Mfile(*mfd);			// recursive search
+	    island = false;
+	    iscore = seededS_ng(level, cmode, bab);
+	    if (!island) {				// reached bottom
+		scr += iscore;
+		iscore = 0;
+	    }
+	}
+	if (iscore < 0) {
+	    if (save_mfd) gswap(mfd, save_mfd);
+	    scr -= creepback(ovr, slmt, bab);
+	    scr -= creepfwrd(ovr, slmt, bab);
+	    if (ovr < 0 && wjxt) return (SKIP);	// excessive overlap skip this hsp
+	    float	dpspace = (float) agap * (float) bgap / MEGA;
+	    VTYPE	kscore = NEVSEL;
+	    if (cmode == 3 && agap < IntronPrm.elmt && bgap >= IntronPrm.llmt &&
+		pincerTrcbkS_ng(cmode, kscore)) {	// Sandwitch
+		    scr += kscore;
+		    kscore = 0;
+	    } else if (dpspace < alprm.maxsp) {
+		stripe(seqs, wdw, alprm.sh);
+		kscore = trcbkalignS_ng(b->inex.intr);	// DP
+	    } else if (cmode == 1) {
+		if (wjxt) {
+		    int	bl = wjxt->jy + term;		// near 5' end
+		    if (bl > b->left) b->left = bl;
+		}
+		pincerTrcbkS_ng(cmode, kscore);
+	    } else if (cmode == 2) {
+		if (wjxt) {
+		    int	br = wjxt->jy - term;		// near 3' end
+		    if (br > b->left && br < b->right) b->right = br;
+		}
+		pincerTrcbkS_ng(cmode, kscore);
+	    } else {	// cmode == 3, give up alignment
+		if (wjxt) {
+		    mfd->write((UPTR) wjxt);
+		    mfd->write((UPTR) (wjxt + 1));
+		} else {
+		    SKL	tmp = {a->left, b->left};
+		    mfd->write((UPTR) &tmp);
+		    tmp.m = a->right; tmp.n = b->right;
+		    mfd->write((UPTR) &tmp);
+		}
+		kscore = 0;
+	    }
+	    if (iscore > kscore) {
+		if (save_mfd) gswap(mfd, save_mfd);
+		scr += iscore;
+	    } else
+		scr += kscore;
+	}
+	delete save_mfd;
+	return (scr);
+}
+
 /* eimode 1: 5'end, 2: 3' end, 3: internal */
 VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 {
@@ -2510,7 +2450,6 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 	INEX	binex = b->inex;
 	RANGE	rng[2];
 	int	cmode = eimode;
-	int	qck = algmode.blk && algmode.crs && level == algmode.qck && algmode.lcl < 16;
 	int	agap = a->right - a->left;
 	int	bgap = b->right - b->left;
 	int	num = 0;
@@ -2519,6 +2458,7 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 	JUXT*	wjxt = 0;
 	Wilip*	wl = 0;
 	WLUNIT*	wlu = 0;
+
 	if (level == lowestlvl && b->jxt) {
 	    jxt = b->jxt;
 	    num = b->CdsNo;
@@ -2528,17 +2468,17 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 	    if (wlu) {
 		num = wlu->num;
 		jxt = wlu->jxt;
+		island = true;
 	    } else	num = 0;
 	}
 	save_range(seqs, rng, 2);
 	WLPRM*	wlprm = setwlprm(level);
-	VTYPE	slmt = pwd->Vthr / 2;
-	int	term = (int) ((pwd->Vthr + pwd->BasicGOP) / pwd->BasicGEP);
 	int	backstep = wlprm->width;
 	if (++level < algmode.qck) {
 	    wlprm = setwlprm(level);
 	    backstep = wlprm->width;
 	}
+	wlmt = (int) wlprm->tpl;
 	BOUND	bab = lub;
 	if (num) {
 	    jxt[num].jx = a->right;
@@ -2548,6 +2488,7 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 	    agap = jxt->jx - a->left;
 	    bgap = jxt->jy - b->left;
 	    for (wjxt = jxt; num--; wjxt++) {
+		scr += wjxt->jscr;
 		a->right = wjxt->jx;
 		b->right = wjxt->jy;
 		bab.ua = wjxt->jx + wjxt->jlen;
@@ -2556,56 +2497,20 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 		int	lx = wjxt->jx + wjxt->jlen / 2;
 		if (bab.ua < lx) bab.ua = lx;
 		bab.ub = wjxt->jy + bab.ua - wjxt->jx;
-		int	ovr = min(agap, bgap);
-		float	dpspace = (float) agap * (float) bgap / MEGA;
-		VTYPE	iscore;
-		scr += wjxt->jscr;
-		if (cmode == 1 && agap == 0)	// 5' end
-		    mfd->write((UPTR) wjxt);
-		else if (cmode == 3 && agap <= 0 &&
-		    bgap >= IntronPrm.llmt && indelfreespjS(agap, iscore))
-			scr += iscore;
-		else if (level < algmode.qck && ovr >= (int) wlprm->tpl)
-		    scr += seededS_ng(level, cmode, bab);	// recursive search
-		else if (ovr <= 0 && bgap < IntronPrm.llmt)
-		    scr += backforth(-ovr, bab);
-		else {
-		    scr -= creepback(ovr, slmt, bab);
-		    scr -= creepfwrd(ovr, slmt, bab);
-		    if (ovr < 0) {		// skip this hsp
-			agap = wjxt[1].jx - a->left;
-			bgap = wjxt[1].jy - b->left;
-			continue;
-		    }
-		    if (cmode == 1 && (qck || ovr < IntronPrm.tlmt
-			|| dpspace >= alprm.maxsp)) {
-			int	bl = wjxt->jy + term;
-			if (bl > b->left) b->left = bl;
-			stripe(seqs, wdw, alprm.sh);
-			scr += pincerTrcbkS_ng(cmode);
-		    } else if (cmode == 3 && agap < IntronPrm.elmt
-			&& bgap >= IntronPrm.llmt) {
-			stripe(seqs, wdw, alprm.sh); // intron ?
-			scr += pincerTrcbkS_ng(cmode);
-		    } else if (dpspace < alprm.maxsp) {
-			stripe(seqs, wdw, alprm.sh);
-			if (wdw->up == wdw->lw) diagonalS_ng();
-			else	trcbkalignS_ng();
-		    } else { 			// give up alignment
-//			scr += pincerTrcbkS_ng(seqs, alnv, cmode);
-			mfd->write((UPTR) wjxt);
-			mfd->write((UPTR) (wjxt + 1));
-		    }
+		if (cmode == 2) cmode = 3;
+		VTYPE	iscore = interpolateS(level, agap, bgap, cmode, wjxt, bab);
+		if (iscore != SKIP) {
+		    scr += iscore;
+		    cmode = 3;
+		    a->left = wjxt->jx + wjxt->jlen;
+		    b->left = wjxt->jy + wjxt->jlen;
+		    a->inex.exgl = 0;
+		    b->inex.exgl = 0;
+		    bab.la = a->right;
+		    bab.lb = b->right;
 		}
-		cmode = 3;
-		a->left = wjxt->jx + wjxt->jlen;
-		b->left = wjxt->jy + wjxt->jlen;
-		a->inex.exgl = 0;
-		b->inex.exgl = 0;
 		agap = wjxt[1].jx - a->left;
 		bgap = wjxt[1].jy - b->left;
-		bab.la = a->right;
-		bab.lb = b->right;
 	    }
 	    a->inex.exgr = ainex.exgr;
 	    b->inex.exgr = binex.exgr;
@@ -2617,49 +2522,8 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 		cmode = 2;
 	}
 
-	int	ovr = min(agap, bgap);
-	VTYPE	iscore;
-	if (cmode == 2 && ovr == 0) {
-	    SKL	tmp = {a->left, b->left};
-	    mfd->write((UPTR) &tmp);
-	} else if (cmode == 3 && agap <= 0 && bgap >= IntronPrm.llmt && 
-	    indelfreespjS(agap, iscore)) {
-	    scr += iscore;
-	} else if (level < algmode.qck && ovr > (int) wlprm->tpl) {
-	    scr += seededS_ng(level, cmode, bab);
-	} else if (ovr <= 0 && bgap < IntronPrm.llmt) {
-	   scr += backforth(-ovr, bab);
-	} else {
-	    scr -= creepback(ovr, slmt, bab);
-	    scr -= creepfwrd(ovr, slmt, bab);
-	    float	dpspace = (float) agap * (float) bgap / MEGA;
-	    if (cmode == 1 && (qck || ovr < IntronPrm.tlmt
-		|| dpspace >= alprm.maxsp)) {
-		stripe(seqs, wdw, alprm.sh);
-		scr += pincerTrcbkS_ng(cmode);
-	    } else if (cmode == 2 && (qck || ovr < IntronPrm.tlmt
-		|| dpspace >= alprm.maxsp)) {
-		if (wjxt) {
-		    int	br = wjxt->jy - term;
-		    if (br > b->left && br < b->right) b->right = br;
-		}
-		stripe(seqs, wdw, alprm.sh);
-		scr += pincerTrcbkS_ng(cmode);
-	    } else if (cmode == 3 && agap < IntronPrm.elmt && 
-		bgap >= IntronPrm.llmt) {
-		stripe(seqs, wdw, alprm.sh);
-		scr += pincerTrcbkS_ng(cmode);
-	    } else if (dpspace < alprm.maxsp) {
-		stripe(seqs, wdw, alprm.sh);
-		if (wdw->up == wdw->lw) diagonalS_ng();
-		else	trcbkalignS_ng();
-	    } else {	// cmode == 3, give up alignment
-		SKL	tmp = {a->left, b->left};
-		mfd->write((UPTR) &tmp);
-		tmp.m = a->right; tmp.n = b->right;
-		mfd->write((UPTR) &tmp);
-	    }
-	}
+	VTYPE	iscore = interpolateS(level, agap, bgap, cmode, wjxt, bab);
+	if (iscore != SKIP) scr += iscore;
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = ainex.exgl;
 	b->inex.exgl = binex.exgl;
