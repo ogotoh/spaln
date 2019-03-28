@@ -22,13 +22,23 @@
 #include "stdtype.h"
 #include "mfile.h"
 
-Mfile::Mfile(size_t rec_size)
+Mfile::Mfile(size_t rec_size) :
+	wwd(rec_size), recno(0)
 {
-	wwd = rec_size;
 	size_t	offbrk = BLOCK_SIZE * wwd;
 	ptr = cur = new char[offbrk];
 	brk = ptr + offbrk;
-	recno = 0;
+}
+
+Mfile::Mfile(const Mfile& src) :
+	wwd(src.wwd), recno(src.recno)
+{
+	size_t	offset = src.cur - src.ptr;
+	size_t	offbrk = src.brk - src.ptr;
+	ptr = new char[offbrk];
+	memcpy(ptr, src.ptr, offset);
+	cur = ptr + offset;
+	brk = ptr + offbrk;
 }
 
 UPTR Mfile::flush()
@@ -38,7 +48,8 @@ UPTR Mfile::flush()
 	    tmp = new char[recno * wwd];
 	    memcpy(tmp, ptr, recno * wwd);
 	}
-	delete[] ptr; ptr = 0;
+	delete[] ptr;
+	ptr = 0;
 	return ((UPTR) tmp);
 }
 
@@ -58,4 +69,18 @@ void Mfile::write(const UPTR pi)
 	memcpy(cur, pi, wwd);
 	cur += wwd;
 	++recno;
+}
+
+Mfile& Mfile::operator=(const Mfile& src)
+{
+	size_t	offset = src.cur - src.ptr;
+	size_t	offbrk = src.brk - src.ptr;
+	delete[] ptr;
+	ptr = new char[offbrk];
+	memcpy(ptr, src.ptr, offset);
+	wwd = src.wwd;
+	recno = src.recno;
+	cur = ptr + offset;
+	brk = ptr + offbrk;
+	return (*this);
 }

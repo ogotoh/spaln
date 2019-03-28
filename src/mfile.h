@@ -30,10 +30,12 @@ class Mfile {
 	size_t	recno;
 public:
 	Mfile(size_t rec_size);
+	Mfile(const Mfile& src);
 	~Mfile() {delete[] ptr;}
 	void	write(const UPTR pi);
 	UPTR	flush();
 	size_t	size() {return recno;}
+	Mfile& operator=(const Mfile& src);
 };
 
 #endif

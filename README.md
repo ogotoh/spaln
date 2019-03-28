@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.3.3
-#### Last updated: 2019-02-12
+#### Present Version 2.3.3a
+#### Last updated: 2019-03-28
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -294,6 +294,12 @@ on the same strand.
 ```
     
 ## <a name="Changes">Changes from previous version</a>
+1. The heuristic alignment engine has been updated, resulting in marginal but significant improvement in speed and accuracy, 
+especially with -Q3/7 option.
+2. chachr.pl has been extended to accept Ganbank/DDBJ and EMBL-formatted files in 
+addition to FASTA files. Maybe used as a format convertor.
+
+## Changes in version 2.3.3</a>
 1. The maxmal path size has been extented from 255 to 2047 characters.
 2. The 'NEVSEL' constant value has been changed to avoid underflow of 2 * NEVSEL.
 3. In utilseq.c and .h, a member variable in class PatMat has been moved to a local variable
@@ -328,4 +334,4 @@ Automated classification of alternative splicing and transcriptional initiation 
 
 * * *
 
-Copyright (c) 1997-2018 Osamu Gotoh (o.gotoh@aist.go.jp) All Rights Reserved.
+Copyright (c) 1997-2019 Osamu Gotoh (o.gotoh@aist.go.jp) All Rights Reserved.
