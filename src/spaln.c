@@ -53,6 +53,7 @@ static	const	int	def_max_extend_gene_rng = 3;
 static	const	long	MaxWordNoSpace = 1 << 30;	// 1GB
 
 enum QvsD {UNDF, AvsA, AvsG, CvsC, CvsG, FvsG, GvsA, GvsC, GvsG};
+const char* const QvsDstr[] = {"UNDF", "AvsA", "AvsG", "CvsC", "CvsG", "FvsG", "GvsA", "GvsC", "GvsG"};
 
 static	QvsD	QRYvsDB = CvsG;
 static	InputMode	input_form = IM_SNGL;
@@ -1121,7 +1122,7 @@ static SrchBlk* getblkinf(Seq* sqs[], const char* dbs, MakeBlk* mb)
 		case UNDF: fatal("Ilegal seq combination !\n"); break;
 	    }
 	    ReadBlock = path2dbf(str, dbs, ext);
-	    if (!ReadBlock) fatal("Specify database !\n");
+	    if (!ReadBlock) fatal("Specify database (expected %s%s - mode %s) !\n", dbs, ext, QvsDstr[QRYvsDB]);
 	}
 	if ((QRYvsDB == CvsC || QRYvsDB == FvsG) && algmode.mns != 2) algmode.mns = 1;
 	SrchBlk* bks = dbs? new SrchBlk(sqs, ReadBlock, genomedb):
