@@ -53,6 +53,8 @@ static	const	int	def_max_extend_gene_rng = 3;
 static	const	long	MaxWordNoSpace = 1 << 30;	// 1GB
 
 enum QvsD {UNDF, AvsA, AvsG, CvsC, CvsG, FvsG, GvsA, GvsC, GvsG};
+static const char* 
+	QvsDstr[] = {"UNDF", "AvsA", "AvsG", "CvsC", "CvsG", "FvsG", "GvsA", "GvsC", "GvsG"};
 
 static	QvsD	QRYvsDB = CvsG;
 static	InputMode	input_form = IM_SNGL;
@@ -157,8 +159,8 @@ static	PolyA	polyA;
 static	int	no_seqs = 0;
 static	bool	pairedends = false;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.3.3a";
-static	const	int	date = 190328;
+static	const	char*	version = "2.3.3b";
+static	const	int	date = 190426;
 
 static void usage(const char* messg)
 {
@@ -176,51 +178,53 @@ static void usage(const char* messg)
 	fputs("spaln [R_options] -aAAdb protein.fa\t(to search aa database)\n", stderr);
 	fputs("\nin the following, # = integer or real number; $ = string; default in ()\n\n", stderr);
 	fputs("W_Options:\n", stderr);
-	fputs("\t-Xk#\t; Word size (11)\n", stderr);
-	fputs("\t-Xb#\t; Block size (4096)\n", stderr);
-	fputs("\t-XG#\t; Maximum expected gene size (262144)\n", stderr);
-	fputs("\t-Xa#\t; Abundance factor (10)\n", stderr);
-	fputs("\t-g\t; gzipped output\n\n", stderr);
+	fputs("\t-Xk#\tWord size (11)\n", stderr);
+	fputs("\t-Xb#\tBlock size (4096)\n", stderr);
+	fputs("\t-XG#\tMaximum expected gene size (262144)\n", stderr);
+	fputs("\t-Xa#\tAbundance factor (10)\n", stderr);
+	fputs("\t-g\tgzipped output\n\n", stderr);
 	fputs("R_Options (representatives):\n", stderr);
-	fputs("\t-H#\t; Minimum score for report (35)\n", stderr);
-	fputs("\t-L or -LS or -L#\t; semi-global or local alignment (-L)\n", stderr);
-	fputs("\t-M#\t: Number of outputs per query (1) (max=4 for genome vs cDNA|protein)\n", stderr);
-	fputs("\t-O#\t; 0:Gff3_gene; 1:alignment; 2:Gff3_match; 3:Bed; 4:exon-inf;\n", stderr);
-	fputs("\t-O#\t; 5:intron-inf; 6:cDNA; 7:translated; 8: block-only;\n", stderr); 
-	fputs("\t-O#\t: 10: SAM; 12: binary (4)\n", stderr);
-	fputs("\t-Q#\t; 0:DP; 1-3: HSP-Search; 4-7; Block-Search (3)\n", stderr);
-	fputs("\t-R$\t; Read block information file *.bkn, *.bkp or *.bka\n", stderr);
-	fputs("\t-S#\t; Orientation. 0: annotation; 1: forward; 2: reverse; 3: both (0)\n", stderr);
-	fputs("\t-T$\t; Subdirectory where species-specific parameters reside\n", stderr);
-	fputs("\t-a$\t; Specify AAdb. Must run `makeidx.pl -ia' breforehand\n", stderr);
-	fputs("\t-A$\t; Same as -a but db sequences are stored in memory\n", stderr);
-	fputs("\t-d$\t; Specify genome. Must run `makeidx.pl -i[n|p]' breforehand\n", stderr);
-	fputs("\t-D$\t; Same as -d but db sequences are stored in memory\n", stderr);
-	fputs("\t-g\t; gzipped output in combination with -O12\n", stderr);
-	fputs("\t-iC\t; paired inputs. C=a: alternative; C=p: parallel\n", stderr);
-	fputs("\t-l#\t; Number of characters per line in alignment (60)\n", stderr);
-	fputs("\t-o$\t; File where results are written (stdout)\n", stderr);
-	fputs("\t-pa\t; Don\'t remove poly A\n", stderr);
-	fputs("\t-pw\t; Report results even if the score is below the threshold\n", stderr);
-	fputs("\t-pq\t; Quiet mode\n", stderr);
-	fputs("\t-r$\t; Report information about block data file\n", stderr);
-	fputs("\t-u#\t; Gap-extension penalty (3)\n", stderr);
-	fputs("\t-v#\t: Gap-open penalty (8)\n", stderr);
-	fputs("\t-w#\t; Band width for DP matrix scan (100)\n", stderr);
-	fputs("\t-t[#]\t; Mutli-thread operation with # CPUs\n", stderr);
-	fputs("\t-ya#\t; Stringency of splice site. 0->3: strong->weak\n", stderr);
-	fputs("\t-yl3\t; Ddouble affine gap penalty\n", stderr);
-	fputs("\t-ym#\t: Nucleotide match score (2)\n", stderr);
-	fputs("\t-yn#\t; Nucleotide mismatch score (-6)\n", stderr);
-	fputs("\t-yy#\t; Weight for splice site signal (8)\n", stderr);
-	fputs("\t-yz#\t; Weight for coding potential (2)\n", stderr);
-	fputs("\t-yB#\t; Weight for branch point signal (0)\n", stderr);
-	fputs("\t-yI$\t; Intron length distribution\n", stderr);
-	fputs("\t-yL#\t; Minimum expected length of intron (30)\n", stderr);
-	fputs("\t-yS[#]\t; Use species-specific parameter set\n", stderr);
-	fputs("\t-yX\t; Use parameter set for cross-species comparison\n", stderr);
-	fputs("\t-yZ#\t; Weight for intron potential (0)\n", stderr);
-	fputs("\t-XG#\t; Reset maximum expected gene size, suffix k or M is effective\n", stderr);
+	fputs("\t-H#\tMinimum score for report (35)\n", stderr);
+	fputs("\t-L or -LS or -L#\tsemi-global or local alignment (-L)\n", stderr);
+	fputs("\t-M#\tNumber of outputs per query (1) (max=4 for genome vs cDNA|protein)\n", stderr);
+	fputs("\t-O# (GvsA|C)\t0:Gff3_gene; 1:alignment; 2:Gff3_match; 3:Bed; 4:exon-inf;\n", stderr);
+	fputs("\t\t\t5:intron-inf; 6:cDNA; 7:translated; 8:block-only;\n", stderr); 
+	fputs("\t\t\t10:SAM; 12:binary (4)\n", stderr);
+	fputs("\t-O# (AvsA)\t0:statistics; 1:alignment; 2:Sugar; 3:Psl; 4:XYL;\n", stderr);
+	fputs("\t\t\t5:srat+XYL; 8:Cigar; 9:Vulgar; 10:SAM (4)\n", stderr); 
+	fputs("\t-Q#\t0:DP; 1-3:HSP-Search; 4-7; Block-Search (3)\n", stderr);
+	fputs("\t-R$\tRead block information file *.bkn, *.bkp or *.bka\n", stderr);
+	fputs("\t-S#\tOrientation. 0:annotation; 1:forward; 2:reverse; 3:both (0)\n", stderr);
+	fputs("\t-T$\tSubdirectory where species-specific parameters reside\n", stderr);
+	fputs("\t-a$\tSpecify AAdb. Must run `makeidx.pl -ia' breforehand\n", stderr);
+	fputs("\t-A$\tSame as -a but db sequences are stored in memory\n", stderr);
+	fputs("\t-d$\tSpecify genome. Must run `makeidx.pl -i[n|p]' breforehand\n", stderr);
+	fputs("\t-D$\tSame as -d but db sequences are stored in memory\n", stderr);
+	fputs("\t-g\tgzipped output in combination with -O12\n", stderr);
+	fputs("\t-iC\tpaired inputs. C=a:alternative; C=p:parallel\n", stderr);
+	fputs("\t-l#\tNumber of characters per line in alignment (60)\n", stderr);
+	fputs("\t-o$\tFile where results are written (stdout)\n", stderr);
+	fputs("\t-pa\tDon\'t remove poly A\n", stderr);
+	fputs("\t-pw\tReport results even if the score is below the threshold\n", stderr);
+	fputs("\t-pq\tQuiet mode\n", stderr);
+	fputs("\t-r$\tReport information about block data file\n", stderr);
+	fputs("\t-u#\tGap-extension penalty (3)\n", stderr);
+	fputs("\t-v#\tGap-open penalty (8)\n", stderr);
+	fputs("\t-w#\tBand width for DP matrix scan (100)\n", stderr);
+	fputs("\t-t[#]\tMutli-thread operation with # CPUs\n", stderr);
+	fputs("\t-ya#\tStringency of splice site. 0->3:strong->weak\n", stderr);
+	fputs("\t-yl3\tDdouble affine gap penalty\n", stderr);
+	fputs("\t-ym#\tNucleotide match score (2)\n", stderr);
+	fputs("\t-yn#\tNucleotide mismatch score (-6)\n", stderr);
+	fputs("\t-yy#\tWeight for splice site signal (8)\n", stderr);
+	fputs("\t-yz#\tWeight for coding potential (2)\n", stderr);
+	fputs("\t-yB#\tWeight for branch point signal (0)\n", stderr);
+	fputs("\t-yI$\tIntron length distribution\n", stderr);
+	fputs("\t-yL#\tMinimum expected length of intron (30)\n", stderr);
+	fputs("\t-yS[#]\tUse species-specific parameter set\n", stderr);
+	fputs("\t-yX\tUse parameter set for cross-species comparison\n", stderr);
+	fputs("\t-yZ#\tWeight for intron potential (0)\n", stderr);
+	fputs("\t-XG#\tReset maximum expected gene size, suffix k or M is effective\n", stderr);
 	fputs("\nExamples:\n", stderr);
 	fputs("\tspaln -Wdictdisc_g.bkn -KD -Xk10 -Xb8192 dictdisc_g.gf\n", stderr);
 	fputs("\tspaln -WSwiss.bka -KA -Xk5 Swiss.faa\n", stderr);
@@ -1121,7 +1125,10 @@ static SrchBlk* getblkinf(Seq* sqs[], const char* dbs, MakeBlk* mb)
 		case UNDF: fatal("Ilegal seq combination !\n"); break;
 	    }
 	    ReadBlock = path2dbf(str, dbs, ext);
-	    if (!ReadBlock) fatal("Specify database !\n");
+	    if (!ReadBlock) {
+		fatal("Specify database (expected %s%s - mode %s)!\n", 
+			dbs, ext, QvsDstr[QRYvsDB]);
+	    }
 	}
 	if ((QRYvsDB == CvsC || QRYvsDB == FvsG) && algmode.mns != 2) algmode.mns = 1;
 	SrchBlk* bks = dbs? new SrchBlk(sqs, ReadBlock, genomedb):
