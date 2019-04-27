@@ -151,7 +151,7 @@ the query without prior expansion. <u>Note, however, that compressed query can c
        * No argument: Multiple loci up to the maximum number specified by the program (4 in the present implementation)
        * *N*=1: Re-search the *query* region not aligned in the first trial. May be useful to detect chimera or fragmented genomic region
        * *N*\>1: Output multiple loci maximally up to *N*
-     * -O *N*: Select output format (4)
+     * -O *N*: Select output format for genome vs cDNA or aa (4)
         * *N*=0: Gff3 gene format
         * *N*=1: Alignment
         * *N*=2: Gff3 match format
@@ -167,6 +167,16 @@ the query without prior expansion. <u>Note, however, that compressed query can c
 	    Output.grd, Output.erd, and Output.qrd will be created. Otherwise,
 	    query.grd, query.erd, and query.qrd will be created. If the -g 
             option is set, gzip-compressed outputs will be generated.
+     * -O *N*: Select output format for aa vs aa (4)
+        * *N*=0: statistics (%divergence alignment_score #match, #mismatch #gap #unpaired)
+        * *N*=1: Alignment
+        * *N*=2: Sugar format
+        * *N*=3: Psl format
+        * *N*=4: XYL = Coordinate + match length
+        * *N*=5: statistics + XYL
+        * *N*=8: Cigar format
+        * *N*=9: Vulgar format
+        * *N*=10: SAM format
      * -Q *N*: Select algorithm (3)
         * 0<=*N*<=3: Genomic segment in the fasta format given by the first argument vs. *query* given by the second argument. One may skip the formatting step described above if only this mode of operation is used.
         * 4<=*N*<=7: Genome mapping and alignment. The genomic sequence must be formatted beforehand.
