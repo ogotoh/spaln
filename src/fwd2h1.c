@@ -3360,17 +3360,9 @@ VTYPE Aln2h1::interpolateH(INT level, int agap, int bgap, int cmode,
 		    if (br > b->left && br < b->right) b->right = br;
 		}
 		pincerTrcbkH_ng(cmode, kscore);
-	    } else { 	// cmode == 3, give up alignment
-		if (wjxt) {
-		    mfd->write((UPTR) wjxt);
-		    mfd->write((UPTR) (wjxt + 1));
-		} else {
-		    SKL	tmp = {a->left, b->left};
-		    mfd->write((UPTR) &tmp);
-		    tmp.m = a->right; tmp.n = b->right;
-		    mfd->write((UPTR) &tmp);
-		}
-		kscore = 0;
+	    } else { 			// cmode == 3, space-saving DP
+		stripe31(seqs, wdw, alprm.sh);
+		kscore = lspH_ng();
 	    }
 	    if (iscore > kscore) {
 		if (save_mfd) gswap(mfd, save_mfd);
