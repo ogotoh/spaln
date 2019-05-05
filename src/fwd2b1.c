@@ -1681,13 +1681,9 @@ VTYPE Aln2b1::seededB_ng(INT level, int eimode, BOUND& lub)
 			(bgap < IntronPrm.elmt && agap >= IntronPrm.llmt))) {
 			stripe(seqs, wdw, alprm.sh);
 			scr += pincerTrcbkB_ng(cmode);
-		    } else if (dpspace < alprm.maxsp) {
+		    } else {
 			stripe(seqs, wdw, alprm.sh);
 			scr += lspB_ng();
-		    } else {
-//			scr += pincerTrcbkB_ng(cmode);
-			mfd->write((UPTR) wjxt);
-			mfd->write((UPTR) (wjxt + 1));
 		    }
 		}
 		cmode = 3;
@@ -1739,14 +1735,9 @@ VTYPE Aln2b1::seededB_ng(INT level, int eimode, BOUND& lub)
 		(bgap < IntronPrm.elmt && agap >= IntronPrm.llmt))) {
 		stripe(seqs, wdw, alprm.sh);
 		scr += pincerTrcbkB_ng(cmode);
-	    } else if (dpspace < alprm.maxsp) {
+	    } else {
 		stripe(seqs, wdw, alprm.sh);
 		scr += lspB_ng();
-	    } else {	// cmode == 3, give up alignment
-		SKL     tmp = {a->left, b->left};
-		mfd->write((UPTR) &tmp);
-		tmp.m = a->right; tmp.n = b->right;
-		mfd->write((UPTR) &tmp);
 	    }
 	}
 	rest_range(seqs, rng, 2);

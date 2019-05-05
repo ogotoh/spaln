@@ -29,10 +29,6 @@
 #define isseqchar(c) (isalpha(c) || (c) == _UNP || (c) == _TRM)
 #define	aton(c) ((c) - 'A' + A)
 
-#define VSWAP(x, y) {VTYPE tmp = x; x = y; y = tmp;}
-
-struct ODRSP {CHAR* ps; int odr;};
-
 static	const	char	StrandPhrase[] = "StrandPhrase";
 static	const	int	tribial_area = 64;
 static	const	int	DelFrac	= 90;
@@ -175,7 +171,8 @@ SEQ_CODE* setSeqCode(Seq* sd, int molc)
 
 SeqServer::SeqServer(int ac, const char** av, InputMode infm, 
 	const char* catalog, int mq, int mt)
-	: argc(ac), argc0(ac), argv(av), argv0(av), input_form(infm)
+	: argc(ac), argc0(ac), argv(av), argv0(av), 
+	  cfrom(0), cto(0), input_form(infm)
 {
 	molc[0] = mq; molc[1] = mt;
 	input_ns = (infm == IM_SNGL)? 1: 2;
@@ -196,7 +193,6 @@ SeqServer::SeqServer(int ac, const char** av, InputMode infm,
 	fc = catalog? fopen(catalog, "r"): 0;
 	nfrom = counter = 0;
 	nto = INT_MAX;
-	cfrom = cto = 0;
 	attr[0] = attr[1] = 0;
 	atsz[0] = atsz[1] = 0;
 	sw = false;
@@ -215,7 +211,8 @@ void SeqServer::reset()
 	if (fc) rewind(fc);
 	nfrom = counter = 0;
 	nto = INT_MAX;
-	cfrom = cto = 0;
+	delete[] cfrom; cfrom = 0;
+	delete[] cto; cto = 0;
 	sw = false;
 }
 
@@ -258,27 +255,38 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 	    if (ps) {	/* exam. seqs in range */
 		*ps = '\0';
 		while (*++ps && isspace(*ps)) ;
+		if (*ps == '$') ++ps;
 		char*	qs = ps;
-		for ( ; *ps; ++ps) {
-		    if (isspace(*ps) || *ps == ',' || *ps == ')') {
-			*ps++ = '\0';
-			break;
-		    }
-		}
+		int	c = 0;
+		while ((c = *ps) && !isspace(c) && !strchr(",-)", c)) ++ps;
+		if (c) *ps++ = '\0';
 		if (isdigit(*qs))	nfrom = atoi(qs) - 1;
-		else if (isalpha(*qs))	cfrom = qs;
+		else if (isalpha(*qs))	cfrom = strrealloc(0, qs);
+
 		while (*ps && isspace(*ps)) ++ps;
-		if (isdigit(*ps))	nto = atoi(ps);
-		else if (isalpha(*ps)) {
-		    cto = ps;
-		    while (*ps++) {
-			if (isspace(*ps) || *ps == ')') {
-			    *ps = '\0';
-			    break;
-			}
-		    }
+
+		if (*ps == '$') ++ps;
+		qs = ps;
+		while (*ps && !isspace(*ps) && *ps != ')') ++ps;
+		*ps = '\0';
+		if (isdigit(*qs))	nto = atoi(qs);
+		else if (isalpha(*qs))	cto = strrealloc(0, qs);
+		else if (c != ',' && c != '-') {
+		    if (cfrom) cto = strrealloc(0, "");
+		    else nto = nfrom + 1;
 		}
-	    } 
+	    } else if ((ps = strchr(str, '$'))) {
+		char* qs = ++ps;
+		while (*ps && !isspace(*ps)) ++ps;
+		*ps = '\0';
+		if (isdigit(*qs)) {
+		    nfrom = atoi(qs);
+		    nto = nfrom + 1;
+		} else if (isalpha(*qs)) {
+		    cfrom = strrealloc(0, qs);
+		    cto = strrealloc(0, "");
+		}
+	    }
 #if USE_ZLIB
 	    fd[which] = sd->openseq(str, gzfd + which);
 	    if (!fd[which] && !gzfd[which]) fatal(not_found, str);
@@ -303,11 +311,11 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 		molc[which] = sd->inex.molc;
 		strcat(attr[which], molc[which] == PROTEIN? "P": "D");
 	    }
-	    if (cfrom && sd->sname && !wordcmp(cfrom, (*sd->sname)[0])) {
-		sw = true; cfrom = 0;
+	    if (sw && cto && (!*cto || (sd->sname && !wordcmp(cto, (*sd->sname)[0])))) {
+		sw = false; delete[] cto; cto = 0;
 	    }
-	    if (cto && sd->sname && !wordcmp(cto, (*sd->sname)[0])) {
-		sw = false; cto = 0;
+	    if (cfrom && sd->sname && !wordcmp(cfrom, (*sd->sname)[0])) {
+		sw = true; delete[] cfrom; cfrom = 0;
 	    }
 	    if (!cfrom && nfrom == counter) sw = true;
 	    ++counter;
@@ -325,11 +333,11 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 		molc[which] = sd->inex.molc;
 		strcat(attr[which], molc[which] == PROTEIN? "P": "D");
 	    }
-	    if (cfrom && sd->sname && !wordcmp(cfrom, (*sd->sname)[0])) {
-		sw = true; cfrom = 0;
+	    if (sw && cto && (!*cto || (sd->sname && !wordcmp(cto, (*sd->sname)[0])))) {
+		sw = false; delete[] cto; cto = 0;
 	    }
-	    if (cto && sd->sname && !wordcmp(cto, (*sd->sname)[0])) {
-		sw = false; cto = 0;
+	    if (cfrom && sd->sname && !wordcmp(cfrom, (*sd->sname)[0])) {
+		sw = true; delete[] cfrom; cfrom = 0;
 	    }
 	    if (!cfrom && nfrom == counter) sw = true;
 	    ++counter;
@@ -341,7 +349,8 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 	   gzfd[which] = 0;
 	  }
 #endif
-	  cfrom = cto = 0;
+	  delete[] cfrom; cfrom = 0;
+	  delete[] cto; cto = 0;
 	  nfrom = 0; nto = INT_MAX;
 	}
 	return IS_END;

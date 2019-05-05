@@ -75,7 +75,7 @@ Benchmarking spliced alignment programs including  Spaln2, an extended version o
 <i>Nucleic Acids Research</i> <b>40</b> (20) e161 (2012)
 <BR>
 <p>
-<h2><a href="#Chg">Present Version: 2.3.3a</a>, Last update: 2019-02-14 </h2>
+<h2><a href="#Chg">Present Version: 2.3.3c</a>, Last update: 2019-05-02 </h2>
 <p>
 <h2><a name="In">Install</a></h2>
 <h3>From source</h3>
@@ -216,7 +216,7 @@ used as follows:<br>
        <li> <i>N</i>=1: Re-search the <i>query</i> region not aligned in the first trial. May be useful to detect chimera or fragmented genomic region
 	<li> <i>N</i>>1: Output multiple loci maximally up to <i>N</i>
       </ul>
-     <li> -O<i>N</i>: Select output format (4)
+     <li> -O<i>N</i>: Select output format for genome vs cDNA or aa (4)
       <ul>
        <li> <i>N</i>=0: Gff3 gene format
        <li> <i>N</i>=1: Alignment
@@ -233,7 +233,19 @@ used as follows:<br>
 	    Output.grd, Output.erd, and Output.qrd will be created. Otherwise,
 	    query.grd, query.erd, and query.qrd will be created.
        </ul>
-     <li> -Q<i>N</i>: Select algorithm (3)
+      <li> -O<i>N</i>: Select output format for aa vs aa (4)
+      <ul>
+       <li> <i>N</i>=0: statistics (%divergence alignment_score #match, #mismatch #gap #unpaired)
+       <li> <i>N</i>=1: Alignment
+       <li> <i>N</i>=2: Sugar format
+       <li> <i>N</i>=3: Psl format
+       <li> <i>N</i>=4: XYL = Coordinate + match length
+       <li> <i>N</i>=5: statistics + XYL
+       <li> <i>N</i>=8: Cigar format
+       <li> <i>N</i>=9: Vulgar format
+       <li> <i>N</i>=10: SAM format
+       </ul>
+    <li> -Q<i>N</i>: Select algorithm (3)
        <ul>
         <li> 0&lt;=<i>N</i>&lt;=3: Genomic segment in the fasta format given by the first argument vs. <i>query</i> given by the second argument. One may skip the formatting step described above if only this mode of operation is used.
         <li> 4&lt;=<i>N</i>&lt;=7: Genome mapping and alignment. The genomic sequence must be formatted beforehand.
@@ -361,6 +373,18 @@ used as follows:<br>
 <p>
 
 <h2><a name="Chg">Change from previous versions</a></h2>
+Added/modified in Ver. 2.3.3c (2019-05-02):
+<p>
+<ol>
+ <li>Update alignment engines to prevent rare segmentation faults.</li>
+</ol>
+
+Added/modified in Ver. 2.3.3b (2019-04-26):
+<p>
+<ol>
+ <li>Minor changes in help/error messages and documentations.</li>
+</ol>
+
 Added/modified in Ver. 2.3.3a (2019-03-28):
 <p>
 <ol>
@@ -374,7 +398,7 @@ addition to FASTA files. Maybe used as a format convertor.</li>
 Added/modified in Ver. 2.3.3 (2019-02-12):
 <p>
 <ol>
- <li>The maximal path size has been extended from 255 to 2047 characters..</li>
+ <li>The maximal path size has been extended from 255 to 2047 characters.</li>
  <li>The <i>NEVSEL</i> constant value has been changed to avoid underflow of 2 * <i>NEVSEL</i>.
  <li>In utilseq.c and .h, a member variable in class <i>PatMat</i> has been moved to a local variable to recover thread safety.</li>
  <li>When <b>Spaln</b> is run: <TT>% spaln protein genome</TT>, the order of the 1st and 2nd arguments is exchanged with a warning message.</li>
@@ -646,7 +670,7 @@ Added/modified in Ver. 1.3.0
  <li> The 'Salvage' procedure was added to find homologues that are missed by the formal criteria.
 </ol> 
 <p>
-Copyright (c) 2007-2018 Osamu Gotoh all rights reserved
+Copyright (c) 2007-2019 Osamu Gotoh all rights reserved
 <p>
 
 

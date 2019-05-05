@@ -2421,17 +2421,9 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 		    if (br > b->left && br < b->right) b->right = br;
 		}
 		pincerTrcbkS_ng(cmode, kscore);
-	    } else {	// cmode == 3, give up alignment
-		if (wjxt) {
-		    mfd->write((UPTR) wjxt);
-		    mfd->write((UPTR) (wjxt + 1));
-		} else {
-		    SKL	tmp = {a->left, b->left};
-		    mfd->write((UPTR) &tmp);
-		    tmp.m = a->right; tmp.n = b->right;
-		    mfd->write((UPTR) &tmp);
-		}
-		kscore = 0;
+	    } else { 			// cmode == 3, space-saving DP
+		stripe(seqs, wdw, alprm.sh);
+		kscore = lspS_ng();
 	    }
 	    if (iscore > kscore) {
 		if (save_mfd) gswap(mfd, save_mfd);
