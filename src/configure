@@ -82,7 +82,7 @@ echo "binaries install to $exec_prefix"
 echo "tables install to $table_dir"
 echo "alndbs install to $alndbs_dir"
 
-# udpate Makefile
+# update Makefile
 sed < Makefile.in "
 /^CXX *=/s%=.*%= $CXX%
 /^CFLAGS *=/s%=.*%= $CFLAGS%
@@ -97,12 +97,12 @@ sed < Makefile.in "
 
 echo "wrote Makefile"
 
-# udpate iolib.h
+# update iolib.h
 sed < iolib.src "
 /#table_dir#/s%#table_dir#%$table_dir%
 " > iolib.h
 
-# udpate dbs.h 
+# update dbs.h
 sed < dbs.src "
 /#alndbs_dir#/s%#alndbs_dir#%$alndbs_dir%
 " > dbs.h
