@@ -217,19 +217,18 @@ void SigII::pfqrepos(RANGE* cr)
 {
 	if (!cr) return;
 	int	getrid = cr->left * step;
-	int	gpbias = 0;
+	int	gpbias = min(pfq[0].gps, pfq[pfqnum].gps);
 	PFQ*	nfq = pfq;
 	PFQ*	wfq = pfq;
 	int*	wst = lst;
 	int*	nst = lst;
 
-	for ( ; wfq->num; ++wfq) {
+	do {
 	    while (cr->right < wfq->pos / step) {
 		if (!neorng(++cr)) goto loopout;
 		getrid += step * (cr->left - cr[-1].right);
 	    }
 	    if (cr->left <= wfq->pos / step) {
-		if (nfq == pfq) gpbias = wfq->gps;
 		if (nfq != wfq) *nfq = *wfq;
 		nfq->gps -= gpbias;
 		(nfq++)->pos -= getrid;
@@ -239,11 +238,8 @@ void SigII::pfqrepos(RANGE* cr)
 	    } else if (lst) {
 		for (int i = 0; i < wfq->num; ++i) ++wst;
 	    }
-	}
+	} while ((wfq++)->num);
 loopout:
-	nfq->pos = wfq->pos - getrid;
-	nfq->num = 0;
-	nfq->gps = wfq->gps - gpbias;
 	pfqnum = nfq - pfq;
 	lstnum = nst - lst;
 }

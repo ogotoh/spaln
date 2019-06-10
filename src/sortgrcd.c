@@ -67,14 +67,15 @@ static	bool	reverse = false;
 
 static void usage()
 {
-	fputs("sortgrcd version 2.2: read binary grds and erds and sort them\n", stderr);
+	fputs("sortgrcd version 2.3: read binary grds and erds and sort them\n", stderr);
 	fputs("\tin the order of chromosomal location in each direction\n", stderr);
 	fputs("Usage: sortgrcd [options] *.grd\n", stderr);
 	fputs("Note: version 2 supports outputs from spaln 2.1.0 or later\n", stderr);
 	fputs("Note: version 2.1 supports -O3, 6, 7, and 8 options\n", stderr);
 	fputs("Options:\n", stderr);
 	fputs("\t-CN:\tMinimum % of coverage (0-100)\n", stderr);
-	fputs("\t-FN:\tFilter Level (0 -> 3: no -> stringent)\n", stderr);
+	fputs("\t-EN:\tReport only the best (N=1) or all (N=2) results per gene locus (1)\n", stderr);
+	fputs("\t-FN:\tFilter Level (0: 0 -> 3: no -> stringent)\n", stderr);
 	fputs("\t-GN:\tGenetic code (0: universal)\n", stderr);
 	fputs("\t-HN:\tMinimum spaln score\n", stderr);
 	fputs("\t-JN:\tMinimum ORF length (300)\n", stderr);

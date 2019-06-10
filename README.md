@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.3.3a
-#### Last updated: 2019-03-28
+#### Present Version 2.3.3d
+#### Last updated: 2019-06-10
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -261,6 +261,7 @@ the query without prior expansion. <u>Note, however, that compressed query can c
       `% sortgrcd [options] xxx.grd(.gz)`
   * Options:
     * -C _N_: Minimum cover rate = % nucleotides in predicted exons / length of *query* (x 3 if query is protein) (0-100)
+    * -E _N_: Report only the best (*N*=1) or all (*N*=2) results per gene locus (1)
     * -F _N_: Filter level (*N*=0: no; *N*=1: mild; *N*=2: medium; *N*=3: stringent)
     * -I _N_: Minimum sequence identity (0-100)
     * -H _N_: Minimum alignment score (35)
@@ -308,6 +309,7 @@ on the same strand.
 especially with -Q3/7 option.
 2. chachr.pl has been extended to accept Ganbank/DDBJ and EMBL-formatted files in 
 addition to FASTA files. Maybe used as a format convertor.
+3. Update help and error messages of **Spaln** and **Sortgrcd**.
 
 ## Changes in version 2.3.3</a>
 1. The maxmal path size has been extented from 255 to 2047 characters.

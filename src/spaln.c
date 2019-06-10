@@ -159,8 +159,8 @@ static	PolyA	polyA;
 static	int	no_seqs = 0;
 static	bool	pairedends = false;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.3.3c";
-static	const	int	date = 190502;
+static	const	char*	version = "2.3.3d";
+static	const	int	date = 190610;
 
 static void usage(const char* messg)
 {
@@ -216,6 +216,8 @@ static void usage(const char* messg)
 	fputs("\t-yl3\tDdouble affine gap penalty\n", stderr);
 	fputs("\t-ym#\tNucleotide match score (2)\n", stderr);
 	fputs("\t-yn#\tNucleotide mismatch score (-6)\n", stderr);
+	fputs("\t-yo#\tPenalty for a premature termination codon (100)\n", stderr);
+	fputs("\t-yx#\tPenalty for a frame shift error (100)\n", stderr);
 	fputs("\t-yy#\tWeight for splice site signal (8)\n", stderr);
 	fputs("\t-yz#\tWeight for coding potential (2)\n", stderr);
 	fputs("\t-yB#\tWeight for branch point signal (0)\n", stderr);
