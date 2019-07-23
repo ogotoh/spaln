@@ -643,7 +643,7 @@ VTYPE skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd)
     	    }
 	    m = wsk->m;
 	    n = wsk->n;
-	    if (usespb) while (api < m) ++api;
+	    if (usespb) while (!api.end() && api < m) ++api;
 	}
 	if (insert && !(a->inex.exgr && m == a->right)) {
 	    h += pwd->GapPenalty(insert);

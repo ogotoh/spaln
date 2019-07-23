@@ -939,8 +939,8 @@ void cutSigII(Seq* dest, Seq* sorc)
 	int*	wst = dst->lst;
 	while (pfq->num && pfq->pos < to) {
 	    PFQ pfqbf = *pfq;
-	    pfq->pos -= bias;
-	    pfq->gps -= gpbias;
+	    pfqbf.pos -= bias;
+	    pfqbf.gps -= gpbias;
 	    *wfq++ = pfqbf;
 	    if (lst)
 		for (int k = 0; k < pfq->num; ++k)

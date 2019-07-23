@@ -159,8 +159,8 @@ static	PolyA	polyA;
 static	int	no_seqs = 0;
 static	bool	pairedends = false;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.3.3d";
-static	const	int	date = 190610;
+static	const	char*	version = "2.3.3e";
+static	const	int	date = 190723;
 
 static void usage(const char* messg)
 {

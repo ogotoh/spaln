@@ -2358,6 +2358,7 @@ BLKTYPE	Qwords::next_mrglist()
 int SrchBlk::findblock(Seq* seqs[])
 {
 	Seq*	a = seqs[0];	// query
+	if (a->right - a->left - (wcp.Nshift + bpp[0]->width) < 1) return (ERROR);
 	init4(a);
 	int	nohit = 0;
 	int	sigpr = 0;
@@ -2574,6 +2575,7 @@ int SrchBlk::findh(Seq* seqs[])
 	for (ORF* wrf = orf; wrf->len; ++norf, ++wrf) {
 	  INT	meet = 0;
 	  b->translate(a, *wrf);
+	  if (a->right - a->left - (wcp.Nshift + bpp[0]->width) < 1) continue;
 	  qwd.reset(a);
 	  c = (a->right - a->left) / (wcp.Nshift + wcp.Nshift) - 1;
 	  init2(a);
@@ -2653,6 +2655,7 @@ int SrchBlk::findh(Seq* seqs[])
 int SrchBlk::finds(Seq* seqs[])
 {
 	Seq*	a = seqs[0];	// query
+	if (a->right - a->left - (wcp.Nshift + bpp[0]->width) < 1) return (ERROR);
 	init2(a);
 	INT	testword[2] = {0, 0};
 	INT	meet = 0;

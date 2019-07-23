@@ -904,7 +904,7 @@ static	const char*	fswarn = "%s %s FrameShift: %d %d\n";
 	    }
 	    m = wsk->m;
 	    n = wsk->n;
-	    if (usespb) while (api.lt(m)) ++api;
+	    if (usespb) while (!api.end() && api.lt(m)) ++api;
 	}
 	if (bb + 3 < bb_last) {
 	    if (algmode.lcl & (16 + 2) && bb[3].sigT > 0)
