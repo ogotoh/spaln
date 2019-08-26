@@ -75,7 +75,7 @@ Benchmarking spliced alignment programs including  Spaln2, an extended version o
 <i>Nucleic Acids Research</i> <b>40</b> (20) e161 (2012)
 <BR>
 <p>
-<h2><a href="#Chg">Present Version: 2.3.3d</a>, Last update: 2019-06-10 </h2>
+<h2><a href="#Chg">Present Version: 2.3.3f</a>, Last update: 2019-08-28 </h2>
 <p>
 <h2><a name="In">Install</a></h2>
 <h3>From source</h3>
@@ -374,7 +374,22 @@ used as follows:<br>
 <p>
 
 <h2><a name="Chg">Change from previous versions</a></h2>
-Added/modified in Ver. 2.3.3d (2019-06-10):
+Added/modified in Ver. 2.3.3f (2019-08-26):
+<p>
+<ol>
+ <li>Prevent segment fault invoked with -ia or -ip option .</li>
+</ol>
+
+Added/modified in Ver. 2.3.3e (2019-07-23):
+<p>
+<ol>
+ <li>Prevent segment fault invoked with extremely short query sequence (< 2 x word size).</li>
+ <li>Prevent possible infinite loop when query sequence possesses its own splice site information.
+ <li>Fix small bugs in gsinfo.c.</li>
+</ol>
+
+<h2><a name="Chg">Change from previous versions</a></h2>
+Added/modified in Ver. 2.3.3f (2019-06-10):
 <p>
 <ol>
  <li>Update help messages of <b>spaln</b> and <b>sortgrcd</b>.</li>

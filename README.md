@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.3.3e
-#### Last updated: 2019-07-23
+#### Present Version 2.3.3f
+#### Last updated: 2019-08-26
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -310,6 +310,7 @@ especially with -Q3/7 option.
 2. chachr.pl has been extended to accept Ganbank/DDBJ and EMBL-formatted files in 
 addition to FASTA files. Maybe used as a format convertor.
 3. Update help and error messages of **Spaln** and **Sortgrcd**.
+4. Prevent segmentation fault invoked with -ia or -ip option.
 
 ## Changes in version 2.3.3</a>
 1. The maxmal path size has been extented from 255 to 2047 characters.

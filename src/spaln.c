@@ -159,8 +159,8 @@ static	PolyA	polyA;
 static	int	no_seqs = 0;
 static	bool	pairedends = false;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.3.3e";
-static	const	int	date = 190723;
+static	const	char*	version = "2.3.3f";
+static	const	int	date = 190826;
 
 static void usage(const char* messg)
 {
@@ -745,7 +745,8 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	    if (algmode.mns == 1 && ori == 3) ori = b->inex.sens? 2: 1;
 	    if (algmode.mns == 2 && ori == 3) ori = b->inex.sens? 1: 2;
 	    if (algmode.lsg == 0 && ori == 3) ori = 1;
-	    if (dbs_dt[0] && b->inex.intr && extend_gene_rng(sqs, pwd, dbs_dt[0]))
+	    if (b->inex.intr && (!b->exin || 
+		(dbs_dt[0] && extend_gene_rng(sqs, pwd, dbs_dt[0]))))
 		genomicseq(sqs + 1, pwd, ori == 3);
 	}
 	if (algmode.lcl & 16) {	// local

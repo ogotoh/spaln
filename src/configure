@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # configure script for spaln
 #
 # To impose specific compiler or flags or install directory, use for example:
