@@ -28,7 +28,6 @@
 #include <math.h>
 
 #define level(i, j) (4 - 9 * countbit((i) & (j))/countbit(i)/countbit(j)/2)
-#define COMMENT_CHAR '#'
 
 /* arbitrarily assign termination code vs others */
 
@@ -52,9 +51,9 @@ BPPRM	bpprm = {0., 1., 1., 100};
 static	int	glocal = GLOBAL;
 static	float	smn[] = {2., 1., 0., -1., -2.};
 static	DefPrm	defNprm[max_simmtxes+1] = 
-{{2., 6., -2., 0., 1}, {3., 8., -6., 0.,1}, {2., 6., -2., 0., 1}, {0}};
+{{3., 8., -6., 0.,1}, {2., 6., -2., 0., 1}, {2., 6., -2., 0., 1}, {0}};
 static	DefPrm	defPprm[max_simmtxes+1] = 
-{{2., 9., 0., 0., 250}, {4., 10., 0., 0., 100}, {2, 9., 0., 0., 250}, {0}};
+{{4., 10., 0., 0., 100}, {2., 9., 0., 0., 250}, {2, 9., 0., 0., 250}, {0}};
 
 void optimize(int gl, int mnmx)
 {
@@ -84,7 +83,7 @@ VTYPE** Simmtx::SquareMtx()
 	return mtx;
 }
 
-int Simmtx::simgrade(int aa, int bb)
+int Simmtx::simgrade(int aa, int bb) const
 {
 	if (IsGap(aa) || IsGap(bb)) return (0);
 	if (AxB == DxD)
@@ -178,8 +177,8 @@ void Simmtx::Nmtx(const char* fname)
 static	const	int	nbit[16] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
 
 	char	str[MAXL];
-	*str = COMMENT_CHAR;
-	while (*str == COMMENT_CHAR) {
+	*str = _LCOMM;
+	while (*str == _LCOMM) {
 	    if (!fgets(str, MAXL, fd))
 		fatal("Matrix File %s was incomplete!\n", fname);
 	    char*	eql = strchr(str + 1, '=');
@@ -345,8 +344,8 @@ void Simmtx::Pmtx(const char* fname)
 	mtx = SquareMtx();
 	nrmlf = log(4.) * alprm.scale;	/* half bit */;
 	char	str[MAXL];
-	*str = COMMENT_CHAR;
-	while (*str == COMMENT_CHAR) {
+	*str = _LCOMM;
+	while (*str == _LCOMM) {
 	    if (!fgets(str, MAXL, fd))
 		fatal("Matrix File %s was incomplete!\n", fname);
 	    char*	eql = strchr(str + 1, '=');
@@ -459,11 +458,11 @@ void Simmtx::Hmtx(ComPmt compmt, Simmtx* pm)
 	drange = mtx[TRP][TRP] - minscr;
 }
 
-double Simmtx::avrmatch(INT* ConvTab)
+double Simmtx::avrmatch(INT* ConvTab) const
 {
 	if (AxB == DxD) return (double) nrmlf;
 	int	count[21];	// Radix sort
-	for (int i = 0; i < 21; ++i) count[i] = 0;
+	vclear(count, 21);
 	for (int i = ALA; i <= VAL; ++i) count[ConvTab[i]]++;
 	int	m = 0;
 	int	n = 0;
@@ -498,7 +497,7 @@ double Simmtx::avrmatch(INT* ConvTab)
 	return (ev);
 }
 
-void Simmtx::fparam(FILE* fd)
+void Simmtx::fparam(FILE* fd) const
 {
 	if (AxB == DxD)
 	    fprintf(fd, "s[=] (%.1lf), s[#] (%.1lf), ", smn[0], param->n);
@@ -507,7 +506,7 @@ void Simmtx::fparam(FILE* fd)
 	fprintf(fd, "u = %.1lf, v = %.1lf\n", param->u, alprm.v);
 }
 
-void Simmtx::printmtx(FILE* fd)
+void Simmtx::printmtx(FILE* fd) const
 {
 	for (int i = 0; i < dim; ++i) {
 	    for (int j = 0; j < dim; ++j) {
@@ -597,17 +596,18 @@ void setlsegs(int ls)
 	alprm.ls = max(alprm.ls, 1);
 }
 
-void readalprm(const char* ps)
+void readalprm(int& argc, const char**& argv, int oc)
 {
-const	char*	vl;
+const	char&	opt = argv[0][oc];
+	if (!opt) return;
+	bool	num = !(opt == 'h' || opt == 'r' || opt == 'I' || opt == 'r');
+const	char*	vl = getarg(argc, argv, num, ++oc);
+	if (!vl && !(opt == 'H' || opt == 'S')) return;
 
-	if (*ps == '-') ++ps;
-	vl = ps + 1;
-	if (*vl == '=') ++vl; 
-	const	char*	colon = strchr(vl, ':');
-	int	k = colon? atoi(colon + 1): 0;
+	const	char*	ps = strchr(vl, ':');
+	int	k = ps? atoi(ps + 1): 0;
 	if (k > max_simmtxes - 1) k = 0;
-	switch (*ps) {
+	switch (opt) {
 	    case 'a': algmode.any = *vl? atoi(vl): 3; break;	// boundary stringency
 	    case 'b': defPprm[k].b = atof(vl); break;		// bias added to mat elem
 	    case 'c': alprm2.jneibr = atoi(vl); break;	// 
@@ -671,7 +671,7 @@ const	char*	vl;
 		break;
 	    case 'T': IntronPrm.tlmt = atoi(vl); break;	// 
 	    case 'V': alprm.maxsp = atof(vl); break;	// max traceback volume
-	    case 'X': algmode.crs = 1; break;		// toggle cross-species switch
+	    case 'X': algmode.crs = vl? atoi(vl): 1; break;	// set cross-species switch
 	    case 'Y': IntronPrm.fact = atof(vl); break;	// amplitude of intron pen.
 	    case 'Z': alprm2.Z = atof(vl); break;	// intron potential
 	    default:  break;
@@ -681,7 +681,7 @@ const	char*	vl;
 void setSimmtxes(ComPmt ab, bool mdm, DefPrm* dp)
 {
 	int	upto = dp? 1: max_simmtxes;
-	if (!dp) dp = ab == DxD? defNprm: defPprm;
+	if (!dp) dp = (ab == DxD? defNprm: defPprm) + algmode.crs;
 	if (alprm.v == FQUERY) alprm.v = dp->v;
 	if (alprm.u == FQUERY) alprm.u = dp->u;
 	Simmtx**	psm = simmtxes.storedSimmtx;

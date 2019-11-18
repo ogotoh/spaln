@@ -37,7 +37,7 @@ static	int	scmpf(const SKL* a, const SKL* b);
 
 #if CDEBUG
 
-void putskl(SKL* skl)
+void putskl(const SKL* skl)
 {
 	int	i = 0;
 	int	w = 0;
@@ -110,7 +110,7 @@ void swapskl(SKL* skl)
 {
 	if (!skl) return;
 	int	num = (skl++)->n;
-	for ( ; num--; ++skl) gswap(skl->m, skl->n);
+	for ( ; num--; ++skl) swap(skl->m, skl->n);
 }
 
 static int scmpf(const SKL* a,const SKL* b)
@@ -120,11 +120,11 @@ static int scmpf(const SKL* a,const SKL* b)
 	return (a->n - b->n);
 }
 
-bool badskl(SKL* skl, Seq** sqs)
+bool badskl(const SKL* skl, const Seq** sqs)
 {
 	int	num = skl->n;
-	SKL*	prv = ++skl;
-	SKL*	trm = prv + num;
+const	SKL*	prv = ++skl;
+const	SKL*	trm = prv + num;
 	int	m0 = sqs? sqs[0]->left: 0;
 	int	n0 = sqs? sqs[1]->left: 0;
 	if (skl->m != m0 || skl->n != n0) return (true);
@@ -228,16 +228,14 @@ SKL* stdskl3(SKL** pskl)
 	return (*pskl = std);
 }
 
-int sklpartner(SKL* skl, int m, int given)
+int sklpartner(const SKL* skl, int m, int given)
 {
 	int	partner = 1 - given;
-	int	step[2];
-	DIM2*	coo = (DIM2*) skl;
-	DIM2*	boo = coo + skl->n - 2;
+const 	DIM2*	coo = (const DIM2*) skl;
+const 	DIM2*	boo = coo + skl->n - 2;
 
 	if (given && partner) return (ERROR);
-	step[0] = skl->m & STEP3m? 3: 1;
-	step[1] = skl->m & STEP3n? 3: 1;
+	int	step[2] = {skl->m & STEP3m? 3: 1, skl->m & STEP3n? 3: 1};
 	while (++coo < boo) {
 	    int	offset = m - coo[0][given];
 	    if (offset >= 0 && m < coo[1][given]) {
@@ -252,7 +250,7 @@ int sklpartner(SKL* skl, int m, int given)
 //	delete terminal gaps
 //	assume already standarized
 
-SKL* trimskl(Seq* seqs[], SKL* skl)
+SKL* trimskl(const Seq* seqs[], SKL* skl)
 {
 	int&	pn = skl->n;
 	SKL*	wsk = skl + 1;
@@ -273,12 +271,12 @@ SKL* trimskl(Seq* seqs[], SKL* skl)
 	return (skl);
 }
 
-SKL* gap2skl(GAPS* gga, GAPS* ggb)
+SKL* gap2skl(const GAPS* gga, const GAPS* ggb)
 {
-	GAPS*	ga = gga;
-	GAPS*	gb = ggb;
+const 	GAPS*	ga = gga;
+const 	GAPS*	gb = ggb;
 	int	maxskl = 2 * (gaps_size(ga) + gaps_size(gb));
-	GAPS*	gaps[2] = {++ga, ++gb};
+const 	GAPS*	gaps[2] = {++ga, ++gb};
 	int	mn[2] = {ga->gps - gb->gps, gb->gps - ga->gps};
 	int	ndel[2] = {0, 0};
 	int	node[2] = {gaps[0]->gps, gaps[1]->gps};
@@ -297,7 +295,7 @@ SKL* gap2skl(GAPS* gga, GAPS* ggb)
 	    if (parity[i]) ndel[i] += gaps[i]->gln;
 	    wk->m = node[i] - ndel[i];
 	    wk->n = min(node[i] - mn[i], gaps[j]->gps) - ndel[j];
-	    if (i) gswap(wk->m, wk->n);
+	    if (i) swap(wk->m, wk->n);
 	    SKL	cinc = {wk->m - (wk-1)->m, wk->n - (wk-1)->n};
 	    if (cinc.m < 0 || cinc.n < 0) {
 		delete[] skl;
@@ -332,7 +330,7 @@ SKL* gap2skl(GAPS* gga, GAPS* ggb)
 	return (skl);
 }
 
-void skl2gaps(GAPS* gaps[], SKL* skl, bool hl)
+void skl2gaps(GAPS* gaps[], const SKL* skl, bool hl)
 {
 	int	num = (skl++)->n;
 	GAPS*	wga = gaps[0] = new GAPS[num + 2];
@@ -371,7 +369,7 @@ void skl2gaps(GAPS* gaps[], SKL* skl, bool hl)
 	}
 }
 
-void skl2gaps3(GAPS* gaps[], SKL* skl, int pro)
+void skl2gaps3(GAPS* gaps[], const SKL* skl, int pro)
 {
 	int	num = (skl++)->n;
 	GAPS*	wga = gaps[0] = new GAPS[num + 2];

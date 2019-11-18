@@ -34,6 +34,8 @@ struct EXIN {
 	short   phs3;
 };
 
+static	const	EXIN	ZeroExin = {0, 0, 0, 0, 0, 0, -2, -2};
+
 struct INT53 {
 	INT	dinc5:	4;
 	INT	dinc3:	4;
@@ -45,8 +47,11 @@ class Premat {
 	FTYPE   fO;
 	int     bn;
 public:
-	Premat(Seq* seqs[]);
-	VTYPE	prematT(const CHAR* ps);
+	Premat(const Seq* seqs[]);
+	VTYPE	prematT(const CHAR* ps) const;
+	VTYPE	prematT1(const CHAR* ps) const {
+	    return (VTYPE) ((*ps == TRM || *ps == TRM2)? fO: 0);
+	}
 };
 
 struct PwdB;
@@ -72,32 +77,37 @@ class Exinon {
 public:
 	double	fact;
 	EXIN*	data;
-	Exinon(Seq* sd, FTYPE f, PwdB* pwd);
+	Exinon(const Seq* sd, FTYPE f, const PwdB* pwd);
 	~Exinon();
-	VTYPE	sig53(int m, int n, INTENDS c);
-	VTYPE	sigST(int n, bool init)
-	{return (VTYPE) (data? (init? data[n].sigS: data[n].sigT) / fact : 0);}
-	EXIN*	score(int n) {return (data + n);}
-	bool	isDonor(int n) {return (int53[n].cano5);}
-	bool	isAccpt(int n) {return (int53[n].cano3);}
-	bool	isCanon(int d, int a) {return
-	    ((int53[d].cano5 == 3) && int53[a].cano3 == 3) ||
+	VTYPE	sig53(int m, int n, INTENDS c) const;
+	VTYPE	sigST(int n, bool init) const {
+	    return (VTYPE) (data? (init? data[n].sigS: data[n].sigT) / fact : 0);
+	}
+	EXIN*	score(int n) const {return (data + n);}
+	bool	isDonor(int n) const {return (int53[n].cano5);}
+	bool	isAccpt(int n) const {return (int53[n].cano3);}
+	int	isCanon(int d, int a) const {return
+	    (((int53[d].cano5 == 3) && int53[a].cano3 == 3) ||
 	    (int53[d].cano5 == 2 && int53[a].cano3 == 2) ||
 	    (int53[d].cano5 == 1 && int53[a].cano3) ||
-	    (int53[d].cano5 && int53[a].cano3 == 1);}
-	bool	within(Seq* sd);
-	int	lplay(int n) {return (n - bias);}
-	int	rplay(int n) {return (bias + size - n);}
-friend	void Intron53(Seq* sd, PwdB* pwd);
-friend	void Intron53N(Seq* sd, FTYPE ff, PwdB* pwd);
-friend	void BoundarySeq(FILE* fd, Seq* sd, RANGE* rng);
-friend	void BoundaryScr(FILE* fd, Seq* sd, Gsinfo* gsinf);
+	    (int53[d].cano5 && int53[a].cano3 == 1))?
+		int53[d].cano5 + int53[a].cano3: 0;}
+	bool	within(const Seq* sd) const;
+	int	lplay(int n) const {return (n - bias);}
+	int	rplay(int n) const {return (bias + size - n);}
+	void	clear() {vset(data + bias, ZeroExin, size + 1);}
+	EXIN*	begin() const {return (data + bias);}
+	EXIN*	end()	const {return (data + bias + size - 1);}
+friend	void Intron53(Seq* sd, const PwdB* pwd, bool both_ori);
+friend	void Intron53N(Seq* sd, FTYPE ff, const PwdB* pwd, bool both_ori);
 };
 
-inline bool isJunct(int ph5, int ph3) {return (ph5 == ph3 && ph5 > -2);}
+inline bool isJunct(int phs5, int phs3) {
+	return (phs5 == phs3 && phs5 > -2);
+}
 
 class SpJunc {
-	Seq*	b;
+const	Seq*	b;
 	SPJ**	hashent;
 	SPJ*	spjunc;
 	SPJ*	spp;
@@ -108,7 +118,7 @@ class SpJunc {
 	CHAR*	spliced;
 	CHAR*	pyrim;
 public:
-	SpJunc(Seq* sd);
+	SpJunc(const Seq* sd);
 	~SpJunc();
 	CHAR*	spjseq(int n5, int n3);
 };
@@ -126,10 +136,10 @@ class IntronPenalty {
 public:
 	IntronPenalty(VTYPE f, int hh, EijPat* eijpat, ExinPot* exinpot);
 	~IntronPenalty() {delete[] array;}
-	VTYPE	Penalty(int n = -1);
-	VTYPE	Penalty(int n, bool addsig53);
-	int	mode() {return (optlen);}
-	VTYPE	maxpenalty() {return Penalty(optlen);}
+	VTYPE	Penalty(int n = -1) const;
+	VTYPE	Penalty(int n, bool addsig53) const;
+	int	mode() const {return (optlen);}
+	VTYPE	maxpenalty() const {return Penalty(optlen);}
 };
 
 struct INTRONPEN {

@@ -30,10 +30,10 @@ static	FTYPE	gapfrac = 0.8;
 
 DISTPRM	distPrm = {0.5, 0.5, 0.0, 1.0, 0, ThisAln, 0};
 
-FTYPE pairdvn(Seq* sd, int i, int j)
+FTYPE pairdvn(const Seq* sd, int i, int j)
 {
-	CHAR*   ps = sd->at(sd->left);
-	CHAR*   tt = sd->at(sd->right);
+const	CHAR*   ps = sd->at(sd->left);
+const	CHAR*   tt = sd->at(sd->right);
 
 	int     mch = 0, mmc = 0, unp = 0, gap = 0;
 	int     gsi = 0, gsj = 0;
@@ -62,14 +62,14 @@ FTYPE pairdvn(Seq* sd, int i, int j)
 	return (1. - (FTYPE) mch / (gapunp + mch + mmc));
 }
 
-FTYPE pairdvn(Seq* sd, int* gi, int* gj)
+FTYPE pairdvn(const Seq* sd, const int* gi, const int* gj)
 {
-	CHAR*   ps = sd->at(sd->left);
-	CHAR*   tt = sd->at(sd->right);
+const	CHAR*   ps = sd->at(sd->left);
+const	CHAR*   tt = sd->at(sd->right);
 
 	int	ni = 0, nj = 0;
-	for (int* g = gi; *g >= 0; ++g) ++ni;
-	for (int* g = gj; *g >= 0; ++g) ++nj;
+	for (const int* g = gi; *g >= 0; ++g) ++ni;
+	for (const int* g = gj; *g >= 0; ++g) ++nj;
 	int*	gsi = new int[ni]; vclear(gsi, ni);
 	int*	gsj = new int[nj]; vclear(gsj, nj);
 	int	mch = 0, mmc = 0, unp = 0, gap = 0;
@@ -155,11 +155,13 @@ void setdivseq(int realn, int geval, int pick)
 	    &distPrm.pickup_one, &PickUpOneB, pick);
 }
 
-void setexprm_z(const char* ps)
+void setexprm_z(int& argc, const char**& argv)
 {
-const	char*	val = ps + 1;
+const	char&	opt = argv[0][2];
+	if (!opt) return;
+const	char*	val = getarg(argc, argv, false, 3);
 
-	switch (*ps) {
+	switch (opt) {
 	  case 'a':	// Realign
 	    distPrm.realign = (*val && isnumber(val))? 
 		(DistCal) atoi(val): DynAln;
@@ -193,7 +195,7 @@ const	char*	val = ps + 1;
 	}
 }
 
-double degdiv(FSTAT* stt)
+double degdiv(const FSTAT* stt)
 {
 	double	fd = stt->mmc;
 	fd += distPrm.gap_v_rate * stt->gap;
@@ -202,7 +204,7 @@ double degdiv(FSTAT* stt)
 	return (fn > 0.)? (fd / fn): 0.;
 }
 
-void put_stat(FILE* fd, FSTAT* fstt, double* ppc)
+void put_stat(FILE* fd, const FSTAT* fstt, const double* ppc)
 {
 	static char frmt1[] = "%7.2lf %7.2lf %7.2lf ";
 	static char frmt2[] = "%6.2f %5.1f %5.1f %5.1f %5.1f ";
@@ -218,18 +220,18 @@ void put_stat(FILE* fd, FSTAT* fstt, double* ppc)
 	    fstt->mch, fstt->mmc, fstt->gap, fstt->unp);
 }
 
-double degdiv(Gsinfo* gsi)
+double degdiv(const Gsinfo* gsi)
 {
 	if (!gsi) return (0);
 	double  divseq = degdiv(&gsi->fstat);
-	SigII*& sigii = gsi->sigII;
+const	SigII* sigii = gsi->sigII;
 	if (distPrm.contbt_spj <= 0 || !sigii) return (divseq);
 	double	divspj = sigii->n_common();
 	divspj = 1. - 2 * divspj / sigii->lstnum;
 	return (distPrm.contbt_seq * divseq + distPrm.contbt_spj * divspj);
 }
 
-void put_stat(FILE* fd, Gsinfo* gsi)
+void put_stat(FILE* fd, const Gsinfo* gsi)
 {
 	double  pc = degdiv(gsi);
 	put_stat(fd, &gsi->fstat, &pc);

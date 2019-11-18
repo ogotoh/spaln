@@ -70,11 +70,10 @@ static	FTYPE	stdfS = 0.;
 
 inline	VTYPE	GapPenalty(int k) {return VTYPE(alprm.u * k + alprm.v);}
 
-SpJunc::SpJunc(Seq* sd)
+SpJunc::SpJunc(const Seq* sd) : b(sd)
 {
 static	SPJ	nullspj = {0, 0, 0, 0, 0};
 
-	b = sd;
 	nent = (sd->right - sd->left) / FoldSpjunc;
 	nent = (nent / 6) * 6 + 5;
 	max_nent = FoldStore * nent;
@@ -105,8 +104,8 @@ CHAR* SpJunc::spjseq(int n5, int n3)
 	int     cc = n5 + n3;
 	SPJ*    find;
 	SPJ**   htop = hashent + (cc % nent);
-	CHAR*   b5 = b->at(n5 - 2);
-	CHAR*   b3 = b->at(n3);
+const	CHAR*   b5 = b->at(n5 - 2);
+const	CHAR*   b3 = b->at(n3);
 
 	for (find = *htop; find; find = find->dlnk)
 	    if (find->n5 == n5 && find->n3 == n3)
@@ -131,12 +130,12 @@ CHAR* SpJunc::spjseq(int n5, int n3)
 	return (find->junc);
 }
 
-inline	bool	Exinon::within(Seq* sd)
+inline	bool	Exinon::within(const Seq* sd) const
 {
 	return (bias < sd->left && sd->right < (bias + size));
 }
 
-VTYPE	Premat::prematT(const CHAR* ps)
+VTYPE	Premat::prematT(const CHAR* ps) const
 {
 	if (bn == 1)
 	    return (VTYPE) ((*ps == TRM || *ps == TRM2)? fO: 0);
@@ -147,16 +146,16 @@ VTYPE	Premat::prematT(const CHAR* ps)
 	return (VTYPE) (fO * tp);
 }
 
-Premat::Premat(Seq* seqs[])
+Premat::Premat(const Seq* seqs[])
 {
 	int	swp = !seqs[1]->inex.intr;
-	if (swp) swapseq(seqs, seqs + 1);
-	Seq*	a = seqs[0];
-	Seq*	b = seqs[1];
+	if (swp) swap(seqs[0], seqs[1]);
+const	Seq*&	a = seqs[0];
+const	Seq*&	b = seqs[1];
 
 	fO = -alprm2.o * a->many * b->many;
 	bn = b->many;
-	if (swp) swapseq(seqs, seqs + 1);
+	if (swp) swap(seqs[0], seqs[1]);
 }
 
 // Frechet Distribution
@@ -191,7 +190,7 @@ IntronPenalty::IntronPenalty(VTYPE f, int hh, EijPat* eijpat, ExinPot* exinpot)
 		if (eijpat->patternB) expsig += fB * eijpat->patternB->mmm.mean;
 	    } else	expsig += fy * avrsig53[1];
 	}
-	if (exinpot) expsig +=  exinpot->avrpot(f * alprm2.Z);
+	if (exinpot) expsig += exinpot->avrpot(f * alprm2.Z);
 	AvrSig = (VTYPE) expsig;
 	VTYPE	IntPen = (VTYPE) (expsig + fY * IntronPrm.mean +
 		f * ((IntronPrm.ip == FQUERY)? GapPenalty(Ip_equ_k): IntronPrm.ip));
@@ -287,7 +286,7 @@ EijPat::~EijPat()
 	delete patternB;
 }
 
-Exinon::Exinon(Seq* sd, FTYPE ff, PwdB* pwd)
+Exinon::Exinon(const Seq* sd, FTYPE ff, const PwdB* pwd)
 {
 static	const	INT53	zero53 = {0, 0, 0, 0};
 	size = sd->right - sd->left + 2;
@@ -311,7 +310,7 @@ Exinon::~Exinon()
 	}
 }
 
-VTYPE Exinon::sig53(int m, int n, INTENDS c)
+VTYPE Exinon::sig53(int m, int n, INTENDS c) const
 {
 	VTYPE	sig = 0;
 	if (alprm2.sss < 1.) {
@@ -420,7 +419,7 @@ void makeStdSig53()
 	}
 }
 
-void Intron53N(Seq* sd, FTYPE ff, PwdB* pwd)
+void Intron53N(Seq* sd, FTYPE ff,  const PwdB* pwd, bool both_ori)
 {
 const	static	INT	jlevelac[4] = {0, 2, 3, 1};
 const	static	INT	jlevelgt[4] = {0, 0, 3, 1};
@@ -452,16 +451,22 @@ const	static	INT	jlevelgt[4] = {0, 0, 3, 1};
 	    wk5->cano5 = wk3->cano3 = algmode.any == 3? 1: 0;
 	    switch (nc) {
 		case AA: wk3->cano3 = jlevelac[algmode.any]; break;
-		case AC: wk3->cano3 = 2; break;
+		case AC: wk3->cano3 = 2;
+			 if (both_ori) wk5->cano5 = 1;
+			 break;
 		case AG: wk3->cano3 = 3; break;
 		case AT: wk5->cano5 = 2; wk3->cano3 = jlevelac[algmode.any]; break;
 		case CG: wk3->cano3 = jlevelgt[algmode.any]; break;
-		case CT: wk5->cano5 = jlevelgt[algmode.any]; break;
+		case CT: wk5->cano5 = jlevelgt[algmode.any];
+			 if (both_ori) wk3->cano3 = 1;
+			 break;
 		case GA: wk5->cano5 = jlevelgt[algmode.any]; break;
 		case GC: wk5->cano5 = 3; break;
 		case GG: wk5->cano5 = jlevelgt[algmode.any];
 			 wk3->cano3 = jlevelgt[algmode.any]; break;
-		case GT: wk5->cano5 = 3; break;
+		case GT: wk5->cano5 = 3;
+			 if (both_ori) wk3->cano3 = 1;
+			 break;
 		case TG: wk3->cano3 = jlevelgt[algmode.any]; break;
 		case TT: wk5->cano5 = jlevelgt[algmode.any]; break;
 		default: break;
@@ -469,12 +474,12 @@ const	static	INT	jlevelgt[4] = {0, 0, 3, 1};
 	}
 }
 
-void Intron53(Seq* sd, PwdB* pwd)
+void Intron53(Seq* sd, const PwdB* pwd, bool both_ori)
 {
 	FTYPE	ff = (FTYPE) (pwd->Vab / sd->many);
 	if (sd->exin && sd->exin->int53 && ff == sd->exin->fact && sd->exin->within(sd))
 	    return;
-	Intron53N(sd, ff, pwd);
+	Intron53N(sd, ff, pwd, both_ori);
 	if (pwd->DvsP == 0 && alprm2.sss <= 0.) return;
 
 	FTYPE	fE = alprm2.z * ff;
@@ -517,16 +522,13 @@ void Intron53(Seq* sd, PwdB* pwd)
 	if (prefE)	++prfE;
 	if (prefI)	++prfI;
 
-	EXIN*	wkb = sd->exin->data + sd->exin->bias;
-	EXIN*	last = wkb + sd->exin->size - 1;
-	memset(wkb, '\0', sizeof(EXIN));
-	memset(last, '\0', sizeof(EXIN)); 
-	for ( ; wkb <= last; ++wkb) wkb->phs5 = wkb->phs3 = -2;
+	sd->exin->clear();
 	CHAR*	ss = sd->at(sd->left);
 	VTYPE	sigB = 0;
 	CHAR*	posB = 0;
+	EXIN*	last = sd->exin->end();
 	INT53*	wk53 = sd->exin->int53 + sd->exin->bias + 1;
-	for (wkb = sd->exin->data + sd->exin->bias; ++wkb < last; ++ss, ++wk53) {
+	for (EXIN* wkb = sd->exin->begin(); ++wkb < last; ++ss, ++wk53) {
 	    wkb->sigS = (VTYPE) (fT * *prfS++);
 	    wkb->sigT = (VTYPE) (fT * *prfT++);
 	    if (prfE) {
@@ -555,8 +557,8 @@ void Intron53(Seq* sd, PwdB* pwd)
 		wkb->phs5 = 0;
 		if (wk53->cano5 > 1) {
 		    wkb[1].phs5 = 1;
-		    if (wkb[-1].phs5 == -2) wkb[-1].phs5 = -1;
-		    else wkb[-1].phs5 = 2;
+		    if (wkb[-1].phs5 == 1) wkb[-1].phs5 = 2;	// GTGT
+		    else wkb[-1].phs5 = -1;
 		}
 	    }
 	    wkb->sig3 = sig3;
@@ -564,9 +566,8 @@ void Intron53(Seq* sd, PwdB* pwd)
 		wkb->phs3 = 0;
 		if (wk53->cano3 > 1) {
 		    wkb[1].phs3 = 1;
-		    if (wkb[-1].phs3 == 1) wkb[-1].phs3 = 2;
+		    if (wkb[-1].phs3 == 1) wkb[-1].phs3 = 2;	// AGAG
 		    else wkb[-1].phs3 = -1;
-/* modified to accomodate the case of ..AGAG.. */
 		}
 	    }
 	}
@@ -574,7 +575,7 @@ void Intron53(Seq* sd, PwdB* pwd)
 	delete[] prefB; delete[] prefE; delete[] prefI;
 }
 
-VTYPE IntronPenalty::Penalty(int n)
+VTYPE IntronPenalty::Penalty(int n) const 
 {
 	if (n < 0 || !array) return (GapWI);
 	if (n < IntronPrm.llmt) return (NEVSEL);
@@ -583,7 +584,7 @@ VTYPE IntronPenalty::Penalty(int n)
 	return (table[n]);
 }
 
-VTYPE IntronPenalty::Penalty(int n, bool addsig)
+VTYPE IntronPenalty::Penalty(int n, bool addsig) const 
 {
 	if (n < IntronPrm.llmt) return (NEVSEL);
 	if (!array) return (GapWI + AvrSig);

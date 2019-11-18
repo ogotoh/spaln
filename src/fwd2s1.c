@@ -21,167 +21,130 @@
 *	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
-#define	DEBUG	0
+#define	DEBUG	1
 
 #include "aln.h"
 #include "vmf.h"
 #include "wln.h"
 
-static	const	int	INTR = 2;
-static	const	int	NCANDS = INTR * NOL;
-static	const	int	MAXR = 4;
-static	const	int	CigarM = 0;
-static	const	VTYPE	SKIP = INT_MIN;
+#define	CigarM	0
 
-struct JRECD {
-	VTYPE	val;
-	int	dir;
-	long	ptr;
-	int	jnc;
-};
+static	const	int	NCAND = 4;
+static	const	int	Newd = 8;
+static	const	int	expected_max_overlap = 1024;
+static	const	int	expected_overlap_ext = 16;
 
-struct LRECD {
-	VTYPE	val;
-	int	dir;
-	long	ptr;
-	int	jnc;
-	int	lst;
-};
-
-struct WRECD {
-	VTYPE	val;
-	int	dir;
-	int	upr;
-	int	lwr;
-	int	lst;
-	int	jnc;
-	VTYPE	sig;
-};
-
-struct CRECD {
-	VTYPE	val;
-	int	dir;
-	int	upr;
-	int	lwr;
-	int	mlb;
-	int	nlb;
-	int	jnc;
-	COLONY* clny;
-};
-
-typedef LRECD	EIJUNC[NCANDS+1];
-typedef int	EIJODR[NCANDS+1];
-
-struct BOUND {int la, lb, ua, ub;};
+static int infer_orientation(Seq** sqs, const PwdB* pwd);
 
 class Aln2s1 {
 protected:
-	Seq**	seqs;
-	Seq*&	a;
-	Seq*&	b;
-	WINDOW*	wdw;
-	PwdB*	pwd;
+const	Seq**	seqs;
+const	Seq*	a;
+const	Seq*	b;
+const 	PwdB*	pwd;
 	Mfile*	mfd;
 	Vmf*	vmf;
-	VTYPE	pinthr;
-	Exinon*	exin;
-	INT	lowestlvl;
-	int	term;
-	VTYPE	slmt;
+const	INT	lowestlvl;
+const	int	term;
+const	VTYPE	slmt;
 	int	wlmt;
 	bool	island;
+const	int	Nod;
+	VTYPE	backward[expected_max_overlap];
 public:
-	Aln2s1(Seq** _seqs, PwdB* _pwd, WINDOW* _wdw);
+	Aln2s1(const Seq** _seqs, const PwdB* _pwd);
 	~Aln2s1() {delete mfd;}
-	void	initS_ng(JRECD* hf[]);
-	JRECD*	lastS_ng(JRECD* hhb[]);
-	VTYPE	forwardS_ng(long pp[], bool spj = true);
-	void	finitS_ng(WRECD* hhf[], int mm);
-	void	binitS_ng(WRECD* hhf[], int mm);
-	VTYPE	centerS_ng(int* ml, int* mr, int* nl, int* nr, 
-		WINDOW* wdwf, WINDOW* wdwb);
-	void	cinitS_ng(CRECD* hhc[]);
-	void	pfinitS_ng(LRECD* hhg[]);
-	void	pbinitS_ng(LRECD* hhg[]);
-	VTYPE	pincersS_ng(long* ptr, int cmode);
-	bool	pincerTrcbkS_ng(int cmode, VTYPE& iscore);
-	Colonies*	fwdswgS_ng(VTYPE* scr);
-	VTYPE	diagonalS_ng();
-	VTYPE	trcbkalignS_ng(bool spj = true);
-	VTYPE	ordinaryS_ng();
-	VTYPE	backforth(int n, BOUND& lub);
-	VTYPE	lspS_ng();
-	VTYPE	interpolateS(INT level, int agap, int bgap, int cmode, 
-		JUXT* wjxt, BOUND& bab);
-	VTYPE	seededS_ng(INT level, int cmode, BOUND& lub);
-	SKL*	globalS_ng(VTYPE* scr);
-	VTYPE	creepback(int ovr, VTYPE bscr, BOUND& lub);
-	VTYPE	creepfwrd(int& ovr, VTYPE bscr, BOUND& lub);
+	void	reset(const Seq** sqs) {
+	    delete mfd; mfd = 0;
+	    a = sqs[0];
+	    b = sqs[1];
+	}
+	void	initS_ng(RVP* hh[], const WINDOW& wdw, CHAR* hdir, const RANGE* cutrng = 0);
+	RVP*	lastS_ng(RVP* hh[], const WINDOW& wdw, const RANGE* cutrng = 0);
+	VTYPE	forwardS_ng(const WINDOW& wdw, long pp[] = 0, 
+		bool spj = true, bool align = true, const RANGE* cutrng = 0);
+	VTYPE	shortcutS_ng(int ovr, const BOUND& bab);
+	void	hinitS_ng(RVWU* hhg[], const WINDOW& wdw);
+	RVWU*	hlastS_ng(RVWU* hh[], const WINDOW& wdw);
+	VTYPE	hirschbergS_ng(int cpos[], 		// coordinates on center row
+		const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb);
+	void	sinitS_ng(VTYPE* hh[], const WINDOW& wdw);
+	VTYPE	slastS_ng(VTYPE* hh[], const WINDOW& wdw);
+	VTYPE	scorealoneS_ng(const WINDOW& wdw);
+	void	pfinitS_ng(RVP* hh[], const WINDOW& wdw);
+	void	pbinitS_ng(RVP* hh[], const WINDOW& wdw);
+	VTYPE	back2ward5endS_ng(long* ptr, const WINDOW& wdw);
+	VTYPE	for2ward3endS_ng(long* ptr, const WINDOW& wdw);
+	VTYPE	openendS_ng(int cmode);
+	void	cinitS_ng(RVDWJC* hhc[], const WINDOW& wdw);
+	Colonies*	fwdswgS_ng(const WINDOW& wdw, VTYPE* scr);
 	bool	indelfreespjS(int agap, VTYPE& iscr);
+	VTYPE	diagonalS_ng();
+	VTYPE	trcbkalignS_ng(const WINDOW& wdw, bool spj = true,
+		const RANGE* cutrng = 0);
+	VTYPE	ordinaryS_ng(const WINDOW& wdw);
+	VTYPE	backforth(int n, const BOUND& lub);
+	VTYPE	lspS_ng(const WINDOW& wdw);
+	VTYPE	interpolateS(INT level, int agap, int bgap, int cmode, 
+		JUXT* wjxt, const BOUND& bab);
+	VTYPE	seededS_ng(INT level, int cmode, const BOUND& lub);
+	SKL*	globalS_ng(const WINDOW& wdw, VTYPE* scr);
+	VTYPE	creepback(int ovr, VTYPE bscr, const BOUND& lub);
+	VTYPE	creepfwrd(int& ovr, VTYPE bscr, const BOUND& lub);
 };
 
-extern	Colonies* swg1stS_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr);
-extern	VTYPE	HomScoreS_ng(Seq* seqs[], PwdB* pwd, long ptr[]);
-extern	SKL*	swg2ndS_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr, COLONY* clny);
-extern	SKL*	alignS_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr);
+extern	Colonies* swg1stS_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr);
+extern	SKL*	swg2ndS_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr, COLONY* clny);
 
-static	JRECD	oom = {NEVSEL, 0, 0, 0};
-static	LRECD	ooml = {NEVSEL, 0, 0, 0, 0};
-static	WRECD	oomW = {NEVSEL, 0, INT_MIN, INT_MAX, 0, 0};
-static	CRECD	oomC = {NEVSEL, 0, INT_MIN, INT_MAX, 0, 0, 0, 0};
-
-Aln2s1::Aln2s1(Seq* _seqs[], PwdB* _pwd, WINDOW* _wdw) :
-	seqs(_seqs), a(seqs[0]), b(seqs[1]), wdw(_wdw), pwd(_pwd),
-	mfd(0), vmf(0), exin(b->exin), lowestlvl(b->wllvl),
+Aln2s1::Aln2s1(const Seq* _seqs[], const PwdB* _pwd) :
+	seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd),
+	mfd(0), vmf(0), lowestlvl(b->wllvl),
 	term((int) ((pwd->Vthr + pwd->BasicGOP) / pwd->BasicGEP)),
-	slmt(pwd->Vthr / 2), island(false)
-{
-	pinthr = pwd->GapPenalty(1);
-}
+	slmt(pwd->Vthr / 2), island(false), Nod(2 * pwd->Noll - 1)
+{}
 
-void Aln2s1::initS_ng(JRECD* hh[])
+void Aln2s1::initS_ng(RVP* hh[], const WINDOW& wdw, CHAR* hdir, const RANGE* cutrng)
 {
 	int	n = b->left;
 	int	r = b->left - a->left;
 	int	rr = b->right - a->left;
-	JRECD*	hf[NOL];
+	int	cutlen = cutrng? cutrng->right - cutrng->left: 0;
 
-	for (int k = 0; k < pwd->Nrow; ++k) hf[k] = hh[k] + r;
-	if (wdw->up < rr) rr = wdw->up;
-	for (int i = 0; r <= wdw->up + 1; ++r, ++n, ++i) {
-	    JRECD*	h = hf[0]++;
- 	    for (int k = 1; k < pwd->Nrow; ++k) *hf[k]++ = oom;
-	    if (i == 0 || (a->inex.exgl && r <= rr)) {
+	RVP*	h = hh[0] + r;
+	CHAR*	hd = hdir? hdir + r: 0;
+	h->val = 0;
+	if (hd) *hd = 0;
+	h->ptr = vmf? vmf->add(a->left, n, 0): 0;
+	if (a->inex.exgl) {		// semi-global
+	    if (wdw.up < rr) rr = wdw.up;
+	    while (++r <= rr) {
+		if (cutrng && n == cutrng->left) {
+		    n += cutlen;
+		    r += cutlen;
+		    continue;
+		}
+		++h;
 		h->val = 0;
-		h->dir = DEAD;
-		h->jnc = n;
+		if (hd) *++hd = 1;
 		h->ptr = vmf? vmf->add(a->left, n, 0): 0;
-	    } else {
-		*h = oom;
-		continue;
 	    }
 	}
 
 	r = b->left - a->left;
 	rr = b->left - a->right;
-	for (int k = 0; k < pwd->Nrow; ++k) hf[k] = hh[k] + r;
-	if (wdw->lw > rr) rr = wdw->lw;
-	for (int i = 1; --r >= wdw->lw - 1; ++i) {
-	    JRECD*	h = --hf[0];
-	    JRECD*	g = --hf[1];
-	    for (int k = 2; k < pwd->Nrow; ++k) *--hf[k] = oom;
-	    if (r < rr) *h = *g = oom;
-	    else if (b->inex.exgl) {	/* local */
+	h = hh[0] + r;
+	if (hdir) hd = hdir + r;
+	RVP*	g = hh[1] + r;
+	if (wdw.lw > rr) rr = wdw.lw;
+	for (int i = 1; --r >= rr; ++i) {
+	    --h; --g; if (hd) *--hd = 2;
+	    if (b->inex.exgl) {		/* local */
 		h->val = 0;
-		h->dir = DEAD;
-		h->jnc = b->left;
 		h->ptr = vmf? vmf->add(a->left + i, b->left, 0): 0;
-		*g = oom;
 	    } else {			/* (semi) global */
 		*h = h[1];
 		if (i == 1) {
 		    h->val += pwd->GapPenalty(1);
-		    h->dir = VERT;
 		    *g = *h;
 		} else {
 		    *g = g[1];
@@ -192,125 +155,124 @@ void Aln2s1::initS_ng(JRECD* hh[])
 	}
 }
 
-JRECD* Aln2s1::lastS_ng(JRECD* hh[])
+RVP* Aln2s1::lastS_ng(RVP* hh[], const WINDOW& wdw, const RANGE* cutrng)
 {
-	JRECD*	h9 = hh[0] + b->right - a->right;
-	JRECD*	mx = h9;
+	int	cutlen = cutrng? cutrng->right - cutrng->left: 0;
+	int	rw = wdw.lw;
+	int	rf = (cutrng? cutrng->left: b->left) - a->right;
+	if (rf > rw) rw = rf;
+	RVP*	h = hh[0] + rw - cutlen;
+	RVP*	h9 = hh[0] + b->right - a->right - cutlen;
+	RVP*	mx = h9;
 
-	if (b->inex.exgr) {
-	    int	rw = wdw->up;
-	    int	rf = b->right - a->left;
-	    if (rf < rw) rw = rf;
-	    for (JRECD* h = hh[0] + rw; h > h9; --h)
+	if (a->inex.exgr) {
+	    for ( ; h <= h9; ++h)
 		if (h->val > mx->val) mx = h;
 	}
-	int	rw = wdw->lw;
-	int	rf = b->left - a->right;
-	if (rf > rw) rw = rf;
-	else	 rf = rw;
-	JRECD*	h = hh[0] + rw;
-	if (a->inex.exgr)
-	    for (int i = 0; h <= h9; ++h, ++i)
+	if (b->inex.exgr) {
+	    rw = min(wdw.up, b->right - a->left) - cutlen;
+	    for (RVP* h = hh[0] + rw; h > h9; --h)
 		if (h->val > mx->val) mx = h;
-	int	i = mx - h9;
-	rf = a->right;	/* m9 */
-	rw = b->right;	/* n9 */
-	if (i > 0) rf -= i;
-	if (i < 0) rw += i;
-	if (vmf) mx->ptr = vmf->add(rf, rw, mx->ptr);
+	}
+	if (vmf) {
+	    int	i = mx - h9;
+	    int	m9 = a->right;
+	    int	n9 = b->right;
+	    if (i > 0) m9 -= i;
+	    if (i < 0) n9 += i;
+	    mx->ptr = vmf->add(m9, n9, mx->ptr);
+	}
 	return (mx);
 }
 
-VTYPE Aln2s1::forwardS_ng(long* pp, bool spj)
+VTYPE Aln2s1::forwardS_ng(const WINDOW& wdw, long* pp, 
+	bool spj, bool align, const RANGE* cutrng)
 {
-	JRECD*	hh[NOL];	/* H matrix	 	*/
-	JRECD*	hf[NOL];
-	JRECD	f1, f2;
-	JRECD*	g2 = 0;
-	JRECD	hl[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
-	int	nl[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
+const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
+	RVP*	hh[NOL];	// H matrix
+	RVP	f1, f2;
+	RVP*	hf[NOD] = {0, &f1, 0, &f2, 0};	// [DIAG, HORI, VERT, HORL, VERTL]
+	RVPDJ	hl[NCAND + 1]; // [candidates]
+	int	nx[NCAND + 1]; // [candidates]
+	RVPDJ*	maxphl[NOD];
 	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
 	int	Local = algmode.lcl & 16;
 	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
 	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+	int	cutlen = cutrng? cutrng->right - cutrng->left: 0;
+	VTYPE	longgep = pwd->BasicGEP * cutlen;
+	VTYPE	longgep2 = pwd->LongGEP * cutlen;
 
-	hh[0] = new JRECD[pwd->Nrow * wdw->width] - wdw->lw + 1;
-	for (int k = 1; k < pwd->Noll; ++k) hh[k] = hh[k-1] + wdw->width;
+	int	width = wdw.width;
+	if (cutrng) width -= cutlen;
+	size_t	bufsiz = pwd->Noll * width;
+	RVP*	jbuf = new RVP[bufsiz];
+	vset(jbuf, black_vp, bufsiz);
+	RVP*	blackvp = jbuf + bufsiz - 1;
+	hh[0] = jbuf - wdw.lw + 1;
+	for (int k = 1; k < pwd->Noll; ++k) hh[k] = hh[k-1] + width;
+	CHAR*	dbuf = new CHAR[width];
+	CHAR*	hdir = dbuf - wdw.lw + 1;
 	if (vmf) vmf->add(0, 0, 0);	/* Skip 0-th record */
-	initS_ng(hh);
+	initS_ng(hh, wdw, hdir, cutrng);
 
 	int	m = a->left;
 	PfqItr	api(a, m);
 	int	api_size = api.size();
 	if (!a->inex.exgl) --m; /* global */
-	int	n1 = m + wdw->lw - 1;
-	int	n2 = m + wdw->up;
-	CHAR*	as = a->at(m);
-	hf[1] = &f1;
-	hf[2] = &f2;
+	int	n1 = m + wdw.lw - 1;
+	int	n2 = m + wdw.up;
+const	CHAR*	as = a->at(m);
 	for ( ; ++m <= a->right; ++as) {
 	    bool	internal = spj && (!a->inex.exgr || m < a->right);
-	    n1++; n2++;
+	    ++n1; ++n2;
 	    int	n = max(n1, b->left);
 	    int	n9 = min(n2, b->right);
-	    CHAR*	bs = b->at(n);
+const	    CHAR*	bs = b->at(n);
 	    int	r = n - m;
 	    int k = 0;
-	    JRECD*	h = hh[k] + r;
-	    JRECD*	g = hh[++k] + r;
-	    f1 = oom;
-	    if (pwd->Noll == 3) {
-		g2 = hh[++k] + r;
-		f2 = oom;
-	    }
-	    for (int k = 0; k < pwd->Noll; ++k) {
-		JRECD*	phl = hl[k];
-		for (int l = 0; l <= INTR; ++l, ++phl) {
-		    nl[k][l] = l;
-		    *phl = oom;
-	  	}
-	    }
+	    RVP*&	h = hf[0] = hh[k] + r;
+	    RVP*&	g = hf[2] = hh[++k] + r;
+	    RVP*&	g2 = hf[4] = dagp? hh[++k] + r: blackvp;
+	    CHAR*	dir = hdir + r;
+	    f1 = f2 = black_vp;
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+	    vset((RVPDJ*) hl, black_vpdj, NCAND + 1);
+	    for (int l = 0; l <= NCAND; ++l) nx[l] = l;
+	    int	ncand = 0;
 #if DEBUG
-	if (algmode.nsa & 8) {
-	    printf("%2d %2d %2d", m, n, h->dir);
+	if (OutPrm.debug) {
+	    printf("%2d %2d %2d", m, n, *dir);
 	    putvar(h->val); putchar('\n');
 	}
 #endif
 	    bool	a_in_zone = api_size && (api == m);
 	    for ( ; ++n <= n9; ++bs) {
 		VTYPE	x;
-		++g;
-		hf[0] = ++h;
-		if (g2) ++g2;
+		++dir; ++h; ++g; if (dagp) ++g2;
 /*	Diagonal	*/
-		JRECD*	from = h;
-		JRECD*	mx = h;
+		RVP*	from = h;
+		RVP*	mx = h;
 		VTYPE	diag = h->val;
 		if (m == a->left) goto HorizonS;
-		h->val += pwd->sim2(as, bs);
-		h->dir = (from->dir & DIAG)? DIAG: NEWD;
+		h->val += qprof[*bs];
+		*dir = (*dir % Newd)? Newd: 0;
 
 /*	Vertical	*/
 		x = (++from)->val + pwd->BasicGOP;
 		if (x >= g[1].val) {
 		    g->val = x;
-		    g->dir = VERT | (g->dir & SPJC);
-		    g->ptr = (vmf && from->dir & SPIN)?
-			vmf->add(m - 1, n, from->ptr): from->ptr;
-		    g->jnc = from->jnc;
+		    g->ptr = from->ptr;
 		} else	*g = g[1];
 		g->val += pwd->BasicGEP;
 		if (g->val > mx->val) mx = g;
 
 /*	Vertical2	*/
-		if (g2) {
+		if (dagp) {
 		  x = from->val + pwd->LongGOP;
 		  if (x >= g2[1].val) {
 		    g2->val = x;
-		    g2->dir = VERL | (g->dir & SPJC);
-		    g2->ptr = (vmf && from->dir & SPIN)? 
-			vmf->add(m - 1, n, from->ptr): from->ptr;
-		    g2->jnc = from->jnc;
+		    g2->ptr = from->ptr;
 		  } else	*g2 = g2[1];
 		  g2->val += pwd->LongGEP;
 		  if (g2->val > mx->val) mx = g2;
@@ -319,61 +281,64 @@ HorizonS:
 /*	Horizontal	*/
 		x = h[-1].val + pwd->BasicGOP;
 		if (x >= f1.val) {
-		    f1 = h[-1];
 		    f1.val = x;
+		    f1.ptr = h[-1].ptr;
 		}
-		if (f1.dir) {
-		    f1.val += pwd->BasicGEP;
-		    f1.dir = (f1.dir & SPIN) + HORI;
-		    if (f1.val >= mx->val) mx = &f1;
-		}
+		f1.val += pwd->BasicGEP;
+		if (f1.val >= mx->val) mx = &f1;
 
 /*	Horizontal2	*/
-		if (g2) {
+		if (dagp) {
 		    x = h[-1].val + pwd->LongGOP;
 		    if (x >= f2.val) {
-			f2 = h[-1];
 			f2.val = x;
+			f2.ptr = h[-1].ptr;
 		    }
-		    if (f2.dir) {
-			f2.val += pwd->LongGEP;
-			f2.dir = (f2.dir & SPIN) + HORL;
-			if (f2.val >= mx->val) mx = &f2;
-		    }
+		    f2.val += pwd->LongGEP;
+		    if (f2.val >= mx->val) mx = &f2;
 		}
 
 /*	intron 3' boundary, assume no overlapping signals	*/
-		if (internal && exin->isAccpt(n)) {
+		if (internal && b->exin->isAccpt(n)) {
 		    VTYPE	sigJ = a_in_zone? api.match_score(m): 0;
-		    for (int k = 0; k < pwd->Noll; ++k) {
-			from = hf[k];
-			JRECD*	maxphl = 0;
-			int*	pnl = nl[k];
-			for (int l = 0; l < INTR; ++l) {
-			    JRECD*	phl = hl[k] + pnl[l];
-			    if (!phl->dir) break;
-			    x = phl->val + sigJ +
-				pwd->IntPen->Penalty(n - phl->jnc) +
-				exin->sig53(phl->jnc, n, IE53);
-			    if (x > from->val) {
-				from->val = x;
-				maxphl = phl;
-			    }
+		    vclear(maxphl, Nod);
+		    for (int l = 0; l < ncand; ++l) {
+			RVPDJ*	phl = hl + nx[l];
+			x = phl->val + sigJ +
+			    pwd->IntPen->Penalty(n - phl->jnc) +
+			    b->exin->sig53(phl->jnc, n, IE53);
+			from = hf[phl->dir];
+			if (x > from->val) {
+			    from->val = x;
+			    maxphl[phl->dir] = phl;
 			}
-			if (maxphl) {
-			    if (vmf) from->ptr = vmf->add(m, n, 
-				vmf->add(m, maxphl->jnc, maxphl->ptr));
-			    from->jnc = n;
-			    from->dir = maxphl->dir | SPJCI;
-			    if (from->val > mx->val) mx = from;
+		    }
+		    for (int d = 0; d < Nod; ++d) {
+			RVPDJ*	phl = maxphl[d];
+			if (!phl) continue;
+			from = hf[d];
+			if (vmf) from->ptr = vmf->add(m, n, 
+			    vmf->add(m, phl->jnc, phl->ptr));
+			if (from->val >= mx->val) {
+			    mx = from;
+			    *dir |= SPJCI;
 			}
 		    }
 		}
 
 /*	Find optimal path	*/
-		if (h != mx) *h = *mx;	/* non-diagonal */
-		else if (Local && h->val > diag) {
-		    if (LocalL && diag == 0 && !(h->dir & SPJC))
+#if DEBUG
+		VTYPE	y = h->val;
+#endif
+		int	hd = 0;
+		if (h != mx) {		// non-diagonal
+		    *h = *mx;
+		    while (mx != hf[++hd]) ;
+		    if (hd % 2 && !(*dir & SPJC)) *dir = dir[-1] & ~SPJC;
+		    else	*dir &= ~15;
+		    *dir += hd;
+		} else if (Local && h->val > diag) {
+		    if (LocalL && diag == 0 && !(*dir & SPJC))
 			h->ptr = vmf? vmf->add(m - 1, n - 1, 0): 0;
 		    else if (LocalR && h->val > maxh.val) {
 			maxh.val = h->val;
@@ -382,79 +347,86 @@ HorizonS:
 			maxh.n = n;
 		    }
 		}
-		if (LocalL && h->val <= 0) h->val = h->dir = 0;
-		else if (vmf && h->dir == NEWD)
+		if (LocalL && h->val <= 0) {h->val = 0; *dir = 1;}
+		else if (vmf && align && *dir == Newd)
 		    h->ptr = vmf->add(m - 1, n - 1, h->ptr);
 
-
 /*	intron 5' boundary	*/
-		if (internal && exin->isDonor(n)) {
-		    VTYPE	sigJ = exin->sig53(n, 0, IE5);
-		    for (int k = 0; k < pwd->Noll; ++k) {
-				/* An orphan exon is disallowed */
-				/* Vertical path is not transferred */
+		if (internal && b->exin->isDonor(n)) {
+		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
+		    for (int k = hd == 0? 0: 1; k < Nod; ++k) {
 			from = hf[k];
-			if (!from->dir || (from->dir & SPIN) || 
-				from->dir == VERT || from->dir == VERL)
-			    continue;
+			if (k == hd) {			// disallow orphan exon
+			    int	vert = k == 2 || k == 4;
+			    if (dir[vert] & SPIN) continue;
+			} else if (hd >= 0) {
+			    y = mx->val;
+			    if (hd == 0 || (k - hd) % 2) y += pwd->GOP[k / 2];
+			    if (from->val <= y) continue;	// prune
+			}
 			x = from->val + sigJ;
-			JRECD*	phl = hl[k];
-			int*	pnl = nl[k];
-			int	l = INTR;
+			int	l = ncand < NCAND? ++ncand: NCAND;
 			for ( ; --l >= 0; ) {
-			    if (x > phl[pnl[l]].val)
-				gswap(pnl[l], pnl[l + 1]);
+			    if (x > hl[nx[l]].val)
+				swap(nx[l], nx[l + 1]);
 			    else
 				break;
 			}
-			if (++l < INTR) {
-			    phl[pnl[INTR]].dir = 0;
-			    phl += pnl[l];
+			if (++l < NCAND) {
+			    RVPDJ*	phl = hl + nx[l];
 			    phl->val = x;
 			    phl->jnc = n;
-			    phl->dir = from->dir;
+			    phl->dir = k;
 			    phl->ptr = from->ptr;
-			}
+			} else --ncand;
 		    }
 		}
 
 #if DEBUG
-		if (algmode.nsa & 8) {
-		    printf("%2d %2d %2d ", m, n, mx->dir);
+		if (OutPrm.debug) {
+		    printf("%2d %2d %2d ", m, n, *dir);
 		    putvar(mx->val); putvar(y); 
 		    putvar(g->val); putvar(f1.val);
-		    if (g2) {
+		    if (dagp) {
 			putvar(g2->val); putvar(f2.val);
 		    }
 		    if (algmode.lsg) {
-			putvar(hl[0][nl[0][0]].val);
-			putvar(hl[1][nl[1][0]].val);
-			if (g2) putvar(hl[2][nl[2][0]].val);
+			putvar(hl[nx[0]].val);
+			putvar(hl[nx[1]].val);
 		    }
 		    putchar('\n');
 		}
 #endif
-	    }
+		if (cutrng && n == cutrng->left) {	// shortcut
+		    f1.val += longgep;
+		    if (dagp) f2.val += longgep2;
+		    *h = dagp? f2: f1;
+		    *g = black_vp;
+		    n += cutlen;
+		    bs += cutlen;
+		}
+	    } // end of n-loop
 	    if (a_in_zone) ++api;		// has exon-exon junctions
-	}
+	} // end of m-loop
 
 	if (LocalR) {
 	    if (vmf) *pp = vmf->add(maxh.m, maxh.n, maxh.p);
 	} else {
-	    JRECD*	mx = lastS_ng(hh);
+	    RVP*	mx = lastS_ng(hh, wdw, cutrng);
 	    maxh.val = mx->val;
 	    if (pp) *pp = mx->ptr;
 	}
-	delete[] (hh[0] + wdw->lw - 1);
+	delete[] jbuf;
+	delete[] dbuf;
 	return (maxh.val);
 }
 
-VTYPE skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd)
+VTYPE skl_rngS_ng(const Seq* seqs[], Gsinfo* gsi, const PwdB* pwd)
 {
-	Seq*	a = seqs[0];
-	Seq*	b = seqs[1];
-	Exinon*	exin = b->exin;
-	SKL*	wsk = gsi->skl;
+const	Seq*	a = seqs[0];
+const	Seq*	b = seqs[1];
+const	Exinon*	exin = b->exin;
+const	SKL*	wsk = gsi->skl;
 	int	num = (wsk++)->n;
 	VTYPE	h = 0;
 	VTYPE	ha = 0;
@@ -474,10 +446,9 @@ VTYPE skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd)
 	Vulgar*	vlgar = gsi->vlgar = 0;
 	Samfmt*	samfm = gsi->samfm = 0;
 	switch (algmode.nsa) {
-	    case EXN_FORM: 
 	    case CIG_FORM: cigar = gsi->cigar = new Cigar(); break;
-	    case VLG_FORM: gsi->vlgar = vlgar = new Vulgar(); break;
-	    case SAM_FORM: gsi->samfm = samfm = new Samfmt(); break;
+	    case VLG_FORM: vlgar = gsi->vlgar = new Vulgar(); break;
+	    case SAM_FORM: samfm = gsi->samfm = new Samfmt(); break;
 	    default:	 break;
 	}
 	vclear(fst);
@@ -486,8 +457,8 @@ VTYPE skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd)
 	if (wsk[1].n == wsk->n && b->inex.exgl) {++wsk; --num;}
 	int	m = wsk->m;
 	int	n = wsk->n;
-	CHAR*	as = a->at(m);
-	CHAR*	bs = b->at(n);
+const	CHAR*	as = a->at(m);
+const	CHAR*	bs = b->at(n);
 	PfqItr	api(a, m);
 	bool	usespb = api.size() && use_spb();
 	rbuf.left = n;
@@ -531,23 +502,21 @@ VTYPE skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd)
 		    rbuf.left = rbuf.right + intlen;
 		    rbuf.rleft = m;
 		    rbuf.sig3 = sig3;
+		    rbuf.iscr = NEVSEL;
 		    h += xi;
 		    insert -= preint;
 		} else {	/* gap */
 		    h += x;
 		}
 		if (insert) {
-		    fst->gap += 1;
-		    fst->unp += insert;
 		    if (cigar) cigar->push('D', insert);
 		    if (samfm) samfm->push('D', insert);
 		    if (vlgar) vlgar->push('G', 0, insert);
+		    insert = intlen = preint = 0;
 		}
-		insert = intlen = preint = 0;
-		rbuf.iscr = NEVSEL;
 	    }
 	    int	ni = wsk->n - n;
-	    if (ni && deletn && mi) {
+	    if (ni && deletn) {
 		if (!(b->inex.exgl && n == b->left)) {
 		    h += pwd->GapPenalty(deletn);
 		    fst->gap += 1;
@@ -568,37 +537,37 @@ VTYPE skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd)
 		VTYPE	x = 0;
 #if CigarM
 		for ( ; d; --d, ++as, ++bs, ++n) {
-		x += pwd->sim2(as, bs);
-		if (*as == *bs) ++fst->mch;
-		else ++fst->mmc;
-		if (eijnc) eijnc->shift(rbuf, *fst, pst,
-		    n - rbuf.left == alprm2.jneibr);
+		    x += pwd->sim2(as, bs);
+		    if (*as == *bs) ++fst->mch;
+		    else ++fst->mmc;
+		    if (eijnc) eijnc->shift(rbuf, *fst, pst,
+			n - rbuf.left == alprm2.jneibr);
 		}
 #else
 		int	run = 0;
 		for ( ; d; --d, ++as, ++bs, ++n) {
-		x += pwd->sim2(as, bs);
-		if (*as == *bs) {
+		  x += pwd->sim2(as, bs);
+		  if (*as == *bs) {
 		    if (run < 0) {
 			if (samfm) samfm->push('X', -run);
 			run = 0;
 		    }
 		    ++fst->mch;
 		    ++run;
-		} else {
+		  } else {
 		    if (run > 0) {
 			if (samfm) samfm->push('=', run);
 			run = 0;
 		    }
 		    ++fst->mmc;
 		    --run;
-		}
-		if (eijnc) eijnc->shift(rbuf, *fst, pst,
+		  }
+		  if (eijnc) eijnc->shift(rbuf, *fst, pst,
 		    n - rbuf.left == alprm2.jneibr);
-		}
-		if (samfm) {
-		if (run > 0) samfm->push('=', run); else
-		if (run < 0) samfm->push('X', -run);
+		  if (samfm) {
+		    if (run > 0) samfm->push('=', run); else
+		    if (run < 0) samfm->push('X', -run);
+		  }
 		}
 #endif
 		h += x;
@@ -627,7 +596,7 @@ VTYPE skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd)
 		    ha = h + xi - sig3;
 		    if (eijnc) {
 			eijnc->store(rbuf, *fst, pst,
-			 n - rbuf.left < alprm2.jneibr);
+			n - rbuf.left < alprm2.jneibr);
 			pst = *fst;
 		    }
 		} else if (!a->inex.exgl || m != a->left) {
@@ -676,6 +645,7 @@ VTYPE skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd)
 	    eijnc->flush();
 	    gsi->noeij = eijnc->size() - 1;
 	}
+	if (cigar) cigar->flush();
 	if (samfm) {
 	    samfm->right = m;
 	    if (m < a->len) samfm->push('H', a->len - m);
@@ -687,66 +657,49 @@ VTYPE skl_rngS_ng(Seq* seqs[], Gsinfo* gsi, PwdB* pwd)
 		vreverse(samfm->rec, samfm->size());
 	    }
 	}
-	if (cigar) cigar->flush();
 	if (vlgar) vlgar->flush();
 	fst->val = (FTYPE) h;
 	return (h);
 }
 
-void Aln2s1::finitS_ng(WRECD* hhf[], int mm)
+/********************************************************
+*
+*	unidirectional Hirschberg algorithm
+*
+********************************************************/
+
+void Aln2s1::hinitS_ng(RVWU* hhg[], const WINDOW& wdw)
 {
-	int	n = b->left;
 	int	r = b->left - a->left;
 	int	r0 = r;
 	int	rr = b->right - a->left;
-	WRECD*	hf[NOL];
 
-	for (int k = 0; k < pwd->Nrow; ++k) hf[k] = hhf[k] + r;
-	if (wdw->up < rr) rr = wdw->up;
-	for (int i = 0; r <= wdw->up + 1; ++r, ++n, ++i) {
-	    WRECD*	h = hf[0]++;
- 	    for (int k = 1; k < pwd->Nrow; ++k) *hf[k]++ = oomW;
-	    if (i == 0) {
+	RVWU*	h = hhg[0]  + r;
+	h->val = 0;
+	h->lwr = h->upr = r;
+	if (a->inex.exgl) {	// semi-global
+	    if (wdw.up < rr) rr = wdw.up;
+	    while (++r <= rr) {
+		++h;
 		h->val = 0;
-	    } else if (!a->inex.exgl || r > rr) {
-		*h = oomW;
-		continue;
-	    } else {
-		*h = h[-1];
-		int	k = n - h->jnc;
-		if (k == 1) h->val += pwd->BasicGOP;
-		h->val += pwd->GapExtPen(k);
-		h->dir = HORI;
-	    }
-	    h->upr = h->lst = r;
-	    if (h->val <= 0) {
-		h->val = 0;
-		h->dir = i? DEAD: DIAG;
-		h->jnc = n;
-		h->lwr = r;
+		h->lwr = h->upr = r;
 	    }
 	}
 
 	r = r0;
-	rr = b->left - mm;
-	for (int k = 0; k < pwd->Nrow; ++k) hf[k] = hhf[k] + r;
-	if (wdw->lw > rr) rr = wdw->lw;
-	for (int i = 1; --r >= wdw->lw - 1; ++i) {
-	    WRECD*	h = --hf[0];
-	    WRECD*	g = --hf[1];
-	    for (int k = 2; k < pwd->Nrow; ++k) *--hf[k] = oomW;
-	    if (r < rr) *h = *g = oomW;
-	    else if (b->inex.exgl) {
+	rr = b->left - a->right;
+	if (wdw.lw > rr) rr = wdw.lw;
+	h = hhg[0] + r;
+	RVWU*	g = hhg[1] + r;
+	for (int i = 1; --r >= rr; ++i) {
+	    --h; --g;
+	    if (b->inex.exgl) {
 		h->val = 0;
-		h->dir = DEAD;
-		h->jnc = b->left;
-		h->lwr = h->upr = h->lst = r;
-		*g = oomW;
+		h->lwr = h->upr = r;
 	    } else {
 		*h = h[1];
 		if (i == 1) {
 		    h->val += pwd->GapPenalty(1);
-		    h->dir = VERT;
 		    *g = *h;
 		} else {
 		    *g = g[1];
@@ -758,93 +711,40 @@ void Aln2s1::finitS_ng(WRECD* hhf[], int mm)
 	}
 }
 
-void Aln2s1::binitS_ng(WRECD* hhb[], int mm)
+RVWU* Aln2s1::hlastS_ng(RVWU* hh[], const WINDOW& wdw)
 {
-	int	n = b->right;
-	int	r = b->right - a->right;
-	int	r9 = r;
-	int	rr = b->left - a->right;
-	WRECD*	hb[2 * NOL];
+	RVWU*	h9 = hh[0] + b->right - a->right;
+	RVWU*	mx = h9;
 
-	for (int k = 0; k < pwd->Nrow; ++k) hb[k] = hhb[k] + r;
-	if (wdw->lw > rr) rr = wdw->lw;
-	for (int i = 0; r >= wdw->lw - 1; --r, --n, ++i) {
-	    WRECD*	h = hb[0]--;
-	    for (int k = 1; k < pwd->Nrow; ++k) *hb[k]-- = oomW;
-	    if (i == 0) {
-		h->val = 0;
-	    } else if (!a->inex.exgr || r < rr) {	/* global */
-		*h = oomW;
-		continue;
-	    } else {
-		*h = h[1];
-		int	k = h->jnc - n;
-		if (k == 1) h->val += pwd->BasicGOP;
-		h->val += pwd->GapExtPen(k);
-		h->dir = HORI;
-	    }
-	    h->lwr = h->lst = r;
-	    if (h->val <= 0) {
-		h->val = 0;
-		h->dir = i? DEAD: DIAG;
-		h->jnc = n;
-		h->upr = r;
-	    }
+	if (b->inex.exgr) {
+	    int	rw = min(wdw.up, b->right - a->left);
+	    for (RVWU* h = hh[0] + rw; h > h9; --h)
+		if (h->val > mx->val) mx = h;
 	}
-
-	r = r9;
-	rr = b->right - mm;
-	if (wdw->up < rr) rr = wdw->up;
-	for (int k = 0; k < pwd->Nrow; ++k) hb[k] = hhb[k] + r;
-	for (int i = 1; ++r <= wdw->up + 1; ++i) {
-	    WRECD*	h = ++hb[0];
-	    WRECD*	g = ++hb[1];
-	    for (int k = 2; k < pwd->Nrow; ++k) *++hb[k] = oomW;
-	    if (r > rr) *h = *g = oomW;
-	    else if (b->inex.exgr) {
-		h->val = 0;
-		h->dir = DEAD;
-		h->jnc = b->right;
-		h->lwr = h->upr = h->lst = r;
-		*g = oomW;
-	    } else {
-		*h = h[-1];
-		if (i == 1) {
-		    h->val = pwd->GapPenalty(1);
-		    h->dir = VERT;
-		    *g = *h;
-		} else {
-		    *g = g[-1];
-		    h->val += pwd->GapExtPen(i);
-		    g->val += pwd->BasicGEP;
-		}
-		h->upr = g->upr = r;
-	    }
+	if (a->inex.exgr) {
+	    int	rw = max(wdw.lw, b->left - a->right);
+	    for (RVWU* h = hh[0] + rw; h < h9; ++h)
+		if (h->val > mx->val) mx = h;
 	}
+	return (mx);
 }
 
-VTYPE Aln2s1::centerS_ng(int* ml, int* mr, int* nl, int* nr, 
-		WINDOW* wdwf, WINDOW* wdwb)
+
+VTYPE Aln2s1::hirschbergS_ng(int cpos[], 
+		const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb)
 {
-	int	kk = 0;
-	int	jtigh = 0;
-	int	kb = 0;
-	int	jb = 0;
-	int	rr[MAXR+1];
-	WRECD	hl[NOL][INTR+1];
-	int	nx[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
-	WRECD*	hhf[NOL];
-	WRECD*	hhb[2 * NOL];
-	WRECD*	hf[NOL];
-	WRECD*	hb[2 * NOL];
-	WRECD	f[NOL];
-	WRECD*	f1 = f + 1;
-	WRECD*	f2 = 0;
-	WRECD*	b1 = f1;
-	WRECD*	b2 = f2;
-	WRECD*	g2 = 0;
-	VTYPE	mxh = NEVSEL;
-	SKL	wskl;
+const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
+	RVWU*	hhg[NOL];
+	RVWU*	hhb[NOL];
+	RVWU*	hb[NOL];		// hhb[k] + r
+	RVWU*	hf[NOD];
+	RVDWUJ	hl[NCAND + 1];;		// [candidates]
+	int	nx[NCAND + 1];		// [candidates]
+	RVDWUJ*	maxphl[NOD];
+	RVWU	e[2];
+	RVWU*&	f1 = hf[1] = e;
+	RVWU*&	f2 = hf[3] = e + 1;
+	RVWU	maxh = black_vwu;
 	int	Local = algmode.lcl & 16;
 	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
 	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
@@ -853,284 +753,76 @@ VTYPE Aln2s1::centerS_ng(int* ml, int* mr, int* nl, int* nr,
 	long	stop;
 #endif
 
-	hhf[0] = new WRECD[pwd->Nrow * wdw->width] - wdw->lw + 1;
-	hhb[0] = new WRECD[pwd->Nrwb * wdw->width] - wdw->lw + 1;
-	for (int k = 1; k < pwd->Nrow; ++k) hhf[k] = hhf[k-1] + wdw->width;
-	for (int k = 1; k < pwd->Nrwb; ++k) hhb[k] = hhb[k-1] + wdw->width;
+	size_t	bufsiz = pwd->Noll * wdw.width;
+	RVWU*	wbuf = new RVWU[bufsiz + bufsiz];
+	vset(wbuf, black_vwu, bufsiz + wdw.width);
+	RVWU*	blackvwu = wbuf + bufsiz - 1;	// assume to be const
+	hhg[0] = wbuf - wdw.lw + 1;
+	CHAR*	from_vert = new CHAR[wdw.width] - wdw.lw + 1;
+	vclear(from_vert + wdw.lw - 1, wdw.width);
+	for (int k = 1; k < pwd->Noll; ++k) hhg[k] = hhg[k-1] + wdw.width;
+	for (int k = 0; k < pwd->Noll; ++k) hhb[k] = hhg[k] + bufsiz;
+	hinitS_ng(hhg, wdw);
+
+	int	m = a->left;
 	int	mm = (a->left + a->right + 1) / 2;
-	if (pwd->Noll == 3) b2 = f2 = f + 2;
-	for (int k = 1; k < pwd->Noll; ++k) hf[k] = hb[k] = f + k;
-
-/*******	backward phase	*******/
-
-	binitS_ng(hhb, mm);
-	int	m = a->right;
-	PfqItr	api(a, m - 1);
+	PfqItr	api(a, m);		// iterator
 	int	api_size = api.size();
-	if (!a->inex.exgr) ++m; /* global */
-	CHAR*	as = a->at(m);
-	int	n1 = m + wdw->lw;
-	int	n2 = m + wdw->up + 1;
-	for ( ; --m >= mm; ) {
-	    --as; --n1; --n2;
-	    int	n = min(n2, b->right);
-	    int	n9 = max(n1, b->left);
-	    CHAR*	bs = b->at(n);
-	    int	r = n - m;
-	    int	d = 0;
-	    WRECD*	h = hhb[d] + r;
-	    WRECD*	g = hhb[++d] + r;
-	    *b1 = oomW;
-	    if (pwd->Noll == 3) {
-		g2 = hhb[++d] + r;
-		*b2 = oomW;
-	    }
-	    if (m == mm) 
-		while (d++ < 2 * pwd->Noll - 1) hb[d] = hhb[d] + r;
-	    for (int k = 0; k < pwd->Noll; ++k) {
-		WRECD*	phl = hl[k];
-		for (int l = 0; l <= INTR; ++l, ++phl) {
-		    nx[k][l] = l;
-		    *phl = oomW;
-		}
-	    }
-
-#if DEBUG
-	if (algmode.nsa & 8) {
-	    printf("%2d %2d %2d", m+1, n, h->dir);
-	    putvar(h->val); putchar('\n');
-	}
-#endif
-	    bool	a_in_zone = api_size && (api == m);
-	    for ( ; --n >= n9; ) {
-		VTYPE	x;
-		--bs; --g; --r;
-		hb[0] = --h;
-		if (g2) --g2;
-
-/*	Diagonal	*/
-		WRECD*	from = h;
-		WRECD*	mx = h;
-		if (m == a->right) goto HorizonB;
-		h->val += pwd->sim2(as, bs);
-		h->dir = (from->dir & DIAG)? DIAG: NEWD;
-
-/*	Vertical	*/
-		x = (--from)->val + pwd->BasicGOP;
-		if (x >= g[-1].val) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = VERT | (g->dir & SPJC);
-		} else *g = g[-1];
-		g->val += pwd->BasicGEP;
-		if (g->val >= mx->val) mx = g;
-
-/*	Vertical2	*/
-		if (g2) {
-		  x = from->val + pwd->LongGOP;
-		  if (x >= g2[-1].val) {
-		    *g2 = *from;
-		    g2->val = x;
-		    g2->dir = VERL | (g2->dir & SPJC);
-		  } else *g2 = g2[-1];
-		  g2->val += pwd->LongGEP;
-		  if (g2->val >= mx->val) mx = g2;
-		}
-HorizonB:
-/*	Horizontal	*/
-		x = h[1].val + pwd->BasicGOP;
-		if (x >= b1->val) {
-		    *b1 = h[1];
-		    b1->val = x;
-		}
-		if (b1->dir ) {
-		    b1->val += pwd->BasicGEP;
-		    b1->dir = (b1->dir & SPIN) + HORI;
-		    if (b1->val >= mx->val) mx = b1;
-		}
-
-/*	Horizontal2	*/
-		if (b2) {
-		    x = h[1].val + pwd->LongGOP;
-		    if (x >= b2->val) {
-			*b2 = h[1];
-			b2->val = x;
-		    }
-		    if (b2->dir) {
-			b2->val += pwd->LongGEP;
-			b2->dir = (b2->dir & SPIN) + HORI;
-			if (b2->val >= mx->val) mx = b2;
-		    }
-		}
-		if (mx->dir == NEWD) mx->lst = r;
-
-/*	intron 5' boundary reverse phase */
-		if (exin->isDonor(n)) {
-		    VTYPE	sigJ = a_in_zone? api.match_score(m): 0;
-		    for (int d = 0; d < pwd->Noll; ++d) {
-			from = hb[d];
-			WRECD*	maxphl = 0;
-			int*	pnx = nx[d];
-			for (int l = 0; l < INTR; ++l) {
-			    WRECD*	phl = hl[d] + pnx[l];
-			    if (!phl->dir) break;
-/*			    x = exin->sig53(n, phl->jnc, IE35) + sigJ +	*/
-			    x = exin->sig53(n, phl->jnc, IE53) + sigJ +
-				(exin->sig53(n, 0, IE5) - phl->sig) +
-				phl->val + pwd->IntPen->Penalty(phl->jnc - n);
-			    if (x > from->val) {
-				from->val = x;
-				maxphl = phl;
-		    	    }
-			}
-			if (maxphl) {
-	 		    from->jnc = maxphl->jnc;
-			    from->dir = maxphl->dir | SPJCI;
-			    from->upr = max(maxphl->upr, r);
-			    from->lwr = min(maxphl->lwr, r);
-			    from->lst = maxphl->lst + n - maxphl->jnc;
-			    if (from->val > mx->val) mx = from;
-			}
-		    }
-		}
-
-/*	Find optimal path	*/
-#if DEBUG
-		VTYPE	y = h->val;
-#endif
-		if (h != mx) {
-		    *h = *mx;
-		    if (h->upr < r) h->upr = r;
-		    if (h->lwr > r) h->lwr = r;
-		}
-		if (LocalR && h->val <= 0) h->val = h->dir = 0;
-
-/*	intron 3' boundary reverse phase	*/
-
-		if (exin->isAccpt(n)) {
-		    VTYPE	sigJ = exin->sig53(0, n, IE3);
-		    for (int d = 0; d < pwd->Noll; ++d) {
-				/* An orphan exon is disallowed */
-			from = hb[d];
-			if (!from->dir || from->dir & SPIN) continue;
-			x = from->val + sigJ;
-			WRECD*	phl = hl[d];
-			int*	pnx = nx[d];
-			int	l = INTR;
-			while (--l >= 0) {
-			    if (x > phl[pnx[l]].val)
-				gswap(pnx[l], pnx[l + 1]);
-			    else
-				break;
-			}
-			if (++l < INTR) {
-			    phl[pnx[INTR]].dir = 0;
-			    phl += pnx[l];
-			    *phl = *from;
-			    phl->val = x;
-			    phl->jnc = n;
-			    phl->sig = sigJ;
-			}
-		    }
-		}
-
-#if DEBUG
-	if (algmode.nsa & 8) {
-		printf("%2d %2d %2d ", m, n, mx->dir);
-		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(b1->val);
-		if (g2) {
-		    putvar(g2->val); putvar(b2->val);
-		}
-		if (algmode.lsg) {
-		    putvar(hl[0][nx[0][0]].val);
-		    putvar(hl[1][nx[1][0]].val);
-		    if (g2) putvar(hl[2][nx[2][0]].val);
-		}
-		putchar('\n');
-	}
-#endif
-
-/*	Prepare for finding the center */
-
-		if (m == mm) {
-		    if (isvert(mx) && g->val < mx->val)
-			*g = *mx;
-		    *--hb[d = pwd->Noll] = *b1;
-		    if (b2) *--hb[++d] = *b2;
-		}
-
-	    }	/* end of n-loop */
-	    if (a_in_zone) --api;		// has exon-exon junctions
-	}	/* end of m-loop */
-
-/*******	forward phase	*******/
-
-	finitS_ng(hhf, mm);
-	m = a->left;
-	if (api_size) api.reset(m);
-	if (!a->inex.exgl) --m; /* global */
-	n1 = m + wdw->lw - 1;
-	n2 = m + wdw->up;
-	as = a->at(m);
-	for ( ; ++m <= mm; ++as) {
+	if (!a->inex.exgl) --m; 	// global
+	int	n1 = m + wdw.lw - 1;
+	int	n2 = m + wdw.up;
+const	CHAR*	as = a->at(m);
+	for ( ; ++m <= a->right; ++as) {
 	    ++n1; ++n2;
 	    int	n = max(n1, b->left);
-	    int	n0 =n;
 	    int	n9 = min(n2, b->right);
-	    CHAR*	bs = b->at(n);
+const	    CHAR*	bs = b->at(n);
 	    int	r = n - m;
-	    WRECD*	h = hhf[0] + r;
-	    WRECD*	g = hhf[1] + r;
-	    *f1 = oomW;
-	    if (g2) {
-		g2  = hhf[2] + r;
-		*f2 = oomW;
+	    int	lst = r;
+	    int	hdir = 0;
+	    RVWU*&	h = hf[0] = hhg[0] + r;
+	    RVWU*&	g = hf[2] = hhg[1] + r;
+	    RVWU*&	g2 = hf[4] = dagp? hhg[2] + r: blackvwu;
+	    vset(e, black_vwu, 2);
+	    if (m == mm)
+		for (int k = 0; k < pwd->Noll; ++k)
+		    hb[k] = hhb[k] + r;
+	    vset(hl, black_vdwuj, NCAND + 1);
+	    for (int l = 0; l <= NCAND; ++l) nx[l] = l;
+	    int	ncand = 0;
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+	    bool	a_in_zone = api_size && api == m;
+#if DEBUG
+	    if (OutPrm.debug) {
+		printf("%2d %2d ", m, n);
+		putvar(h->val); putchar('\n');
 	    }
-	    if (m == mm) {
-		int	k = 0;
-		for ( ; k < pwd->Nrow; ++k) hb[k] = hhb[k] + r;
-		b1 = hhb[k++] + r;
-		if (b2) b2 = hhb[k] + r;
-	    }
-	    for (int d = 0; d < pwd->Noll; ++d) {
-		WRECD*	phl = hl[d];
-		for (int l = 0; l <= INTR; ++l, ++phl) {
-		    nx[d][l] = l;
-		    *phl = oomW;
-		}
-	    }
-	    bool	a_in_zone = api == m;
-	    for ( ; n <= n9; ++n, ++h, ++g, ++r, ++bs) {
+#endif
+	    for ( ; ++n <= n9; ++bs) {
 		VTYPE	x, y;
-		hf[0] = h;
-		WRECD*	from = h;
-		WRECD*	mx = h;
-		if (n == n0) goto FindCenter;
-		if (g2) ++g2;
+		++r; ++h; ++g; if (dagp) ++g2;
 
 /*	Diagonal	*/
+		RVWU*	from = h;
+		RVWU*	mx = h;
 		if (m == a->left) goto HorizonF;
-		h->val += pwd->sim2(as, bs);
-		h->dir = (from->dir & DIAG)? DIAG: NEWD;
+		h->val += qprof[*bs];
 
 /*	Vertical	*/
 		x = (++from)->val + pwd->BasicGOP;
 		if (x >= g[1].val) {
 		    *g = *from;
 		    g->val = x;
-		    g->dir = VERT | (g->dir & SPJC);
 		} else	*g = g[1];
 		g->val += pwd->BasicGEP;
 		if (g->val >= mx->val) mx = g;
 
 /*	Vertical2	*/
-		if (g2) {
+		if (dagp) {
 		  x = from->val + pwd->LongGOP;
 		  if (x >= g2[1].val) {
 		    *g2 = *from;
 		    g2->val = x;
-		    g2->dir = VERL | (g2->dir & SPJC);
 		  } else 	*g2 = g2[1];
 		  g2->val += pwd->LongGEP;
 		  if (g2->val >= mx->val) mx = g2;
@@ -1142,529 +834,598 @@ HorizonF:
 		    *f1 = h[-1];
 		    f1->val = x;
 		}
-		if (f1->dir) {
-		    f1->val += pwd->BasicGEP;
-		    f1->dir =(f1->dir & SPIN) + HORI;
-		    if (f1->val >= mx->val) mx = f1;
-		}
+		f1->val += pwd->BasicGEP;
+		if (f1->val >= mx->val) mx = f1;
 
 /*	Horizontal2	*/
-		if (f2) {
+		if (dagp) {
 		    x = h[-1].val + pwd->LongGOP;
 		    if (x >= f2->val) {
 			*f2 = h[-1];
 			f2->val = x;
-			f2->dir = HORI;
 		    }
-		    if (f2->dir) {
-			f2->val += pwd->LongGEP;
-			f2->dir =(f2->dir & SPIN) + HORL;
-			if (f2->val >= mx->val) mx = f2;
-		    }
+		    f2->val += pwd->LongGEP;
+		    if (f2->val >= mx->val) mx = f2;
 		}
-		if (mx->dir == NEWD) mx->lst = r;
 
 /*	intron 3' boundary	*/
-		if (exin->isAccpt(n)) {
+		if (b->exin->isAccpt(n)) {
 		    VTYPE	sigJ = a_in_zone? api.match_score(m): 0;
-		    for (int d = 0; d < pwd->Noll; ++d) {
-			from = hf[d];
-			WRECD*	maxphl = 0;
-			int*	pnx = nx[d];
-			for (int l = 0; l < INTR; ++l) {
-			    WRECD*	phl = hl[d] + pnx[l];
-			    if (!phl->dir) break;
-			    x = sigJ + phl->val + exin->sig53(phl->jnc, n, IE53) +
-				pwd->IntPen->Penalty(n - phl->jnc);
-			    if (x > from->val) {
-				from->val = x;
-				maxphl = phl;
-		    	    }
+		    vclear(maxphl, Nod);
+		    for (int l = 0; l < ncand; ++l) {
+			RVDWUJ*	phl = hl + nx[l];
+			from = hf[phl->dir];
+			x = phl->val + sigJ + b->exin->sig53(phl->jnc, n, IE53) +
+			    pwd->IntPen->Penalty(n - phl->jnc);
+			if (x > from->val) {
+			    from->val = x;
+			    maxphl[phl->dir] = phl;
 			}
-			if (maxphl) {
-		 	    from->jnc = maxphl->jnc;
-			    from->dir = maxphl->dir | SPJCI;
-			    from->upr = max(maxphl->upr, r);
-			    from->lwr = min(maxphl->lwr, r);
-			    from->lst = maxphl->lst + n - maxphl->jnc;
-			    if (from->val > mx->val) mx = from;
+		    }
+		    for (int k = 0; k < Nod; ++k) {
+			RVDWUJ*	phl = maxphl[k];
+			if (!phl) continue;
+			from = hf[k];
+			from->upr = max(phl->upr, r);
+			from->lwr = min(phl->lwr, r);
+			if (m > mm) from->ulk = phl->ulk;
+			else if (m == mm) 
+			    from->ulk = phl->jnc - m;
+			if (from->val > mx->val) {
+			    mx = from;
+			    hdir = SPJCI;
 			}
 		    }
 		}
 
 /*	Find optimal path	*/
 		y = h->val;
-		if (h != mx)  {
+		if (h != mx) {
 		    *h = *mx;
 		    if (h->upr < r) h->upr = r;
 		    if (h->lwr > r) h->lwr = r;
-		}
-		if (LocalL && h->val <= 0) h->val = h->dir = 0;
+		} else if (LocalR && y > maxh.val)
+		    maxh = *h;
+		if (LocalL && h->val <= 0) h->val = 0;
+		int		hd = 0;
+		for ( ; mx != hf[hd]; ++hd) ;
 
 /*	intron 5' boundary	*/
-		if (exin->isDonor(n)) {
-		    VTYPE	sigJ = exin->sig53(n, 0, IE5);
-		    for (int d = 0; d < pwd->Noll; ++d) {
-				/* An orphan exon is disallowed */
-			from = hf[d];
-			if (!from->dir || (from->dir & SPIN) || isvert(from))
-			    continue;
+		if (b->exin->isDonor(n)) {
+		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
+		    for (int k = mx == h? 0: 1; k < Nod; ++k) {
+			from = hf[k];
+			if (k % 2 && (hdir & SPIN)) continue;
+			if (k != hd) {
+			    y = mx->val;
+			    if (hd == 0 || (k - hd) % 2) y += pwd->GOP[k / 2];
+			    if (from->val <= y) continue;	// prune
+			}
 			x = from->val + sigJ;
-			WRECD*	phl = hl[d];
-			int*	pnx = nx[d];
-			int	l = INTR;
+			int	l = ncand < NCAND? ++ncand: NCAND;
 			while (--l >= 0) {
-			    if (x > phl[pnx[l]].val)
-				gswap(pnx[l], pnx[l + 1]);
+			    if (x > hl[nx[l]].val)
+				swap(nx[l], nx[l + 1]);
 			    else
 				break;
 			}
-			if (++l < INTR) {
-			    phl[pnx[INTR]].dir = 0;
-			    phl += pnx[l];
-			    *phl = *from;
+			if (++l < NCAND) {
+			    RVDWUJ*	phl = hl + nx[l];
 			    phl->val = x;
 			    phl->jnc = n;
-			}
+			    phl->dir = k;
+			    phl->upr = from->upr;
+			    phl->lwr = from->lwr;
+			    if (m > mm) phl->ulk = from->ulk;
+			    else if (m == mm)	// hori?
+				phl->ulk = (k % 2)? lst: end_of_ulk;
+			} else --ncand;
 		    }
 		}
 
 #if DEBUG
-	if (algmode.nsa & 8) {
-		printf("%2d %2d %2d ", m, n, mx->dir);
-		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(f1->val);
-		if (g2) {
-		    putvar(g2->val); putvar(f2->val);
+		if (OutPrm.debug) {
+		    printf("%2d %2d ", m, n);
+		    putvar(mx->val); putvar(y); 
+		    putvar(g->val); putvar(f1->val);
+		    if (dagp) {
+			putvar(g2->val); putvar(f2->val);
+		    }
+		    if (algmode.lsg) {
+			putvar(hl[nx[0]].val);
+			putvar(hl[nx[1]].val);
+			putvar(hl[nx[2]].val);
+		    }
+		    putchar('\n');
 		}
-		if (algmode.lsg) {
-		    putvar(hl[0][nx[0][0]].val);
-		    putvar(hl[1][nx[1][0]].val);
-		    if (g2) putvar(hl[2][nx[2][0]].val);
-		}
-		putchar('\n');
-	}
 #endif
 
-/* Find Center */
-FindCenter:
+// save variables at the center
 		if (m == mm) {
-		    int	acc = (*hf)->dir & SPJC;
-		    int	dnr = (*hb)->dir & SPJC;
-		    int	j1, k1, l;
-		    if (((*hf)->dir & SPIN) && ((*hb)->dir & SPIN))
-			goto NextCycle;
-		    x = (*hf)->val + (*hb)->val;
-		    j1 = f1->dir & SPJC;	/* 3' boundary */
-		    k1 = b1->dir & SPJC;	/* 5' boundary */
-		    if ((j1 && !k1) || (!j1 && k1)) {
-			y = f1->val + b1->val - pwd->BasicGOP;
-			l = b1->lst - f1->lst - pwd->codonk1;/* gap length */
-			if (l > 0) y += pwd->diffu * l;		/* > codonK1 ? */
-			if (y > x) {
-			    x = y;
-			    dnr = k1;
-			    acc = j1;
-			}
+		    for (int k = 0; k < pwd->Noll; ++k)
+			*++hb[k] = *hf[2 * k];
+		    if (mx == h || (hdir & SPJC)) lst = r;
+		    else if (lst < r) hb[0]->ulk = lst;
+		    else from_vert[r] = 1;
+		    for (int k = 0, j = 0; k < pwd->Noll; ++k, j += wdw.width) {
+			hf[2 * k]->upr = hf[2 * k]->lwr = r;
+			hf[2 * k]->ulk = r + j;
 		    }
-		    if (f2) {
-			int	j2 = f2->dir & SPJC;
-			int	k2 = b2->dir & SPJC;
-			if ((j1 && !k2) || (!j1 && k2)) {
-			    l = r - f1->lst;
-			    y = f1->val + b2->val - pwd->BasicGOP + pwd->diffu * l;
-			    if (y > x) {
-				x = y;
-				dnr = k2;
-				acc = j1;
-			    }
-			}
-			if ((j2 && !k1) || (!j2 && k1)) {
-			    int l = b1->lst - r;
-			    y = f2->val + b1->val - pwd->BasicGOP + pwd->diffu * l;
-			    if (y > x) {
-				x = y;
-				dnr = k1;
-				acc = j2;
-			    }
-			}
-			if ((j2 && !k2) || (!j2 && k2)) {
-			    y = f2->val + b2->val - pwd->LongGOP;
-			    if (y > x) {
-				x = y;
-				dnr = k2;
-				acc = j2;
-			    }
-			}
-		    }
-		    k1 = isvert(*hf)? 1: 0;
-		    j1 = isvert(*hb)? 1: 0;
-		    y = g->val + hb[1]->val - pwd->BasicGOP;
-		    l = g->lst - hb[1]->lst - pwd->codonk1;
-		    if (l > 0) y += pwd->diffu * l;
-		    if (y >= x) {x = y; k1 = j1 = 1;}
-		    if (g2) {
-			y = g->val + hb[2]->val - pwd->BasicGOP + pwd->diffu * (g->lst - r);
-			if (y > x) {x = y; k1 = 1; j1 = 2;}
-			y = g2->val + hb[1]->val - pwd->BasicGOP + pwd->diffu * (r - hb[1]->lst);
-			if (y > x) {x = y; k1 = 2; j1 = 1;}
-			y = g2->val + hb[2]->val - pwd->LongGOP;
-			if (y > x) {x = y; k1 = j1 = 2;}
-		    }
-		    if (gt(x, mxh)) {
-			mxh = x;
-			rr[jtigh = 0] = r;
-			kk = k1 + 4 * j1;
-			jb = ((*hb)->dir & SPJC)? 1: 0;
-			kb = (*hb)->dir & HORI;
-		    } else if (ge(x, mxh)) {
-			if (j1 && dnr) {
-			    rr[jtigh = 0] = r;
-			} else if (j1 && acc) {
-			    rr[jtigh = 1] = r;
-			} else if
-			(((kb || jb == 2) && ((*hf)->dir & HORI)) ||	/* --* */
-			(jb == 1 && (acc || ((*hf)->dir & SPJC))) ||	/* ..| */
-			(kb && dnr)) {					/* *-| */
-			    if (++jtigh < MAXR) rr[jtigh] = r;
-			    if (acc || dnr) ++jb;
-			    else	jb = 0;
-			    kb = 0;
-			}
-		    }
-NextCycle:
-		    for (int d = 0; d < pwd->Nrow; d++) ++hb[d];
-		    b1++;
-		    if (b2) b2++;
-		}
-	    }	/* end of n-loop */
+		}	// was center
+		hdir &= (hd % 2? SPIN: 0);
+	    }	// end of n-loop
 	    if (a_in_zone) ++api;		// has exon-exon junctions
-	}	/* end of m-loop */
+	}	// end of m-loop
 
-	int	k1 = kk % 4;
-	int	k2 = kk / 4;
-	int	r = rr[0];
-	*nl = r + mm;
-	for (int d = 0; d < pwd->Nrow; ++d) hf[d] = hhf[d] + r;
-	wdwf->up = max(hf[k1]->upr, hf[k1]->lst);
-	wdwf->lw = min(hf[k1]->lwr, hf[k1]->lst);;
-	wdwf->width = wdwf->up - wdwf->lw + 3;
-	if (k1) {
-	    wskl.m = *ml = *nl - hf[k1]->lst;
-	    wskl.n = *nl;
-	    mfd->write((UPTR) &wskl);
-	} else {
-	    wskl.m = *ml = mm;
+	if (!LocalR) maxh = *hlastS_ng(hhg, wdw);
+	wdwb.up = maxh.upr;
+	wdwb.lw = maxh.lwr;
+	wdwb.width = wdwb.up - wdwb.lw + 3;
+	int	r = maxh.ulk;
+	int	k = (r - wdw.lw) / wdw.width;
+	if (k)	r -= k * wdw.width;
+	RVWU*	mx = hhb[k] + r;
+	b->inex.exgr = k? 1: 0;
+	b->inex.exgl = (k == from_vert[r])? 1: 0;
+	int	c = 0;
+	cpos[c++] = mm;
+	while (mx->ulk != end_of_ulk) {
+	    cpos[c++] = r + mm;
+	    mx = hhb[0] + (r = mx->ulk);
 	}
-	*nr = (r = rr[jtigh]) + mm;
-	for (int d = 0; d < pwd->Nrow; ++d) hb[d] = hhb[d] + r;
-	wdwb->up = max(hb[k2]->upr, hb[k2]->lst);
-	wdwb->lw = min(hb[k2]->lwr, hb[k2]->lst);
-	wdwb->width = wdwb->up - wdwb->lw + 3;
-	if (k2) {
-	    wskl.n = *nr;
-	    mfd->write((UPTR) &wskl);
-	    wskl.m = *mr = *nr - hb[k2]->lst;
-	    mfd->write((UPTR) &wskl);
-	} else {
-	    *mr = mm;
-	    for ( ; jtigh >= 0; --jtigh) {
-		wskl.m = mm;
-		wskl.n = rr[jtigh] + mm;
-		mfd->write((UPTR) &wskl);
-	    }
-	}
-	delete[] (hhf[0] + wdw->lw - 1);
-	delete[] (hhb[0] + wdw->lw - 1);
-	return (mxh);
+	cpos[c++] = r + mm;
+	cpos[c] = end_of_ulk;
+	wdwf.up = mx->upr;
+	wdwf.lw = mx->lwr;
+	wdwf.width = wdwf.up - wdwf.lw + 3;
+
+	delete[] wbuf;
+	delete[] (from_vert + wdw.lw - 1);
+	return (maxh.val);
 }
 
-static const int pNoll = 2;
-static const int pNrow = 2;
-static const int Nedge = 3;
+/********************************************************
+*
+*	score only algorithm
+*
+********************************************************/
 
-void Aln2s1::pfinitS_ng(LRECD* hhg[])
+void Aln2s1::sinitS_ng(VTYPE* hh[], const WINDOW& wdw)
 {
 	int	r = b->left - a->left;
 	int	rr = b->right - a->left;
-	LRECD*	hf[pNrow];
 
-	for (int d = 0; d < pNrow; ++d) hf[d] = hhg[d] + r;
-	if (wdw->up < rr) rr = wdw->up;
-	LRECD*	h = hf[0]++;
-	h->val = 0;
-	h->dir = DIAG;
-	h->jnc = b->left;
-	h->lst = r;
-	h->ptr = vmf? vmf->add(a->left, b->left, 0): 0;
- 	for (int d = 1; d < pNrow; ++d) *hf[d]++ = ooml;
-	while (++r <= wdw->up + 1) {
- 	    for (int d = 0; d < pNrow; ++d) *hf[d]++ = ooml;
+	VTYPE*	h = hh[0]  + r;
+	*h = 0;
+	if (a->inex.exgl) {	// semi-global
+	    if (wdw.up < rr) rr = wdw.up;
+	    vclear(h + 1, rr - r);
 	}
+
+	rr = b->left - a->right;
+	if (wdw.lw > rr) rr = wdw.lw;
+	if (b->inex.exgl) {
+	    vclear(hh[0] + rr, r - rr);
+	    return;
+	}
+	VTYPE*	g = hh[1] + r;
+	for (int i = 1; --r >= rr; ++i) {
+	    --h; --g;
+	    *h = h[1];
+	    if (i == 1) {
+		*h += pwd->GapPenalty(1);
+		*g = *h;
+	    } else {
+		*g = g[1];
+		*h += pwd->GapExtPen(i);
+		*g += pwd->BasicGEP;
+	    }
+	}
+}
+
+VTYPE Aln2s1::slastS_ng(VTYPE* hh[], const WINDOW& wdw)
+{
+	VTYPE*	h9 = hh[0] + b->right - a->right;
+	VTYPE	mx = *h9;
+
+	if (b->inex.exgr) {
+	    int	rw = min(wdw.up, b->right - a->left);
+	    for (VTYPE* h = hh[0] + rw; h > h9; --h)
+		if (*h > mx) mx = *h;
+	}
+	if (a->inex.exgr) {
+	    int	rw = max(wdw.lw, b->left - a->right);
+	    for (VTYPE* h = hh[0] + rw; h < h9; ++h)
+		if (*h > mx) mx = *h;
+	}
+	return (mx);
+}
+
+VTYPE Aln2s1::scorealoneS_ng(const WINDOW& wdw)
+{
+const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
+	VTYPE*	hh[NOL];
+	RVDJ	hl[NCAND + 1];
+	int	nx[NCAND + 1];		// [candidates]
+	RVDJ*	maxphl[NOD];
+	VTYPE	f1;
+	VTYPE	f2;
+	VTYPE*	hf[NOD] = {0, &f1, 0, &f2, 0};
+	VTYPE	maxh = NEVSEL;
+	int	Local = algmode.lcl & 16;
+	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
+	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+
+	size_t	bufsiz = pwd->Noll * wdw.width;
+	VTYPE*	wbuf = new VTYPE[bufsiz];
+	vset(wbuf, NEVSEL, bufsiz);
+	VTYPE*	blackv = wbuf + bufsiz - 1;	// assume to be const
+	hh[0] = wbuf - wdw.lw + 1;
+	for (int k = 1; k < pwd->Noll; ++k) hh[k] = hh[k-1] + wdw.width;
+	sinitS_ng(hh, wdw);
+
+	int	m = a->left;
+	if (!a->inex.exgl) --m; 	// global
+	int	n1 = m + wdw.lw - 1;
+	int	n2 = m + wdw.up;
+const	CHAR*	as = a->at(m);
+	for ( ; ++m <= a->right; ++as) {
+	    ++n1; ++n2;
+	    int	n = max(n1, b->left);
+	    int	n9 = min(n2, b->right);
+const	    CHAR*	bs = b->at(n);
+	    int	r = n - m;
+	    VTYPE*&	h = hf[0] = hh[0] + r;
+	    VTYPE*&	g = hf[2] = hh[1] + r;
+	    VTYPE*&	g2 = hf[4] = dagp? hh[2] + r: blackv;
+	    f1 = f2 = NEVSEL;
+	    vset(hl, black_vdj, NCAND + 1);
+	    for (int l = 0; l <= NCAND; ++l) nx[l] = l;
+	    int	ncand = 0;
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+#if DEBUG
+	    if (OutPrm.debug) {
+		printf("%2d %2d ", m, n);
+		putvar(*h); putchar('\n');
+	    }
+#endif
+	    for ( ; ++n <= n9; ++bs) {
+		VTYPE	x, y;
+		++h; ++g; if (dagp) ++g2;
+
+/*	Diagonal	*/
+		VTYPE*	from = h;
+		VTYPE*	mx = h;
+		if (m == a->left) goto HorizonF;
+		*h += qprof[*bs];
+
+/*	Vertical	*/
+		x = *++from + pwd->BasicGOP;
+		*g = max(x, g[1]) + pwd->BasicGEP;
+		if (*g > *mx) mx = g;
+
+/*	Vertical2	*/
+		if (dagp) {
+		  x = *from + pwd->LongGOP;
+		  *g2 = max(x, g2[1]) + pwd->LongGEP;
+		  if (*g2 > *mx) mx = g2;
+		}
+HorizonF:
+/*	Horizontal	*/
+		x = h[-1] + pwd->BasicGOP;
+		f1 = max(x, f1) + pwd->BasicGEP;
+		if (f1 > *mx) mx = &f1;
+
+/*	Horizontal2	*/
+		if (dagp) {
+		    x = h[-1] + pwd->LongGOP;
+		    f2 = max(x, f2) + pwd->LongGEP;
+		    if (f2 > *mx) mx = &f2;
+		}
+
+/*	intron 3' boundary	*/
+		if (b->exin->isAccpt(n)) {
+		    vclear(maxphl, Nod);
+		    for (int l = 0; l < ncand; ++l) {
+			RVDJ*	phl = hl + nx[l];
+			from = hf[phl->dir];
+			x = phl->val + b->exin->sig53(phl->jnc, n, IE53) +
+			    pwd->IntPen->Penalty(n - phl->jnc);
+			if (x > *from) {
+			    *from = x;
+			    maxphl[phl->dir] = phl;
+			}
+		    }
+		    for (int k = 0; k < Nod; ++k) {
+			RVDJ*	phl = maxphl[k];
+			if (!phl) continue;
+			from = hf[k];
+			if (*from > *mx) mx = from;
+		    }
+		}
+
+/*	Find optimal path	*/
+		y = *h;
+		if (h != mx) *h = *mx;
+		else if (LocalR && y > maxh) maxh = y;
+		if (LocalL && *h < 0) *h = 0;
+		int	hd = 0;
+		for ( ; mx != hf[hd]; ++hd) ;
+
+/*	intron 5' boundary	*/
+		if (b->exin->isDonor(n)) {
+		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
+		    for (int k = hd == 0? 0: 1; k < Nod; ++k) {
+			from = hf[k];
+			if (k != hd) {
+			    y = *mx;
+			    if (hd == 0 || (k - hd) % 2) y += pwd->GOP[k / 2];
+			    if (*from <= y) continue;	// prune
+			}
+			x = *from + sigJ;
+			int	l = ncand < NCAND? ++ncand: NCAND;
+			while (--l >= 0) {
+			    if (x > hl[nx[l]].val)
+				swap(nx[l], nx[l + 1]);
+			    else
+				break;
+			}
+			if (++l < NCAND) {
+			    RVDJ*	phl = hl + nx[l];
+			    phl->val = x;
+			    phl->jnc = n;
+			    phl->dir = k;
+			} else --ncand;
+		    }
+		}
+
+#if DEBUG
+		if (OutPrm.debug) {
+		    printf("%2d %2d ", m, n);
+		    putvar(*mx); putvar(y); 
+		    putvar(*g); putvar(f1);
+		    if (dagp) {
+			putvar(*g2); putvar(f2);
+		    }
+		    if (algmode.lsg) {
+			putvar(hl[0].val);
+			putvar(hl[1].val);
+			putvar(hl[2].val);
+		    }
+		    putchar('\n');
+		}
+#endif
+	    }	// end of n-loop
+	}	// end of m-loop
+	if (!LocalR) maxh = slastS_ng(hh, wdw);
+
+	delete[] wbuf;
+	return (maxh);
+}
+
+void Aln2s1::pfinitS_ng(RVP* hh[], const WINDOW& wdw)
+{
+	int	r = b->left - a->left;
+	int	rr = b->right - a->left;
+
+	RVP*	h = hh[0] + r;
+	RVP*	g = hh[1] + r;
+	h->val = 0;
+	h->ptr = vmf? vmf->add(a->left, b->left, 0): 0;
 
 	r = b->left - a->left;
 	rr = b->left - a->right;
-	for (int d = 0; d < pNrow; ++d) hf[d] = hhg[d] + r;
-	if (wdw->lw > rr) rr = wdw->lw;
-	for (int i = 1; --r >= wdw->lw - 1; ++i) {
-	    h = --hf[0];
-	    if (r < rr) *h = ooml;
-	    else {			/* (semi) global */
-		*h = h[1];
-		if (i == 1) {
-		    h->val += pwd->BasicGOP;
-		    h->dir = VERT;
-		}
-		h->val += pwd->BasicGEP;
-	    }
-	    *--hf[1] = *h;
+	if (wdw.lw > rr) rr = wdw.lw;
+	for (int i = 1; --r >= rr; ++i) {
+	    --h; --g;
+	    *h = h[1];
+	    if (i == 1)	h->val += pwd->BasicGOP;
+	    h->val += pwd->BasicGEP;
+	    *g = *h;
 	}
 }
 
-void Aln2s1::pbinitS_ng(LRECD* hhg[])
+void Aln2s1::pbinitS_ng(RVP* hh[], const WINDOW& wdw)
 {
 	int	r = b->right - a->right;
 	int	rr = b->left - a->right;
-	LRECD*	hb[pNrow];
 
-	for (int d = 0; d < pNrow; ++d) hb[d] = hhg[d] + r;
-	if (wdw->lw > rr) rr = wdw->lw;
-	LRECD*	h = hb[0]--;
+	RVP*	h = hh[0] + r;
+	RVP*	g = hh[1] + r;
 	h->val = 0;
-	h->dir = DIAG;
-	h->jnc = b->right;
-	h->lst = r;
 	h->ptr = vmf? vmf->add(a->right, b->right, 0): 0;
-	for (int d = 1; d < pNrow; ++d) *hb[d]-- = ooml;
-	while (--r >= wdw->lw - 1) {
-	    for (int d = 0; d < pNrow; ++d) *hb[d]-- = ooml;
-	}
 
 	r = b->right - a->right;
 	rr = b->right - a->left;
-	if (wdw->up < rr) rr = wdw->up;
-	for (int d = 0; d < pNrow; ++d) hb[d] = hhg[d] + r;
-	for (int i = 1; ++r <= wdw->up + 1; ++i) {
-	    h = ++hb[0];
-	    if (r > rr) *h = ooml;
-	    else {
-		*h = h[-1];
-		if (i == 1) {
-		    h->val += pwd->BasicGOP;
-		    h->dir = VERT;
-		}
-		h->val += pwd->BasicGEP;
-	    }
-	    *++hb[1] = *h;
+	if (wdw.up < rr) rr = wdw.up;
+	for (int i = 1; ++r <= rr; ++i) {
+	    ++h; ++g;
+	    *h = h[-1];
+	    if (i == 1) h->val += pwd->BasicGOP;
+	    h->val += pwd->BasicGEP;
+	    *g = *h;
 	}
 }
 
-VTYPE Aln2s1::pincersS_ng(long *ptr, int cmode)
+// intron-less backward extension
+
+VTYPE Aln2s1::back2ward5endS_ng(long *ptr, const WINDOW& wdw)
 {
-	int	enda = a->inex.exgl && algmode.lcl < 16;
-	int	endb = b->inex.exgl && algmode.lcl < 16;
-	int	nx = 0;
-	int	n = 0, n1, n2, n9 = 0;
-	LRECD*	hhg[pNrow];
-	LRECD*	hf[Nedge];
-	LRECD	f[pNoll];
-	LRECD*	h = 0;
-	LRECD*	f1 = f + 1;
-	LRECD*	b1 = f1;
-	LRECD	maxl = ooml;	/* left  side */
-	LRECD	maxr = ooml;	/* right side */
-	int	dd = a->right - a->left + 1;
-	EIJUNC*	hhl = new EIJUNC[dd] - a->left;	/* intron junc	*/
-	EIJODR*	nnl = new EIJODR[dd] - a->left;	/* intron junc	*/
+	RVP*	hh[2];			// H matrix
 	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
 	VSKLP	lsth = maxh;
-	VTYPE	maxscr = NEVSEL;	/* overall */
+	RVP	f1 = black_vp;
+	RVP*	hf[3] = {0, &f1, 0};
+	RVP*&	h = hf[0];
+	RVP*&	g = hf[2];
 
-	hhg[0] = new LRECD[pNrow * wdw->width] - wdw->lw + 1;
-	for (int d = 1; d < pNrow; ++d) hhg[d] = hhg[d-1] + wdw->width;
-	for (int d = 1; d < pNoll; ++d) hf[2 * d] = f + d;
-	vmf->add(0, 0, 0);	/* Skip 0-th record */
-	int	m = a->left;
-	CHAR*	as = a->at(m);
-	PfqItr	api(a, m);
-	int	api_size = api.size();
-	if (cmode == 2) goto forward;	// forward only
+	size_t	bufsiz = 2 * wdw.width;
+	RVP*	jbuf = new RVP[bufsiz];
+	vset(jbuf, black_vp, bufsiz);
+	RVP*	blackvp = jbuf + bufsiz - 1;
+	hh[0] = jbuf - wdw.lw + 1;
+	hh[1] = hh[0] + wdw.width;
+	CHAR*	dbuf = new CHAR[wdw.width];
+	vset(dbuf, CHAR(1), wdw.width);
+	CHAR*	hdir = dbuf  - wdw.lw + 1;
+	vmf->add(0, 0, 0);		// Skip 0-th record
+	pbinitS_ng(hh, wdw);
 
-/*******	backward phase	*******/
-
-	pbinitS_ng(hhg);
-	m = a->right;
-	if (!a->inex.exgr) ++m; /* global */
-	else {
-	    for (int l = 0; l <= NCANDS; ++l) {
-		hhl[m][l] = ooml;
-		nnl[m][l] = l;
-	    }
-	}
-	as = a->at(m);
-	n1 = m + wdw->lw;
-	n2 = m + wdw->up + 1;
+	int	m = a->right;
+	if (!a->inex.exgr) ++m; 	// global
+const	CHAR*	as = a->at(m);
+	int	n = 0;
+	int	n9 = 0;
+	int	n1 = m + wdw.lw;
+	int	n2 = m + wdw.up + 1;
+	bool	enda = a->inex.exgl && algmode.lcl < 16;
+	bool	endb = b->inex.exgl && algmode.lcl < 16;
 	while (--m >= a->left) {
-	    for (int l = 0; l <= NCANDS; ++l) {
-		hhl[m][l] = ooml;
-		nnl[m][l] = l;
-	    }
 	    --as; --n1; --n2;
-	    n  = min(n2, b->right);
+	    n = min(n2, b->right);
 	    n9 = max(n1, b->left);
 	    int	r = n - m;
 	    int	nr = n + 1;
 	    int	peak = 0;
-	    CHAR*	bs = b->at(n);
-	    h = hhg[0] + r;
-	    LRECD*	g = hhg[1] + r;
-	    LRECD*	mxd = ((h->val + pwd->Vthr) < maxh.val)? &ooml: h;
-	    *b1 = ooml;
+const	    CHAR*	bs = b->at(n);
+	    h = hh[0] + r;
+	    g = hh[1] + r;
+	    CHAR*	dir = hdir + r;
+	    f1 = black_vp;
+	    RVP*	mxd = ((h->val + pwd->Vthr) < maxh.val)? blackvp: h;
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 
 #if DEBUG
-	if (algmode.nsa & 8) {
-	    printf("%2d %2d %2d", m+1, n, h->dir);
+	if (OutPrm.debug) {
+	    printf("%2d %2d %2d", m+1, n, *dir);
 	    putvar(h->val); putchar('\n');
 	}
 #endif
 	    while (--n >= n9) {
 		VTYPE	x;
-		--bs; --r;
-		hf[0] = --h;
-		hf[1] = --g;
+		--bs; --r; --h; --g;
 
 /*	Diagonal	*/
-		LRECD*	from = h;
-		LRECD*	mx = h;
+		RVP*	from = h;
+		RVP*	mx = h;
 		if (m == a->right) goto HorizonB;
-		h->val += pwd->sim2(as, bs);
-		h->dir = (from->dir & DIAG)? DIAG: NEWD;
+		h->val += qprof[*bs];
+		*dir = *dir % Newd? Newd: 0;
 
 /*	Vertical	*/
 		x = (--from)->val + pwd->BasicGOP;
 		if (x >= g[-1].val) {
 		    *g = *from;
 		    g->val = x;
-		    g->dir = VERT;
 		} else *g = g[-1];
 		g->val += pwd->BasicGEP;
 		if (g->val >= mx->val) mx = g;
 HorizonB:
 /*	Horizontal	*/
 		x = h[1].val + pwd->BasicGOP;
-		if (x >= b1->val) {
-		    *b1 = h[1];
-		    b1->val = x;
+		if (x >= f1.val) {
+		    f1 = h[1];
+		    f1.val = x;
 		}
-		if (b1->dir) {
-		    b1->val += pwd->BasicGEP;
-		    b1->dir = HORI;
-		    if (b1->val >= mx->val) mx = b1;
-		}
-
-		if (mx->dir == NEWD) {
-		    mx->lst = r;
-		    if (vmf) mx->ptr = vmf->add(m + 1, n + 1, mx->ptr);
-		}
+		f1.val += pwd->BasicGEP;
+		if (f1.val >= mx->val) mx = &f1;
 
 /*	Find optimal path	*/
+#if DEBUG
+		VTYPE	y = maxh.val;
+#endif
+		if ((*dir & Newd) && vmf)
+		    mx->ptr = vmf->add(m + 1, n + 1, mx->ptr);
 		if (mx->val > maxh.val) {
 		    maxh.val = mx->val;
 		    maxh.p = mx->ptr;
 		    maxh.m = m;
 		    maxh.n = n;
 		}
-		if (mx->val + pwd->Vthr < maxh.val) {	/* x drop off */
-		    if (peak) {		/* end of block */
+		if (mx->val + pwd->Vthr < maxh.val) {	// x drop off
+		    if (peak) {				// end of block
 			n1 = n + 1;
 			peak = 0;
 		    }
-		    nr = n;		/* before block	*/
-		} else if ((mx->dir & DIAG) && mx->val >= mxd->val) {
+		    nr = n;				// before block
+		} else if ((*dir % Newd == 0) && mx->val >= mxd->val) {
 		    mxd = mx;
 		    if (nr < n2) n2 = nr;
-		    nx = n;
 		    peak = 1;
 		}
 		if (h != mx) *h = *mx;
-
-/*	intron 3' boundary reverse phase	*/
-
-		if (cmode == 3 && exin->isAccpt(n)) {
-		    LRECD*	phl = hhl[m];
-		    int*	pnx = nnl[m];
-		    int		p = 0;
-		    for ( ; p < NCANDS && phl[pnx[p]].dir; ++p) ;
-		    VTYPE	sigJ = exin->sig53(0, n, IE3);
-		    for (int d = 0; d < Nedge; ++d) {
-			int	l = (d + 1) / 2;
-			from = hf[d];
-			if (!from->dir || (d && (mx == from || 
-			from->val <= mx->val + pwd->GOP[l])))
-			    continue;
-			x = from->val + sigJ;
-			if (p == NCANDS) --p;
-			for (l = p++; l >= 0; --l) {
-			    if (x <= phl[pnx[l]].val)
-				break;
-			    else if (l < NCANDS - 1)
-				gswap(pnx[l], pnx[l + 1]);
-			}
-			if (++l < NCANDS) {
-			    LRECD*	phr = phl + pnx[l];
-			    *phr = *from;
-			    phr->val = x;
-			    phr->jnc = n;
-			}
-		    }
-		}
+		for (*dir = 0; mx != hf[*dir]; ++*dir) ;
 
 #if DEBUG
-	if (algmode.nsa & 8) {
-		printf("%2d %2d %2d ", m, n, mx->dir);
+	if (OutPrm.debug) {
+		printf("%2d %2d %2d ", m, n, *dir);
 		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(b1->val);
-		if (algmode.lsg) {
-		    putvar(hhl[m][nnl[m][0]].val);
-		    putvar(hhl[m][nnl[m][1]].val);
-		    putvar(hhl[m][nnl[m][2]].val);
-		}
+		putvar(g->val); putvar(f1.val);
 		putchar('\n');
 	}
 #endif
-		if (m == a->left && enda && h->val > lsth.val)
-		    {lsth.val = h->val; lsth.p = h->ptr; lsth.m = m; lsth.n = n;}
-	    }	// end of n loop
-	    if (!mxd->dir) break;	// no peak
+		if (m == a->left && enda && h->val > lsth.val) {
+		    lsth.val = h->val;
+		    lsth.p = h->ptr;
+		    lsth.m = m;
+		    lsth.n = n;
+		}
+	    } // end of n loop
+	    if (mxd->val <= NEVSEL) break;	// no peak
 	    if (peak) n1 = n;
-	    LRECD*	phr = hhl[m] + nnl[m][NCANDS];
-	    *phr = *mxd;		// maxscr in row
-	    phr->jnc = nx;
-	    if (++n == b->left && endb && h->val > lsth.val)
-		{lsth.val = h->val; lsth.p = h->ptr; lsth.m = m; lsth.n = n;}
-	}	// end of m loop
-	if (cmode == 1) {
-	    if (!a->inex.exgl && !b->inex.exgl && h)		// global
-		{lsth.val = h->val; lsth.p = h->ptr; lsth.m = ++m; lsth.n = max(n, n9);}
-	    else if (lsth.val == NEVSEL) lsth = maxh;
-	    maxscr = lsth.val;
-	    ptr[0] = 0;
-	    if (vmf) ptr[1] = vmf->add(lsth.m, lsth.n, lsth.p);
-	    goto freeprec;
-	} else	++m;
+	    if (++n == b->left && endb && h->val > lsth.val) {
+		lsth.val = h->val;
+		lsth.p = h->ptr;
+		lsth.m = m;
+		lsth.n = n;
+	    }
+	} // end of m loop
 
-/*******	forward phase	*******/
+	if (!a->inex.exgl && !b->inex.exgl && h) {		// global
+	    lsth.val = h->val;
+	    lsth.p = h->ptr;
+	    lsth.m = ++m;
+	    lsth.n = max(n, n9);
+	} else if (lsth.val == NEVSEL) lsth = maxh;
+	if (vmf) *ptr = vmf->add(lsth.m, lsth.n, lsth.p);
+	delete[] jbuf;
+	delete[] dbuf;
+	return (lsth.val);
+}
 
-forward:
-	pfinitS_ng(hhg);
-	if (api_size) api.reset(m);
-	if (!a->inex.exgl) --m; /* global */
-	n1 = m + wdw->lw - 1;
-	n2 = m + wdw->up;
-	as = a->at(m);
-	maxh.val = lsth.val = NEVSEL;
-	enda = a->inex.exgr && algmode.lcl < 16;
-	endb = b->inex.exgr && algmode.lcl < 16;
+// intron-less forward extension
+
+VTYPE Aln2s1::for2ward3endS_ng(long *ptr, const WINDOW& wdw)
+{
+	RVP*	hh[2];		// H matrix
+	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
+	VSKLP	lsth = maxh;
+	RVP	f1 = black_vp;
+	RVP*	hf[3] = {0, &f1, 0};
+	RVP*&	h = hf[0];
+	RVP*&	g = hf[2];
+
+	size_t	bufsiz = 2 * wdw.width;
+	RVP*	jbuf = new RVP[bufsiz];
+	vset(jbuf, black_vp, bufsiz);
+	RVP*	blackvp = jbuf + bufsiz - 1;
+	hh[0] = jbuf - wdw.lw + 1;
+	hh[1] = hh[0] + wdw.width;
+	CHAR*	dbuf = new CHAR[wdw.width];
+	vset(dbuf, CHAR(1), wdw.width);
+	CHAR*	hdir = dbuf  - wdw.lw + 1;
+	vmf->add(0, 0, 0);		// Skip 0-th record
+	pbinitS_ng(hh, wdw);
+
+	int	m = a->left;
+	if (!a->inex.exgl) --m;		// global
+	int	n1 = m + wdw.lw - 1;
+	int	n2 = m + wdw.up;
+	int	n = 0;
+	int	n9 = 0;
+const	CHAR*	as = a->at(m);
+	bool	enda = a->inex.exgr && algmode.lcl < 16;
+	bool	endb = b->inex.exgr && algmode.lcl < 16;
 	for ( ; ++m <= a->right; ++as) {
 	    ++n1; ++n2;
 	    n = max(n1, b->left);
@@ -1672,175 +1433,121 @@ forward:
 	    int	nr = n - 1;
 	    int	peak = 0;
 	    int	r = n - m;
-	    CHAR*	bs = b->at(n);
-	    LRECD*	phr = hhl[m] + nnl[m][NCANDS];
-	    h = hhg[0] + r;
-	    LRECD*	g = hhg[1] + r;
-	    LRECD*	mxd = ((h->val + pwd->Vthr) < maxh.val)? &ooml: h;
-	    *f1 = ooml;
+const	    CHAR*	bs = b->at(n);
+	    h = hh[0] + r;;
+	    g = hh[1] + r;
+	    CHAR*	dir = hdir + r;
+	    RVP*	mxd = ((h->val + pwd->Vthr) < maxh.val)? blackvp: h;
+	    f1 = black_vp;
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 
 #if DEBUG
-	if (algmode.nsa & 8) {
-	    printf("%2d %2d %2d", m, n, h->dir);
+	if (OutPrm.debug) {
+	    printf("%2d %2d %2d", m, n, *dir);
 	    putvar(h->val); putchar('\n');
 	}
 #endif
-	    bool	a_in_zone = api_size && (api == m);
 	    for ( ; ++n <= n9; ++bs) {
 		VTYPE	x;
-		++r;
-		hf[0] = ++h;
-		hf[1] = ++g;
+		++r; ++h; ++g;
 
 /*	Diagonal	*/
-		LRECD*	from = h;
-		LRECD*	mx = h;
+		RVP*	from = h;
+		RVP*	mx = h;
 		if (m == a->left) goto HorizonP;
-		h->val += pwd->sim2(as, bs);
-		h->dir = (from->dir & DIAG)? DIAG: NEWD;
+		h->val += qprof[*bs];
+		*dir = (*dir % Newd)? Newd: 0;
 
 /*	Vertical	*/
 		x = (++from)->val + pwd->BasicGOP;
 		if (x >= g[1].val) {
 		    *g = *from;
 		    g->val = x;
-		    g->dir = VERT;
 		} else	*g = g[1];
 		g->val += pwd->BasicGEP;
 		if (g->val >= mx->val) mx = g;
 HorizonP:
 /*	Horizontal	*/
 		x = h[-1].val + pwd->BasicGOP;
-		if (x >= f1->val) {
-		    *f1 = h[-1];
-		    f1->val = x;
+		if (x >= f1.val) {
+		    f1 = h[-1];
+		    f1.val = x;
 		}
-		if (f1->dir) {
-		    f1->val += pwd->BasicGEP;
-		    f1->dir = HORI;
-		    if (f1->val >= mx->val) mx = f1;
-		}
-
-		if (mx->dir == NEWD) {
-		    mx->lst = r;
-		    mx->ptr = vmf->add(m - 1, n - 1, mx->ptr);
-		}
-
+		f1.val += pwd->BasicGEP;
+		if (f1.val >= mx->val) mx = &f1;
 /*	Find optimal path	*/
+#if DEBUG
+		VTYPE	y = h->val;
+#endif
+		if ((*dir & Newd) && vmf)
+		    mx->ptr = vmf->add(m - 1, n - 1, mx->ptr);
 		if (mx->val > maxh.val) {
 		    maxh.val = mx->val;
 		    maxh.m = m;
 		    maxh.n = n;
 		    maxh.p = mx->ptr;
 		}
-		if (mx->val + pwd->Vthr < maxh.val) {	/* x drop off */
-		    if (peak) {		/* end of block */
+		if (mx->val + pwd->Vthr < maxh.val) {	// x drop off
+		    if (peak) {				// end of block
 			n2 = n - 1;
 			peak = 0;
 		    }
 		    nr = n;
-		} else if ((mx->dir & DIAG) && mx->val >= mxd->val) {
+		} else if ((*dir % Newd == 0) && mx->val >= mxd->val) {
 		    mxd = mx;
 		    if (nr > n1) n1 = nr;
 		    peak = 1;
 		}
 		if (h != mx) *h = *mx;
+		for (*dir = 0; mx != hf[*dir]; ++*dir) ;
 
-/*	intron 5' boundary	*/
-		if (cmode == 3 && exin->isDonor(n)) {
-		    VTYPE	sigJ = a_in_zone? api.match_score(m): 0;
-		    for (int k = 0; k < Nedge; ++k) {
-			int	l = (k + 1) / 2;
-			LRECD*	phl = hf[k];
-			if (!phl->dir || (k && (mx == phl ||
-				phl->val <= mx->val + pwd->GOP[l])))
-			    continue;
-			for (l = 0; l < NCANDS; ++l) {
-			    phr = hhl[m] + nnl[m][l];
-			    if (!phr->dir) break;
-			    x = sigJ + phl->val + 
-				phr->val + pwd->IntPen->Penalty(phr->jnc - n) +
-				exin->sig53(n, phr->jnc, IE35);
-			    if ((phl->dir == VERT && phr->dir == VERT) ||
-				((phl->dir & HORI) && (phr->dir & HORI))) {
-				    x -= pwd->BasicGOP;
-			    }
-			    if (x > maxscr) {
-				maxscr = x;
-				maxl = *phl;
-				maxr = *phr;
-				maxl.ptr = vmf->add(m, n, phl->ptr);
-				maxl.ptr = vmf->add(m, phr->jnc, maxl.ptr);
-			    }
-			}
-		    }
-		}
 #if DEBUG
-	if (algmode.nsa & 8) {
-		printf("%2d %2d %2d ", m, n, mx->dir);
+	if (OutPrm.debug) {
+		printf("%2d %2d %2d ", m, n, *dir);
 		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(f1->val);
+		putvar(g->val); putvar(f1.val);
 		putchar('\n');
 	}
 #endif
-		if (m == a->right && enda && h->val > lsth.val)
-		    {lsth.val = h->val; lsth.p = h->ptr; lsth.m = m; lsth.n = n;}
-	    }	/* end of n-loop */
-	    if (peak) n2 = n;
-	    if (cmode == 3) {
-		LRECD*	phr = hhl[m] + nnl[m][NCANDS];
-		int	l = phr->lst - mxd->lst;
-		if (l < 0) continue;
-		VTYPE	x = mxd->val + phr->val + pwd->GapPenalty(l);
-		if (x > maxscr) {
-		    maxscr = x;
-		    maxl = *mxd;
-		    maxr = *phr;
-		    maxl.ptr = vmf->add(m, m + mxd->lst, mxd->ptr);
-		    maxl.ptr = vmf->add(m, m + phr->lst, maxl.ptr);
+		if (m == a->right && enda && h->val > lsth.val) {
+		    lsth.val = h->val;
+		    lsth.p = h->ptr;
+		    lsth.m = m;
+		    lsth.n = n;
 		}
+	    } // end of n-loop
+	    if (peak) n2 = n;
+	    if (mxd->val <= NEVSEL) break;
+	    if (--n == b->right && endb && h->val > lsth.val) {
+		lsth.val = h->val;
+		lsth.p = h->ptr;
+		lsth.m = m;
+		lsth.n = n;
 	    }
-	    if (!mxd->dir) break;
-	    if (a_in_zone) ++api;		// has exon-exon junctions
-	    if (--n == b->right && endb && h->val > lsth.val)
-		{lsth.val = h->val; lsth.p = h->ptr; lsth.m = m; lsth.n = n;}
-	}	/* end of m-loop */
-	if (cmode == 2) {
-	    if (!a->inex.exgr && !b->inex.exgr && h)	// global
-		{lsth.val = h->val; lsth.p = h->ptr; lsth.m = --m; lsth.n = min(n, n9);}
-	    else if (lsth.val == NEVSEL) lsth = maxh;	// local
-	    maxscr = lsth.val;
-	    ptr[0] = vmf->add(lsth.m, lsth.n, lsth.p);
-	    ptr[1] = 0;
-	} else {
-	    ptr[0] = maxl.ptr;
-	    ptr[1] = maxr.ptr;
-	}
+	} // end of m-loop
 
-freeprec:
-	delete[] (hhg[0] + wdw->lw - 1);
-	delete[] (hhl + a->left);
-	delete[] (nnl + a->left);
-	return (maxscr);
+	if (!a->inex.exgr && !b->inex.exgr && h) {	// global
+	    lsth.val = h->val;
+	    lsth.p = h->ptr;
+	    lsth.m = --m;
+	    lsth.n = min(n, n9);
+	} else if (lsth.val == NEVSEL) lsth = maxh;	// local
+	*ptr = vmf->add(lsth.m, lsth.n, lsth.p);
+	delete[] jbuf;
+	delete[] dbuf;
+	return (lsth.val);
 }
 
-void Aln2s1::cinitS_ng(CRECD* hhc[])
+void Aln2s1::cinitS_ng(RVDWJC* hhc[], const WINDOW& wdw)
 {
 	int	n = b->left;
 	int	r = b->left - a->left;
 	int	rr = b->right - a->left;
-	CRECD*	hf[NOL];
+	RVDWJC*	h = hhc[0] + r;
+	RVDWJC*	g = hhc[1] + r;
 
-	for (int d = 0; d < pwd->Nrow; ++d) hf[d] = hhc[d] + r;
-	if (wdw->up < rr) rr = wdw->up;
-	CRECD*	h = hhc[0] + r;
-	for ( ; r <= wdw->up + 1; ++h, ++r) {
-	    for (int d = 1; d < pwd->Nrow; ++d) *hf[d]++ = oomC;
-	    if (r > rr) {
-		*hf[0]++ = oomC;
-		continue;
-	    }
-	    h = hf[0]++;
+	if (wdw.up < rr) rr = wdw.up;
+	for ( ; r <= rr; ++h, ++r) {
 	    h->val = 0;
 	    h->dir = DEAD;
 	    h->upr = h->lwr = r;
@@ -1851,62 +1558,62 @@ void Aln2s1::cinitS_ng(CRECD* hhc[])
 
 	r = b->left - a->left;
 	rr = b->left - a->right;
-	for (int d = 0; d < pwd->Nrow; ++d) hf[d] = hhc[d] + r;
-	if (wdw->lw > rr) rr = wdw->lw;
-	while (--r >= wdw->lw - 1) {
-	    for (int d = 0; d < pwd->Nrow; ++d) *--hf[d] = oomC;
-	    if (r < rr) continue;
-	    h = hf[0];
+	if (wdw.lw > rr) rr = wdw.lw;
+	h = hhc[0] + r;
+	while (--r >= rr) {
+	    --h;
 	    h->val = 0;
 	    h->dir = DEAD;
 	    h->upr = h->lwr = r;
 	    h->mlb = b->left - r;
 	    h->nlb = b->left;
 	    h->jnc = b->left;
+	    *--g = *h;
 	}
 }
 
-Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
+Colonies* Aln2s1::fwdswgS_ng(const WINDOW& wdw, VTYPE* scr)
 {
-	CRECD*	hhc[NOL];	/* local H matrix	*/
-	CRECD*	hf[NOL]; 	/* [DIAG, HORI, HORL] */
-	CRECD	f[NOL]; 	/* [DIAG, HORI, HORL] */
-	CRECD	hl[NOL][INTR+1];
-	int	nl[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
-	CRECD*	g2 = 0;
+	RVDWJC*	hhc[NOL];	/* local H matrix	*/
+	RVDWJC*	hf[NOL]; 	/* [DIAG, HORI, HORL] */
+	RVDWJC	f[NOL]; 	/* [DIAG, HORI, HORL] */
+	RVDWJC	hl[NOL][INTR+1];
+	int	nx[NOL][INTR+1]; /* [DIA, HORI, HORL][candidates] */
+	RVDWJC*	g2 = 0;
 	Colonies*	cl = new Colonies(0);
 	COLONY*	clny = cl->at();
 
-	hhc[0] = new CRECD[pwd->Noll * wdw->width] - wdw->lw + 1; /* +1: sp junc */
-	for (int d = 1; d < pwd->Noll; ++d) hhc[d] = hhc[d-1] + wdw->width;
-	cinitS_ng(hhc);
-	for (int d = 1; d < pwd->Noll; ++d) hf[d] = f + d;
+	RVDWJC*	cbuf = new RVDWJC[pwd->Noll * wdw.width];
+	vset(cbuf, black_vdwjc, pwd->Noll * wdw.width);
+	hhc[0] = cbuf - wdw.lw + 1; /* +1: sp junc */
+	for (int k = 1; k < pwd->Noll; ++k) hhc[k] = hhc[k-1] + wdw.width;
+	cinitS_ng(hhc, wdw);
+	for (int k = 1; k < pwd->Noll; ++k) hf[k] = f + k;
 	int	m = a->left;
-	CHAR*	as = a->at(m);
+const	CHAR*	as = a->at(m);
 	PfqItr	api(a, m);
 	int	api_size = api.size();
-	int	n1 = m + wdw->lw - 1;
-	int	n2 = m + wdw->up;
+	int	n1 = m + wdw.lw - 1;
+	int	n2 = m + wdw.up;
 	for ( ; ++m <= a->right; ++as) {
 	    ++n1; ++n2;
 	    int	n = max(n1, b->left);
 	    int	n9 = min(n2, b->right);
 	    int	r = n - m;
-	    CHAR*	bs = b->at(n);
-	    CRECD*	h = hhc[0] + r;
-	    CRECD*	 g = hhc[1] + r;
+const	    CHAR*	bs = b->at(n);
+	    RVDWJC*	h = hhc[0] + r;
+	    RVDWJC*	 g = hhc[1] + r;
 	    if (pwd->Noll == 3) g2 = hhc[2] + r;
-	    for (int d = 0; d < pwd->Noll; ++d) {
-		CRECD*	phl = hl[d];
-		for (int l = 0; l <= INTR; ++l, ++phl) {
-		    nl[d][l] = l;
-		    *phl = oomC;
-		}
-		f[d] = oomC;
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+	    vset((RVDWJC*) hl, black_vdwjc, NOL * (INTR + 1));
+	    for (int k = 0; k < pwd->Noll; ++k) {
+		f[k] = black_vdwjc;
+		for (int l = 0; l <= INTR; ++l)
+		    nx[k][l] = l;
 	    }
 
 #if DEBUG
-	if (algmode.nsa & 8) {
+	if (OutPrm.debug) {
 	    printf("%2d %2d %2d", m+1, n, h->dir);
 	    putvar(h->val); putchar('\n');
 	}
@@ -1917,10 +1624,10 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 		hf[0] = ++h;
 		if (g2) ++g2;
 /*	Diagonal	*/
-		CRECD*	from = h;
-		CRECD*	mx = h;
+		RVDWJC*	from = h;
+		RVDWJC*	mx = h;
 		f[0] = *h;	/* diag */
-		h->val += pwd->sim2(as, bs);
+		h->val += qprof[*bs];
 		h->dir = (from->dir & DIAG)? DIAG: NEWD;
 
 /*	Vertical	*/
@@ -1972,18 +1679,18 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 		}
 
 /*	intron 3' boundary, assume no overlapping signals	*/
-		if (exin->isAccpt(n)) {
+		if (b->exin->isAccpt(n)) {
 		    VTYPE	sigJ = a_in_zone? api.match_score(m): 0;
-		    for (int d = 0; d < pwd->Noll; ++d) {
-			from = hf[d];
-			CRECD*	maxphl = 0;
-			int*	pnl = nl[d];
+		    for (int k = 0; k < pwd->Noll; ++k) {
+			from = hf[k];
+			RVDWJC*	maxphl = 0;
+			int*	pnl = nx[k];
 			VTYPE	y = NEVSEL;
 			for (int l = 0; l < INTR; ++l) {
-			    CRECD*	phl = hl[d] + pnl[l];
+			    RVDWJC*	phl = hl[k] + pnl[l];
 			    if (!phl->dir) break;
 			    x = sigJ + phl->val + pwd->IntPen->Penalty(n - phl->jnc)
-				+ exin->sig53(phl->jnc, n, IE53);
+				+ b->exin->sig53(phl->jnc, n, IE53);
 			    if (x > from->val) {
 				y = x;
 				maxphl = phl;
@@ -2004,21 +1711,21 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 
 /*	intron 5' boundary	*/
 
-		if (exin->isDonor(n)) {
-		    VTYPE	sigJ = exin->sig53(n, 0, IE5);
-		    for (int d = 0; d < pwd->Noll; ++d) {
+		if (b->exin->isDonor(n)) {
+		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
+		    for (int k = 0; k < pwd->Noll; ++k) {
 				/* An orphan exon is disallowed */
-			from = hf[d];
+			from = hf[k];
 			if (!from->dir || (from->dir & SPIN) || 
 				from->dir == VERT || from->dir == VERL)
 			    continue;
 			x = from->val + sigJ;
-			CRECD*	phl = hl[d];
-			int*	pnl = nl[d];
+			RVDWJC*	phl = hl[k];
+			int*	pnl = nx[k];
 			int	l = INTR;
 			while (--l >= 0) {
 			    if (x > phl[pnl[l]].val)
-				gswap(pnl[l], pnl[l + 1]);
+				swap(pnl[l], pnl[l + 1]);
 			    else
 				break;
 			}
@@ -2033,6 +1740,9 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 		}
 
 /*	Find optimal path	*/
+#if DEBUG
+		VTYPE	y = h->val;
+#endif
 		if (h != mx) {		/* non-diagonal */
 		    *h = *mx;
 		    if (h->upr < r) h->upr = r;
@@ -2077,7 +1787,7 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 		    }
 		}
 #if DEBUG
-	if (algmode.nsa & 8) {
+	if (OutPrm.debug) {
 		printf("%2d %2d %2d ", m, n, mx->dir);
 		putvar(mx->val); putvar(y); 
 		putvar(g->val); putvar(f[1].val);
@@ -2085,9 +1795,9 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 		    putvar(g2->val); putvar(f[2].val);
 		}
 		if (algmode.lsg) {
-		    putvar(hl[0][nl[0][0]].val); 
-		    putvar(hl[1][nl[1][0]].val);
-		    if (g2) putvar(hl[2][nl[2][0]].val);
+		    putvar(hl[0][nx[0][0]].val); 
+		    putvar(hl[1][nx[1][0]].val);
+		    if (g2) putvar(hl[2][nx[2][0]].val);
 		}
 		putchar('\n');
 	}
@@ -2097,7 +1807,7 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 	    if (a_in_zone) ++api;		// has exon-exon junctions
 	}
 
-	delete[] (hhc[0] + wdw->lw - 1);
+	delete[] cbuf;
 	*scr = clny->val;
 	cl->sortcolonies();
 	return (cl);
@@ -2105,8 +1815,8 @@ Colonies* Aln2s1::fwdswgS_ng(VTYPE* scr)
 
 VTYPE Aln2s1::diagonalS_ng()
 {
-	CHAR*	as = a->at(a->left);
-	CHAR*	bs = b->at(b->left);
+const	CHAR*	as = a->at(a->left);
+const	CHAR*	bs = b->at(b->left);
 	VTYPE	scr = 0;
 	VTYPE	maxh = NEVSEL;
 	SKL	wskl;
@@ -2128,31 +1838,21 @@ VTYPE Aln2s1::diagonalS_ng()
 	    }
 	}
 	int m = b->left - a->left;
-	if (vmf) {
-	    wskl.m = mL;
-	    wskl.n = mL + m;
-	    mfd->write((UPTR) &wskl);
-	    wskl.m = mR;
-	    wskl.n = mR + m;
-	    mfd->write((UPTR) &wskl);
-	} else if (a->inex.exgl && a->left == 0) {
-	    wskl.m = a->left;
-	    wskl.n = b->left;
-	    mfd->write((UPTR) &wskl);
-	} else if (a->inex.exgr && a->right == a->len) {
-	    wskl.m = a->right;
-	    wskl.n = b->right;
-	    mfd->write((UPTR) &wskl);
-	}
+	wskl.m = mL;
+	wskl.n = mL + m;
+	mfd->write((UPTR) &wskl);
+	wskl.m = mR;
+	wskl.n = mR + m;
+	mfd->write((UPTR) &wskl);
 	return (LocalR? maxh: scr);
 }
 
-VTYPE Aln2s1::trcbkalignS_ng(bool spj)
+VTYPE Aln2s1::trcbkalignS_ng(const WINDOW& wdw, bool spj, const RANGE* cutrng)
 {
 	long	ptr = 0;
 
 	vmf = new Vmf();
-	VTYPE	scr = forwardS_ng(&ptr, spj);
+	VTYPE	scr = forwardS_ng(wdw, &ptr, spj, true, cutrng);
 	if (ptr) {
 	    SKL* lskl = vmf->traceback(ptr);
 	    if (!lskl) {
@@ -2169,86 +1869,116 @@ eop:
 	return (scr);
 }
 
-VTYPE Aln2s1::lspS_ng()  /* recursive */ 
+VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)  /* recursive */ 
 {
-	WINDOW*	wrsv = wdw;
+	if (wdw.up == wdw.lw) return(diagonalS_ng());
+	int	m = a->right - a->left;
+	int	n = b->right - b->left;
+	int	k = wdw.lw - b->left + a->right;
+	int	q = b->right - a->left - wdw.up;
+	long	cvol =  m * n - (k * k + q * q) / 2;
+	if (cvol < MaxVmfSpace || m == 1 || n <= 1)
+	    return (trcbkalignS_ng(wdw, b->inex.intr));
+
 	WINDOW	wdwl;
 	WINDOW	wdwr;
 	RANGE	rng[2];			/* reserve */
-	int	aexg = a->inex.exgr;	/* reserve */
-	int	bexg = b->inex.exgr;	/* reserve */
+	INT	aexg = a->inex.exgr;	/* reserve */
+	INT	bexg = b->inex.exgr;	/* reserve */
+	int	cpos[6];
 
-	if (wdw->up == wdw->lw) return(diagonalS_ng());
-	int	m = a->right - a->left;
-	int	n = b->right - b->left;
-	int	k = wdw->lw - b->left + a->right;
-	int	q = b->right - a->left - wdw->up;
-	long	cvol =  m * n - (k * k + q * q) / 2;
-	if (cvol < MaxVmfSpace || m == 1 || n <= 1) {
-	    return (trcbkalignS_ng(b->inex.intr));
-	}
 	save_range(seqs, rng, 2);
-	VTYPE	scr = centerS_ng(&m, &q, &n, &k, &wdwl, &wdwr);
+	VTYPE	scr = hirschbergS_ng(cpos, wdw, wdwl, wdwr);
+	SKL	wskl = {cpos[0], 0};
+	int	c = 1;
+	for ( ; cpos[c] != end_of_ulk; ++c) {
+	    wskl.n = cpos[c];
+	    mfd->write((UPTR) &wskl);
+	}
+	INT	bexgl = b->inex.exgl;
 	a->inex.exgr = b->inex.exgr = 0;
 	int	r = b->left - a->left;
 	if (r < wdwl.lw) b->left = a->left + wdwl.lw;
-	if (r > wdwl.up) a->left = b->left - wdwl.up;
-	a->right = m;
-	b->right = n;
-	wdw = &wdwl;
-	lspS_ng();
+	if (r > wdwl.lw) a->left = b->left - wdwl.lw;
+	a->right = cpos[0];
+	b->right = cpos[--c];
+	lspS_ng(wdwl);
 	rest_range(seqs, rng, 2);
 	a->inex.exgr = aexg;
 	b->inex.exgr = bexg;
 	aexg = a->inex.exgl;
 	bexg = b->inex.exgl;
-	a->inex.exgl = b->inex.exgl = 0;
+	a->inex.exgl = 0;
+	b->inex.exgl = bexgl;
 	r = b->right - a->right;
-	if (r < wdwr.lw) a->right = b->right - wdwr.lw;
+	if (r < wdwr.up) a->right = b->right - wdwr.up;
 	if (r > wdwr.up) b->right = a->right + wdwr.up;
-	a->left = q;
-	b->left = k;
-	wdw = &wdwr;
-	lspS_ng();
-	wdw = wrsv;
+	a->left = cpos[0];
+	b->left = cpos[1];
+	lspS_ng(wdwr);
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = aexg;
 	b->inex.exgl = bexg;
 	return scr;
 }
 
-bool Aln2s1::pincerTrcbkS_ng(int cmode, VTYPE& scr)
+VTYPE Aln2s1::shortcutS_ng(int ovr, const BOUND& bab)
+{
+	int	margin = IntronPrm.llmt;
+	VTYPE	scr = 0;
+	ovr = (ovr > 0? 0: ovr) - 3;
+	scr -= creepback(ovr, 0, bab);
+	scr -= creepfwrd(ovr, 0, bab);
+	int	alen = a->right - a->left;
+	int	sh = alen / 2;
+	if (alprm.sh < 0) {
+	    float f = -alprm.sh;
+	    if (f > 1.) f /= 100;
+	    if (f < 0.5) sh = int(alen * f);
+	} else if (alprm.sh < sh)
+	    sh = int(alprm.sh);
+	int	minsh = alen - margin;
+	if (sh < minsh) sh = minsh;
+	WINDOW	wdw;
+	stripe(seqs, &wdw, sh);
+
+	int	interval = b->right - b->left - 2 * margin;
+	RANGE	rng = {b->left + margin, b->right - margin};
+
+	int	aexg = a->inex.exgl;
+	int	bexg = b->inex.exgl;
+	a->inex.exgl = b->inex.exgl = 0;	// global
+	scr += trcbkalignS_ng(wdw, true, (interval > 0)? &rng: 0);
+	a->inex.exgr = aexg;
+	b->inex.exgr = bexg;
+	return (scr);
+}
+
+VTYPE Aln2s1::openendS_ng(int cmode)
 {
 	vmf = new Vmf();
-	long	ptr[2];
-	stripe(seqs, wdw, alprm.sh);
-	scr = pincersS_ng(ptr, cmode);;
-	SKLP    sv;
+	long	ptr;
+	WINDOW	wdw;
+	stripe(seqs, &wdw, alprm.sh);
+	VTYPE scr = (cmode == 1)? 
+	    back2ward5endS_ng(&ptr, wdw):
+	    for2ward3endS_ng(&ptr, wdw);
 
-	if (scr <= pinthr) {
-	    delete vmf;
-	    return (false);
-	}
-	sv.p = ptr[0];
-	while (sv.p) {
-	    vmf->readvmf(&sv, sv.p);
-	    mfd->write((UPTR) &sv);
-	}
-	sv.p = ptr[1];	/* restore */
+	SKLP    sv = {0, 0, ptr};
 	while (sv.p) {
 	    vmf->readvmf(&sv, sv.p);
 	    mfd->write((UPTR) &sv);
 	}
 	delete vmf;
 	vmf = 0;
-	return (true);
+	return (scr);
 }
 
-VTYPE Aln2s1::backforth(int ovr, BOUND& lub)
+VTYPE Aln2s1::backforth(int ovr, const BOUND& lub)
 {
 	VTYPE*	bscr = new VTYPE[ovr + 1];
-	CHAR*	as = a->at(a->left);
-	CHAR*	bs = b->at(b->left);
+const	CHAR*	as = a->at(a->left);
+const	CHAR*	bs = b->at(b->left);
 	VTYPE	scr = bscr[ovr] = 0;
 	int	i = ovr;
 	int	m = a->left;
@@ -2278,46 +2008,47 @@ VTYPE Aln2s1::backforth(int ovr, BOUND& lub)
 	return (maxscr + pwd->GapPenalty(dr));
 }
 
-// indel-free version of pincsersS within overlapped region
-// doubly conted alignment score is cancelled
-// assume agap <= 0
-// return whether a cannonical pair is found or not
+/**********************************************************
+   find spj within indel-free overlapped region
+   doubly conted alignment score is cancelled
+   assume agap <= 0
+   return whether a cannonical or reverse cannonical pair 
+   is found or not
+**********************************************************/
 
 bool Aln2s1::indelfreespjS(int agap, VTYPE& iscr)
 {
-	int	play = -b->exin->lplay(b->left);
-	if (play > agap) agap = play;
-	int	d5 = b->left + agap;	// donor 5' end
-	int	d3 = b->left;		// donor 3' end
-	int	ilen = b->right - d5;	// intron length
-	int	i = 1 - agap;
-	VTYPE*	backward = new VTYPE[i];
-	CHAR*	as = a->at(a->left);	// cancel score of
-	CHAR*	bs = b->at(b->left);	// donor side overlap
-	for (VTYPE v = 0; --i >= 0; v += pwd->sim2(--as, --bs))
-	    backward[i] = v;
-	int	m = a->right;
-	int	mm = m;
-	int	n = d5;
-	int	nn = n;
-	as = a->at(a->right);
-	PfqItr	api(a, m);
-	bs = b->at(b->right);
+	int	ilen = b->right - b->left - agap;	// intron length
+	agap = 1 - agap;
+	int	n = min3(a->left, b->left, agap + expected_overlap_ext);
+	VTYPE*	bw = (n + 1 > expected_max_overlap)? new VTYPE[n + 1]: backward;
+	int	i = 0;
+const	CHAR*	as = a->at(a->left);	// cancel score of
+const	CHAR*	bs = b->at(b->left);	// donor side overlap
+const	CHAR*	ds = bs + ilen;		// bl + ilen
+	bw[0] = 0;
+	for (VTYPE v = 0; i < n && (*--bs == *--ds || i < agap); )
+	    bw[++i] = v += pwd->sim2(--as, bs);
+	vreverse(bw, i + 1);
+	int	m = a->left - i;	/*  \ 			*/
+	int	mm = m;			/*   \        \(ar,br)	*/
+	int	nn = n = b->left - i;	/*    \        \	*/
+	PfqItr	api(a, m);		/*     \(al,bl) \	*/
 	VTYPE	maxspj = iscr = NEVSEL;
 	VTYPE	ip = pwd->IntPen->Penalty(ilen);
 	bool	usespb = api.size() && use_spb();
-	for (VTYPE v = i = 0; n <= d3; ++n, ++i, ++m) {
+	for (VTYPE v = i = 0; n <= b->left; ++n, ++i, ++m) {
 	    bool	a_in_zone = usespb && (api == m);
-	    if (exin->isCanon(n, n + ilen)) {
-		VTYPE	x = ip + exin->sig53(n, n + ilen, IE5P3);
-		if (a_in_zone) x += api.match_score(m);
-		VTYPE	y = x - v - backward[i];
+	    int	rc = b->exin->isCanon(n, n + ilen);
+	    if (rc) {			// canonical or revserse canonical
+		VTYPE	x = ip + b->exin->sig53(n, n + ilen, IE5P3);
+		if (a_in_zone && rc > 3) x += api.match_score(m);
+		VTYPE	y = x - v - bw[i];
 		if (y > iscr) {nn = n; mm = m; iscr = y; maxspj = x;}
 	    }
-	    v += pwd->sim2(as++, bs++);	// cancel score of acc side
+	    v += pwd->sim2(as++, ++ds);	// cancel score of acc side
 	    if (a_in_zone) ++api;
 	}
-	delete[]	backward;
 	if (maxspj > NEVSEL) {
 	    SKL	tmp = {mm, nn};
 	    mfd->write(&tmp);
@@ -2326,12 +2057,13 @@ bool Aln2s1::indelfreespjS(int agap, VTYPE& iscr)
 	    return (true);
 	} else
 	    return (false);
+	if (bw != backward) delete[] bw;
 }
 
-VTYPE Aln2s1::creepback(int ovr, VTYPE bscr, BOUND& lub)
+VTYPE Aln2s1::creepback(int ovr, VTYPE bscr, const BOUND& lub)
 {
-	CHAR*	as = a->at(a->left);
-	CHAR*	bs = b->at(b->left);
+const	CHAR*	as = a->at(a->left);
+const	CHAR*	bs = b->at(b->left);
 	VTYPE	dscr = 0;
 	while (a->left > lub.la && b->left > lub.lb
 		&& (ovr < 0 || dscr < bscr)) {
@@ -2342,10 +2074,10 @@ VTYPE Aln2s1::creepback(int ovr, VTYPE bscr, BOUND& lub)
 	return (dscr);
 }
 
-VTYPE Aln2s1::creepfwrd(int& ovr, VTYPE bscr, BOUND& lub)
+VTYPE Aln2s1::creepfwrd(int& ovr, VTYPE bscr, const BOUND& lub)
 {
-	CHAR*	as = a->at(a->right);
-	CHAR*	bs = b->at(b->right);
+const	CHAR*	as = a->at(a->right);
+const	CHAR*	bs = b->at(b->right);
 	VTYPE	dscr = 0;
 	while (a->right < lub.ua && b->right < lub.ub
 		&& (ovr < 0 || dscr < bscr)) {
@@ -2357,7 +2089,7 @@ VTYPE Aln2s1::creepfwrd(int& ovr, VTYPE bscr, BOUND& lub)
 }
 
 VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode, 
-		JUXT* wjxt, BOUND& bab)
+		JUXT* wjxt, const BOUND& bab)
 {
 	int	ovr = min(agap, bgap);
 	int	dgap = bgap - agap;
@@ -2366,8 +2098,12 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 	VTYPE	scr = 0;
 	Mfile*	save_mfd = 0;
 	if (dgap == 0) {
-	    if (agap == 0) return (0);
-	    iscore = diagonalS_ng();			// no gap
+	    if (agap == 0) {
+		mfd->write((UPTR) wjxt);
+		return (0);
+	    }
+	    scr += diagonalS_ng();			// no gap
+	    iscore = 0;
 	} else if (cmode == 1 && cont && wjxt) {	// 5' end
 	    mfd->write((UPTR) wjxt);
 	    iscore = 0;
@@ -2379,54 +2115,56 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 	    indelfreespjS(agap, iscore)) {		// indel-free spj
 	    scr += iscore;
 	    iscore = 0;
+	} else if (cmode == 3 && agap < IntronPrm.elmt && bgap >= IntronPrm.llmt) {
+	    scr = shortcutS_ng(ovr, bab);		// shortcut
+	    iscore = 0;
 	} else if (cont && bgap < IntronPrm.llmt) {
 	    scr += backforth(-ovr, bab);		// ordinary gap
 	    iscore = 0;
 	} else if (dgap < IntronPrm.llmt) {
-	    stripe(seqs, wdw, abs(dgap) + 3);
-	    scr += trcbkalignS_ng(false);		// ordinary alignment
+	    WINDOW	wdw;
+	    stripe(seqs, &wdw, min(alprm.sh, abs(dgap) + 3));
+	    scr += trcbkalignS_ng(wdw, false);		// ordinary alignment
 	    iscore = 0;
 	} else if (level < algmode.qck && ovr >= wlmt) {
 	    save_mfd = new Mfile(*mfd);			// recursive search
 	    island = false;
 	    iscore = seededS_ng(level, cmode, bab);
-	    if (!island) {				// reached bottom
+	    if (iscore >= 0 || !island) {		// reached bottom
 		scr += iscore;
 		iscore = 0;
 	    }
 	}
 	if (iscore < 0) {
-	    if (save_mfd) gswap(mfd, save_mfd);
+	    if (save_mfd) swap(mfd, save_mfd);
 	    scr -= creepback(ovr, slmt, bab);
 	    scr -= creepfwrd(ovr, slmt, bab);
 	    if (ovr < 0 && wjxt) return (SKIP);	// excessive overlap skip this hsp
 	    float	dpspace = (float) agap * (float) bgap / MEGA;
 	    VTYPE	kscore = NEVSEL;
-	    if (cmode == 3 && agap < IntronPrm.elmt && bgap >= IntronPrm.llmt &&
-		pincerTrcbkS_ng(cmode, kscore)) {	// Sandwitch
-		    scr += kscore;
-		    kscore = 0;
-	    } else if (dpspace < alprm.maxsp) {
-		stripe(seqs, wdw, alprm.sh);
-		kscore = trcbkalignS_ng(b->inex.intr);	// DP
+	    if (dpspace < alprm.maxsp) {
+		WINDOW	wdw;
+		stripe(seqs, &wdw, alprm.sh);
+		kscore = trcbkalignS_ng(wdw, b->inex.intr);	// DP
 	    } else if (cmode == 1) {
 		if (wjxt) {
 		    int	bl = wjxt->jy + term;		// near 5' end
 		    if (bl > b->left) b->left = bl;
 		}
-		pincerTrcbkS_ng(cmode, kscore);
+		kscore = openendS_ng(cmode);		// drop off
 	    } else if (cmode == 2) {
 		if (wjxt) {
 		    int	br = wjxt->jy - term;		// near 3' end
 		    if (br > b->left && br < b->right) b->right = br;
 		}
-		pincerTrcbkS_ng(cmode, kscore);
-	    } else { 			// cmode == 3, space-saving DP
-		stripe(seqs, wdw, alprm.sh);
-		kscore = lspS_ng();
+		kscore = openendS_ng(cmode);		// drop off
+	    } else {		// cmode == 3, space-saving DP
+		WINDOW	wdw;
+		stripe(seqs, &wdw, alprm.sh);
+		kscore = lspS_ng(wdw);
 	    }
 	    if (iscore > kscore) {
-		if (save_mfd) gswap(mfd, save_mfd);
+		if (save_mfd) swap(mfd, save_mfd);
 		scr += iscore;
 	    } else
 		scr += kscore;
@@ -2436,10 +2174,12 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 }
 
 /* eimode 1: 5'end, 2: 3' end, 3: internal */
-VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
+VTYPE Aln2s1::seededS_ng(INT level, int eimode, const BOUND& lub)
 {
-	INEX	ainex = a->inex;
-	INEX	binex = b->inex;
+	INT	aexgl = a->inex.exgl;
+	INT	aexgr = a->inex.exgr;
+	INT	bexgl = b->inex.exgl;
+	INT	bexgr = b->inex.exgr;
 	RANGE	rng[2];
 	int	cmode = eimode;
 	int	agap = a->right - a->left;
@@ -2504,8 +2244,8 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 		agap = wjxt[1].jx - a->left;
 		bgap = wjxt[1].jy - b->left;
 	    }
-	    a->inex.exgr = ainex.exgr;
-	    b->inex.exgr = binex.exgr;
+	    a->inex.exgr = aexgr;
+	    b->inex.exgr = bexgr;
 	    a->right = rng[0].right;
 	    b->right = rng[1].right;
 	    bab.ua = lub.ua;
@@ -2517,8 +2257,8 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 	VTYPE	iscore = interpolateS(level, agap, bgap, cmode, wjxt, bab);
 	if (iscore != SKIP) scr += iscore;
 	rest_range(seqs, rng, 2);
-	a->inex.exgl = ainex.exgl;
-	b->inex.exgl = binex.exgl;
+	a->inex.exgl = aexgl;
+	b->inex.exgl = bexgl;
 	if (--level == lowestlvl && wjxt) {
 	    wjxt->jx = a->len;
 	    wjxt->jy = b->len;
@@ -2526,7 +2266,8 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, BOUND& lub)
 	delete wl;
 	return (scr);
 }
-SKL* Aln2s1::globalS_ng(VTYPE* scr)
+
+SKL* Aln2s1::globalS_ng(const WINDOW& wdw, VTYPE* scr)
 {
 	mfd = new Mfile(sizeof(SKL));
 	SKL	wsk;
@@ -2535,57 +2276,109 @@ SKL* Aln2s1::globalS_ng(VTYPE* scr)
 	    BOUND bab = {a->left, b->left, a->right, b->right};
 	    *scr = seededS_ng(lowestlvl, 1, bab);
 	} else
-	    *scr = lspS_ng();
+	    *scr = lspS_ng(wdw);
 	wsk.n = (int) mfd->size();
 	SKL*	skl = (SKL*) mfd->flush();
 	skl->n = wsk.n - 1;
-	skl->m = 1;
 	if (skl->n == 0) {
 	    delete[] skl;
 	    return (0);
 	}
+	skl->m = AlgnTrb;
+	if (a->inex.sens) skl->m |= A_RevCom;
 	return (trimskl(seqs, stdskl(&skl)));
 }
 
 
-VTYPE HomScoreS_ng(Seq* seqs[], PwdB* pwd)
+VTYPE HomScoreS_ng(const Seq* seqs[], const PwdB* pwd)
 {
+	Aln2s1 alnv(seqs, pwd);
 	WINDOW	wdw;
-
 	stripe(seqs, &wdw, alprm.sh);
-	Aln2s1 alnv(seqs, pwd, &wdw);
-	return alnv.forwardS_ng(0);
+	return alnv.scorealoneS_ng(wdw);
 }
 
-Colonies* swg1stS_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr)
+static int infer_orientation(Seq** sqs, const PwdB* pwd)
 {
-	WINDOW	wdw;
-
-	stripe(seqs, &wdw, alprm.sh);
-	Aln2s1	alnv(seqs, pwd, &wdw);
-	return (alnv.fwdswgS_ng(scr));
+	Seq*&	a = sqs[0];
+	VTYPE	scr1 = HomScoreS_ng((const Seq**) sqs, pwd);
+	a->comrev();
+	antiseq(sqs + 1);
+	VTYPE	scr2 = HomScoreS_ng((const Seq**) sqs, pwd);
+	if (scr2 > scr1) return (1);
+	a->comrev();
+	antiseq(sqs + 1);
+	return (0);
 }
 
-SKL* swg2ndS_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr, COLONY* clny)
+Colonies* swg1stS_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr)
+{
+	Aln2s1	alnv(seqs, pwd);
+	WINDOW	wdw;
+	stripe(seqs, &wdw, alprm.sh);
+	return (alnv.fwdswgS_ng(wdw, scr));
+}
+
+SKL* swg2ndS_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr, COLONY* clny)
 {
 	if (clny->val <= 0) return (0);
-	Seq*	a = seqs[0];
-	Seq*	b = seqs[1];
+const	Seq*	a = seqs[0];
+const	Seq*	b = seqs[1];
 
 	a->left = clny->mlb;
 	b->left = clny->nlb;
 	b->right = clny->nrb;
 	a->right = clny->mrb;
 	WINDOW	wdw = {clny->upr, clny->lwr, clny->upr - clny->lwr + 3};
-	Aln2s1 alnv(seqs, pwd, &wdw);
-	return (alnv.globalS_ng(scr));
+	Aln2s1 alnv(seqs, pwd);
+	return (alnv.globalS_ng(wdw, scr));
 }
 
-SKL* alignS_ng(Seq* seqs[], PwdB* pwd, VTYPE* scr)
+static void reverse_copy_jxt(Seq** seqs)
 {
-	WINDOW	wdw;
-
-	stripe(seqs, &wdw, alprm.sh);
-	Aln2s1 alnv(seqs, pwd, &wdw);
-	return alnv.globalS_ng(scr);
+	Seq*&	b = seqs[0];
+	if (!b->jxt) return;
+	Seq*	c = b;
+	if (b->getanti()) {
+	    c = seqs[1];
+	    if (c->jxt) delete[] c->jxt;
+	    c->CdsNo = b->CdsNo;
+	    c->jxt = new JUXT[b->CdsNo + 1];
+	    vcopy(c->jxt, b->jxt, b->CdsNo + 1);
+	}
+	revjxt(c->jxt, c->CdsNo);
 }
+
+SKL* alignS_ng(Seq* seqs[], const PwdB* pwd, VTYPE* scr, int ori)
+{
+	Seq*&	a = seqs[0];
+	Seq*&	b = seqs[1];
+	if (ori == 2) {
+	    a->comrev();
+	    antiseq(seqs + 1);
+	} else if (ori == 3 && !algmode.qck)
+	    ori = infer_orientation(seqs, pwd);
+	Aln2s1 alnv((const Seq**) seqs, pwd);
+	WINDOW	wdw;
+	stripe((const Seq**) seqs, &wdw, alprm.sh);
+	SKL*	fskl = alnv.globalS_ng(wdw, scr);
+	if (ori != 3) return (fskl);
+	VTYPE	rscr = NEVSEL;
+	reverse_copy_jxt(seqs + 1);
+	a->comrev();
+	antiseq(seqs + 1);
+	alnv.reset((const Seq**) seqs);
+	SKL*	rskl = alnv.globalS_ng(wdw, &rscr);
+	if (*scr >= rscr) {
+	    delete[] rskl;
+	    a->comrev();
+	    antiseq(seqs + 1);
+	    if (!b->getanti()) revjxt(b->jxt, b->CdsNo);
+	} else {
+	    delete[] fskl;
+	    fskl = rskl;
+	    *scr = rscr;
+	}
+	return (fskl);
+}
+

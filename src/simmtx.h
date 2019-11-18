@@ -48,17 +48,17 @@ const	char*	simfile;
 	Simmtx(ComPmt ab, DefPrm* dp);
 	Simmtx(ComPmt ab, const char* fname, DefPrm* dp);
 	~Simmtx() {delete *mtx; delete mtx;}
-	int	simgrade(int aa, int bb);
-	float	Nrmlf() {return nrmlf;}
-	float	AvTrc() {return avtrc;}
+	int	simgrade(int aa, int bb) const;
+	float	Nrmlf() const {return nrmlf;}
+	float	AvTrc() const {return avtrc;}
 	void	Nmtx();
 	void	Nmtx(const char* fname);
 	void	Pmtx();
 	void	Pmtx(const char* fname);
 	void	Hmtx(ComPmt compmt, Simmtx* pm);
-	void	fparam(FILE* fd);
-	double	avrmatch(INT* ConvTab);
-	void	printmtx(FILE* fd);
+	void	fparam(FILE* fd) const;
+	double	avrmatch(INT* ConvTab) const;
+	void	printmtx(FILE* fd) const;
 };
 
 class Simmtxes {
@@ -85,7 +85,7 @@ extern	int	minmax;
 
 extern	void	setlsegs(int ls);
 extern	void	setalprm();
-extern	void	readalprm(const char* ps);
+extern	void	readalprm(int& argc, const char**& argv, int oc = 1);
 extern	int	dvp2pam(double x);
 extern	void	optimize(int gl, int mnmx);
 extern	void	setdefNprm(float n, float u, float v, float b = 0., int c = 0);

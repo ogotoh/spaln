@@ -9,8 +9,9 @@ RANLIB = ranlib
 LD  = g++
 AR = ar ru
 DEL = rm -f
+DEFLT = -DM_THREAD=1
 
-CXX := $(CXX) $(CFLAGS)
+CXX := $(CXX) $(CFLAGS) $(DEFLT)
 
 .SUFFIXES: .o .c .cc .h .sh
 

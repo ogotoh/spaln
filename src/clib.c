@@ -41,8 +41,8 @@ int	thread_num = 0;
 int	cpu_num = 1;
 int	max_queue_num = 0;
 
-ALGMODE	algmode = {1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//	{nsa, alg, bnd, mlt, lcl, aut, lsg, mns, thr, rng, qck, blk, any, slv, crs, lvl}
+ALGMODE	algmode = {1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0};
+//	{nsa, alg, bnd, mlt, aut lcl, lsg, mns, thr, rng, qck, blk, any, crs, slv, lvl. dim}
 
 int ipower(int x, int n)
 {
@@ -95,9 +95,9 @@ bool isBlankLine(char* str)
 	return (true);
 }
 
-const char* getarg(int& argc, const char**& argv, bool num)
+const char* getarg(int& argc, const char**& argv, bool num, int pv)
 {
-	if (argv[0][2]) return argv[0] + 2;
+	if (argv[0][pv]) return argv[0] + pv;
 	if (!argv[1]) return (0);
 	char	na = argv[1][0];
 	if ((argc > 1 && (na != OPTCHAR && (!num || isdigit(na) || na == '.')))
@@ -236,16 +236,16 @@ UPTR fbisrch( UPTR found, const UPTR key, FILE* fd, long left, long right, int w
 int comb2(int i, int j)
 {
 	if (i == j) return(-1);
-	if (i > j) gswap(i, j);
+	if (i > j) swap(i, j);
 	return (j*(j-1)/2 + i);
 }
 
 int comb3(int i, int j, int k)
 {
 	if (i == j || j == k || k == i) return(-1);
-	if (i > j) gswap(i, j);
-	if (i > k) gswap(i, k);
-	if (j > k) gswap(j, k);
+	if (i > j) swap(i, j);
+	if (i > k) swap(i, k);
+	if (j > k) swap(j, k);
 	return (k*(k-1)*(k-2)/6 + j*(j-1)/2 + i);
 }
 
@@ -308,7 +308,7 @@ double ktof(const char* str)
 {
 	double	x = atof(str);
 	const	char*	ps = str;
-	while (*ps && isdigit(*ps)) ++ps;
+	while (*ps && (isdigit(*ps) || *ps == '.')) ++ps;
 	switch (*ps) {
 	    case 'k': case 'K': x *= KILO; break;
 	    case 'm': case 'M': x *= MEGA; break;
@@ -575,7 +575,7 @@ PutIntoBins::PutIntoBins(int n, double l, double u, double (*t)(double x),
 	  n_data(0), idx(0), sample_size(0), 
 	  vrtl(false), xval(0), freq(0) {
 	if (ndiv <= 0) fatal("number of bins <= 0 !\n");
-	if (ulmt < llmt) gswap(llmt, ulmt);
+	if (ulmt < llmt) swap(llmt, ulmt);
 	width = (ulmt - llmt) / ndiv;
 	xval = new int[ndiv + 2] + 1;
 	size();

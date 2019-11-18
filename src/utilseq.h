@@ -44,17 +44,17 @@ public:
 	float	tonic;
 	ExpectMmm	mmm;	// min, mean, max
 	double* mtx;
-	PatMat(PatMat& src);	// copy constructor
+	PatMat(const PatMat& src);	// copy constructor
 	PatMat(FILE* fd);
 	PatMat(const char* fname = 0);
 	PatMat(const int r, const int c, const int o = 0, float* m = 0);
 	~PatMat() {delete[] mtx;}
-	float	pwm_score(Seq* sd, CHAR* ps, CHAR* redctab = 0);
-	float*	calcPatMat(Seq* sd);
-	int	columns() {return cols;}
+	float	pwm_score(const Seq* sd, const CHAR* ps, const CHAR* redctab = 0) const;
+	float*	calcPatMat(const Seq* sd) const;
+	int	columns() const {return cols;}
 	void	clearmtx() {vclear(mtx, rows * cols);}
-	CHAR*	setredctab(Seq* sd);
-	void	increment(Seq* sd, int pos, CHAR* redctab = 0);
+	CHAR*	setredctab(const Seq* sd) const;
+	void	increment(const Seq* sd, int pos, const CHAR* redctab = 0);
 	PatMat&	operator=(const PatMat& src);
 };
 
@@ -63,12 +63,12 @@ class CodePot {
 	FTYPE*	CodePotBuf;
 	int	CodePotType;
 	int	CodePotClmn;
-	float*	calc5MMCodePot(Seq* sd, int phase);
-	float*	calcDitCodePot(Seq* sd, int phase);
+	float*	calc5MMCodePot(const Seq* sd, int phase) const;
+	float*	calcDitCodePot(Seq* sd, int phase) const;
 public:
 	CodePot();
 	~CodePot() {delete[] CodePotBuf;}
-	float*	calcPrefCodePot(Seq* sd, int phase);
+	float*	calcPrefCodePot(Seq* sd, int phase) const;
 };
 
 class ExinPot {
@@ -84,9 +84,9 @@ class ExinPot {
 public:
 	ExinPot(int zZ, const char* fname = 0);
 	~ExinPot() {delete[] ExonPot; delete[] IntronPot;}
-	float*	calcExinPot(Seq* sd, bool exon);
-	VTYPE	intpot(EXIN* b5, EXIN* b3);
-	VTYPE	avrpot(float f) {return (VTYPE) (f * avpot);}
+	float*	calcExinPot(const Seq* sd, bool exon) const;
+	VTYPE	intpot(const EXIN* b5,const  EXIN* b3) const;
+	VTYPE	avrpot(float f) const {return (VTYPE) (f * avpot);}
 };
 
 struct EijPat {
@@ -111,15 +111,15 @@ struct SpbInfo {
 
 extern	void	setorf(int len, int ic = SILENT);
 extern	int	setcodon(int c);
-extern	int	codon_id(CHAR* s, int byte);
+extern	int	codon_id(const CHAR* s, int byte);
 extern	void	de_codon_4(CHAR* ncs, int n);
-extern	int	toaa(CHAR* ns);
-extern	int	toaa3(CHAR* ns, int inc);
-extern	int	nuc2tron3(CHAR* ns, int inc);
+extern	int	toaa(const CHAR* ns);
+extern	int	toaa3(const CHAR* ns, int inc);
+extern	int	nuc2tron3(const CHAR* ns, int inc);
 extern	int	initcodon(int code);
 extern	int	initcodon(const char* genspc);
 extern	void	mkinvtab();
-extern	int	getCodonUsage(char* fname);
+extern	int	getCodonUsage(const char* fname);
 extern	int	setCodonUsage(int gc);
 
 #endif

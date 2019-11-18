@@ -134,11 +134,13 @@ static	const	char	_LCOMM = '#';
 static	const	RANGE	zerorng = {0, 0};
 static	const	RANGE	endrng = {INT_MAX, INT_MAX};
 
-inline	bool	neorng(RANGE* r) {return(r->left != INT_MAX);}
-inline	bool	emptyrng(RANGE* r) {return(r->left == NSENT);}
-inline	int	sizerng(RANGE* r) {return (r->left);}
+inline	bool	neorng(const RANGE* r) {return(r->left != INT_MAX);}
+inline	bool	emptyrng(const RANGE* r) {return(r->left == NSENT);}
+inline	int	sizerng(const RANGE* r) {return (r->left);}
 inline	RANGE*	fistrng(RANGE* r) {return (r + 1);}
 inline	RANGE*	lastrng(RANGE* r) {return (r + r->left - NSENT);}
+inline	const	RANGE*	fistrng(const RANGE* r) {return (r + 1);}
+inline	const	RANGE*	lastrng(const RANGE* r) {return (r + r->left - NSENT);}
 
 extern	FILE*	out_fd;
 extern	int	minmax;

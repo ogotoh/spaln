@@ -261,7 +261,7 @@ SeqDb SeqDBs[] = {
 	}
 };
 
-int SeqDb::is_DbEntry(char* str)
+int SeqDb::is_DbEntry(const char* str) const
 {
 	if (FormID == FASTA) 
 	    return (*str == *EntLabel);
@@ -272,12 +272,12 @@ int SeqDb::is_DbEntry(char* str)
 	else	return (0);
 }
 
-int SeqDb::is_DbEnd(char* str)
+int SeqDb::is_DbEnd(const char* str) const
 {
 	return (*str == '/');
 }
 
-int SeqDb::is_DbOrigin(char* str)
+int SeqDb::is_DbOrigin(const char* str) const
 {
 	if (SeqLabel)
 	    return (!wordcmp(str, SeqLabel));
@@ -295,7 +295,7 @@ bool space_digit(const char* ps)
 	return (true);
 }
 
-SeqDb* whichdb(char* ps)
+SeqDb* whichdb(const char* ps)
 {
 	SeqDb*	db = SeqDBs + FASTA;
 	if (*ps == *db->EntLabel) return (db);	// FASTA
@@ -311,7 +311,7 @@ SeqDb* whichdb(char* ps)
 	return (db);
 }
 
-long SeqDb::dbnextentry(FILE* fd, char* ps)
+long SeqDb::dbnextentry(FILE* fd, char* ps) const
 {
 	long	pos = ftell(fd);
 
@@ -349,7 +349,7 @@ void setdefdbf(DbsDt* dbf)
 	defdbf = dbf;
 }
 
-void DbsDt::readseq(char* fn)
+void DbsDt::readseq(const char* fn)
 {
 	fseek(fseq, 0L, SEEK_END);
 	long	fp = ftell(fseq);
@@ -386,7 +386,7 @@ static int cmpodr_r20(const int* a, const int* b)
 	return (wordcmp(defdbf->entname(*a), defdbf->entname(*b), ENTLEN));
 }
 
-void DbsDt::readidx20(FILE* fd, char* fn)
+void DbsDt::readidx20(FILE* fd, const char* fn)
 {
 	fseek(fd, 0L, SEEK_END);
 	long	fp = ftell(fd);
@@ -406,7 +406,7 @@ void DbsDt::readidx20(FILE* fd, char* fn)
 	    rec->seqptr = rec20->seqptr;
 	    if (i && strncmp(rec20[-1].entry, rec20->entry, ENTLEN) > 0)
 		sorted = false;
-	    rec->seqlen = rec20->seqlen;
+	    rec->seqlen = (INT) rec20->seqlen;
 	    rec->entptr = entidx;
 	    entry[entidx + ENTLEN] = '\0';
 	    strncpy(entry + entidx, rec20->entry, ENTLEN);
@@ -419,7 +419,7 @@ void DbsDt::readidx20(FILE* fd, char* fn)
 	qsort((UPTR) recodr, numidx, sizeof(INT), (CMPF) cmpodr_r20);
 }
 
-void DbsDt::readentry(FILE* fent, char* fn)
+void DbsDt::readentry(FILE* fent, const char* fn)
 {
 	fseek(fent, 0L, SEEK_END);
 	size_t	fp = ftell(fent);
@@ -429,7 +429,7 @@ void DbsDt::readentry(FILE* fent, char* fn)
 	    fatal("%s: Bad entry file!", fn);
 }
 
-void DbsDt::readodr(FILE* fodr, char* fn)
+void DbsDt::readodr(FILE* fodr, const char* fn)
 {
 	fseek(fodr, 0L, SEEK_END);
 	long	fp = ftell(fodr);
@@ -439,7 +439,7 @@ void DbsDt::readodr(FILE* fodr, char* fn)
 	    fatal("%s: Bad order file!", fn);
 }
 
-DbsRec* DbsDt::readidx(FILE* fidx, char* fn)
+DbsRec* DbsDt::readidx(FILE* fidx, const char* fn)
 {
 	fseek(fidx, 0L, SEEK_END);
 	long	fp = ftell(fidx);
@@ -457,7 +457,7 @@ DbsRec* DbsDt::readidx(FILE* fidx, char* fn)
 	return (recidx);
 }
 
-DbsGrp* DbsDt::finddbsgrp(const char* name)
+DbsGrp* DbsDt::finddbsgrp(const char* name) const
 {
 	DbsGrp*	dgrp = dbsgrp;
 
@@ -466,11 +466,11 @@ DbsGrp* DbsDt::finddbsgrp(const char* name)
 	return (0);
 }
 
-int DbsDt::guessmolc()
+int DbsDt::guessmolc() const
 {
 	int	n = 0;
 	int	i = 0;
-	CHAR*	ps = dbsseq;
+const	CHAR*	ps = dbsseq;
 
 	for ( ; i < NTESTC; ++i) {
 	    int	c = dbsseq? *ps++: getc(fseq);
@@ -650,7 +650,7 @@ DbsDt::~DbsDt()
 }
 
 template <typename file_t>
-CHAR* Seq::read_dbres(file_t fd, RANGE* rng)
+CHAR* Seq::read_dbres(file_t fd, const RANGE* rng)
 {
 	int	c;
 	CHAR*	ps = at(0);
@@ -692,7 +692,7 @@ CHAR* Seq::read_dbres(file_t fd, RANGE* rng)
 	return (ps);
 }
 
-CHAR* Seq::read_dbres(CHAR* dbs, RANGE* rng)
+CHAR* Seq::read_dbres(CHAR* dbs, const RANGE* rng)
 {
 	CHAR*	ps = at(0);
 
@@ -731,12 +731,12 @@ CHAR* Seq::read_dbres(CHAR* dbs, RANGE* rng)
 	return (ps);
 }
 
-Seq* Seq::read_dbseq(DbsDt* dbf, DbsRec* rec, RANGE* rng)
+Seq* Seq::read_dbseq(DbsDt* dbf, DbsRec* rec, const RANGE* rng)
 {
 	if (dbf->fseq && fseek(dbf->fseq, rec->seqptr, 0) == ERROR) return(0);
 	int	n = 0;
 	int	area = rng->left;
-	RANGE*	r = rng;
+const 	RANGE*	r = rng;
 
 	for ( ; neorng(r); ++r) n += r->right - r->left;
 	left = 0;
@@ -771,7 +771,7 @@ Seq* Seq::read_dbseq(DbsDt* dbf, long pos)
 	return (read_dbseq(dbf, rec, rng));
 }
 
-DbsRec* DbsDt::bisearch(const char* key)
+DbsRec* DbsDt::bisearch(const char* key) const
 {
 	int	left = 0;
 	int	right = numidx;
@@ -786,7 +786,7 @@ DbsRec* DbsDt::bisearch(const char* key)
 	return (0);
 }
 
-DbsRec* DbsDt::findcode(const char* code)
+DbsRec* DbsDt::findcode(const char* code) const
 {
 	DbsRec*	rec = bisearch(code);
 	return recodr? dbsrec(rec): rec;
@@ -817,13 +817,13 @@ Seq* Seq::getdbseq(DbsDt* dbf, const char* code, int c, bool readin)
 	char*	term = cdr(code);
 	for ( ; term && *term && rng < maxrng; term = cdr(term)) {
 	    if (isdigit(*term)) {
-		int	n = atoi(term);
-		if (n > int(record->seqlen)) n = record->seqlen;
+		INT	n = atoi(term);
+		if (n > record->seqlen) n = record->seqlen;
 		if (ir++ % 2) {
-		    if (n < rng->left) ++negative;
+		    if (n < INT(rng->left)) ++negative;
 		    (rng++)->right = n;
 		} else	rng->left = n - 1;
-		if (n == int(record->seqlen)) break;
+		if (n == record->seqlen) break;
 	    }
 	}
 	if (negative) {
@@ -852,3 +852,4 @@ void EraDbsDt()
 {
 	for (int n = 0; n < MAX_DBS; ++n) delete dbs_dt[n];
 }
+

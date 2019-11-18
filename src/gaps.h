@@ -28,24 +28,25 @@
 
 static	const	int	gaps_end = EOS;
 
-inline	int	gaps_span(GAPS* gg) {return gg->gps;}
-inline	int	gaps_size(GAPS* gg) {return gg->gln;}
+inline	int	gaps_span(const GAPS* gg) {return gg->gps;}
+inline	int	gaps_size(const GAPS* gg) {return gg->gln;}
 inline	GAPS*	gaps_begin(GAPS* gg) {return gg + 1;}
-inline	bool	gaps_free(GAPS* gg) {return gg->gln == 3;}
-inline	bool	gaps_intr(GAPS* g) {return (g->gln != gaps_end);}
+inline	const	GAPS*	gaps_begin(const GAPS* gg) {return gg + 1;}
+inline	bool	gaps_free(const GAPS* gg) {return gg->gln == 3;}
+inline	bool	gaps_intr(const GAPS* g) {return (g->gln != gaps_end);}
 
-extern	void	putskl(SKL* skl);
+extern	void	putskl(const SKL* skl);
 extern	void	toimage(GAPS* gaps[], int numseq);
 extern	void	unfoldgap(GAPS* gp, int step, bool hl = false);
-extern	void	skl2gaps(GAPS* gaps[], SKL* skl, bool hl = false);
-extern	void	skl2gaps3(GAPS* gaps[], SKL* skl, int pro);
+extern	void	skl2gaps(GAPS* gaps[], const SKL* skl, bool hl = false);
+extern	void	skl2gaps3(GAPS* gaps[], const SKL* skl, int pro);
 extern	void	swapskl(SKL* skl);
-extern	bool	badskl(SKL* skl, Seq** sqs = 0);
+extern	bool	badskl(const SKL* skl, const Seq** sqs = 0);
 extern	SKL*	stdskl(SKL** pskl);
 extern	SKL*	stdskl3(SKL** pskl);
-extern	SKL*	gap2skl(GAPS* ga, GAPS* gb);
-extern	int	sklpartner(SKL* skl, int m, int given);
-extern	SKL*	trimskl(Seq* seqs[], SKL* skl);
+extern	SKL*	gap2skl(const GAPS* ga, const GAPS* gb);
+extern	int	sklpartner(const SKL* skl, int m, int given);
+extern	SKL*	trimskl(const Seq* seqs[], SKL* skl);
 extern	bool	sameskl(const SKL* a, const SKL* b);
 
 #endif

@@ -21,19 +21,18 @@
 
 #include "aln.h"
 
-#define MAXICD	4
-#define MAXTCD	16
-
 enum Triplet {AAA = 0, AGA = 8, AGG = 10, AUA = 12, 
 	CUA = 28, CUC, CUG, CUU,
 	UAA = 48, UAG = 50, UCA = 52, UGA = 56, UUA = 60};
 
-#define DEF_CDI_PATH "/data2/seqdb/blast/cdi"
-#define DEF_CDI "BLASTCDI"
-#define	PassCom	0x08
+static	const	char	DEF_CDI_PATH[] = "/data2/seqdb/blast/cdi";
+static	const	char	DEF_CDI[] = "BLASTCDI";
+static	const	int	PassCom = 0x08;
+static	const	int	MAXICD = 4;
+static	const	int	MAXTCD = 16;
+static	const	float	ambLimit = 0.2;
 
-#define	isNucAmb(c)	((c) != A && (c) != C && (c) != G && (c) != T)
-#define ambLimit	0.2
+inline	bool	isNucAmb(int c) {return (c != A && c != C && c != G && c != T); }
 
 CHAR gencode[64] = {
 	LYS,ASN,LYS,ASN,THR,THR,THR,THR,ARG,SER,ARG,SER,ILE,ILE,MET,ILE,
@@ -114,7 +113,7 @@ static	int	minorf = 300;
 static	CHAR*	de_codon(CHAR* ncs, int n);
 static	int	lcomp(ORF* a, ORF* b);
 static	int	evenusage();
-static	int	kmer(CHAR* s, int m, CHAR* elements, int k, int* x = 0);
+static	int	kmer(const CHAR* s, int m, const CHAR* elements, int k, int* x = 0);
 
 static	int	curcode = 0;
 static	int	ChangeCodon = 1;
@@ -140,7 +139,7 @@ void setorf(int len, int ic)
 	}
 }
 
-int codon_id(CHAR* s, int many)
+int codon_id(const CHAR* s, int many)
 {
 	int	c = 0;
 
@@ -176,7 +175,7 @@ void de_codon_4(CHAR* ncs, int n)
 
 static	const CHAR most_abund[4] = {LYS, ALA, GLY, LEU};
 
-int toaa(CHAR* ns)
+int toaa(const CHAR* ns)
 {
 	int	c1;
 	int	c2 = ns[1];
@@ -189,7 +188,7 @@ int toaa(CHAR* ns)
 	return (gencode[16 * c1 + 4 * c2 + ncelements[ns[2]]]);
 }
 
-int toaa3(CHAR* ns, int inc)
+int toaa3(const CHAR* ns, int inc)
 {
 	int	c1;
 	int	c2 = ns[inc];
@@ -202,7 +201,7 @@ int toaa3(CHAR* ns, int inc)
 	return (gencode[16 * c1 + 4 * c2 + ncelements[ns[inc+inc]]]);
 }
 
-int nuc2tron3(CHAR* ns, int inc)
+int nuc2tron3(const CHAR* ns, int inc)
 {
 	int	c2 = ns[inc];
 
@@ -359,7 +358,7 @@ fromic == 5: <ATG - AG --- GT - >Term
 
 */
 
-ORF* Seq::getorf()
+ORF* Seq::getorf() const
 {
 static	const	int	tm[14][4] = {
 /*       A  C  G  T */
@@ -387,11 +386,11 @@ static	const	int	tm[14][4] = {
 	    cur[f].frm = fromic? 0: 1;	/* close/open */
 	    cur[f].len = 0;
 	}
-	CHAR*	ts = at(right);
+const	CHAR*	ts = at(right);
 	Mfile*	mfd = new Mfile(sizeof(ORF));
-	CHAR*	redctab = isdrna()? ncredctab: tnredctab;
+const	CHAR*	redctab = isdrna()? ncredctab: tnredctab;
 	int	state = 0;
-	for (CHAR* ps = at(left); ps < ts; ++n) {
+	for (const CHAR* ps = at(left); ps < ts; ++n) {
 	    int	c = redctab[*ps++];
 	    if (c < 4) {
 		state = tm[state][c];
@@ -481,7 +480,7 @@ static	const	int	tm[14][4] = {
 	return (orfs);
 }
 
-void Seq::passcom(FILE* fo)
+void Seq::passcom(FILE* fo) const
 {
 	FILE*	fi = fopen(spath, "r");
 	if (!fi) return;
@@ -498,10 +497,10 @@ void Seq::passcom(FILE* fo)
 	fclose(fi);
 }
 
-Seq* Seq::translate(Seq* aas, ORF& orf)
+Seq* Seq::translate(Seq* aas, ORF& orf) const
 {
-	CHAR*	ns = at(orf.pos + 3 - (orf.pos - orf.frm) % 3);
-	CHAR*	ts = ns + orf.len;
+const	CHAR*	ns = at(orf.pos + 3 - (orf.pos - orf.frm) % 3);
+const	CHAR*	ts = ns + orf.len;
 	int	ln = orf.len / 3 + 2;
 
 	if (aas)	aas->refresh(1, ln);
@@ -526,10 +525,10 @@ Seq* Seq::translate(Seq* aas, ORF& orf)
 	return aas->postseq(as);
 }
 
-void Seq::ftranslate(FILE* fd, int at_term, SeqDb* form, int orfn)
+void Seq::ftranslate(FILE* fd, int at_term, SeqDb* form, int orfn) const
 {
 	int 	i = 0;
-	CHAR*	seq = at(left);
+const	CHAR*	seq = at(left);
 	int 	m = left;
 	int 	width = form->SeqBlkNo * form->SeqBlkSz;
 	int 	block = form->SeqBlkSz;
@@ -589,7 +588,7 @@ void Seq::ftranslate(FILE* fd, int at_term, SeqDb* form, int orfn)
 	if (form->EndLabel) fprintf(fd, "%s\n", form->EndLabel);
 }
 
-void Seq::fmtranslate(FILE* fd, int at_term, int orfn)
+void Seq::fmtranslate(FILE* fd, int at_term, int orfn) const
 {
 	int*	label = new int[many];
 
@@ -599,12 +598,12 @@ void Seq::fmtranslate(FILE* fd, int at_term, int orfn)
 	if (algmode.nsa & PassCom) passcom(fd);
 	for (int i = 0; i < many; i++) label[i] = 1;
 	for (int m = left; m < right; m += 3 * OutPrm.lpw) {
-	    CHAR*	sq = at(m);
+	    const CHAR*	sq = at(m);
 	    for (int i = 0; i < many; i++, sq++) {
 		fprintf(fd, "%6d ", label[i]);
 		int	c = (right - m) / 3;
 		if (c > OutPrm.lpw) c = OutPrm.lpw;
-		CHAR*	b = sq;
+		const CHAR*	b = sq;
 		int j = 0;
 		for ( ; j++ < c; b += 3 * many) {
 		    int	aa = toaa3(b, many);
@@ -621,7 +620,7 @@ void Seq::fmtranslate(FILE* fd, int at_term, int orfn)
 	delete[] label;
 }
 
-int Seq::transout(FILE* fd, int at_term, int orfn)
+int Seq::transout(FILE* fd, int at_term, int orfn) const
 {
 	if (!isdrna()) {
 	    prompt("Not a nucleotide sequence !\n");
@@ -666,7 +665,7 @@ static int evenusage()
 	return (OK);
 }
 
-int getCodonUsage(char* fname)
+int getCodonUsage(const char* fname)
 {
 	char	str[LINE_MAX];
 	char*	ps;
@@ -766,7 +765,7 @@ void PatMat::readPatMat(FILE* fd)
 	    if (*wk > maxval) {maxval = *wk; maxidx = rc;}
 	    if (*wk < minval) {minval = *wk; minidx = rc;}
 	}
-	if (t) gswap(rows, cols);
+	if (t) swap(rows, cols);
 	if (rows % 23 == 0) nalpha = 23;
 	else if (rows % 4 == 0) nalpha = 4;
 	else	nalpha = rows;
@@ -788,7 +787,7 @@ PatMat& PatMat::operator=(const PatMat& src)
 	return (*this);
 }
 
-PatMat::PatMat(PatMat& src) :
+PatMat::PatMat(const PatMat& src) :
 	maxidx(src.maxidx), minidx(src.minidx), nsupport(src.nsupport), 
 	nalpha(src.nalpha), rows(src.rows), cols(src.cols), offset(src.offset), 
 	tonic(src.tonic), mmm(src.mmm)
@@ -844,7 +843,7 @@ retry:
 	fclose(fd);
 }
 
-CHAR* PatMat::setredctab(Seq* sd)
+CHAR* PatMat::setredctab(const Seq* sd) const
 {
 	CHAR*	redctab = 0;
 	switch (sd->inex.molc) {
@@ -858,10 +857,10 @@ CHAR* PatMat::setredctab(Seq* sd)
 	return (redctab);
 }
 
-void PatMat::increment(Seq* sd, int pos, CHAR* redctab)
+void PatMat::increment(const Seq* sd, int pos, const CHAR* redctab)
 {
-	CHAR*	ps = sd->at(pos);
-	CHAR*	ts = sd->at(pos + cols);
+const	CHAR*	ps = sd->at(pos);
+const	CHAR*	ts = sd->at(pos + cols);
 	double*	ptn = mtx;
 	for ( ; ps < ts; ++ps, ptn += rows) {
 	    int	k = redctab? redctab[*ps]: (*ps - sd->code->base_code);
@@ -869,10 +868,10 @@ void PatMat::increment(Seq* sd, int pos, CHAR* redctab)
 	}
 }
 
-float PatMat::pwm_score(Seq* sd, CHAR* ps, CHAR* redctab)
+float PatMat::pwm_score(const Seq* sd, const CHAR* ps, const CHAR* redctab) const
 {
-	double*	ptn = mtx;
-	CHAR*	ts = min(sd->at(sd->right), ps + cols);
+const	double*	ptn = mtx;
+const	CHAR*	ts = min((const CHAR*) sd->at(sd->right), ps + cols);
 	double	fit = 0;
 	for ( ; ps < ts; ++ps, ptn += rows) {
 	    int	k = redctab? redctab[*ps]: (*ps - sd->code->base_code);
@@ -881,12 +880,12 @@ float PatMat::pwm_score(Seq* sd, CHAR* ps, CHAR* redctab)
 	return (float) fit;
 }
    
-float* PatMat::calcPatMat(Seq* sd)
+float* PatMat::calcPatMat(const Seq* sd) const
 {
 	int	k = sd->right - sd->left;
 	int	Mrkv = 0;
 
-	CHAR*	redctab = setredctab(sd);
+const 	CHAR*	redctab = setredctab(sd);
 	if (rows == 20) Mrkv = 1;	// 1st-order Markov/
 	else if (rows == 84) Mrkv = 2;	// 2nd-order Markov/
 	else if (rows == 67) Mrkv = 3;	// Should be MODIFIED !!!
@@ -894,20 +893,20 @@ float* PatMat::calcPatMat(Seq* sd)
 	float*	rest = result;
 	float*	last = result + k;
 	double	minval = cols * mtx[minidx];
-	CHAR*	aa = sd->at(0);			// left limit
-	CHAR*	zz = sd->at(sd->len - Mrkv);	// right limit
+const	CHAR*	aa = sd->at(0);			// left limit
+const	CHAR*	zz = sd->at(sd->len - Mrkv);	// right limit
 	int	n = sd->left - offset;		// start point
 	if (Mrkv <= 1) {
 	    for ( ; rest < last; ++n) {
-		CHAR*	ss = sd->at(n);
-		CHAR*	tt = sd->at(n + cols);
+		const	CHAR*	ss = sd->at(n);
+		const	CHAR*	tt = sd->at(n + cols);
 		if (tt > zz) tt = zz;
 		double	fit = 0;
-		double*	ptn = mtx;
+const		double*	ptn = mtx;
 		if (n < 0) {ptn -= n * rows; ss = aa;}
 		int	q = n + cols >= sd->len;	// number of bad chars
 		for (int m = 0; ss < tt; ptn += rows, ++m) {
-		    CHAR*	rr = ss + sd->many;
+		    const	CHAR*	rr = ss + sd->many;
 		    for ( ; ss < rr; ++ss) {
 			k = redctab? redctab[*ss]: (*ss - sd->code->base_code);
 			if (k < 0 || k >= nalpha) ++q;
@@ -927,18 +926,18 @@ float* PatMat::calcPatMat(Seq* sd)
 	    }
 	} else if (Mrkv == 2) {
 	    for ( ; rest < last; ++n) {
-		CHAR*	ss = sd->at(n);
-		CHAR*	tt = sd->at(n + cols);
+		const	CHAR*	ss = sd->at(n);
+		const	CHAR*	tt = sd->at(n + cols);
 		if (tt > zz) tt = zz;
 		double	fit = 0;
-		double*	ptn = mtx;
+const		double*	ptn = mtx;
 		if (n < 0) {ptn -= n * rows; ss = aa;}
 		int	q = n + cols >= sd->len;	// number of bad chars
 		for (int m = 0; ss < tt; ptn += rows, ++m) {
 		    if (sd->many == 1) {	/* in most cases */
 			int i = redctab? redctab[*ss]: (*ss - sd->code->base_code);
 			k = i;
-			CHAR*	s1 = ++ss;
+			const	CHAR*	s1 = ++ss;
 			if (i > 3) ++q;				// bad char
 			if (m == 0 && q == 0) fit += ptn[k];	// 1st pos
 			i = redctab? redctab[*s1]: (*s1 - sd->code->base_code);
@@ -955,9 +954,9 @@ float* PatMat::calcPatMat(Seq* sd)
 			    fit += ptn[k + 20];			// 2nd oder
 			}
 		    } else {
-		      CHAR*	rr = ss + sd->many;
-		      CHAR*	s2 = rr + sd->many;
-		      for (CHAR* s1 = rr; ss < rr; ++ss, ++s1, ++s2) {
+		      const	CHAR*	rr = ss + sd->many;
+		      const	CHAR*	s2 = rr + sd->many;
+		      for (const CHAR* s1 = rr; ss < rr; ++ss, ++s1, ++s2) {
 			int	i = redctab? redctab[*ss]: (*ss - sd->code->base_code);
 			k = i;
 			if (i > 3) ++q;
@@ -982,17 +981,17 @@ float* PatMat::calcPatMat(Seq* sd)
 	    }
 	} else if (Mrkv == 3) {
 	    for ( ; rest < last; ++n) {
-		CHAR*	ss = sd->at(n);
-		CHAR*	tt = sd->at(n + cols);
+		const	CHAR*	ss = sd->at(n);
+		const	CHAR*	tt = sd->at(n + cols);
 		if (tt > zz) tt = zz;
-		double*	ptn = mtx;
+const		double*	ptn = mtx;
 		if (n < 0) {ptn -= n * rows; ss = aa;}
-		CHAR*	sss = ss;
+		const	CHAR*	sss = ss;
 
 		int	flag = 0;
 		double	fit = 0;
 		for (int m = 0; ss < tt; ptn += rows, ++m) {
-		    CHAR*	rr = ss + sd->many;
+		    const	CHAR*	rr = ss + sd->many;
 		    for ( ; ss < rr; ++ss) {
 			INT	x = (INT) ptn[0];
 			INT	y = (INT) ptn[1];
@@ -1068,7 +1067,7 @@ fail_to_read:
 	fclose(fd);
 }
 
-static int kmer(CHAR* s, int m, CHAR* elements, int k, int* x)
+static int kmer(const CHAR* s, int m, const CHAR* elements, int k, int* x)
 {
 	int	c = elements[*s];
 	int	d = c;
@@ -1076,7 +1075,7 @@ static int kmer(CHAR* s, int m, CHAR* elements, int k, int* x)
 	    d = 0;
 	    if (x) *x = 0;
 	}
-	CHAR*	t = s + k * m;
+const	CHAR*	t = s + k * m;
 
 	while ((s += m) < t) {
 	    c = elements[*s];
@@ -1093,14 +1092,14 @@ static int kmer(CHAR* s, int m, CHAR* elements, int k, int* x)
 
 /*	Calculate coding potential from DNA seq based on the 5th-order Markov model */
 
-float* CodePot::calc5MMCodePot(Seq* sd, int phase)
+float* CodePot::calc5MMCodePot(const Seq* sd, int phase) const
 {
 	CHAR*   redctab = sd->inex.molc == TRON? tnredctab: ncredctab;
 	CHAR*   elements = sd->inex.molc == TRON? trelements: ncelements;
 	int	k = sd->right - sd->left;
 	FTYPE	prf;
-	CHAR*	ss = sd->at(sd->left);
-	CHAR*	tt = sd->at(sd->right);
+const	CHAR*	ss = sd->at(sd->left);
+const	CHAR*	tt = sd->at(sd->right);
 
 	float*	result = new float[k];
 	float*	rest = result;
@@ -1172,15 +1171,15 @@ float* CodePot::calc5MMCodePot(Seq* sd, int phase)
 
 /*	Calculate coding potential from DiTRON (1st-order Markov) model */
 
-float* CodePot::calcDitCodePot(Seq* sd, int phase)
+float* CodePot::calcDitCodePot(Seq* sd, int phase) const
 {
 	int	i = sd->right;
 	int	k = sd->right - sd->left;
 	int	d = sd->len - 3;
 	int	n2t = 0;
-	CHAR*	ss = sd->at(sd->left);
-	CHAR*	uu = ss + 3 * sd->many;
-	CHAR*	tt = sd->at(min(i, d));
+const	CHAR*	ss = sd->at(sd->left);
+const	CHAR*	uu = ss + 3 * sd->many;
+const	CHAR*	tt = sd->at(min(i, d));
 
 	if (sd->isdrna()) {sd->nuc2tron(); n2t = 1;}
 	if (sd->inex.molc != TRON) {
@@ -1223,7 +1222,7 @@ float* CodePot::calcDitCodePot(Seq* sd, int phase)
 	return (result);
 }
 
-float* CodePot::calcPrefCodePot(Seq* sd, int phase)
+float* CodePot::calcPrefCodePot(Seq* sd, int phase) const
 {
 	if (!CodePotBuf) return (0);
 	switch (CodePotType) {
@@ -1281,14 +1280,14 @@ ExinPot::ExinPot(int zZ, const char* fname)
 
 // calculate "instaneous" exonic or "cumulative" intronic potential
 
-float* ExinPot::calcExinPot(Seq* sd, bool exon)
+float* ExinPot::calcExinPot(const Seq* sd, bool exon) const
 {
 	FTYPE*	pot = exon? ExonPot: IntronPot;
 	if (!pot) return 0;
 	double	acc = 0.;
-	CHAR*	ss = sd->at(sd->left);
-	CHAR*	tt = sd->at(sd->right);
-	CHAR*   redctab = sd->inex.molc == TRON? tnredctab: ncredctab;
+const	CHAR*	ss = sd->at(sd->left);
+const	CHAR*	tt = sd->at(sd->right);
+const	CHAR*   redctab = sd->inex.molc == TRON? tnredctab: ncredctab;
 
 	float*	result = new float[sd->right - sd->left];
 	float*	rest = result;
@@ -1310,7 +1309,7 @@ float* ExinPot::calcExinPot(Seq* sd, bool exon)
 	return (result);
 }
 
-VTYPE ExinPot::intpot(EXIN* b5, EXIN* b3)
+VTYPE ExinPot::intpot(const EXIN* b5, const EXIN* b3) const
 {
 	b5 += lm;
 	b3 -= rm;

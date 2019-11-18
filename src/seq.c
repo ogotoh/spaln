@@ -19,28 +19,8 @@
 *	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
-#include "seq.h"
 #include <new>
-
-/* attribute characters	*/
-
-#define isnbr(ps)\
-	(isdigit(*ps) || ((*ps == '-' || *ps == '+') && isdigit(ps[1])))
-#define isseqchar(c) (isalpha(c) || (c) == _UNP || (c) == _TRM)
-#define	aton(c) ((c) - 'A' + A)
-
-static	const	char	StrandPhrase[] = "StrandPhrase";
-static	const	int	tribial_area = 64;
-static	const	int	DelFrac	= 90;
-
-	/* GenBank aa coding region */
-static	const	int	typecolumn = 5;
-static	const	int	datacolumn = 21;
-static	const	int	MinPctNucChar = 75;
-static	const	int	MinPctTronChar = 5;
-static	const	INT	MaxTestChar = 1000;
-static	char	seqdfn[MAXL] = "";
-static  const   char*   NoSeqSpace = "No space for sequence!\n";
+#include "seq.h"
 
 DefSetup	def_setup = {UNKNOWN, 0, IM_NONE};
 RANGE	fullrng = {0, INT_MAX};
@@ -87,6 +67,8 @@ char *Nucl = rdnucl + 2;
 char *Amin = amino + 3;
 char *Tron = acodon + 3;
 
+static	char	seqdfn[MAXL] = "";
+
 CHAR complcod[] = {___,_,T,G,K,C,Y,S,B,A,W,R,D,M,H,V,N};
 /*		  -  - X A R N D C Q E G H I L K M F P S T W Y V S * */
 CHAR aa2nuc[] = {___,_,N,C,G,A,A,G,A,A,G,A,T,T,A,T,T,C,C,C,G,A,T,G,G,A};
@@ -96,10 +78,7 @@ static	SEQ_CODE str_code = {28, 1, 2, 28, 28, 0, alphab, 0};
 static	SEQ_CODE nts_code = {NSIMD, N, A, N, NSIMD, nccode, nucl, ncredctab};
 static	SEQ_CODE trc_code = {TSIMD, AMB, ALA, TSIMD, TSIMD, trccode, acodon, 0};
 static	SEQ_CODE aas_code = {ASIMD, AMB, ALA, ASIMD, ASIMD, aacode, amino, aaredctab};
-
-template <typename file_t>
-static	char*	onecds(RANGE& wexon, char* ps, int& par);
-static	int	cmppos(PFQ* a, PFQ* b);
+static	const	INEX	def_inex = {0};
 
 void setdfn(const char* newdfn) {topath(seqdfn, newdfn);}
 
@@ -476,7 +455,7 @@ void Seq::fillpad()
 void swapseq(Seq** x, Seq** y)
 {
 	if (!x || !y) return;
-	gswap(*x, *y);
+	swap(*x, *y);
  }
 
 void Seq::seqalloc(int num, int length, bool keep)
@@ -589,7 +568,7 @@ Seq::Seq(Seq* sd, int* which, int snl)
 	else	sd->copyseq(this, snl);
 }
 
-const char* Seq::path2fn(const char* pname)
+const char* Seq::path2fn(const char* pname) const
 {
 	const char*	ns = strrchr(pname, PATHDELM);
 	ns = ns? ns + 1: pname;
@@ -651,7 +630,7 @@ static	const	int	a2t[4] = {0, 2, 1, 3};
 	INT t = inex.exgl;
 	inex.exgl = inex.exgr;
 	inex.exgr = t;
-	gswap(left, right);
+	swap(left, right);
 	left = len - left;
 	right = len - right;
 }
@@ -692,7 +671,7 @@ void antiseq(Seq** seqs)
 
 /* assume seq.many = 1 */
 
-CHAR* spliceTron(CHAR* spliced, CHAR* b5, CHAR* b3, int n)
+CHAR* spliceTron(CHAR* spliced, const CHAR* b5,  const CHAR* b3, int n)
 {
 	int	nn = n + n;
 	CHAR*	sp = spliced + nn;
@@ -737,7 +716,7 @@ void Seq::tron2nuc(bool cmpl)
 {
 	if (!istron()) return;
 
-register CHAR*	soc = at(0) - many;
+	CHAR*	soc = at(0) - many;
 	CHAR*	trm = at(len);
 	memset(soc, NAMB, many);
 	for (soc += many; soc < trm; ++soc) { 
@@ -750,12 +729,12 @@ register CHAR*	soc = at(0) - many;
 	delete[] cmps; cmps = 0;
 }
 
-RANGE* Seq::setrange(const char* attr, int* ncr)
+RANGE* Seq::setrange(const char* attr, int* ncr) const
 {
 	if (!attr) return (0);
 	int 	lr = 0;		// left boundary
 	int	c;
-	const	char*	pa = attr;
+const	char*	pa = attr;
 	int	num = 0;
 
 	while ((c = *pa++)) {
@@ -859,7 +838,7 @@ int Seq::sname2memno(const char* memid)
 	return (kv? kv->val: -1);
 }
 
-void Seq::exg_seq(int gl, int gr)
+void Seq::exg_seq(int gl, int gr) 
 {
 	CHAR*	ss = at(0);
 	CHAR*	tt = at(len);
@@ -891,7 +870,7 @@ void Seq::exg_seq(int gl, int gr)
 	}
 }
 
-void Seq::test_gap_amb()
+void Seq::test_gap_amb() 
 {
 	CHAR*	ss = at(left);
 	CHAR*	tt = at(right);
@@ -972,33 +951,33 @@ void Seq::copyattr(Seq* dest) const
 	dest->inex = inex;
 }
 
-void Seq::fillnbr(Seq* dest)
+void Seq::fillnbr(Seq* dest) const
 {
-	CHAR*	ss = at(0);
-	CHAR*	tt = at(left);
+const	CHAR*	ss = at(0);
+const	CHAR*	tt = at(left);
 
 	if (!dest->nbr) dest->nbr = new int[many];
 	for (int i = 0; i < many; ++i) {
 	    dest->nbr[i] = nbr[i];
-	    for (CHAR* s = ss++; s < tt; s += many)
+	    for (const CHAR* s = ss++; s < tt; s += many)
 		if (IsntGap(*s)) dest->nbr[i]++;
 	}
 }
 
-void Seq::copynbr(Seq* dest)
+void Seq::copynbr(Seq* dest) const
 {
 	if (!dest->nbr) dest->nbr = new int[many];
 	vcopy(dest->nbr, nbr, many);
 }
 
-void Seq::copylbl(Seq* dest)
+void Seq::copylbl(Seq* dest) const
 {
 	if (dest->sname) dest->sname->assign(*sname);
 	else dest->sname = new Strlist(*sname);
 }
 
 #if USE_WEIGHT
-void Seq::copyweight(Seq* dest)
+void Seq::copyweight(Seq* dest) const
 {
 	if (weight) {
 	    if (!dest->weight) dest->weight = new FTYPE[many];
@@ -1014,9 +993,9 @@ void Seq::copyweight(Seq* dest)
 
 // dest is a new seq sliced from this's segment
 
-Seq* Seq::cutseq(Seq* dest, int snl)
+Seq* Seq::cutseq(Seq* dest, int snl) const
 {
-	CHAR*	s = at(left);
+const	CHAR*	s = at(left);
 	int	l = right - left;
 
 	if (dest) dest->refresh(many, l);
@@ -1037,7 +1016,7 @@ Seq* Seq::cutseq(Seq* dest, int snl)
 // dest is a copy of this's segment
 // seq numbering is preserved
 
-Seq* Seq::copyseq(Seq* dest, int snl)
+Seq* Seq::copyseq(Seq* dest, int snl) const
 {
 	if (snl & CPY_SEQ) {
 	    if (dest)	dest->refresh(many, len);
@@ -1059,13 +1038,13 @@ Seq* Seq::copyseq(Seq* dest, int snl)
 	return (dest);
 }
 
-Seq* Seq::duplseq(Seq* dest)
+Seq* Seq::duplseq(Seq* dest) const
 {
 	int	l = 0;
 	int	r = len;
 
-	gswap(l, left);
-	gswap(r, right);
+	swap(l, left);
+	swap(r, right);
 	dest = copyseq(dest, CPY_ALL);
 	left = l;
 	right = r;
@@ -1239,6 +1218,26 @@ Seq* Seq::rndseq()
 	return (this);
 }
 
+char* Seq::onecds(RANGE& wexon, char* ps, int& par)
+{
+	int	qar = par;
+	wexon = zerorng;
+	while (*ps && !isdigit(*ps)) ++ps;
+	if (!*ps) return (0);
+	wexon.left = atoi(ps) - 1;
+	while (isdigit(*ps)) ++ps;
+	while (*ps && !isdigit(*ps))
+	    if (*ps++ == ')') --qar;
+	if (!*ps) return (0);
+	wexon.right = atoi(ps);
+	while (isdigit(*ps)) ++ps;
+	if (!*ps) return (0);
+	while (*ps && !isdigit(*ps))
+	    if (*ps++ == ')') --qar;
+	par = qar;
+	return (ps);
+}
+
 int Nprim_code(int c)
 {
 	int	rn = ncredctab[c];
@@ -1279,119 +1278,86 @@ CHAR* tosqcode(CHAR* ns, const SEQ_CODE* code)
 	return (bs);
 }
 
-static char* onecds(RANGE& wexon, char* ps, int& par)
+int infermolc(const char* fname)
 {
-	int	qar = par;
-	wexon = zerorng;
-	while (*ps && !isdigit(*ps)) ++ps;
-	if (!*ps) return (0);
-	wexon.left = atoi(ps) - 1;
-	while (isdigit(*ps)) ++ps;
-	while (*ps && !isdigit(*ps))
-	    if (*ps++ == ')') --qar;
-	if (!*ps) return (0);
-	wexon.right = atoi(ps);
-	while (isdigit(*ps)) ++ps;
-	if (!*ps) return (0);
-	while (*ps && !isdigit(*ps))
-	    if (*ps++ == ')') --qar;
-	par = qar;
-	return (ps);
+	Seq	sd(1);
+	char	str[MAXL];
+	if (is_gz(fname)) {
+#if USE_ZLIB
+	    gzFile	gzfd = gzopen(fname, "r");
+	    if (!gzfd) fatal("%s not found !\n", fname);
+	    if (!fgets(str, MAXL, gzfd)) fatal("%s is empty !\n", fname);
+	    sd.infermolc(gzfd, str);
+	    fclose(gzfd);
+#else
+	    fatal(gz_unsupport, fname);
+#endif
+	} else {
+	    FILE*	fd = fopen(fname, "r");
+	    if (!fd) fatal("%s not found !\n", fname);
+	    if (!fgets(str, MAXL, fd)) fatal("%s is empty !\n", fname);
+	    sd.infermolc(fd, str);
+	    fclose(fd);
+	}
+	return (sd.inex.molc);
 }
 
-template <typename file_t>
-int Seq::getcds(file_t fd, char* str, int cdscolumn)
+// remove polyA sequences if present
+
+SHORT PolyA::rmpolyA(Seq* sd, int q_mns) const
 {
-	Mfile	exonrng(sizeof(RANGE));
-	RANGE	ebuf = fullrng;
-	bool	rv = false;
-	int	par = 0;
-static	const	char* readthru = "CDS may be read through !\n";
+	if (sd->isprotein() || sd->inex.intr) return (1);
+	int	rv = q_mns? q_mns: 3;
+	if (thr <= 0) return (rv);	// has treated
+	if (sd->inex.polA) return (sd->inex.polA == 3? rv: sd->inex.polA);
+	int	polya = 0;
+	int	polyt = 0;
+	int	scr = 0;
+	CHAR*	maxa = 0;
+	CHAR*	maxt = 0;
+static	const	int	mn[2] = {-5, 1};
 
-	char*	ps = str + cdscolumn;
-	if (*ps == 'j' && strmatch(ps, "join(")) {
-	    ps += 5; ++par;
-	} else if (*ps == 'c' && strmatch(ps, "complement(join(")) {
-	    rv = true;
-	    ps += 16;
-	    par = 2;
-	} else if (*ps == '-') {
-	    rv = true; ++ps;
-	} 
-	char*	qs = strchr(ps, '(');
-	if (qs) {
-	    ++par; ps = qs + 1;
-	} else if (!par) {
-	    qs = onecds(ebuf, ps, par);
-	    exonrng.write(&ebuf);
-	}
-	while (par > 0) {
-	    int	n = 0;
-	    while ((qs = onecds(ebuf, ps, par))) {
-		if (ebuf.right > ebuf.left) exonrng.write(&ebuf);
-		if (par < 0) prompt("Bad CDS inf.!\n");
-		if (par <= 0) goto eoj;
-		ps = qs;
-		++n;
-	    }
-	    if (!n) {
-		prompt(readthru);
-		break;
-	    }
-	    ps = strcpy(str, ps);
-	    int	len = strlen(ps);
-	    if (!fgets(str + len, MAXL - len, fd)) {
-		prompt(readthru);
-		break;
-	    }
-	}
-eoj:
-	if (exons) delete[] exons;
-	CdsNo = exonrng.size();
-	exonrng.write(&zerorng);
-	exons = CdsNo? (RANGE*) exonrng.flush(): 0;
-	return (rv? -CdsNo: CdsNo);
-}
-
-template <typename file_t>
-char* Seq::readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd)
-{
-	char*	ps = str;
-	int	feature = 0;
-	int	nseg = 0;
-
-	for ( ; ps && ((db->FormID >= FASTA &&
-	    (*str == _COMM || *str == _NHEAD || *str == _CHEAD)) ||
-	    (db->SeqLabel && wordcmp(str, db->SeqLabel)));
-	    ps = fgets(str, MAXL, fd)) {
-	    if (db->FormID == GenBank && 
-		*str == 'F' && strmatch(str, "FEATURES")) {
-		    feature = 1;
-	    } else if ((db->FormID == GenBank && *str == ' ' && feature) ||
-		     (db->FormID == EMBL && strmatch(str, "FT"))) {
-		ps = str + typecolumn;
-		if (*ps == 'C' && strmatch(ps, "CDS")) {
-		    nseg = getcds(fd, str, datacolumn);
+	CHAR*	lend = sd->at(0);
+	CHAR*	s = sd->at(sd->len);
+	CHAR*	t = s;
+	if (q_mns != 2) {
+	    while (--s >= lend) {
+		scr += mn[*s == A];
+		if (scr > polya) {
+		    polya = scr;
+		    if (scr > thr) maxa = s;
 		}
-	    } else if (db->FormID >= FASTA) {
-		if (strmatch(str, ";C")) {
-		    nseg = getcds(fd, str, 3);
-		} else if (strmatch(str, ";M")) {
-		    ps = cdr(str);
-		    bool	delfs = strmatch(ps, "Deleted");
-		    GAPS	gaps;
-		    gaps.gln = atoi(ps = cdr(ps));
-		    if (delfs) gaps.gln = -gaps.gln;
-		    ps = cdr(ps); ps = cdr(ps);
-		    gaps.gps = atoi(cdr(ps));
-		    gapmfd.write(&gaps);
-		}
+		if (scr < polya - thr) break;
 	    }
 	}
-	if (exons && ((exons->left > exons[CdsNo - 1].left) ^ (nseg < 0)))
-	    vreverse(exons, CdsNo);
-	if (ps && db->FormID < FASTA) ps = fgets(str, MAXL, fd);
-	return (ps);
+	if (q_mns != 1) {
+	    for (scr = 0, s = lend; s < t; ++s) {
+		scr += mn[*s == T];
+		if (scr > polyt) {
+		    polyt = scr;
+		    if (scr > thr) maxt = s;
+		}
+		if (scr < polyt - thr) break;
+	    }
+	}
+	if (maxa && maxt) {
+	    if (polya >= polyt) maxt = 0;
+	    else		maxa = 0;
+	}
+	sd->inex.polA = 3;
+	if (maxa) {
+	    sd->tlen = maxa - lend;
+	    if (sd->right > sd->tlen) sd->right = sd->tlen;
+	    sd->inex.polA = 1;
+	} else if (maxt) {
+	    int	polytlen = maxt - lend;
+	    if (sd->left < polytlen) sd->left = polytlen;
+	    sd->tlen = sd->len - polytlen;
+	    sd->inex.polA = 2;
+	    sd->comrev();
+	}
+	return (q_mns == 3? 3: 
+	    ((sd->inex.polA == 1 || sd->inex.polA == 2)? sd->inex.polA: rv));
 }
 
 StrPhrases::StrPhrases(const char* fname)
@@ -1496,445 +1462,12 @@ void Seq::header_nat_aln(int n, FTYPE sumwt)
 #endif
 }
 
-template <typename file_t>
-CHAR* Seq::get_nat_aln(file_t fd, char* str, RANGE* qcr)
-{
-	char*	ps = str + 1;
-	msaname = strrealloc(msaname, car(ps));
-
-	CHAR*	ss = seq_;
-	long	fpos = ftell(fd);
-	if (inex.molc == UNKNOWN) {
-//	Infer molecular type
-	    if (!fgets(str, MAXL, fd)) return (ss);
-	    infermolc(fd, str, true);
-	    fseek(fd, fpos, SEEK_SET);
-	}
-
-	CHAR**	wrk = new CHAR*[many];
-	if (sigII) {delete sigII; sigII = 0;}
-	int	column = 0;
-	FTYPE	sumwt = 0.;
-	inex.algn = 1;
-	int	n = 0;
-	int	blkno = 0;
-	for (int i = 0; i < many; ) wrk[i++] = ss++;
-	int	i = 0;
-	for ( ; (ps = fgets(str, MAXL, fd)); fpos = ftell(fd)) {
-	    if (*ps == _NHEAD || *ps == _CHEAD) {
-		fseek(fd, fpos, SEEK_SET);	// undo 1 line
-		break;
-	    }
-	    if (strmatch(ps, ";B") && (alprm2.spb > 0)) {
-#if USE_WEIGHT
-		sigII = new SigII(fd, ps, weight);
-#else
-		sigII = new SigII(fd, ps);
-#endif
-		if (!sigII->pfqnum) {
-		    delete sigII; sigII = 0;
-		}
-	    }
-	    if (*ps == _COMM) {
-		while (withinline(ps, MAXL, fd)) ;
-		continue;
-	    }
-	    chop(ps);
-	    while (*ps && isspace(*ps)) ps++;
-	    if (isnbr(ps) || *ps == _LABL) {
-		ps = sqline(i, ps);
-#if USE_WEIGHT
-	    } else if (*ps++ == _WGHT) {
-		if (!weight) {
-		    n = 0;
-		    weight = new FTYPE[many];
-		}
-		while (*ps && n < many) {
-		    sumwt += weight[n++] = atof(ps);
-		    ps = cdr(ps);
-		}
-		continue;
-#endif
-	    } else	continue;
-	    RANGE*	pcr = qcr;
-	    int 	clm = column;
-	    for ( ; *ps; ++ps) {
-		int	res_code = -1;
-		switch (*ps) {
-		  case '\0':
-		  case _COMM:
-		  case _NHEAD:
-		  case _CHEAD:
-		  case _LABL:	goto eob;
-		  case ESC:
-			while (!isalpha(*++ps)) ;
-			if (*ps) ++ps;
-			break;
-		  case _SAME:	res_code = *wrk[0]; break;
-		  case _IBID:	res_code = *wrk[i-1]; break;
-		  default:
-			res_code = en_code(*ps, code);
-			if (res_code < 0) continue;
-			if (IsGap(res_code)) inex.algn |= 2;
-			break;
-		}
-		if (res_code >= 0) {
-		    if (clm == pcr->right) ++pcr;
-		    else if (pcr->left <= clm) {
-			*wrk[i] = res_code;
-			wrk[i] += many;
-		    }
-		    ++clm;
-		}
-	    }
-eob:	    ; /* end of block --- this line is a dummy */
-	    if (++i == many) {
-		i = 0;
-		qcr = pcr;
-		column = clm;
-		if (blkno++ == 0) header_nat_aln(n, sumwt);
-	    }
-	}
-/* end of input */
-	ss = wrk[0];
-	delete[] wrk;
-	return (ss);
-}
-
-template <typename file_t>
-CHAR* Seq::get_msf_aln(file_t fd, char* str, RANGE* pcr)
-{
-	int	num  = 0;
-	if (!sname) sname = new Strlist;
-	while (fgets(str, MAXL, fd)) {
-	    if (!wordcmp(str, "//")) break;
-	    char*	qs = str;
-	    char*	ps = car(qs);
-	    if (!strcmp(ps, "MSF:")) {
-		len = atoi(++qs);
-		ps = cdr(qs); ps = cdr(ps);
-		setSeqCode(this, *ps == 'P'? PROTEIN: DNA);
-	    } else if (!strcmp(ps, "Name:")) {
-		++qs;
-		ps = car(qs);
-		sname->push(ps);
-		++num;
-	    }
-	}
-
-	seqalloc(num, len);
-	delete[]	nbr;
-	nbr = new int[many];
-	vclear(nbr, many);
-	CHAR*	ss = at(0);
-	int	m = 0;
-	inex.algn = 1;
-	while (fgets(str, MAXL, fd)) {
-	    char*	ps = cdr(str);
-	    if (!*ps) continue;	// blank line
-	    CHAR*	rr = ss + m;
-	    for ( ; *ps; ++ps) {
-		int	c = -1;
-		if (isalpha(*ps)) c = en_code(*ps, code);
-		else if (*ps == '.') {c = gap_code; inex.algn = 3;}
-		if (c >= 0) {
-		    *rr = c;
-		    rr += many;
-		}
-	    }
-	    if (++m == many) {
-		ss = rr - many + 1;
-		m = 0;
-	    }
-	}
-	return (ss);
-}
-    
-template <typename file_t>
-CHAR* Seq::seq_readin(file_t fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd)
-{
-	SeqDb*	db = whichdb(str, fd);
-	if (!db)	return (0);		// bad format
-	GAPS gend = {INT_MAX, EOS};
-
-/*************************
-* read annotation
-*************************/
-
-	char*	ps = 0;
-	Mfile	gapmfd(sizeof(GAPS));
-	if (db->FormID < FASTA)	{		// Public 1-seq Format
-	    char*	ss = cdr(str);
-	    char*	ct = 0;
-	    char	cc;
-	    sname->push(car(ss, ct, cc));	// seq label
-	    if (ct) *ct = cc;
-	    ps = readanno(fd, str, db, gapmfd);
-	} else if (db->FormID == FASTA)	{	// FASTA format
-	    char*	ss = str;		// process header line
-	    char*	sp = str;
-	    while (*sp && !isspace(*sp)) ++sp;
-	    if (*sp == '\n') *sp = 0;
-	    else	*sp = '\0';
-	    if (algmode.mns == 0) setstrand(0, ss);
-	    while (char* sb = strchr(++ss, '|')) {
-		if (sb[1] == '\0' || isspace(sb[1])) {
-		    *sb = ' ';
-		    break;
-		}
-		ss = sb;
-	    }
-	    sname->push(ss);
-	    if (sp) {				// process comments in header
-		*sp++ = ' ';
-		do {
-		    if (algmode.mns == 0 && inex.ori == 0)
-			setstrand(1, sp); 
-		} while ((sp = withinline(str, MAXL, fd)));
-	    }
-	    if (!fgets(str, MAXL, fd)) return (0);	// empty seq
-	    ps = readanno(fd, str, db, gapmfd);
-	} else
-	    ps = readanno(fd, str, db, gapmfd);
-	if (!ps)  return (0);
-
-	int	ngaps = gapmfd.size();
-	GAPS*	gg = 0;
-	if (ngaps) {
-	    gapmfd.write(&gend);
-	    gg = (GAPS*) gapmfd.flush();
-	}
-
-/*************************
-* read body of seq
-*************************/
-
-	long	fpos = ftell(fd);
-	if (inex.molc == UNKNOWN) {
-	    char	buf[MAXL];
-	    strcpy(buf, str);
-	    infermolc(fd, buf);
-	    fseek(fd, fpos, SEEK_SET);
-	}
-
-	int	step = isprotein()? 3: 1;
-	CHAR*	ns = at(0) + mem;
-	int 	flag = -1;
-	int	total = 0;
-	int	unps = 0;
-	int	nres = 0;
-	int	eij = 0;	// cumulated exon length
-	int	cds = 0;	// virtual CDS length != eij if frameshifts
-	bool	rev = exons && (exons->left > exons[CdsNo - 1].left);
-	RANGE*	bcr = 0;
-
-	if (sscanf(ps, "%d", nbr + mem) > 0)	nbr[mem]--;
-	else					nbr[mem] = 0;
-	GAPS*	gwk = gg;
-	bool	readspb = alprm2.spb > 0 && inex.molc != GENOME;
-	RANGE*&	cr = exons;
-	if ((readspb = readspb && exons)) {
-	    if (rev && ngaps) vreverse(gg, ngaps);
-	    bcr = (inex.molc != UNKNOWN)? cr: 0;
-	    eij = cds = cr->right - cr->left;
-	    if (gg) {
-		if (rev) {
-		    while (gaps_intr(gwk) && gwk->gps > cr->left)
-			cds += (gwk++)->gln;
-		} else {
-		    while (gaps_intr(gwk) && gwk->gps < cr->right)
-			cds += (gwk++)->gln;
-		}
-	    }
-	}
-
-	for ( ; ps; fpos = ftell(fd), ps = fgets(str, MAXL, fd)) {
-	    if (db->is_DbEntry(ps)) {
-		fseek(fd, fpos, SEEK_SET);	// undo 1 line
-		break;
-	    }
-	    if (db->EndLabel && !wordcmp(str, db->EndLabel)) flag = -2;
-	    if (flag == -2) continue;
-	    while (int c = *ps++) {
-		if (c == _COMM || c == _LCOMM) {
-		    while (withinline(str, MAXL, fd)) ;
-		    break;
-		}
-		if (c == _EOS && *ps == _EOS) {	/* // */
-		    flag = -2; break;
-		}
-		if (c == ESC) {			// skip esc cntl
-		    while (!isalpha(*++ps)) ;
-		    if (*ps && (c = *++ps)) ++ps;
-		    else	break;
-		}
-		if ((c = en_code(c, code)) >= 0) {
-		    if (total == pcr->left) flag = 1;
-		    else if (total == pcr->right) {
-			flag = 0;
-			pcr++;
-		    }
-		    ++total;
-		    if (flag == 1) {
-			push(c, ns, many);
-			if (bcr && bcr < cr + CdsNo) {
-			    if (IsGap(c))	unps += step;
-			    else		nres += step;
-			    if ((step == 3 && cds < nres + 2) || cds == nres) {
-				bcr->left = eij + unps;
-				++bcr;
-				if (gg) {
-				    if (rev) {
-					while (gaps_intr(gwk) && gwk->gps > bcr->left)
-					    cds += (gwk++)->gln;
-				    } else {
-					while (gaps_intr(gwk) && gwk->gps < bcr->right)
-					    cds += (gwk++)->gln;
-				    }
-				}
-				eij += bcr->right - bcr->left;
-				cds += bcr->right - bcr->left;
-			    }
-			} else if (IsGap(c))	unps++;
-		    } else if (flag  > 0 && IsntGap(c))
-			nbr[mem]++;
-		}
-	    }
-	}
-	inex.algn = unps? 3: 0;
-	if (!readspb) {delete[] gg; return (ns);}
-
-/***************************************
-* store exon-intron junction information
-***************************************/
-
-	if (!sigII) sigII = new SigII;
-	unps = 0;
-	gwk = gg;
-	if (pfqmfd) {
-	    bcr = cr + CdsNo;
-	    for (pcr = cr; pcr < bcr; ++pcr) {
-		if (gg) {
-		    while (gaps_intr(gwk) && (rev ^ (gwk->gps < pcr[rev].right)))
-			unps += (gwk++)->gln;
-		}
-		PFQ	pfqbf = {pcr->left + unps, mem, pcr->right};
-		pfqmfd->write(&pfqbf);
-	    }
-	} else {
-	    PFQ*	pfq = sigII->pfq = new PFQ[CdsNo];
-	    sigII->pfqnum = sigII->lstnum = CdsNo - 1;
-	    bcr = cr + CdsNo - 1;
-	    for (pcr = cr; pcr < bcr; ++pcr, ++pfq) {
-		if (gg) {
-		    while (gaps_intr(gwk) && (rev ^ (gwk->gps < pcr[rev].right)))
-			unps += (gwk++)->gln;
-		}
-		pfq->pos = pcr->left + unps;
-		pfq->num = 1;
-		pfq->gps = pcr->right;
-#if USE_WEIGHT
-		pfq->dns = weight? weight[mem]: 1;
-#endif
-	    }
-	    pfq->pos = pcr->left + unps;
-	    pfq->num = 0;
-	    pfq->gps = pcr->right;
-#if USE_WEIGHT
-	    pfq->dns = 0;
-#endif
-	}
-	delete[] gg;
-	delete[] exons; exons = 0; CdsNo = 0;
-	return (ns);
-}
-
-static int cmppos(PFQ* a, PFQ* b)
+int cmpPfqPos(const PFQ* a, const PFQ* b)
 {
 	int	i = a->pos - b->pos;
 
 	if (i) return (i);
 	return (a->num - b->num);
-}
-
-/*	Get multiple sequences in sequential format	*/
-
-template <typename file_t>
-CHAR* Seq::get_seq_aln(file_t fd, char* str, RANGE* pcr)
-{
-	size_t*	slen = new size_t[many];
-	Mfile*	pfqmfd = new Mfile(sizeof(PFQ));
-
-	size_t	span = 0;
-	for (int i = 0; i < many; ++i) {
-	    if (*str != _NHEAD && *str != _CHEAD) *str = '\0';
-	    CHAR* ss = seq_readin(fd, str, i, pcr, pfqmfd);
-	    if (!ss)
-		fatal("Insufficient # of sequences %d < %d", i, many);
-	    slen[i] = ss - i - seq_;
-	    if (slen[i] > span) span = slen[i];
-	}
-	CHAR*	last = seq_ + span;
-	for (int i = 0; i < many; ++i) {
-	    CHAR*	 ss = seq_ + slen[i];
-	    if (ss >= last) continue;
-	    for ( ; ss < last; ss += many) *ss = UNP;
-	}
-	delete[] slen;
-	int	n = pfqmfd->size();
-	pfqmfd->write(&pfqend);
-	PFQ*	pfq = (PFQ*) pfqmfd->flush();
-	delete pfqmfd;
-	if (sigII) {
-	    int*	lst = new int[n];
-	    sigII->lst = lst;
-	    qsort((UPTR) pfq, (INT) n, sizeof(PFQ), (CMPF) cmppos);
-	    PFQ*	wfq = pfq;
-	    sigII->pfq = pfq;
-	    sigII->lstnum = n;
-	    for (int i = 0; i < n; ++i, ++wfq) {
-		*lst++ = wfq->num;
-#if USE_WEIGHT
-		wfq->dns = weight? weight[wfq->num]: 1;
-#endif
-		wfq->num = 0;
-	    }
-	    wfq = pfq = sigII->pfq;
-	    for (int i = 0; i < n; ++i, ++wfq) {
-		if (wfq->pos != pfq->pos) {
-		    *++pfq = *wfq;
-		} else if ((wfq->gps < 0) ^ (wfq->gps > pfq->gps)) {
-		   pfq->gps = wfq->gps;
-		    ++pfq->num;
-#if USE_WEIGHT
-		    pfq->dns += wfq->dns;
-#endif
-		}
-	    }
-	    sigII->pfqnum = pfq - sigII->pfq;
-	    *++pfq = *wfq;
-	} else if (pfq) delete[] pfq;
-	return (last);
-}
-
-template <typename file_t>
-CHAR* Seq::get_mfasta(file_t fd, long fpos, char* str, RANGE* pcr, SeqDb* dbf)
-{
-	if (!dbf) fatal("Unknown sequence format !\n");
-	int	num = 0;
-	do {
-	    if (dbf->is_DbEntry(str)) ++num;
-	} while (fgets(str, MAXL, fd));
-	fseek(fd, fpos, SEEK_SET);
-	if (!num) {
-	    prompt("Empty or not MSA !\n");
-	    exit(0);
-	}
-	refresh(num);
-	*str = '\0';
-	return (many == 1?
-	    seq_readin(fd, str, 0, pcr, 0):
-	    get_seq_aln(fd, str, pcr));
 }
 
 CHAR* Seq::ToInferred(CHAR* src, CHAR* lastseq, int step)
@@ -1961,74 +1494,6 @@ CHAR* Seq::ToInferred(CHAR* src, CHAR* lastseq, int step)
 	    else if ((*dst = tab[*src - A]) < code->max_code) dst += step;
 	}
 	return (dst);
-}
-
-template <typename file_t>
-int Seq::infermolc(file_t fd, char* str, bool msf)
-{
-	INT	cmp[28];
-	vclear(cmp, 28);
-	INT	total = 0;
-	bool	pending = false;
-
-	do {
-	    char*	ps = str;
-	    if (*ps == _NHEAD || *ps == _CHEAD || *ps == _WGHT || 
-		*ps == _COMM || *ps == _LCOMM || pending) {
-		    pending = (strlen(str) + 1) == (INT) MAXL;
-		    continue;
-	    }
-	    if (*ps == _EOS) break;
-	    if (msf) {
-		while (*ps && isspace(*ps)) ++ps;
-		if (!isdigit(*ps)) continue;
-	    }
-	    for ( ; *ps; ++ps) {
-		if (isalpha(*ps)) {
-		    ++cmp[aton(toupper(*ps))];
-		    if (++total >= MaxTestChar) goto eol;
-		} else if (msf && *ps == _LABL) break;
-		else if (*ps == _COMM || *ps == _LCOMM) break;
-	    }
-	} while (fgets(str, MAXL, fd));
-eol:
-	FTYPE	ncode = cmp[aton('A')] + cmp[aton('C')] + cmp[aton('G')]
-		+ cmp[aton('T')] + cmp[aton('U')];
-	int	molc = PROTEIN;
-	INT	tmark = cmp[aton('J')] + cmp[aton('U')];
-	if (total == cmp[aton('N')]) molc = DNA;
-	else if (100. * ncode/(total - cmp[aton('N')] - cmp[aton('X')]) > MinPctNucChar)
-	    molc = (cmp[aton('T')] >= cmp[aton('U')])? DNA: RNA;
-	else if (tmark && 100. * (tmark + cmp[aton('O')]) / total > MinPctTronChar) {
-	    molc = TRON;
-	    prompt("Warning: %s is regared as TRON sequence!\n", spath);
-	}
-	setSeqCode(this, molc);
-	return molc;
-}
-
-int infermolc(const char* fname)
-{
-	Seq	sd(1);
-	char	str[MAXL];
-	if (is_gz(fname)) {
-#if USE_ZLIB
-	    gzFile	gzfd = gzopen(fname, "r");
-	    if (!gzfd) fatal("%s not found !\n", fname);
-	    if (!fgets(str, MAXL, gzfd)) fatal("%s is empty !\n", fname);
-	    sd.infermolc(gzfd, str);
-	    fclose(gzfd);
-#else
-	    fatal(gz_unsupport, fname);
-#endif
-	} else {
-	    FILE*	fd = fopen(fname, "r");
-	    if (!fd) fatal("%s not found !\n", fname);
-	    if (!fgets(str, MAXL, fd)) fatal("%s is empty !\n", fname);
-	    sd.infermolc(fd, str);
-	    fclose(fd);
-	}
-	return (sd.inex.molc);
 }
 
 void Seq::estimate_len(FILE* fd, int nos)
@@ -2186,7 +1651,7 @@ static	char tc[] = "tc";
 	return (sd);
 }
 
-int samerange(Seq* a, Seq* b)
+int samerange(const Seq* a, const Seq* b)
 {
 	if (!a || !b || !a->sname || !b->sname) return (0);
 	bool	half = !strcmp((*a->sname)[0], (*b->sname)[0]) && 
@@ -2196,7 +1661,7 @@ int samerange(Seq* a, Seq* b)
 	return (((a->inex.sens ^ b->inex.sens) & REVERS)? -1 : 1);
 }
 
-void save_range(Seq* seqs[], RANGE* temp, int n)
+void save_range(const Seq* seqs[], RANGE* temp, int n) 
 {
 	while (n--) {
 	    temp->left = (*seqs)->left;
@@ -2204,7 +1669,7 @@ void save_range(Seq* seqs[], RANGE* temp, int n)
 	}
 }
 
-void rest_range(Seq* seqs[], RANGE* temp, int n)
+void rest_range(const Seq* seqs[], RANGE* temp, int n)
 {
 	while (n--) {
 	    (*seqs)->left = temp->left;
@@ -2264,16 +1729,16 @@ void setstrip(int sh)
 	    promptin("BandWidth (%d) : ", &alprm.sh);
 }
 
-bool Seq::test_aligned()
+bool Seq::test_aligned() 
 {
-	CHAR*	ss = at(left);
-	CHAR*	tt = at(right);
+const 	CHAR*	ss = at(left);
+const 	CHAR*	tt = at(right);
 
 	if (inex.algn) return (true);
 	for (int i = 0; i < many; ++i) {
 	    int	alt = 0;
 	    int	prv = 1;
-	    for (CHAR* s = ss + i; s < tt; s += many) {
+	    for (const CHAR* s = ss + i; s < tt; s += many) {
 		int	now = (IsGap(*s));
 		if (now ^ prv) ++alt;
 		if (alt > 2) {
@@ -2308,12 +1773,12 @@ FTYPE* Seq::composition()
 	return (cmps);
 }
 
-int Seq::countgap(int mem, int from, int to)
+int Seq::countgap(int mem, int from, int to) const
 {
 	if (from < left) from = left;
-	CHAR*	ss = at(from) + mem;
+const	CHAR*	ss = at(from) + mem;
 	if (to > right) to = right;
-	CHAR*	tt = at(to);
+const	CHAR*	tt = at(to);
 	int	n = 0;
 
 	for ( ; ss < tt; ss += many)
@@ -2321,15 +1786,15 @@ int Seq::countgap(int mem, int from, int to)
 	return (n);
 }
 
-VTYPE Seq::countunps()
+VTYPE Seq::countunps() const
 {
-	CHAR*	ss = at(left);
-	CHAR*	tt = at(right);
+const	CHAR*	ss = at(left);
+const	CHAR*	tt = at(right);
 	VTYPE	unps = 0;
 
 	for (int i = 0; i < many; ++i) {
 	    int	nu = 0;
-	    for (CHAR* wk = ss++; wk < tt; wk += many)
+	    for (const CHAR* wk = ss++; wk < tt; wk += many)
 		if (IsTrueGap(*wk)) ++nu;
 #if USE_WEIGHT
 	    if (weight)
@@ -2341,28 +1806,28 @@ VTYPE Seq::countunps()
 	return (unps);
 }
 
-bool Seq::isgap(CHAR* ps)
+bool Seq::isgap(const CHAR* ps) const
 {
-	CHAR*	ts = ps + many;
+const	CHAR*	ts = ps + many;
 	for (; ps < ts; ++ps) 
 	    if (!isGap(*ps)) return (false);
 	return (true);
 }
 
-bool Seq::nogap(CHAR* ps)
+bool Seq::nogap(const CHAR* ps) const
 {
-	CHAR*	ts = ps + many;
+const	CHAR*	ts = ps + many;
 	for (; ps < ts; ++ps) 
 	    if (isGap(*ps)) return (false);
 	return (true);
 }
 
-void Seq::pregap(int* gl)
+void Seq::pregap(int* gl) const
 {
-	CHAR*	ss = at(left);
+const	CHAR*	ss = at(left);
 
 	for (int i = 0; i < many; ++i) {
-	    CHAR*	s = ss++;
+	    const	CHAR*	s = ss++;
 	    int	n = left;
 	    for ( ; n > 0; --n) {
 		s -= many;
@@ -2542,7 +2007,7 @@ Seq* Seq::substseq(int n, int which)
 
 #if USE_WEIGHT
 
-FTYPE* Seq::saveseqwt()
+FTYPE* Seq::saveseqwt() const
 {
 	if (!weight) return (0);
 	FTYPE*	tmpwt = new FTYPE[many];

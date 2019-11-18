@@ -45,12 +45,12 @@ extern	double	pamcorrect(double x, int molc = PROTEIN);
 
 extern	DISTPRM	distPrm;
 extern	void	setdivseq(int realn, int geval, int pick);
-extern	void	setexprm_z(const char* s);
-extern	double	degdiv(FSTAT* stt);
-extern	FTYPE	pairdvn(Seq* sd, int i, int j);
-extern	FTYPE	pairdvn(Seq* sd, int* g1, int* g2);
-extern	void	put_stat(FILE* fd, FSTAT* fstt, double* ppc = 0);
-extern	double	degdiv(Gsinfo* gsi);
-extern	void	put_stat(FILE* fd, Gsinfo* gsi);
+extern	void	setexprm_z(int& argc, const char**& argv);
+extern	double	degdiv(const FSTAT* stt);
+extern	FTYPE	pairdvn(const Seq* sd, int i, int j);
+extern	FTYPE	pairdvn(const Seq* sd, const int* g1, const int* g2);
+extern	void	put_stat(FILE* fd, const FSTAT* fstt, const double* ppc = 0);
+extern	double	degdiv(const Gsinfo* gsi);
+extern	void	put_stat(FILE* fd, const Gsinfo* gsi);
 
 #endif	// _DIVSEQ_H_

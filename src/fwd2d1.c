@@ -34,27 +34,27 @@
 struct ValDia {VTYPE val; int r;};
 
 class Fwd2d {
-	Seq**	seqs;
-	Seq*&	a;
-	Seq*&	b;
+const 	Seq**	seqs;
+const 	Seq*&	a;
+const 	Seq*&	b;
 	WINDOW	wdw;
 	VTYPE*	hh;
 	VTYPE*	ff;
 	VTYPE*	gg;
 	VTYPE	lastD();
-	CHAR*	as;
-	CHAR*	bs;
-	VTYPE**	mtx;
+const 	CHAR*	as;
+const 	CHAR*	bs;
+ 	VTYPE**	mtx;
 	VTYPE	uu;
 	VTYPE	vv;
 public:
-	Fwd2d(Seq** sqs, Simmtx* sm);
+	Fwd2d(const Seq** sqs, const Simmtx* sm);
 	VTYPE	swgforwardD();
 	~Fwd2d();
 	VTYPE	forwardD();
 };
 
-Fwd2d::Fwd2d(Seq** sqs, Simmtx* sm)
+Fwd2d::Fwd2d(const Seq** sqs, const Simmtx* sm)
 	: seqs(sqs), a(seqs[0]), b(seqs[1]), mtx(sm->mtx)
 {
 	as = a->at(a->left);
@@ -149,7 +149,7 @@ VTYPE Fwd2d::forwardD()
 		hh[r] += (VTYPE) mtx[as[m]][bs[n]];
 		hh[r] = max(max(hh[r], ff[r]), gg[r]);
 #if D_DEBUG
-		if (algmode.nsa & 8)
+		if (OutPrm.debug)
 		    printf("%5d %5d %5d %5d: %7.1f %7.1f %7.1f\n",
 			m, n, d, r, (float) hh[r], 
 			(float) ff[r], (float) gg[r]);
@@ -178,7 +178,7 @@ VTYPE Fwd2d::swgforwardD()
 		hh[r] = max(max(max(hh[r], ff[r]), gg[r]), vzero);
 		maxh = max(maxh, hh[r]);
 #if D_DEBUG
-		if (algmode.nsa & 8)
+		if (OutPrm.debug)
 		    printf("%5d %5d %5d %5d: %7.1f %7.1f %7.1f\n",
 			m, n, d, r, (float) hh[r], 
 			(float) ff[r], (float) gg[r]);
@@ -189,26 +189,26 @@ VTYPE Fwd2d::swgforwardD()
 }
 
 class Fwd2d_vd {
-	Seq**	seqs;
-	Seq*&	a;
-	Seq*&	b;
+const 	Seq**	seqs;
+const 	Seq*&	a;
+const 	Seq*&	b;
 	WINDOW	wdw;
 	ValDia*	hh;
 	ValDia*	ff;
 	ValDia*	gg;
 	VTYPE	lastD(int* ends);
-	CHAR*	as;
-	CHAR*	bs;
-	VTYPE**	mtx;
+const 	CHAR*	as;
+const 	CHAR*	bs;
+ 	VTYPE**	mtx;
 	VTYPE	uu;
 	VTYPE	vv;
 public:
-	Fwd2d_vd(Seq** sqs, Simmtx* sm);
+	Fwd2d_vd(const Seq** sqs, const Simmtx* sm);
 	~Fwd2d_vd();
 	VTYPE	forwardD(int* ends);
 };
 
-Fwd2d_vd::Fwd2d_vd(Seq** sqs, Simmtx* sm)
+Fwd2d_vd::Fwd2d_vd(const Seq** sqs, const Simmtx* sm)
 	: seqs(sqs), a(seqs[0]), b(seqs[1]), mtx(sm->mtx)
 {
 	as = a->at(a->left);
@@ -311,7 +311,7 @@ VTYPE Fwd2d_vd::forwardD(int* ends)
 		ng = ff[r].val > gg[r].val? ff[r]: gg[r];
 		hh[r] = hh[r].val > ng.val? hh[r]: ng;
 #if D_DEBUG
-		if (algmode.nsa & 8)
+		if (OutPrm.debug)
 		    printf("%5d %5d %5d %5d %5d: %7.1f %7.1f %7.1f\n",
 			m, n, d, r, hh[r].r,(float) hh[r].val, 
 			(float) ff[r].val, (float) gg[r].val);
@@ -321,7 +321,7 @@ VTYPE Fwd2d_vd::forwardD(int* ends)
 	return lastD(ends);
 }
 
-VTYPE alnScoreD(Seq* seqs[], Simmtx* sm, int* ends)
+VTYPE alnScoreD(const Seq* seqs[], const Simmtx* sm, int* ends)
 {
 	if (!sm) sm = getSimmtx(0);
 	if (algmode.lcl & 16) {		// SWG local alignment

@@ -67,7 +67,7 @@ static	bool	reverse = false;
 
 static void usage()
 {
-	fputs("sortgrcd version 2.3: read binary grds and erds and sort them\n", stderr);
+	fputs("sortgrcd version 2.2: read binary grds and erds and sort them\n", stderr);
 	fputs("\tin the order of chromosomal location in each direction\n", stderr);
 	fputs("Usage: sortgrcd [options] *.grd\n", stderr);
 	fputs("Note: version 2 supports outputs from spaln 2.1.0 or later\n", stderr);
@@ -75,7 +75,7 @@ static void usage()
 	fputs("Options:\n", stderr);
 	fputs("\t-CN:\tMinimum % of coverage (0-100)\n", stderr);
 	fputs("\t-EN:\tReport only the best (N=1) or all (N=2) results per gene locus (1)\n", stderr);
-	fputs("\t-FN:\tFilter Level (0: 0 -> 3: no -> stringent)\n", stderr);
+	fputs("\t-FN:\tFilter Level (0 -> 3: no -> stringent)\n", stderr);
 	fputs("\t-GN:\tGenetic code (0: universal)\n", stderr);
 	fputs("\t-HN:\tMinimum spaln score\n", stderr);
 	fputs("\t-JN:\tMinimum ORF length (300)\n", stderr);
@@ -328,7 +328,7 @@ void Sortgrcd::print_cds(GeneRecord* gwrk, RANGE* exon, const char* Rname)
 	    fprintf(out_fd, "%s %c 1:%d ( %d - %d ) N %7.2f\n",
 		Rname, gwrk->Csense? '-': '+', gwrk->Rlen,
 		gwrk->Rstart, gwrk->Rend, gwrk->Gscore);
-	    GBcdsForm(exon, &gene);
+	    GBcdsForm(exon, &gene, out_fd);
 	    cds->typeseq(out_fd);
 	} else if (orfs) {		// translated
 	    cds->left = orfs->pos;
@@ -337,7 +337,7 @@ void Sortgrcd::print_cds(GeneRecord* gwrk, RANGE* exon, const char* Rname)
 		Rname, gwrk->Csense? '-': '+', orfs->len,
 		gwrk->Rstart, gwrk->Rend, gwrk->Gscore);
 	    cdsrng(exon, cds);
-	    GBcdsForm(exon, &gene);
+	    GBcdsForm(exon, &gene, out_fd);
 	    if (OutMode == 7)
 		cds->transout(out_fd, STOP, 0);
 	    else {
@@ -387,7 +387,7 @@ static	const	char*	BedFrom = "%s\t%d\t%d\t%s\t%d\t%c\t%d\t%d\t%-11s\t%d\t";
 	int	rend = exon[n_exon].right;
 	int	cl = orfs? gposition(&gene, exon, orfs->pos): l;
 	int	cr = orfs? gposition(&gene, exon, orfs->pos + orfs->len): r;
-	if (gwrk->Csense && orfs) gswap(cl, cr);
+	if (gwrk->Csense && orfs) swap(cl, cr);
 	if (gwrk->Csense) vreverse(exon + 1, n_exon);
 	fprintf(out_fd, BedFrom, cid, l - 1, r, Rname,
 	    int(10 * gwrk->Pcover),
@@ -760,7 +760,7 @@ const	char*	ltype = "";
 	    for (INT m = 0; m < gwrk->nexn; ++m, ++ewrk) {
 		int	l = ewrk->Gleft;
 		int	r = ewrk->Gright;
-		if (l > r) gswap(l, r);
+		if (l > r) swap(l, r);
 		if (hetero) {
 		    fprintf(out_fd, fmt3p, gdbs->entname(gwrk->Cid), ltype, l, r,
 			(int) ewrk->Escore, rvg, (3 - ewrk->phase) % 3);
@@ -771,7 +771,7 @@ const	char*	ltype = "";
 		ExnInf*	eif = ehh->ehashv(ewrk->Gleft, ewrk->Gright);
 		l = ewrk->Rleft;
 		r = ewrk->Rright;
-		if (l > r) gswap(l, r);
+		if (l > r) swap(l, r);
 		fprintf(out_fd, fmt3c, ltype, eif->exonID, Gff3MID, mname);
 		fprintf(out_fd, fmt3t, Rname, l, r, rvc);
 	    }
@@ -1063,7 +1063,7 @@ void Sortgrcd::readGrcd(int ac, const char** av, INT hashsize)
 	    if (fd) {
 		while (fread(&grfn->gr, sizeof(GeneRecord), 1, fd) == 1) {
 		    GeneRecord* gwrk = &grfn->gr;
-		    if (gwrk->Csense) gswap(gwrk->Gstart, gwrk->Gend);
+		    if (gwrk->Csense) swap(gwrk->Gstart, gwrk->Gend);
 		    ChrInf*	hv = hh->chashv(gwrk->Cid, true);
 		    hv->ecount += gwrk->nexn;
 		    (grfn++)->fn = fn;
@@ -1075,7 +1075,7 @@ void Sortgrcd::readGrcd(int ac, const char** av, INT hashsize)
 		gzFile	gzfd = gzopen(str, "rb");
 		while (fread(&grfn->gr, sizeof(GeneRecord), 1, gzfd) > 0) {
 		    GeneRecord* gwrk = &grfn->gr;
-		    if (gwrk->Csense) gswap(gwrk->Gstart, gwrk->Gend);
+		    if (gwrk->Csense) swap(gwrk->Gstart, gwrk->Gend);
 		    ChrInf*	hv = hh->chashv(gwrk->Cid, true);
 		    hv->ecount += gwrk->nexn;
 		    (grfn++)->fn = fn;

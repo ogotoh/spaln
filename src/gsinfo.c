@@ -26,15 +26,15 @@
 PFQ	pfqend = {INT_MAX - 1};
 
 static	PFQ*	fusePfqinaGap(PFQ* dst, int igp);
-static	int	cmppos(PFQ* a, PFQ* b);
-static	void	oneline(Seq* sd, int i, int len, int pp, double sig, double scr);
+static	int	cmppos(const PFQ* a, const PFQ* b);
+static	void	oneline(const Seq* sd, int i, int len, int pp, double sig, double scr);
 static	const	int	MaxClm = 80;
 
 VTYPE	SpbFact;
 
 VTYPE	spb_fact() {return (SpbFact = (VTYPE) (alprm.scale * alprm2.spb));}
 
-PfqItr::PfqItr(Seq* sd, int n) :
+PfqItr::PfqItr(const Seq* sd, int n) :
 	pfqnum(sd->sigII? sd->sigII->pfqnum: 0),
 	lstnum(sd->sigII? sd->sigII->lstnum: 0),
 	step(sd->sigII? sd->sigII->step: 0),
@@ -61,7 +61,7 @@ PfqItr::PfqItr(SigII& sgi, int n) :
 }
 #endif
 
-Iiinfo::Iiinfo(Seq* seqs[], int m, int n, bool save) :
+Iiinfo::Iiinfo(const Seq* seqs[], int m, int n, bool save) :
 	a(seqs[0]), b(seqs[1]), 
 	sgi(0), cpi(0), agap(0), bgap(0), amany(seqs[0]->many)
 {
@@ -87,7 +87,7 @@ SigII::~SigII()
 	delete[] lone;
 }
 
-SigII::SigII(Seq* sd) : 
+SigII::SigII(const Seq* sd) : 
 	pfqnum(0), lstnum(0), 
 	pfq(0), lst(0), eijtab(0), lone(0)
 {
@@ -106,7 +106,7 @@ SigII::SigII(int p, int l, int s) :
 	else	lstnum = pfqnum;
 }
 
-SigII::SigII(int* poss, int nn, int s) : 
+SigII::SigII(const int* poss, int nn, int s) : 
 	pfqnum(nn), lstnum(0), step(s),
 	lst(0), eijtab(0), lone(0)
 {
@@ -124,11 +124,11 @@ SigII::SigII(int* poss, int nn, int s) :
 	} else	pfq = 0;
 }
 
-SigII::SigII(Seq** slist, GAPS** gsrc, FTYPE* wtlst)
+SigII::SigII(const Seq** slist, const GAPS** gsrc, FTYPE* wtlst)
 	: pfqnum(0), lstnum(0), step(0), pfq(0), lst(0), eijtab(0), lone(0)
 {
 	int	i = 0, j = 0, k = 0;
-	for (Seq** sq = slist ; *sq; ++sq, ++k) {
+	for (const Seq** sq = slist ; *sq; ++sq, ++k) {
 	    if ((*sq)->sigII) {
 		i += (*sq)->sigII->pfqnum;
 		j += (*sq)->sigII->lstnum;
@@ -143,7 +143,7 @@ SigII::SigII(Seq** slist, GAPS** gsrc, FTYPE* wtlst)
 	if (j) vclear(lst, j);
 	PFQ**	pfqs = new PFQ*[k + 1];
 	PFQ**	wsqs = new PFQ*[k];
-	GAPS**	glst = new GAPS*[k];
+const	GAPS**	glst = new const GAPS*[k];
 	*pfqs = new PFQ[i + k];
 	int**	wlst = new int*[k];
 	int	len = gaps_span(*gsrc);
@@ -152,7 +152,7 @@ SigII::SigII(Seq** slist, GAPS** gsrc, FTYPE* wtlst)
 	int*	amany = new int[k + 1];
 	int	many = amany[0] = 0;
 	j = 0;
-	for (Seq** sq = slist; j < k; ++j, ++sq) {
+	for (const Seq** sq = slist; j < k; ++j, ++sq) {
 	    wsqs[j] = pfqs[j];
 	    glst[j] = gsrc[j] + 1;
 	    amany[j + 1] = (many += (*sq)->many);
@@ -179,7 +179,7 @@ SigII::SigII(Seq** slist, GAPS** gsrc, FTYPE* wtlst)
 	    for (i = 0; i < wsqs[j]->num; ++i)
 		if (wlst[j]) *wst++ = *wlst[j]++;
 		else	*wst++ = amany[j];
-	    GAPS*&	gj = glst[j];
+const	    GAPS*&	gj = glst[j];
 	    while (gaps_intr(gj) && step * (gj->gps + gj->gln) < pos) ++gj;
 	    int play = (gaps_intr(gj) && (step * (gj->gps + gj->gps)) == pos)?
 		step * gj->gln: 0;
@@ -213,7 +213,7 @@ SigII::SigII(Seq** slist, GAPS** gsrc, FTYPE* wtlst)
 	delete[] amany;
 }
 
-void SigII::pfqrepos(RANGE* cr)
+void SigII::pfqrepos(const RANGE* cr)
 {
 	if (!cr) return;
 	int	getrid = cr->left * step;
@@ -265,7 +265,7 @@ void SigII::swaplst(int an, int bn)
 
 // renumber lst according to the permutation table
 
-void SigII::renumlst(int* lst_odr)
+void SigII::renumlst(const int* lst_odr)
 {
 	if (!lst) return;
 	for (int i = 0; i < lstnum; ++i) lst[i] = lst_odr[lst[i]];
@@ -308,7 +308,7 @@ void SigII::mkeijtab(int many)
 	}
 }
 
-void SigII::printlones(FILE* fd, int i, int many)
+void SigII::printlones(FILE* fd, int i, int many) const
 {
 	int	intno = 0;
 	for (int j = 0; j < pfqnum; ++j) {
@@ -321,7 +321,7 @@ void SigII::printlones(FILE* fd, int i, int many)
 	}
 }
 
-void SigII::printmates(FILE* fd, int i, int many)
+void SigII::printmates(FILE* fd, int i, int many) const
 {
 	for (int j = 0; j < pfqnum; ++j) {
 	    if (eijtab[i][j] == 0) fputs(" 0", fd);
@@ -334,7 +334,7 @@ void SigII::printmates(FILE* fd, int i, int many)
 	}
 }
 
-float SigII::eij_dist(int i, int j, int* abc)
+float SigII::eij_dist(int i, int j, int* abc) const
 {
 	int	abc_[3];
 	if (!abc) abc = abc_;
@@ -350,12 +350,12 @@ float SigII::eij_dist(int i, int j, int* abc)
 	return (a + b)? float(a + b - 2 * c) / (a + b): 0.;
 }
 
-int SigII::to_gene_end(int m, bool rend)
+int SigII::to_gene_end(int m, bool rend) const
 {
 	if (!pfqnum) return (0);
 	m *= step;
-	PFQ*	tfq = pfq + pfqnum;
-	PFQ*	wfq = rend? tfq: pfq;
+const	PFQ*	tfq = pfq + pfqnum;
+const	PFQ*	wfq = rend? tfq: pfq;
 	int	term = wfq->pos;
 
 	if (rend) {
@@ -370,11 +370,11 @@ int SigII::to_gene_end(int m, bool rend)
 	}
 }
 
-int SigII::n_common()
+int SigII::n_common() const
 {
 	int	c = 0;
-	PFQ*	tfq = pfq + pfqnum;
-	for (PFQ* wfq = pfq; wfq < tfq; ++wfq)
+const	PFQ*	tfq = pfq + pfqnum;
+	for (const PFQ* wfq = pfq; wfq < tfq; ++wfq)
 	    if (wfq->num > 1) c += wfq->num * (wfq->num - 1);
 	return (c / 2);
 }
@@ -411,7 +411,7 @@ FTYPE* eijdmx(Seq* sd)
 	return(dist);
 }
 		
-void fouteijdmx(FILE* fd, Seq* sd, bool dmx)
+void fouteijdmx(FILE* fd, const Seq* sd, bool dmx)
 {
 	PrintMember	prm(sd->sname, false, dmx? "\n": " ");
 	if (dmx) {
@@ -420,7 +420,7 @@ void fouteijdmx(FILE* fd, Seq* sd, bool dmx)
 	    fputc('\n', fd);
 	}
 	char	str[MAXL];
-	SigII*	sgi = sd->sigII;
+const	SigII*	sgi = sd->sigII;
 	for (int j = 1; j < sd->many; ++j) {
 	    int	clm = 0;
 	    for (int i = 0; i < j; ++i) {
@@ -444,7 +444,7 @@ void fouteijdmx(FILE* fd, Seq* sd, bool dmx)
 	}
 }
 
-static void fouteij_sumary(FILE* fd, Seq* sd, PrintMember& prm)
+static void fouteij_sumary(FILE* fd, const Seq* sd, PrintMember& prm)
 {
 	int	preblank = sd->sname->longest() + 5;
 	fputs("Perdeci", fd);
@@ -695,52 +695,39 @@ SigII* Iiinfo::finalize(int len)
 	return (rv);
 }
 
-bool Gsinfo::intronless()
+bool Gsinfo::intronless() const
 {
 	if (!eijnc) return false;
-	EISCR*	fst = eijnc->begin();
+const	EISCR*	fst = eijnc->begin();
 	return ((noeij < 2) && (fstat.unp < IntronPrm.llmt) &&
 	    (fst->unp5 + fst->mmc5 <= end_error_thr) &&
 	    (fst->unp3 + fst->mmc3 <= end_error_thr));
 }
 
-void Gsinfo::SaveGsInfo(Iiinfo* iif, int len)
-{
-	delete sigII;
-	sigII = iif? iif->finalize(len): 0;
-}
-
-Gsinfo::Gsinfo(SKL* s) :
-	end_error_thr(int(alprm2.jneibr * 0.8)), scr(0), rscr(0),
-	skl(s), noeij(0), CDSrng(0), eijnc(0), cigar(0), vlgar(0),
-	samfm(0), sigII(0)
-{
+void Gsinfo::clear() {
+	scr = 0; rscr = 0; noeij = 0;
 	vclear(&fstat);
+	delete[] skl;	skl = 0;
+	delete[] CDSrng; CDSrng = 0;
+	delete eijnc;	eijnc = 0;
+	delete sigII;	sigII = 0;
+	delete cigar;	cigar = 0;
+	delete vlgar;	vlgar = 0;
+	delete samfm;	samfm = 0;
 }
 
-Gsinfo::~Gsinfo()
-{
-	delete[] skl;
-	delete[] CDSrng;
-	delete eijnc;
-	delete sigII;
-	delete cigar;
-	delete vlgar;
-	delete samfm;
-}
-
-int Gsinfo::center(int k)
+int Gsinfo::center(int k) const
 {
 	if (!eijnc) return (0);
-	EISCR*  eij = eijnc->begin();
-	EISCR*  lst = eij + noeij - 1;
+const	EISCR*  eij = eijnc->begin();
+const	EISCR*  lst = eij + noeij - 1;
 	return ((k? eij->left + lst->right: eij->rleft + lst->rright) / 2);
 }
 
 RANGE* Gsinfo::eiscr2rng()
 {
 	if (!eijnc) return (0);
-	EISCR*	eij = eijnc->begin();
+const	EISCR*	eij = eijnc->begin();
 	CDSrng = new RANGE[noeij + 2];
 	RANGE*  wrng = CDSrng;
 	(wrng++)->left = noeij;
@@ -773,7 +760,7 @@ RANGE* Gsinfo::eiscrunfold(GAPS* gp)
 
 // infer exon-exon structure of the reference
 
-RANGE* Gsinfo::querygs(Seq* qry)
+RANGE* Gsinfo::querygs(const Seq* qry) const
 {
 	int	step = qry->isprotein()? 3: 1;
 	RANGE*	rng = new RANGE[noeij + 2];
@@ -799,7 +786,7 @@ RANGE* Gsinfo::querygs(Seq* qry)
 	return (rng);
 }
 
-static void oneline(Seq* sd, int i, int len, int pp, double sig, double scr)
+static void oneline(const Seq* sd, int i, int len, int pp, double sig, double scr)
 {
 	char*	decode = sd->inex.molc == TRON? ncodon: nucl;
 	int	ll = i - BoundRng;
@@ -808,7 +795,7 @@ static void oneline(Seq* sd, int i, int len, int pp, double sig, double scr)
 	int	r = rr;
 	if (ll < 0) ll = 0;
 	if (rr > sd->len) rr = sd->len;
-	CHAR*	ps = sd->at(ll);
+const 	CHAR*	ps = sd->at(ll);
 	fprintf(out_fd, "%6d  ", sd->SiteNo(ll));
 	for ( ; l < ll; ++l) putc(' ', out_fd);
 	for ( ; l < i; ++l, ++ps)
@@ -822,14 +809,14 @@ static void oneline(Seq* sd, int i, int len, int pp, double sig, double scr)
 	else fprintf(out_fd, "%9.2f\n", scr);
 }
 
-void Gsinfo::BoundarySeq(Seq* sd)
+void Gsinfo::BoundarySeq(const Seq* sd) const
 {
-	RANGE*	wrng = fistrng(CDSrng);
+const	RANGE*	wrng = fistrng(CDSrng);
 	double	sig;
 	int	len = -wrng->left;
 	int	clen = 0;
 
-	RANGE*	rng = wrng;
+const	RANGE*	rng = wrng;
 	fputs("//\n", out_fd);
 	for ( ; neorng(wrng + 1); ++wrng) {
 	    clen += wrng->right - wrng->left;
@@ -861,15 +848,15 @@ void Gsinfo::BoundarySeq(Seq* sd)
 	oneline(sd, wrng->right, len, clen / 3, sig, INT_MIN);
 }
 
-void Gsinfo::BoundaryInf(Seq* sd)
+void Gsinfo::BoundaryInf(const Seq* sd) const
 {
 	if (!eijnc) {
 	    BoundarySeq(sd);
 	    return;
 	}
-	EISCR*	wrng = eijnc->begin();
-	EISCR*	trng = wrng + noeij - 1;
-	EXIN*	bb = sd->exin->data;
+const	EISCR*	wrng = eijnc->begin();
+const	EISCR*	trng = wrng + noeij - 1;
+const	EXIN*	bb = sd->exin->data;
 	int	len = -wrng->left;
 	int	clen = 0;
 	double	tscr = 0.;
@@ -914,15 +901,15 @@ void Gsinfo::BoundaryInf(Seq* sd)
 	oneline(sd, trng->right, len, clen / 3, sig, scr);
 }
 
-void cutSigII(Seq* dest, Seq* sorc)
+void cutSigII(Seq* dest, const Seq* sorc)
 {
 	if (dest == sorc) fatal("bad cutSigII!\n");
-	SigII*&	src = sorc->sigII;
+const	SigII*	src = sorc->sigII;
 	SigII*&	dst = dest->sigII; 
 	delete dst; dst = 0;
 	if (!src || !src->pfq) return;
-	PFQ*	pfq = src->pfq;
-	int*	lst = src->lst;
+ 	PFQ*	pfq = src->pfq;
+ 	int*	lst = src->lst;
 	int	bias = sorc->left * src->step;
 	int	to = sorc->pfqPos(sorc->left);
 	while (pfq->num && pfq->pos < to) {
@@ -958,7 +945,7 @@ void cutSigII(Seq* dest, Seq* sorc)
 	if (lst) dst->lstnum = wst - dst->lst;
 }
 
-SigII* copySigII(SigII* src)
+SigII* copySigII(const SigII* src)
 {
 	if (!src || !src->pfqnum) return (0);
 	SigII*	dst = new SigII;
@@ -975,10 +962,10 @@ SigII* copySigII(SigII* src)
 	return (dst);
 }
 
-void catSigII(Seq* dest, Seq* sorc, int bias)
+void catSigII(Seq* dest, const Seq* sorc, int bias)
 {
 	SigII*&	head = dest->sigII;
-	SigII*&	tail = sorc->sigII;
+const 	SigII*	tail = sorc->sigII;
 	bias += dest->right - sorc->left;
 	if (!tail) {
 	    if (head) {
@@ -996,13 +983,13 @@ void catSigII(Seq* dest, Seq* sorc, int bias)
 	    for ( ; pfq <= wfq; ++pfq) pfq->pos += bias;
 	    return;
 	}
-	PFQ*	pfq = tail->pfq;
-	int*	lst = tail->lst;
+const 	PFQ*	pfq = tail->pfq;
+const 	int*	lst = tail->lst;
 	int	to = sorc->pfqPos(sorc->left);
 	for ( ; pfq->num && pfq->pos < to; ++pfq)
 	    if (lst) lst += pfq->num;
-	int*	wst = lst;
-	PFQ*	wfq = pfq;
+const 	int*	wst = lst;
+const 	PFQ*	wfq = pfq;
 	to = sorc->pfqPos(sorc->right);
 	for ( ; wfq->num && wfq->pos < to; ++wfq)
 	    if (wst) wst += wfq->num;
@@ -1031,14 +1018,14 @@ void catSigII(Seq* dest, Seq* sorc, int bias)
 	}
 }
 
-SigII* extSigII(Seq* sorc, int* which, FTYPE nfact, bool renum_lst)
+SigII* extSigII(const Seq* sorc, const int* which, FTYPE nfact, bool renum_lst)
 {
-	SigII*	src = sorc->sigII;
+const 	SigII*	src = sorc->sigII;
 	if (!src) return (0);
 	if (!which) return copySigII(src);
 
-	PFQ*	pfq = src->pfq;
-	int*	lst = src->lst;
+const 	PFQ*	pfq = src->pfq;
+const 	int*	lst = src->lst;
 	int	bias = sorc->left;
 	bias *= src->step;
 	int	to = sorc->pfqPos(sorc->left);
@@ -1052,7 +1039,7 @@ SigII* extSigII(Seq* sorc, int* which, FTYPE nfact, bool renum_lst)
 	int*	chosen = new int[sorc->many];
 	vset(chosen, -1, sorc->many);
 	int	n = 0;
-	for (int* w = which; *w >= 0; ++w, ++n)
+	for (const int* w = which; *w >= 0; ++w, ++n)
 	    chosen[*w] = renum_lst? n: *w;
 	int	nst = lst? src->lstnum - (lst - src->lst): 0;
 	SigII*	dst = new SigII(nfq, nst, src->step);
@@ -1101,7 +1088,7 @@ _______V_____________VV___V__________________
 
 *********************************************/
 
-static int cmppos(PFQ* a, PFQ* b)
+static int cmppos(const PFQ* a, const PFQ* b)
 {
 	return (a->pos - b->pos);
 }
@@ -1118,7 +1105,7 @@ static PFQ* fusePfqinaGap(PFQ* dst, int igp)
 	return (dst);
 }
 
-void SigII::rmGapPfq(GAPS* gp)
+void SigII::rmGapPfq(const GAPS* gp)
 {
 	if ((gp++)->gln == 3) return;	/* no gap no action */
 
@@ -1157,19 +1144,19 @@ void SigII::rmGapPfq(GAPS* gp)
 	pfqnum += dst - wfq;
 }
 
-VTYPE spSigII(Seq* sd)
+VTYPE spSigII(const Seq* sd)
 {
 	if (!sd->sigII || !sd->sigII->pfqnum || SpbFact <= 0) return (0);
 #if USE_WEIGHT
-	FTYPE*	pw = sd->pairwt;
+const	FTYPE*	pw = sd->pairwt;
 #else
-	FTYPE*	pw = 0;
+const	FTYPE*	pw = 0;
 #endif
 	int	lb = sd->pfqPos(sd->left);
 	int	rb = sd->pfqPos(sd->right);
 
-	PFQ*	pfq = sd->sigII->pfq;
-	int*	lst = sd->sigII->lst;
+const 	PFQ*	pfq = sd->sigII->pfq;
+const 	int*	lst = sd->sigII->lst;
 	if (!lst || !pw) {
 	    for ( ; pfq->pos < lb; ++pfq) ;
 	    int	n = 0;
@@ -1196,7 +1183,7 @@ VTYPE spSigII(Seq* sd)
 #endif
 }
 
-void unfoldPfq(PFQ* pfq, int num, GAPS* gg, int step)
+void unfoldPfq(PFQ* pfq, int num, const GAPS* gg, int step)
 {
 	if ((gg++)->gln == 3) return;		// no gap to be inserted
 	PFQ*	tfq = pfq + num;

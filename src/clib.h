@@ -3,8 +3,8 @@
 *	Collection of functions for general use
 *
 *	vclear	vcopy	vset	vreverse	vmax	vmin
-*	max	min	max3	min3	max4	min4
-*	ipower	gswap
+*	max3	min3	max4	min4
+*	ipower	
 *	next_wd	wordcmp	isBlankLine  
 *	car	cdr	prefix	chop	replace
 *	queue	stack	fbisrch	insort
@@ -31,11 +31,12 @@
 #define  _CLIB_
 
 #include <math.h>
+#include <algorithm>
 #include "adddef.h"
 
 struct ALGMODE {
 	INT	nsa :   4;	// no/single/all alignments
-	INT	alg :   4;	// regor in group sequnece
+	INT	alg :   4;	// rigor in group sequnece
 	INT	bnd :   1;	// banded dp space
 	INT	mlt :   3;	// multiple output
 	INT	aut :	1;	// automatic param set
@@ -48,10 +49,14 @@ struct ALGMODE {
 	INT	lvl :	2;	// wilip initial level
 	INT	blk :	1;	// rapid genome scan
 	INT	any :	2;	// accept non-consensus spj
-	INT	crs :	1;	// cross species comparison
+	INT	crs :	2;	// cross species comparison
 	INT	slv :	1;	// salvage all positive blocks
 	INT	dim:	1;	// database seq in memory
 };
+
+using std::max ;
+using std::min ;
+using std::swap ;
 
 extern	int	thread_num;
 extern	int	cpu_num;
@@ -74,16 +79,6 @@ static	const	int	HashovLS = 12;
 static	const	int	def_un_def = (INT_MIN / 8 * 7);
 static	const	float	FACT_QUEUE = 1.5;
 
-template <typename X> inline X max(X x, X y)
-{
-	return (x > y)? x: y;
-}
-
-template <typename X> inline X min(X x, X y)
-{
-	return (x < y)? x: y;
-}
-
 template <typename X> X* vcopy(X* dst, const X* src, int n)
 {
 	if (!dst) dst = new X[n];
@@ -92,12 +87,13 @@ template <typename X> X* vcopy(X* dst, const X* src, int n)
 	return (head);
 }
 
-template <typename X> X* vset(X* dst, const X& val, int n)
+template <typename X> X* vset(X* dst, const X& val, size_t n)
 {
+	if (n == 0) return(dst);
 	if (!dst) dst = new X[n];
-	X*	head = dst;
-	while (n-- > 0) *dst++ = val;
-	return (head);
+	X*	w = dst + n;
+	while (--w >= dst) *w = val;
+	return (dst);
 }
 
 template  <typename X> inline void vclear(X* ary, const int n = 1)
@@ -119,18 +115,11 @@ template <typename X> X* vmin(const X* array, int n)
 	return ((X*) temp);
 }
 
-template <typename X> inline void gswap(X& x, X& y)
-{
-	X temp = x;
-	x = y;
-	y = temp;
-}
-
 template <typename X> X* vreverse(X* array, int n)
 {
 	X*	f = array;
 	X*	b = array + n - 1;
-	while (f < b) gswap(*f++, *b--);
+	while (f < b) swap(*f++, *b--);
 	return (array);
 }
 
@@ -211,7 +200,7 @@ public:
 	    sh->val += vl;
 	    return (sh);
 	}
-	int	count();
+	int	count() const;
 	KVpair<key_t, val_t>*	press(int* n, val_t* sum = 0);
 	void	clear() {
 	    KVpair<key_t, val_t> zero = {0, un_def};
@@ -267,7 +256,7 @@ KVpair<key_t, val_t>* Dhash<key_t, val_t>::map(key_t key, bool record)
 }
 
 template <class key_t, class val_t>
-int	Dhash<key_t, val_t>::count()
+int	Dhash<key_t, val_t>::count() const
 {
 	int	c = 0;
 	for (KVpair<key_t, val_t>* sh = hash; sh < hz; ++sh)
@@ -331,17 +320,17 @@ public:
 	}
 	~Queue() {delete[] queue;}
 	X	shift(X val) {
-	    gswap(val, queue[qp]);
+	    swap(val, queue[qp]);
 	    if (++qp == qsize) qp = 0;
 	    return (val);
 	}
 	X	unshift(X val) {
-	    gswap(val, queue[qp]);
+	    swap(val, queue[qp]);
 	    if (qp) --qp;
 	    else qp = qsize - 1;
 	    return (val);
 	}
-	X	oldest() {return queue[qp];}
+	X	oldest() const {return queue[qp];}
 };
 
 // priority queue
@@ -365,12 +354,12 @@ public:				// initial data size, ascending order, never replace data
 	void	put(const val_t& x, int p = -1);
 	val_t	gettop() {return data[0];}
 	val_t&	operator[](int i) {return (data[i]);}
-	bool	empty() {return front == 0;}
-	int	size()	{return front;}
+	bool	empty() const{return front == 0;}
+	int	size() const {return front;}
 	void	reset() {front = 0; if (hpos) hpos->clear();}
 	void	hsort();
 	int	find(const val_t& x);
-	bool	lt(const val_t& a, const val_t& b) {
+	bool	lt(const val_t& a, const val_t& b) const {
 		     return (dec_order? b < a: a < b);
 		}
 };
@@ -476,7 +465,7 @@ template <typename val_t>
 void PrQueue<val_t>::hsort()	// heap sort data
 {
 	for (int k = front; --k > 0; ) {
-	    gswap(data[0], data[k]);
+	    swap(data[0], data[k]);
 	    downheap(0, k);
 	}
 }
@@ -677,20 +666,20 @@ public:
 #endif
 	Strlist(Strlist& src);
 	~Strlist() {delete[] strbuf; delete[] idxlst;}
-	char*	operator[](INT n) {
+	char*	operator[](INT n) const {
 	    return ((idxlst && n < many)? strbuf + idxlst[n]: strbuf);
 	}
-	INT	size() {return (many);}
+	INT	size() const {return (many);}
 	char*	assign(const Strlist& src);
 	char*	assign(const char* str);
 	char*	push(const char* str);
 	void	reset(int m = 0);
-	bool	unfilled() {return !filled;}
+	bool	unfilled() const {return !filled;}
 	void	setfill() {filled = true;}
-	bool	empty() {return !strbuf || !*strbuf;}
+	bool	empty() const {return !strbuf || !*strbuf;}
 	void	undo() {--many; totallen -= lastlen;}
 	char*	squeeze() {char* tmp = strbuf; strbuf = 0; return (tmp);}
-	INT	longest() {return (maxlen? maxlen - 1: 0);}
+	INT	longest() const {return (maxlen? maxlen - 1: 0);}
 };
 
 // hash for string key
@@ -743,7 +732,7 @@ public:
 	KVpair<INT, val_t>* pile(INT iky) {
 	    return push(strkey(iky));
 	}
-	int	count();
+	int	count() const;
 	KVpair<INT, val_t>* press(int* n, val_t* sum = 0);
 	void	clear() {
 	    if (un_def) {
@@ -806,7 +795,7 @@ KVpair<INT, val_t>* StrHash<val_t>::map(const char* skey, int record)
 }
 
 template <class val_t>
-int StrHash<val_t>::count()
+int StrHash<val_t>::count() const
 {
 	int	c = 0;
 	for (KVpair<INT, val_t>* sh = hash; sh < hz; ++sh)
@@ -962,7 +951,7 @@ extern	int	countbit(unsigned long x);
 extern	double	rgauss();
 extern	int	rpoisson(double mu);
 extern	double	ktof(const char* str);
-extern	const	char* getarg(int& argc, const char**& argv, bool num = false);
+extern	const	char* getarg(int& argc, const char**& argv, bool num = false, int pv = 2);
 inline	long	ktol(const char* str) {return (long(ktof(str)));}
 inline	int	ktoi(const char* str) {return (int(ktof(str)));}
 inline	double	inverse(double x) {return (1. / x);};
