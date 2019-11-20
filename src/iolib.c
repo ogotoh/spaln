@@ -261,7 +261,7 @@ void setintval(const char* mssg, int* pval, int* back, int given)
 	if (given == QUERY) {
 	    *back = *pval;
 	    if (mssg) promptin(mssg, pval);
-	} else if (given == POPUP)	gswap(*pval, *back);
+	} else if (given == POPUP)	swap(*pval, *back);
 	else if (given != SILENT)	{*back = *pval; *pval = given;}
 }
 
@@ -272,7 +272,7 @@ void setdblval(const char* mssg, double* pval, double* back, const double* given
 	if (gvn == QUERY) {
 	    *back = *pval;
 	    if (mssg) promptin(mssg, pval);
-	} else if (gvn == POPUP) gswap(pval, back);
+	} else if (gvn == POPUP) swap(pval, back);
 	else if (gvn != SILENT) {
 	    *back = *pval;
 	    *pval = *given;

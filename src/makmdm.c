@@ -148,7 +148,7 @@ static double det(double matrix[][20])
 		if (fabs(a[i][k]) > fabs(a[mx][k])) mx = i;
 	    if (fabs(a[mx][k]) < EPS) return(0.);
 	    if (mx != k) {
-		for (int j = k; j < 20; j++) gswap(a[k][j], a[mx][j]);
+		for (int j = k; j < 20; j++) swap(a[k][j], a[mx][j]);
 		if ((mx + k) % 2) dt = -dt;
 	    }
 	    for (int i = k + 1; i < 20; i++) {

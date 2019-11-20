@@ -35,12 +35,17 @@ static	const	char 	ODR_EXT[] = ".odr";
 static	const	char 	BKA_EXT[] = ".bka";
 static	const	char 	BKN_EXT[] = ".bkn";
 static	const	char 	BKP_EXT[] = ".bkp";
-#define	BKP_EXT	".bkp"
+static	const	char	LUN_EXT[] = ".lun";
+static	const	char	LUP_EXT[] = ".lup";
+static	const	char	LXN_EXT[] = ".lxn";
+static	const	char	LXP_EXT[] = ".lxp";
 #if USE_ZLIB
 static	const	char	SGZ_EXT[] = ".seq.gz";
 static	const	char	AGZ_EXT[] = ".bka.gz";
 static	const	char	NGZ_EXT[] = ".bkn.gz";
 static	const	char	PGZ_EXT[] = ".bkp.gz";
+static	const	char	LNZ_EXT[] = ".lun.gz";
+static	const	char	LPZ_EXT[] = ".lup.gz";
 #endif
 
 #ifndef	DBS_DIR
@@ -63,7 +68,7 @@ static	const	char	DBSID = '$';
 static	const	int	MAX_DBS = 2;
 static	const	int	ENTLEN = 14;
 static	const	CHAR	SEQ_DELIM = 0x00;
-static	const	int	MAXCODE	= 21;
+static	const	int	MAXCODE = 21;
 static	const	int	NTESTC = 1000;
 static	const	long	magicver21 = 1117114721;
 
@@ -90,10 +95,10 @@ const	char*	SeqForm;	/* Format for Left Margin*/
 	int	SeqBlkSz;	/* Size of a Block	*/
 	int	SeqBlkSp;	/* Size of an Inter-Block space	*/
 	INT	ContSpc;	/* Continue Space	*/
-	int	is_DbEntry(char* str);
-	int	is_DbEnd(char* str);
-	int	is_DbOrigin(char* str);
-	long	dbnextentry(FILE* fd, char* ps);
+	int	is_DbEntry(const char* str) const;
+	int	is_DbEnd(const char* str) const;
+	int	is_DbOrigin(const char* str) const;
+	long	dbnextentry(FILE* fd, char* ps) const;
 };
 
 struct DbsRec20 {
@@ -106,9 +111,15 @@ struct DbsRec20 {
 	long	seqlen;
 };
 
+struct DbsRec25 {
+	long	seqptr;
+	long	seqlen;
+	size_t	entptr;
+};
+
 struct DbsRec {
 	long	seqptr;
-	size_t	seqlen;
+	long	seqlen;
 	size_t	entptr;
 };
 
@@ -130,13 +141,13 @@ friend	class	SrchBlk;
 	INT*	recodr;
 	char*	entry;
 	int*	gsipool;
-	DbsRec*	bisearch(const char* key);
-	void	readseq(char* fn);
+	DbsRec*	bisearch(const char* key) const;
+	void	readseq(const char* fn);
 	size_t	readgrp(FILE* fgrp);
-	void	readidx20(FILE* fd, char* fn);
-	DbsRec*	readidx(FILE* fidx, char* fn);
-	void	readentry(FILE* fent, char* fn);
-	void	readodr(FILE* fodr, char* fn);
+	void	readidx20(FILE* fd, const char* fn);
+	DbsRec*	readidx(FILE* fidx, const char* fn);
+	void	readentry(FILE* fent, const char* fn);
+	void	readodr(FILE* fodr, const char* fn);
 public:
 const	char*	dbsid;
 	SeqDb*  curdb;
@@ -148,25 +159,25 @@ const	char*	dbsid;
 	DbsDt(int c = 0, int molc = UNKNOWN);
 	DbsDt(const char* form);
 	~DbsDt();
-	int	grpno(DbsGrp* grp) {return (grp - dbsgrp);}
-	int	recno(const DbsRec* rec) {return (rec - recidx);}
-	DbsGrp*	finddbsgrp(const char* name);
-	DbsRec*	findcode(const char* code);
-	DbsRec*	dbsrec(INT pos) {return (pos < numidx? recidx + pos: 0);}
-	DbsRec*	dbsrec(const DbsRec* rec = 0) {return (recidx + (rec? recodr[recno(rec)]: 0));}
-	int	guessmolc();
-	CHAR*	dbseq(DbsRec* rec = 0) {return (dbsseq + (rec? rec->seqptr: 0));}
-	char*	entname(const DbsRec* rec = 0) {return (entry + (rec? rec->entptr: 0));}
-	char*	entname(int recno) {return (entry + recidx[recno].entptr);}
-	int*	gsient(int recno) {return (gsiidx? gsipool + gsiidx[recno]: 0);}
-	int	gsisize(int recno) {return (gsiidx? gsiidx[recno + 1] - gsiidx[recno]:0);}
-	char*	fsrcname(int sub) {return ((*grplbl)[sub]);}
-	FILE*	dbsfopen() {return (dbsseq? 0: fopen(pseq, "r"));}
+	int	grpno(DbsGrp* grp) const {return (grp - dbsgrp);}
+	int	recno(const DbsRec* rec) const {return (rec - recidx);}
+	DbsGrp*	finddbsgrp(const char* name) const;
+	DbsRec*	findcode(const char* code) const;
+	DbsRec*	dbsrec(INT pos) const {return (pos < numidx? recidx + pos: 0);}
+	DbsRec*	dbsrec(const DbsRec* rec = 0) const {return (recidx + (rec? recodr[recno(rec)]: 0));}
+	int	guessmolc() const;
+	CHAR*	dbseq(DbsRec* rec = 0) const {return (dbsseq + (rec? rec->seqptr: 0));}
+	char*	entname(const DbsRec* rec = 0) const {return (entry + (rec? rec->entptr: 0));}
+	char*	entname(int recno) const {return (entry + recidx[recno].entptr);}
+	int*	gsient(int recno) const {return (gsiidx? gsipool + gsiidx[recno]: 0);}
+	int	gsisize(int recno) const {return (gsiidx? gsiidx[recno + 1] - gsiidx[recno]:0);}
+	char*	fsrcname(int sub) const {return ((*grplbl)[sub]);}
+	FILE*	dbsfopen() const {return (dbsseq? 0: fopen(pseq, "r"));}
 	void	prepare(size_t entry_space, size_t num, size_t seq_space, size_t gsi_space = 0);
 	void	prepare(Strlist& sname, int num, size_t space, size_t gsi_space = 0);
-	int	seqloc(CHAR* ps) {return (ps - dbsseq);}
-	int	entloc(char* pe) {return (pe - entry);}
-	int	gsiloc(int* pg) {return (pg - gsipool);}
+	int	seqloc(CHAR* ps) const {return (ps - dbsseq);}
+	int	entloc(char* pe) const {return (pe - entry);}
+	int	gsiloc(int* pg) const {return (pg - gsipool);}
 	void	makodr();
 };
 
@@ -182,7 +193,7 @@ extern	void	EraDbsDt();
 extern	char*	path2dbf(char* str, const char* fn, const char* ext = 0);
 extern	bool	space_digit(const char* ps);
 extern	const	char*	finddbfpath(const char* fn, const char* ext = 0);
-extern	SeqDb*	whichdb(char* ps);
+extern	SeqDb*	whichdb(const char* ps);
 
 template <typename file_t>
 char* dbs_header(char* str, file_t fin)

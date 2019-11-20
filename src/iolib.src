@@ -212,6 +212,18 @@ inline	time_t	change_time(const char* fn) {
 	return (stat(fn, &buf)? 0: buf.st_ctime);
 }
 
+inline	bool	is_file(const char* fn) {
+	struct	stat buf;
+	if (stat(fn, &buf)) return (false);
+	return (S_ISREG(buf.st_mode));
+}
+
+inline	bool	is_dir(const char* fn) {
+	struct	stat buf;
+	if (stat(fn, &buf)) return (false);
+	return (S_ISDIR(buf.st_mode));
+}
+
 #if USE_ZLIB
 extern	gzFile	gzopenpbe(const char* path, const char* name, const char* extent, 
 			const char* opt, int lvl = 0, char* buf = 0);
