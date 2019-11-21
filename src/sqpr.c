@@ -536,7 +536,7 @@ static	const	char*	fmt3t = "Target=%s %d %d %c\n";
 		    prv = wsk++;
 		}
 		skp = ++wkr;
-	    } else {
+	    } else if ((wkr++)->iscr > NEVSEL) {
 		skp = wkr++;
 	    }
 	}
@@ -620,8 +620,8 @@ static	const	char*	fmt3t = "Target=%s %d %d %c;Gap=";
 		}
 		putc('\n', fd);
 		skp = ++wkr;
-	    } else {
-		skp = wkr++;
+	    } else if ((wkr++)->iscr > NEVSEL) {
+		skp = wkr;
 	    }
 	}
 	swapskl(skl);

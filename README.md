@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.0
-#### Last updated: 2019-11-18
+#### Present Version 2.4.02
+#### Last updated: 2019-11-21
 
 - [Overview](#Ov)
 - [Install](#Inst)

@@ -91,7 +91,7 @@ const	char*	ps = wlprm->redpat;
 	wlprm->mask = (INT) ipower(wlprm->elem, wlprm->tpl);
 	VTYPE	Vab = (VTYPE) alprm.scale;
 	wlprm->vthr = (VTYPE) (Vab * wlprm->thr);
-	Simmtx*	simmtx = getSimmtx(1);
+	Simmtx*	simmtx = getSimmtx(WlnPamNo);
 	double	nmlfact = simmtx->avrmatch(wlprm->ConvTab);
 	wlprm->cutoff = (int) (wlprm->gain * wlprm->vthr / nmlfact);
 }
@@ -178,7 +178,7 @@ Wlprms::Wlprms(int dvsp) : DvsP(dvsp)
 {
 	if (DvsP == 2) fatal("Ilegal combination of seq types !i\n");
 	Vab = (VTYPE) alprm.scale;
-	simmtx = getSimmtx(1);
+	simmtx = getSimmtx(WlnPamNo);
 	EndBonus = (VTYPE) simmtx->AvTrc();
 	RepPen = (VTYPE) (Vab * hspprm.RepPen);
 	for (INT level = 0; level < MaxWlpLevel; ++level)

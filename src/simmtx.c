@@ -51,9 +51,9 @@ BPPRM	bpprm = {0., 1., 1., 100};
 static	int	glocal = GLOBAL;
 static	float	smn[] = {2., 1., 0., -1., -2.};
 static	DefPrm	defNprm[max_simmtxes+1] = 
-{{3., 8., -6., 0.,1}, {2., 6., -2., 0., 1}, {2., 6., -2., 0., 1}, {0}};
+{{3., 8., -6., 0., 1}, {2., 6., -2., 0., 1}, {3., 8., -6., 0., 1}, {0}};
 static	DefPrm	defPprm[max_simmtxes+1] = 
-{{4., 10., 0., 0., 100}, {2., 9., 0., 0., 250}, {2, 9., 0., 0., 250}, {0}};
+{{4., 10., 0., 0., 100}, {2., 9., 0., 0., 250}, {4., 10., 0., 0., 100}, {0}};
 
 void optimize(int gl, int mnmx)
 {
@@ -636,7 +636,7 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	    case 's': alprm3.scnd = atof(vl); break;	// secondary structure prop.
 	    case 't': alprm.tgapf = atof(vl); break;	// reduced terminal gap factor
 	    case 'u': defPprm[k].u = atof(vl); break;	// gap extension
-	    case 'v': alprm.v = atof(vl); break;	// gap open
+	    case 'v': defPprm[k].v = atof(vl); break;	// gap open
 	    case 'w': alprm.sh = atoi(vl); break;	// band width
 	    case 'x': alprm2.x = atof(vl); break;	// frame shift
 	    case 'y': alprm2.y = atof(vl); break;	// boundary signal
@@ -681,7 +681,7 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 void setSimmtxes(ComPmt ab, bool mdm, DefPrm* dp)
 {
 	int	upto = dp? 1: max_simmtxes;
-	if (!dp) dp = (ab == DxD? defNprm: defPprm) + algmode.crs;
+	if (!dp) dp = (ab == DxD? defNprm: defPprm);
 	if (alprm.v == FQUERY) alprm.v = dp->v;
 	if (alprm.u == FQUERY) alprm.u = dp->u;
 	Simmtx**	psm = simmtxes.storedSimmtx;
@@ -692,7 +692,8 @@ void setSimmtxes(ComPmt ab, bool mdm, DefPrm* dp)
 		else if (dp->p) *psm = new Simmtx(ab, dp);
 	    }
 	}
-	simmtxes.current = (ab == DxD)? algmode.crs: 0;
+	if (algmode.crs) swap(simmtxes.storedSimmtx[0], simmtxes.storedSimmtx[1]);
+	simmtxes.current = 0;
 }
 
 void resetSimmtxes(bool rmcomps)

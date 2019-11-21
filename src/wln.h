@@ -31,6 +31,7 @@ enum {ON_SCORE, ON_RDIAG, ON_POSIT};
 static	const	char	strlut[] = "LookupTabs";
 static	const	INT	lut_version = 10;
 static	const	INT	MaxWlpLevel = 3;
+static	const	int	WlnPamNo = 2;
 
 class	mSeq;
 

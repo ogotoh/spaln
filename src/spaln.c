@@ -45,8 +45,9 @@
 
 static	const	int	MAX_ARGS = 128;
 static	const	int	MAX_ARGTEXT = 4096;
-static	const	int	DefPam = 150;
-static	const	int	WlpPam = 50;
+static	const	int	InsPam = 100;	// intra species
+static	const	int	CrsPam = 150;	// cross species
+static	const	int	WlpPam = 50;	// HSP search
 static	const	int	DefOrfLen = 75;
 static	const	int	spacer = 32;
 static	const	int	def_max_extend_gene_rng = 3;
@@ -146,7 +147,7 @@ static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
 static	const	char*	version = "2.4.0";
-static	const	int	date = 191118;
+static	const	int	date = 191114;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -1369,8 +1370,9 @@ static void setdefparam()
 	algmode.thr = 1;	// filter out weak matches
 	setalgmode(4, 0);	// rich exon info
 	setNpam(4, -6);		// default int mismatch score
-	setpam(DefPam, 0);	// change to this pam value
-	setpam(WlpPam, 1);	// pam of secondary sim matrix
+	setpam(InsPam, 0);	// intra-species PAM value
+	setpam(CrsPam, 1);	// cross-species PAM value
+	setpam(WlpPam, WlnPamNo);	// pam for HSP search
 	setorf(DefOrfLen, 2);	// orf length and AG< .. >GT ends
 	OutPrm.MaxOut = 1;
 	OutPrm.SkipLongGap = 1;	// suppress display of long gaps
