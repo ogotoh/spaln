@@ -537,7 +537,7 @@ static	const	char*	fmt3t = "Target=%s %d %d %c\n";
 		}
 		skp = ++wkr;
 	    } else if ((wkr++)->iscr > NEVSEL) {
-		skp = wkr++;
+		skp = wkr;
 	    }
 	}
 }

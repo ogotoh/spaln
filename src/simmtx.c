@@ -682,17 +682,20 @@ void setSimmtxes(ComPmt ab, bool mdm, DefPrm* dp)
 {
 	int	upto = dp? 1: max_simmtxes;
 	if (!dp) dp = (ab == DxD? defNprm: defPprm);
-	if (alprm.v == FQUERY) alprm.v = dp->v;
-	if (alprm.u == FQUERY) alprm.u = dp->u;
+	int	odr[3] = {0, 1, 2};
+	if (algmode.crs) swap(odr[0], odr[1]);
+	DefPrm*	ddp = upto == 1? dp: dp + odr[0];
+	if (alprm.v == FQUERY) alprm.v = ddp->v;
+	if (alprm.u == FQUERY) alprm.u = ddp->u;
 	Simmtx**	psm = simmtxes.storedSimmtx;
-	for (int mid = 0; mid < upto; ++mid, ++psm, ++dp) {
+	for (int mid = 0; mid < upto; ++mid, ++psm) {
+	    ddp = dp + odr[mid];
 	    if (!*psm) {
 		const char* fname = mdm_file[mid];
-		if (fname && !mdm)	*psm = new Simmtx(ab, fname, dp);
-		else if (dp->p) *psm = new Simmtx(ab, dp);
+		if (fname && !mdm)	*psm = new Simmtx(ab, fname, ddp);
+		else if (ddp->p) *psm = new Simmtx(ab, ddp);
 	    }
 	}
-	if (algmode.crs) swap(simmtxes.storedSimmtx[0], simmtxes.storedSimmtx[1]);
 	simmtxes.current = 0;
 }
 
