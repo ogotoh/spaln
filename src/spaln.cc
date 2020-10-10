@@ -49,7 +49,6 @@ static	const	int	InsPam = 100;	// intra species
 static	const	int	CrsPam = 150;	// cross species
 static	const	int	WlpPam = 50;	// HSP search
 static	const	int	DefOrfLen = 75;
-static	const	int	spacer = 32;
 static	const	int	def_max_extend_gene_rng = 3;
 static	const	long	MaxWordNoSpace = 1 << 30;	// 1GB
 
@@ -75,7 +74,6 @@ public:
 class ThQueue {
 	int	rp, wp;
 	int	remain;
-	int	done;
 	pthread_cond_t	not_full;
 	pthread_cond_t	not_empty;
 public:
@@ -146,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.0";
-static	const	int	date = 191114;
+static	const	char*	version = "2.4.1";
+static	const	int	date = 201009;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -613,7 +611,7 @@ static	RANGE*	skl2exrng(SKL* skl)
 	(++wrng)->left = (skl++)->n;	// 5' end
 	for ( ; --num; ++skl) {
 	    if (skl->m - skl[-1].m == 0 &&	// intron
-		skl->n - skl[-1].n > IntronPrm.llmt) {
+		skl->n - skl[-1].n > IntronPrm.minl) {
 		    (wrng++)->right = skl[-1].n;
 		    wrng->left = skl->n;
 	    }
@@ -650,7 +648,6 @@ static int spalign2(Seq* sqs[], PwdB* pwd, Gsinfo* GsI, int ori)
 			GsI->scr = skl_rngS_ng((const Seq**) sqs, GsI, pwd);
 		else	GsI->scr = skl_rngH_ng((const Seq**) sqs, GsI, pwd);
 		GsI->eiscr2rng();		// raise score for each intron
-		GsI->scr -= pwd->GapPenalty(Ip_equ_k) * (GsI->noeij - 1);
 	    } else {
 		GsI->CDSrng = skl2exrng(GsI->skl);
 	    }
@@ -726,7 +723,7 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	}
 	Gsinfo	GsI[2];
 	dir = spalign2(sqs, pwd, GsI, ori);
-	if (dir != ERROR && (!algmode.thr || GsI->fstat.val >= pwd->Vthr)) {
+	if (dir != ERROR) {
 	    if (algmode.nsa == BED_FORM)
 		GsI->rscr = selfAlnScr(a, pwd->simmtx);
 #if M_THREAD
@@ -784,7 +781,7 @@ static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q)
 	Gsinfo*	gsinf = GsI;
 	INT	n_out = 0;
 	Seq**	gener = bks->get_gener();
-	for (int n = 0; n < nparalog; ++n, ++gsinf) {
+	for (int n = 0; n < nparalog; swap(b, gener[n++]), ++gsinf) {
 	    swap(b, gener[n]);
 	    if ((QRYvsDB == AvsA || QRYvsDB == CvsC) && OutPrm.supself) {
 		int	sc = strcmp((*a->sname)[0], (*b->sname)[0]);  
@@ -816,6 +813,17 @@ static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q)
 	    delete b->exin; b->exin = 0;	// suppress Boundary output
 	    if (dir < 0 || !gsinf->skl ||
 		(algmode.thr && gsinf->scr < bks->pwd->Vthr)) {
+		int	nid = 0, jln = 0;
+		for (int j = 0; j < b->CdsNo; ++j) {
+		    nid += b->jxt[j].nid;
+		    jln += b->jxt[j].jlen;
+		}
+		if (q) pthread_mutex_lock(&q->mutex);
+		prompt("< %6.1f %6.1f %s\t(%d %d) %s %d %d %d %d\n",
+		    (float) gsinf->scr, (float) b->jscr, b->sqname(), 
+		    b->SiteNo(b->left), b->SiteNo(b->right), 
+		    a->sqname(), a->len, jln, nid, b->CdsNo);
+		if (q) pthread_mutex_unlock(&q->mutex);
 		gsinf->scr = NEVSEL;
 		continue;
 	    }
@@ -856,18 +864,17 @@ static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q)
 		a->right = fst[gsinf->noeij - 1].rright;
 	    }
 	    ++n_out;
-	    swap(b, gener[n]);
 	}	// end of nparalog loop
-//	insert sort GsI as nearlly sorted
+//	insert sort GsI as nearly sorted
 	int*	odr = 0;
 	if (nparalog > 1) {
 	    odr = new int[nparalog];
 	    for (int n = 0; n < nparalog; ++n) odr[n] = n;
 	    for (int n = 1; n < nparalog; ++n) {
 		int	l = odr[n];
-		VTYPE	v = GsI[l].scr;
+		VTYPE	v = GsI[l].fstat.val;
 		int	m = n;
-		while (--m >= 0 && v > GsI[odr[m]].scr)
+		while (--m >= 0 && v > GsI[odr[m]].fstat.val)
 		    odr[m + 1] = odr[m];
 		odr[m + 1] = l;
 	    }
@@ -901,9 +908,9 @@ static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q)
 	if (q && q->mfd) {
 	    pthread_mutex_lock(&q->mutex);
 	    hfg.sname = strrealloc(0, a->sqname());
-	    if (hfg.left > 0) hfg.left += IntronPrm.llmt;
+	    if (hfg.left > 0) hfg.left += IntronPrm.minl;
 	    else	hfg.left = frng.left;
-	    if (hfg.right < INT_MAX) hfg.right -= IntronPrm.llmt;
+	    if (hfg.right < INT_MAX) hfg.right -= IntronPrm.minl;
 	    else	hfg.right = frng.right;
 	    hfg.left = a->SiteNo(hfg.left);
 	    hfg.right = a->SiteNo(hfg.right);

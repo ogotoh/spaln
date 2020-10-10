@@ -44,7 +44,7 @@ CHAR nccode[26] =
 	{A,B,C,D,Z,Z,G,H,Z,Z,K,Z,M,N,Z,Z,Z,R,S,T,U,V,W,N,Y,Z};
 CHAR aacode[26] = 
 	{ALA,ASX,CYS,ASP,GLU,PHE,GLY,HIS,ILE,ZZZ,LYS,LEU,MET,
-	 ASN,AMB,PRO,GLN,ARG,SER,THR,ZZZ,VAL,TRP,AMB,TYR,GLX};
+	 ASN,AMB,PRO,GLN,ARG,SER,THR,SEC,VAL,TRP,AMB,TYR,GLX};
 CHAR trccode[26] =
 	{ALA,ASX,CYS,ASP,GLU,PHE,GLY,HIS,ILE,SER2,LYS,LEU,MET,
 	 ASN,TRM,PRO,GLN,ARG,SER,THR,TRM2,VAL,TRP,AMB,TYR,GLX};
@@ -53,14 +53,14 @@ CHAR rdcode[26] =
 
 char nucl[] = "--ACMGRSVTWYHKDBN";
 char nucr[] = "--ACMGRSVUWYHKDBN";
-char amino[] =  "--XARNDCQEGHILKMFPSTWYVBZO";
+char amino[] =  "--XARNDCQEGHILKMFPSTWYVBUO";
 char acodon[] = "--XARNDCQEGHILKMFPSTWYVJUO";
 char ncodon[] = "--NCGAAGAAGATTATTCCCGATGGA";
 char alphab[] = "--ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 char amino3[][4] = {
 	"---", "---", "???", "Ala", "Arg", "Asn", "Asp", "Cys", "Gln", 
 	"Glu", "Gly", "His", "Ile", "Leu", "Lys", "Met", "Phe", "Pro", 
-	"Ser", "Thr", "Trp", "Tyr", "Val", "Asx", "Glx", "***"};
+	"Ser", "Thr", "Trp", "Tyr", "Val", "Asx", "Sec", "***"};
 char rdnucl[] = "--ACGTN";
 CHAR red2nuc[] = {A,C,G,T};
 char *Nucl = rdnucl + 2;
@@ -613,8 +613,8 @@ void Seq::comple()
 	    tron2nuc(true);
 	    nuc2tron();
 	} else {
-register    CHAR*	ss = at(0);
-register    CHAR*	tt = at(len);
+	    CHAR*	ss = at(0);
+	    CHAR*	tt = at(len);
 
 	    for ( ; ss < tt; ss++)
 		*ss = complcod[*ss];
@@ -639,9 +639,9 @@ void Seq::reverse()
 {
 	delete exin; exin = 0;
 	if (!seq_) return;
-	register CHAR* seq = at(0);
-	register CHAR* rsq = at(len - 1);
-	register CHAR* temp = new CHAR[many];
+	CHAR* seq = at(0);
+	CHAR* rsq = at(len - 1);
+	CHAR* temp = new CHAR[many];
 
 	for ( ; seq < rsq; seq += many, rsq -= many) {
 	    memcpy(temp, seq, many);
@@ -667,6 +667,18 @@ void antiseq(Seq** seqs)
 	    (*seqs)->anti_ = as;
 	    (*as)->anti_ = seqs;
 	} else (*seqs)->comrev();
+}
+
+JUXT* Seq::revjxt()
+{
+        JUXT*   wjx = jxt;
+        JUXT*   lst = jxt + CdsNo;
+
+        for ( ; wjx < lst; ++wjx) {
+            wjx->jx = lst->jx - wjx->jx - wjx->jlen;
+            wjx->jy = len - wjx->jy - wjx->jlen;
+        }
+        return (vreverse(jxt, CdsNo));
 }
 
 /* assume seq.many = 1 */
@@ -697,7 +709,7 @@ void Seq::nuc2tron()
 	que[0] = buf;
 	que[1] = buf + many;
 	memset(que[1], AMB, many);
-register CHAR*	soc = at(0) - many;
+	CHAR*	soc = at(0) - many;
 	CHAR*	trm = at(len);
 	for ( ; soc < trm; soc += many) {
 	    for (int i = 0; i < many; ++i)
@@ -934,10 +946,10 @@ Seq* Seq::deamb(int bzx)
 	} else {
 	    while (++ss < tt) {
 		if ((bzx & 1) && *ss == AMB) *ss = randaa();
-		if (bzx & 2) {
+		if (bzx & 2)
 		    if (*ss == ASX) *ss = rand() & 0x1000? ASN: ASP;
+		if (bzx & 4)
 		    if (*ss == GLX) *ss = rand() & 0x1000? GLN: GLU;
-		}
 	    }
 	}
 	inex.ambs &= ~bzx;
@@ -1484,7 +1496,7 @@ CHAR* Seq::ToInferred(CHAR* src, CHAR* lastseq, int step)
 	else if (100 * (cmps[aton('J')] + cmps[aton('O')]
 		 + cmps[aton('U')]) / total > MinPctTronChar) {
 	    molc = TRON;
-	    prompt("Warning: %s is regared as TRON sequence!\n", spath);
+	    prompt("Warning: %s is regarded as TRON sequence !\n", sqname());
 	}
 	setSeqCode(this, molc);
 	CHAR*	tab = code->encode;

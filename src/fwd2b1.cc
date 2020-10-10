@@ -1314,12 +1314,12 @@ SKL* Aln2b1::globalB_ng(VTYPE* scr, const WINDOW& wdw)
 	return (stdskl(&skl));
 }
 
-VTYPE HomScoreB_ng(const Seq* seqs[], const PwdB* pwd)
+VTYPE HomScoreB_ng(const Seq* seqs[], const PwdB* pwd, long rr[])
 {
 	Aln2b1 alnv(seqs, pwd);
 	WINDOW	wdw;
 	stripe((const Seq**) seqs, &wdw, alprm.sh);
-	return alnv.forwardB_ng(wdw);
+	return alnv.forwardB_ng(wdw, rr);
 }
 
 Colonies* swg1stB_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr)

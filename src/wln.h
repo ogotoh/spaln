@@ -174,6 +174,7 @@ public:
 	~Wilip() {delete[] top; delete[] wlu;}
 	int	size() {return nwlu;}
 	WLUNIT*	begin() {return wlu;}
+	void	shift_y(int bias, int rbias);
 };
 
 struct JXT_SCORE {
@@ -260,7 +261,7 @@ public:
 	void	dmsnno(INT jj, LookupTabs* lut, INT lb, INT rb);
 	void	revcoord(JUXT* jxt, const int& n);
 	VTYPE	LinkHspScr(HSP* mcl, HSP* ncl);
-	HSP*	mkhsps(const JUXT* jxt, int n);
+	HSP*	mkhsps(const JUXT* jxt, int& n);
 	WLUNIT* jxtcore(int& num, JUXT** ptop);
 	JUXT*	run_dmsnno(int& njxt, LookupTabs* lut = 0, INT lb = 0, INT rb = 0);
 	WLUNIT* willip(JUXT** ptop, int& nwlu, JUXT* jxt);
@@ -283,7 +284,6 @@ extern	void	eraWlprms();
 extern	WLPRM*	setwlprm(INT level);
 extern	WLPRM*	selectwlprm(INT sz, int dvsp, WLPRM* wlp = 0);
 extern	void	setexprm_x(int& argc, const char**& argv);
-extern	JUXT*	revjxt(JUXT* jxt, const int& n);
 extern	int	geneorient(Seq* seqs[], const PwdB* pwd, int max_n = 0);
 
 #endif

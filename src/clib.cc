@@ -42,7 +42,7 @@ int	cpu_num = 1;
 int	max_queue_num = 0;
 
 ALGMODE	algmode = {1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0};
-//	{nsa, alg, bnd, mlt, aut lcl, lsg, mns, thr, rng, qck, blk, any, crs, slv, lvl. dim}
+//	{nsa, alg, bnd, mlt, aut, lcl, lsg, mns, thr, rng, qck, lvl, blk, any, crs, slv, dim}
 
 int ipower(int x, int n)
 {

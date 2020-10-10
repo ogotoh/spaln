@@ -30,7 +30,6 @@ static	int	rdiagcmp(const JUXT* a, const JUXT* b);
 static	int	yposicmp(const JUXT* a, const JUXT* b);
 static	JUXT*	jxtsort(JUXT* jxt, int n, int key);
 
-static  const	int     max_stuck = 2;
 static	WLPRM	wlprms[MaxWlpLevel + 1] = {{0}, {0}, {0}, {0}};
 static	HSPPRM	hspprm = {20, 10};
 static	Wlprms*	wlparams = 0;
@@ -107,7 +106,7 @@ static	WLPRM	aaprm[] =
 	 {"", DefConvPat[DefConvPatNo[12]], 14, 3, 1728, 4, 4, 8, 30, -1, 0, 0, 0}};
 //	 {0,  20, 20, 2, 400, 2, 4, 4, 30, -1, 0, 0, 0}};
 static	WLPRM	trprm[] = 
-	{{"", DefConvPat[DefConvPatNo[16]], 20, 4, 279841, 5, 4, 8, 50, -1, 0, 0, 0},
+	{{"", DefConvPat[DefConvPatNo[20]], 20, 4, 279841, 5, 4, 8, 50, -1, 0, 0, 0},
 	 {"", DefConvPat[DefConvPatNo[14]], 14, 4, 38416, 5, 4, 8, 40, -1, 0, 0, 0},
 	 {"", DefConvPat[DefConvPatNo[12]], 12, 3, 1728, 4, 4, 8, 30, -1, 0, 0, 0}};
 
@@ -306,14 +305,14 @@ const	CHAR*	at = a->at(min(jxt->jx + jxt->jlen, a->right));
 const	CHAR*	bs = b->at(jxt->jy);
 const	CHAR*	ax = a->at(a->left);
 const	CHAR*	bx = b->at(b->left);
+const	CHAR*	az = a->at(a->len);
 const	EXIN*	bb = 0;
 
 	if (bbt == 3) {
 	    ++bs;
 	    if (b->exin) {
 		bb = (const EXIN*) b->exin->score(jxt->jy + 1);
-		if (jxt->jx == 0 && *as == MET && scr > bb->sigS)
-		    scr = wlprm->vthr / 2;
+		if (jxt->jx == 0 && *as == MET) scr = wlprm->vthr / 2;
 	    }
 	}
 	if (scr <= 0) {
@@ -337,12 +336,9 @@ const	EXIN*	bb = 0;
 	    jxt->jlen++;
 	    scr += wlparams->sim2(as, bs);
 	    if (*as == *bs || (*as == SER && *bs == SER2)) jxt->nid++;
-	    if (bb) {
-		scr += bb->sigE;
-		bb += bbt;
-	    }
+	    if (bb) bb += bbt;
 	}
-	if (as == ax && bb && bb->sigT > 0) scr += wlprm->vthr / 2;
+	if (as == az && bb && bb->sigT > 0) scr += wlprm->vthr / 2;
 	else {
 	    int	rend = wlprm->tpl - a->tlen + jxt->jx + jxt->jlen;
 	    if (a->inex.exgr && rend > 0)
@@ -372,20 +368,6 @@ JUXT* Wlp::reeval(JUXT* jxt, int& num)
 	    num = j;
 	}
 	return (jxt);
-}
-
-// reverse
-
-JUXT* revjxt(JUXT* jxt, const int& n)
-{
-	JUXT*	wjx = jxt;
-	JUXT*	lst = jxt + n;
-
-	for ( ; wjx < lst; ++wjx) {
-	    wjx->jx = lst->jx - wjx->jx - wjx->jlen;
-	    wjx->jy = lst->jy - wjx->jy - wjx->jlen;
-	}
-	return (vreverse(jxt, n));
 }
 
 // reverse coordinates
@@ -548,7 +530,7 @@ const	CHAR*	ts = b->at(b->left + bwspan) - 1;
 		    intvl = j - wxtd->prevj - wlprm->width;
 		    if (intvl > 0) {
 			int	land = wxtd->mxscr - wlprm->cutoff;
-			wxtd->score -= intvl;
+			wxtd->score -= wlprm->gain * intvl;
 			if (land > wxtd->score || wxtd->score < 0) {
 			    if (land > 0) enter(wxtd, r);	/* end of HSR */
 			    wxtd->score = tplwt;
@@ -684,12 +666,13 @@ VTYPE Wlp::LinkHspScr(HSP* mcl, HSP* ncl)
 	return (pen);
 }
 
-										      
-HSP* Wlp::mkhsps(const JUXT* jxt, int n)
+HSP* Wlp::mkhsps(const JUXT* jxt, int& n)
 {
 	HSP*	hsp = new HSP[n];
+	HSP*	wcl = hsp;
+	HSP*	pcl = wcl;
 
-	for (HSP* wcl = hsp; n--; ++wcl, ++jxt) {
+	for (const JUXT* txt = jxt + n; jxt < txt; ++jxt) {
 	    wcl->lx = jxt->jx;
 	    wcl->ly = jxt->jy;
 	    wcl->rx = jxt->jx + jxt->jlen;
@@ -703,7 +686,19 @@ HSP* Wlp::mkhsps(const JUXT* jxt, int n)
 	    wcl->irno = 0;
 	    wcl->sumh = 0;
 	    wcl->ux = INT_MAX;
+// remove imcomaptible or embraced hsps
+	    if (wcl == hsp || wcl->ly > pcl->ry || wcl->rx > pcl->rx || wcl->rx < pcl->lx) {
+		pcl = wcl++;
+		continue;
+	    }
+	    int	aovr = wcl->rx - max(wcl->lx, pcl->lx);
+	    HSP*	mcl = wcl->jscr * pcl->len > pcl->jscr * wcl->len? wcl: pcl;
+	    VTYPE	ovrscr = mcl->jscr * aovr / mcl->len +
+		pwd->GapPenalty(abs(pcl->rr - wcl->rr));
+	    if (ovrscr > 0) pcl = wcl++;
+	    else if (wcl->jscr > pcl->jscr) vcopy(pcl, wcl, 1);
 	}
+	n = wcl - hsp;
 	return (hsp);
 }
 
@@ -759,7 +754,7 @@ WLUNIT* Wlp::jxtcore(int& num, JUXT** jxt)
 	    VTYPE	sscr = 0;
 	    HSP*	qcl = ncl;
 	    for (HSP* mcl = ncl; --mcl >= ccl; ) {
-		if (ncl->rx <= mcl->rx || ncl->ry <= mcl->ry ||
+		if (ncl->rx <= mcl->rx || ncl->ry < mcl->ry ||
 		    ncl->lx <= mcl->lx || mcl->ux <= ncl->lx ||
 		    (mcl->rx - ncl->lx) * 2 > ncl->rx - mcl->lx)
 		    continue;
@@ -823,6 +818,10 @@ WLUNIT* Wlp::jxtcore(int& num, JUXT** jxt)
 		wjx->nid = qcl->nid;
 		wjx->jscr = qcl->jscr;
 		wbf.scr += qcl->jscr;
+		int	ovr = wjx->jx + wjx->jlen - wjx[1].jx;
+		if (ovr > 0)
+		    wbf.scr -= ovr * (wjx->jscr + wjx[1].jscr) 
+			/ (wjx->jlen + wjx[1].jlen);
 		wbf.nid += qcl->nid;
 		wbf.tlen += qcl->len;
 		qcl->sscr = 0;	/* erase once read */
@@ -889,12 +888,15 @@ nextchain:
 		}
 	    }
 	}
+	WLUNIT* wlum = wlu;
 	for (WLUNIT* wlul = wlu; wlul < wlur; ) {
-	    if (wlul->num) ++wlul;
-	    else	swap(*wlul, *--wlur);
+	    if (wlul->num) {
+		if (wlul->ulmt > wlum->ulmt) wlum = wlul;
+		++wlul;
+	    } else	swap(*wlul, *--wlur);
 	}
 	num = wlur - wlu;
-	wlur[-1].ulmt = b->right;
+	wlum->ulmt = b->right;
 	qsort((UPTR) wlu, (INT) num, sizeof(WLUNIT), (CMPF) cmpwlscr);
 	return (wlu);
 }
@@ -985,6 +987,24 @@ Wilip::Wilip(Seq* seqs[], const PwdB* pwd, LookupTabs* lut, INT lb, INT rb)
 	    seqs[1]->comrev();
 	}
 	wlu = wln.willip(&top, nwlu, jxt);
+}
+
+void Wilip::shift_y(int bias, int ylen)
+{
+	WLUNIT*	llu = wlu;	// last Wlunit
+	WLUNIT*	tlu = wlu + nwlu;
+	for (WLUNIT* w = wlu; w < tlu; ++w) {
+	    if (bias) {
+		JUXT*	txt = w->jxt + w->num;
+		for (JUXT* wjx = w->jxt; wjx <= txt; ++wjx)
+		    wjx->jy += bias;
+		if (w->llmt) w->llmt += bias;
+		w->ulmt += bias;
+	    }
+	    if (w->ulmt > llu->ulmt) llu = w;
+	}
+	llu->ulmt = ylen;
+	llu->jxt[llu->num].jy = ylen;
 }
 
 // max_n must be smaller than OutPrm.MaxOut2

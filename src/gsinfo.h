@@ -26,8 +26,8 @@
 #ifndef _GSINFO_H_
 #define _GSINFO_H_
 
-class Seq;
-class Iiinfo;
+class	Seq;
+struct	Iiinfo;
 
 #if USE_WEIGHT
 struct	PFQ	{int pos, num, gps; VTYPE dns;};
@@ -130,8 +130,8 @@ readlst:
 }
 
 class PfqItr {
-friend	class	SigII;
-friend	class	Iiinfo;
+friend	struct	SigII;
+friend	struct	Iiinfo;
 private:
 	int	pfqnum;
 	int	lstnum;
@@ -371,6 +371,7 @@ mutable	FILE*	fd;
 	void	repalninf2(const SKL* skl, Seq* seqs[]) const;
 	void	repalninf3(const SKL* skl, Seq* seqs[]) const;
 	void	repalninf4(const SKL* skl, Seq* seqs[]) const;
+	void	repalninf5(const SKL* skl, Seq* seqs[]) const;
 	void	repalninf6(const SKL* skl, Seq* seqs[]) const;
 	void	Gff3Form(const Seq* gene, const Seq* qry) const;
 	void	Gff3PWA(const Seq* gene, const Seq* qry) const;

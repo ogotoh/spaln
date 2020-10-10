@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.03
-#### Last updated: 2019-11-22
+#### Present Version 2.4.1
+#### Last updated: 2020-10-09
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -305,9 +305,16 @@ on the same strand.
     % spaln -Q7 -d dictdisc_g -yS -T dictdisc -O12 -g [-t10] dictdisc.cf.gz
     % sortgrcd -O15 -F2 dictdisc.grd.gz
 ```
-    
+
 ## <a name="Changes">Changes from previous version</a>
 
+1. The algorithm for delimiting a genic region has been modified to find remote terminal coding exon(s) separated by long (up to 99.6% quantile) intron(s) from the main body of the gene.
+2. The -yx0 option now tries to search for missing internal micro exons and terminal very short coding exons.
+3. Selenocysteine (denoted by U) is now regarded as the 21th amino acid which favorably matches an in-frame TGA termination codon (U in the Tron code) upon DNA vs amino acid sequence alignment.
+4. Gene candidates are now sorted according to the final alignment score rather than the intermediate chained HSP score. This modification has improved the chance of true orthologous hits rather than paralog hits at an expense of a slight increase in computational load.
+5. Compared with the previous versions, a larger number of species-specific parameter sets (247 <- 102) are provided to support more species (1495 <- 688). **Note** that some parameter-set identifiers are changed. Please use eight-digit species identifies (e.g. zea_mays) rather than former parameter-set identifiers (e.g. Magnolio) as the argument of -T option.
+
+## Changes in version 2.4.0
 1. **Spaln** can now directly format genomic sequences without relying on 'make' command. See [Format](#Format).
 2.  The internal format of index files is slightly modified. Although previously-formatted files can be used by the new version, the opposite is not true. Note that use of older files with the new version can lead to a slight loss in sensitivity.
 3. The above change has been done to facilitate multi-thread operation at the format time, although the acceleration rate by multi-threading is only marginal.
@@ -352,9 +359,15 @@ Direct mapping and alignment of protein sequences onto genomic sequence. *Bioinf
 <a name="Ref3">[[3]](http://nar.oxfordjournals.org/content/40/20/e161) Iwata, H. and Gotoh, O.
 Benchmarking spliced alignment programs including  Spaln2, an extended version of Spaln that incorporates additional species-specific features. *Nucleic Acids Research* **40** (20) e161 (2012)
 
-<a name="Ref4">[[4]](https://academic.oup.com/bioinformatics/article/22/10/1211/236993) Nagasaki, H., Arita, M., Nishizawa, T., Suwa, M., Gotoh, O.
+<a name="Ref4">[[4]](https://doi.org/10.1093/bioinformatics/16.3.190) Gotoh, O.
+Homology-based gene structure prediction: simplified matching algorithm using a translated codon (tron) and improved accuracy by allowing for long gaps. *Bioinformatics* **16** (3) 190-202 (2000)
+
+<a name="Ref4">[[5]](https://academic.oup.com/bioinformatics/article/22/10/1211/236993) Nagasaki, H., Arita, M., Nishizawa, T., Suwa, M., Gotoh, O.
 Automated classification of alternative splicing and transcriptional initiation and construction of a visual database of the classified patterns. *Bioinformatics* **22** (10) 1211-1216 (2006).
+
+[6] Gotoh, O.
+Cooperation of Spaln and Prrn5 for construction of gene-structure-aware multiple sequence alignment. *Methods in Molecular Biology*, in press.
 
 * * *
 
-Copyright (c) 1997-2019 Osamu Gotoh (o.gotoh@aist.go.jp) All Rights Reserved.
+Copyright (c) 1997-2020 Osamu Gotoh (o.gotoh@aist.go.jp) All Rights Reserved.

@@ -30,8 +30,9 @@ static	SeqDb*	fst_form = 0;
 static	const	char	BLANK = 0;
 static	const	char	DEF_GAP_CHAR = '-';
 static	const	char	GCG_GAP_CHAR = '.';
+#if USE_WEIGHT
 static	const	int	NO_WGHT = 5;
-static	const	int	DEF_LINELENGTH = 60;
+#endif
 static	const	int	GCG_LINELENGTH = 50;
 static	const	int	GCG_SeqBlkSz = 10;
 static	const	INT	INTRONBIT = 0x80;
@@ -289,6 +290,19 @@ const 	FSTAT&	fst = fstat;
 		a->SiteNo(skl->m), b->SiteNo(skl->n), dm);
 	}
 	fprintf(fd, "\n");
+}
+
+/* 1 line exon boundary format */
+
+void Gsinfo::repalninf5(const SKL* skl, Seq* seqs[]) const
+{
+	int	nn = skl->n;
+ 	Seq*&	b = seqs[1];
+
+	b->fphseq(fd, 0);
+	for (++skl; nn--; skl++)
+	    fprintf(fd, " %d", b->SiteNo(skl->n));
+	putc('\n', fd);
 }
 
 /* 2 line compact XYL format (x, y, len) * n */
@@ -809,6 +823,8 @@ void Gsinfo::ExonForm(const Seq* gene, const Seq* qry, int mode) const
 	int	cds = 0;
 	int	mch = 0;
 	bool	binary = mode == BIN_FORM;
+	float	scale = alprm.scale;
+	if (gene->exin && gene->exin->fact) scale *= gene->exin->fact;
 	float	fscr = scr / alprm.scale;
 	VTYPE	iscr = 0;
 const 	EISCR*	fst = eijnc->begin();
@@ -824,7 +840,7 @@ static	int	qryidx = 0;
 static	const	char	tmp_intends[] = "  .  ";
 static	const	char	fmt[] = "%s\t%s\t%7.2f\t%7d\t%7d\t%7d\t%7d\t%7d\t%7d\t"
 			"%7d\t%7.1f\t%7d\t%7.1f\t%7.2f\t%7.2f %2d %d %2d %d %s\n";
-static	const	char	tfmt[] = "@ %s %c ( %d %d ) %s %d ( %d %d ) S: %.1f =: %.1f C: %.1f "
+static	const	char	tfmt[] = "@ %s %c ( %d %d ) %s [%d:%d] ( %d %d ) S: %.1f =: %.1f C: %.1f "
 			"T#: %d T-: %d B#: %d B-: %d X: %d Nexn: %d\n";
 static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 
@@ -878,7 +894,7 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		    gr.bunp += prv->unp3 + wkr->unp5;
 		}
 		int	exon = wkr->right - skp->left;
-		int	rlen = wkr->rright - skp->rleft + wkr->unp;
+		int	rlen = (wkr->rright - skp->rleft) * qry->many + wkr->unp;
 		cds += exon;
 		mch += wkr->mch;
 		gr.mmc += wkr->mmc;
@@ -892,10 +908,10 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		er.Gright = gene->SiteNo(wkr->right - 1);
 		er.Bmmc   = prv->mmc3 + wkr->mmc5;
 		er.Bunp   = prv->unp3 + wkr->unp5;
-		er.Escore = (float) wkr->escr / alprm.scale;
-		er.Iscore = (float) iscr / alprm.scale;
-		er.Sig3   = (float) wkr->sig3 / alprm.scale;
-		er.Sig5   = (float) wkr->sig5 / alprm.scale;
+		er.Escore = (float) wkr->escr / scale;
+		er.Iscore = (float) iscr / scale;
+		er.Sig3   = (float) wkr->sig3 / scale;
+		er.Sig5   = (float) wkr->sig5 / scale;
 		if (binary) {
 		    er.Nmmc = wkr->mmc;
 		    er.Nunp = wkr->unp;
@@ -961,7 +977,7 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 	} else {
 	    fprintf(fd, tfmt, (*gene->sname)[0], gr.Csense? '-': '+', 
 	    gr.Gstart, gr.Gend,
-	    (*qry->sname)[0], qry->len, gr.Rstart, gr.Rend,
+	    (*qry->sname)[0], qry->many, qry->len, gr.Rstart, gr.Rend,
 	    gr.Gscore, gr.Pmatch, gr.Pcover, 
 	    gr.mmc, gr.unp, gr.bmmc, gr.bunp, gr.ng, gr.nexn);
 	}
@@ -991,7 +1007,7 @@ const 	char*	convt = gene->isdrna()? nucl: ncodon;
 	bool	isnuc = qry->isdrna();
 static	int	visit = 0;
 static	const char	tmp_intends[] = "   ..   ";
-static	const char	tfmt[] = "@ %s %c ( %d %d ) %s %d ( %d %d )\n";
+static	const char	tfmt[] = "@ %s %c ( %d %d ) %s [%d:%d] ( %d %d )\n";
 static	const char	fmt[] = "%s\t%c %9d %9d  %d  %9d %9d\t%s\t%7d\t%7d\t%7d\t%7d\t%7d\t%7d\t %s\n";
 
 	char	intends[10];
@@ -1026,7 +1042,7 @@ static	const char	fmt[] = "%s\t%c %9d %9d  %d  %9d %9d\t%s\t%7d\t%7d\t%7d\t%7d\t
 	gr.Rend   = qry->SiteNo(qry->right) - 1;
 	gr.Csense = gr.Gstart > gr.Gend;
 	fprintf(fd, tfmt, (*gene->sname)[0], gr.Csense? '-': '+',
-	    gr.Gstart, gr.Gend, (*qry->sname)[0], qry->len, gr.Rstart, gr.Rend);
+	    gr.Gstart, gr.Gend, (*qry->sname)[0], qry->many, qry->len, gr.Rstart, gr.Rend);
 }
 
 void Gsinfo::CigarForm(const Seq* gen, const Seq* qry) const
@@ -1104,6 +1120,7 @@ void Gsinfo::repalninf(Seq* seqs[], int mode, FILE* _fd) const
 	  case 2:  repalninf2(skl, seqs); break;
 	  case 3:  repalninf3(skl, seqs); break;
 	  case 4:  repalninf4(skl, seqs); break;
+	  case 5:  repalninf5(skl, seqs); break;
 	  case CIG_FORM: CigarForm(seqs[1], seqs[0]); return;
 	  case VLG_FORM: VulgarForm(seqs[1], seqs[0]); return;
 	  case SAM_FORM: 
@@ -1125,7 +1142,8 @@ const	GAPS*	gp = gaps[0];
 	while (gaps_intr(gp)) ++gp;
 	int	span = gp->gps - gaps[0]->gps;
 	if (!span) return (ERROR);
-	double	fscr = double(scr) / alprm.scale;
+	double	sscr = double(scr) / alprm.scale;	// spliced alignment score
+	double	tscr = double(fstat.val) / alprm.scale;	// transcript alignment score
 	PrintAln	praln(gaps, seqs, 2, fd);
 	int	many;
 	switch (prmode) {
@@ -1149,7 +1167,7 @@ const	GAPS*	gp = gaps[0];
 		break;
 	    case Form_CLW: break;
 	    default:
-		if (skip < 1)	fphseqs((const Seq**) seqs, 2, fd);
+		if (skip < 1)	fphseqs((const Seq**) seqs, 3, fd);
 		if (OutPrm.ColorEij) break;
 		sm->fparam(fd);
 		if (skip == -1)	return (OK);
@@ -1159,7 +1177,7 @@ const	GAPS*	gp = gaps[0];
 				fstat.mmc + fstat.unp; 
 		    percent = 100. * fstat.mch / percent;
 		    fprintf(fd, "Score = %5.1lf (%5.1f), %.1f (=), %.1f (#),",
-			fstat.val, fscr, fstat.mch, fstat.mmc);
+			sscr, tscr, fstat.mch, fstat.mmc);
 		    fprintf(fd, " %.1f (g), %.1f (u), (%5.2f %%)\n",
 			fstat.gap, fstat.unp, percent);
 		}
@@ -1673,10 +1691,12 @@ static	const char* frm[] = {"%c%s [%d:%d] ", "%s ( %d - %d )",  "%-16s ( %3d - %
 
 	if (n <= 0) {
 	    fputs(sqname(), fd);
-	} else if (--n == 0) {
+	} else if (n == 1) {
 	    fprintf(fd, frm[0], senschar(), sqname(), many, len);
+	} else if (n == 2) {
+	    fprintf(fd, frm[1], sqname(), SiteNo(left), SiteNo(right - 1));
 	} else {
-	    if (n > 2) n = 1;
+	    n = n == 3? 1: 2;
 	    sprintf(str, frm[0], senschar(), sqname(), many, len);
 	    fprintf(fd, frm[n], str, SiteNo(left), SiteNo(right - 1));
 	}
@@ -1712,7 +1732,7 @@ void fprint_seq_mem(const Seq* seqs[], int n, FILE* fd)
 {
 	if (!fd) fd = out_fd;
 	for (int i = 0; i < n; ++i) {
-	    seqs[i]->fphseq(fd, algmode.rng? 2: 0);
+	    seqs[i]->fphseq(fd, algmode.rng? 3: 0);
 	    putc(' ', fd);
 	}
 	putc('\n', fd);

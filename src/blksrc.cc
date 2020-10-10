@@ -26,13 +26,12 @@
 
 bool	ignoreamb = false;
 
-static	const	int	PRUNE = 2;
 static	const	int	TFACTOR = 100;
-static	const	int	NCAND = 10;
+static	const	int	NCAND2PHS = 10;
 static	const	INT	ddelim = SEQ_DELIM + (SEQ_DELIM << 4);
 static	const	int	genlencoeff = 38;
 static	const	INT	MinMaxGene = 16384;
-static	const	BLKTYPE	Undef = 0;
+static	const	INT	NoRetry = 2;
 
 static	const	char	dir[2] = {'>', '<'};
 static	const	char	emssg[] = "%s is incompatible !\n";
@@ -46,11 +45,10 @@ static	BlkWcPrm	wcp_cf = {4, 8, 0, 65536, 0, 8, 4096, 0, 1, 10};
 static	BlkWcPrm	wcp_cx = {4, 8, 3255, 65536, 7573, 8, 4096, 0, 5, 10};
 
 static	int	gene_rng_max_extend = -1;
-static	const	INT	blkmergin = 1024;
 static	float	hfact = 1.25;
 static	int	gratio = 10;	// ratio of average gene and cDNA
 static	const	char*	WriteFile = 0;
-static	SHORT	Ncand = NCAND;	// max number of candidates to pass to 2nd phase
+static	SHORT	Ncand = NCAND2PHS;	// max number of candidates to pass to 2nd phase
 static	const	char*	ConvPat = 0;
 static	const	char*	sBitPat = 0;
 static	float	aaafact = 1;
@@ -68,7 +66,10 @@ static	float	RbsBaseX = 0.5;
 static	float	RbsFact = FQUERY;
 static	int	Nascr = 2;
 static	INT	MinOrf = 30;	// nt
-static	float	ild_up_quantile = 0.995;
+static	float	ild_up_quantile = 0.996;
+static	BLKTYPE	MaxBlock = 0;
+static	BLKTYPE	ExtBlock = 0;
+static	BLKTYPE	ExtBlockL = 0;
 
 static	void	setupbitpat(int molc, size_t gnmsz);
 static	bool	newer(char* str, const char** argv);
@@ -99,6 +100,7 @@ const	char*	val = ps + 1;
 	    case 'E':	// max number of extension
 		gene_rng_max_extend = atoi(val);
 		if (gene_rng_max_extend <= 0) gene_rng_max_extend = 1;
+		ExtBlock = gene_rng_max_extend;
 		break;
 	    case 'G':	// Maximum gene length
 		if (*val) wcp.MaxGene = ktoi(val);
@@ -1641,7 +1643,7 @@ bq[n]->qid = n;
 	for (int n = 0; n < thread_num; ++n)
 	    pthread_join(handle[n], 0);
 	delete[] targs;
-	delete handle;
+	delete[] handle;
 }
 
 #endif	// M_THREAD
@@ -1861,7 +1863,7 @@ const	char*	path = getenv(ALN_DBS);
 	    readBlkInfo(fd, fn, &wc, &bc);
 	}
 	size_t	chrn = wc.ChrNo + 1;
-	int	MaxBlock = wc.VerNo < 21? wcp.MaxGene / wcp.blklen: wcp.Nbitpat;
+	MaxBlock = wc.VerNo < 21? wcp.MaxGene / wcp.blklen: wcp.Nbitpat;
 	const	char*	ms = wc.VerNo < 21? "MaxBlock": "BitpatNo";
 	printf("Versioin %d, Elem %u, Tuple %u, TabSize %u, BlockSize %u, MaxGene %u, %s %u, afact %u\n",
 	    wc.VerNo, wcp.Nalpha, wcp.Ktuple, wcp.TabSize, wcp.blklen, wcp.MaxGene, ms, MaxBlock, wcp.afact);
@@ -1900,7 +1902,7 @@ void SrchBlk::init2(const Seq* sd)
 const	CHAR*	ss = sd->at(sd->left);
 const	CHAR*	ts = sd->at(sd->right - (bpp[0]->width + wcp.Nshift) + 1);
 	INT	q = (ts - ss) % wcp.Nshift;
-	MinGeneLen = poslmt = 0;
+	MinGeneLen = 0;
 	for (INT p = 0; p < wcp.Nshift; ++p) {
 	    bh2->as[0][p] = ss++;
 	    bh2->as[1][q] = ts++;
@@ -1911,8 +1913,8 @@ const	CHAR*	ts = sd->at(sd->right - (bpp[0]->width + wcp.Nshift) + 1);
 void SrchBlk::init4(const Seq* sd)
 {
 	MinGeneLen = bbt * (sd->right - sd->left) * 3 / 4;
-	poslmt = (short) (gratio * sd->len / wcp.blklen + 2);
-	vclear(bh4->sigw, Ncand);
+	vclear(bh4->sigw[0], Ncand * 2);
+	vclear(bh4->sigw[1], Ncand * 2);
 	vclear(bh4->testword, 4);
 	vclear(bh4->nhit, 4);
 	vclear(bh4->maxs, 4);
@@ -1972,50 +1974,14 @@ int SrchBlk::findChrNo(const INT& blk)
 	else	return (up);
 }
 
-Seq* SrchBlk::setgnmrng(BPAIR* wrkbp)
+Seq* SrchBlk::setgnmrng(const BPAIR* wrkbp)
 {
-	Seq**	tgtgr = curgr;
-	Seq**	wrkgr = tgtgr;
-	INT&	lb = wrkbp->lb;
-	INT&	rb = wrkbp->rb;
-	int	c = findChrNo(lb);
-	INT	cb = chrblk(c);
-	INT	u = chrblk(c + 1) - 1;
-	INT	d = wrkbp->d? 3: 0;
-	INT	e = wrkbp->d? 2: 1;
-
-	INT	x = cb? lb - cb: 0;
-	INT	y = cb? rb - cb: 0;
-	while (x && bh4->bscr[d][--lb] && !bh4->bscr[e][lb]) --x;
-	while (rb < u && bh4->bscr[e][++rb] && !bh4->bscr[d][rb]) ++y;
-	d = wrkbp->d;
-	if (rb <= u) ++y;
-	x *= wcp.blklen;
-	y *= wcp.blklen;
-//	if (x > blkmergin) x -= blkmergin; else	x = 0;
-//	y += blkmergin;
-	INT	l = y;
-	INT	r = x;
-	while (--wrkgr >= gener) {
-	    if ((*wrkgr)->did == c && (*wrkgr)->inex.sens == d) {
-		INT	wl = (*wrkgr)->SiteNo((*wrkgr)->left);
-		INT	wr = (*wrkgr)->SiteNo((*wrkgr)->right);
-		if (wl > wr) swap(wl, wr);
-		if (wl > x && wl < l) l = wl;	// left most
-		if (wr < y && wr > r) r = wr;	// right most
-	    }
-	}
-	if (l > r)	{x = r; y = l;}		// x=r < l < y || x < r < l=y
-	else if (x + y > l + r)	x = r;		// x < l < r << y
-	else			y = l;		// x << l < r < y
-	if (x + MinGeneLen > y) return (0);
+	INT	x = (wrkbp->zl? wrkbp->lb - wrkbp->zl: 0) * wcp.blklen;
+	INT	y = ((wrkbp->zl? wrkbp->rb - wrkbp->zl: 0) + 1) * wcp.blklen;
 	char	str[LINE_MAX];
-	sprintf(str, "Dbs%d %d %d", c, x + 1, y);
-	Seq*	sd = (*tgtgr)->getdbseq(dbf, str, c);
-	if (cb) {
-	    lb = x / wcp.blklen + cb;
-	    rb = --y / wcp.blklen + cb;
-	}
+	sprintf(str, "Dbs%d %d %d", wrkbp->chr, x + 1, y);
+	Seq*	sd = (*curgr)->getdbseq(dbf, str, wrkbp->chr);
+	if (wrkbp->rvs && !lut) sd->comrev();
 	return (sd);
 }
 
@@ -2079,7 +2045,7 @@ int genemergin(int apos, int mingap, Seq* sd, bool rend)
 {
 	int	agap = rend? (sd->right - apos): (apos - sd->left);
 	if (!agap) return (0);
-	int	play = IntronPrm.llmt;
+	int	play = IntronPrm.minl;
 	if (sd->sigII) {
 	    int	tge = sd->sigII->to_gene_end(apos, rend);
 	    return (tge + play);
@@ -2205,43 +2171,6 @@ SrchBlk::~SrchBlk()
 	delete lut;
 }
 
-INT SrchBlk::max_intron_len(const char* fn)
-{
-	double	mu = IntronPrm.m2;
-	double	th = IntronPrm.t2;
-	double	ki = IntronPrm.k2;
-	if (IntronPrm.a2 > 0.) {
-	    mu = IntronPrm.m3;
-	    th = IntronPrm.t3;
-	    ki = IntronPrm.k3;
-	} else if (IntronPrm.a1 == 0) {
-	    mu = IntronPrm.m1;
-	    th = IntronPrm.t1;
-	    ki = IntronPrm.k1;
-	}
-	INT	observed = 0;
-	FILE*	fd = ftable.fopen(ipstat, "r");
-	if (fd) {
-	    const	char*	sl = strrchr(fn, '/');
-	    if (sl) fn = sl + 1;
-	    char	str[LINE_MAX];
-	    while (fgets(str, LINE_MAX, fd)) {
-		if (strncmp(str, fn, 8)) continue;
-		Strlist	stl(str, stddelim);
-		if (atoi(stl[2]) < 1000) break;
-		observed = atoi(stl[5]);
-		int	n = stl.size() - 6;
-		mu = atof(stl[n]);
-		th = atof(stl[n + 1]);
-		ki = atof(stl[n + 2]);
-		break;
-	    }
-	    fclose(fd);
-	}
-	INT	q99 = (INT) frechet_quantile(ild_up_quantile, mu,th, ki);
-	return (max(observed, q99));
-}
-
 void SrchBlk::initialize(Seq* sqs[], const char* fn)
 {
 	if (!pbwc->blkp)
@@ -2264,6 +2193,7 @@ void SrchBlk::initialize(Seq* sqs[], const char* fn)
 	if (wcp.Nbitpat > 3) {
 	    bpp[2] = new Bitpat(wcp.Bitpat2);
 	}
+	min_agap = bpp[0]->width;
 	rdbt = new Randbs((double) pbwc->AvrScr * bpp[0]->weight / wcp.Nshift, gnmdb);
 #if TESTRAN
 	tstrn = 0;
@@ -2272,14 +2202,16 @@ void SrchBlk::initialize(Seq* sqs[], const char* fn)
 	maxmmc = (MaxMmc == 0 || (int) MaxMmc > (INT_MAX / bpp[0]->weight)
 		 || algmode.lcl & 16)?
 	    INT_MAX: bpp[0]->weight * MaxMmc / wcp.Nshift;
-	vthr = (VTYPE) (alprm.scale * alprm.thr);
+	vthr = (VTYPE) (alprm.scale * 2 * alprm.thr);
 	ptpl = rdbt->base() / pbwc->AvrScr;
 	DeltaPhase2 = (int) (ptpl * pbwc->AvrScr);
 	MaxBlock = wcp.MaxGene / wcp.blklen;
-	ExtBlock = (max_intron_len(fn) + wcp.blklen) / wcp.blklen;
+	if (ExtBlock == 0) 
+	    ExtBlock = max_intron_len(ild_up_quantile, fn) / wcp.blklen + 1;
+	ExtBlockL = MaxBlock / 2 + 1;
 	nseg = chrblk(pbwc->ChrNo);
 	bbt = pwd->DvsP == 1? 3: 1;
-	Ncand = OutPrm.MaxOut + NCAND;
+	Ncand = OutPrm.MaxOut + NCAND2PHS;
 	if (gnmdb)	bh4 = new Bhit4(nseg);
 	else {
 	    bh2 = new Bhit2(nseg);
@@ -2405,105 +2337,159 @@ bool extend_gene_rng(Seq* sqs[], const PwdB* pwd, DbsDt* dbf)
 	return (extended);
 }
 
-bool SrchBlk::FindHsp(BPAIR* wrkbp)
+
+int SrchBlk::FindHsp(BPAIR* wrkbp)
 {
 	INT	intr = (*gener)->inex.intr;
-	int	c1 = findChrNo(wrkbp->lb);
-	INT	zl = chrblk(c1);
-	INT	zr = chrblk(c1+1) - 1;
-	int	sr = chrsize(c1);
-	RANGE	rng;
-	int	ntry = 0;
-const	WLPRM*	wlprm = setwlprm(lut? MaxWlpLevel: algmode.crs);
+	int	sr = chrsize(wrkbp->chr);
+const	bool	rvs = wrkbp->rvs;
+	if (rvs && lut)	query->comrev();
 
 	wrkbp->jscr = 0;
-	Seq*   cursd = 0;
-retry:
+	Seq*	cursd = 0;
+	RANGE	qrng, grng;
+	query->saverange(&qrng);
+	INT	retry_no = 0;
 	RANGE	prv = {query->right, query->left};
+
+retry:
 	cursd = setgnmrng(wrkbp);
-	if (!cursd) return (false);
+	if (!cursd) return (2);
 	cursd->inex.intr = intr;
-const	bool	rvs = wrkbp->d > 1;
-	if (rvs) {
-	    if (lut)	query->comrev();
-	    else	cursd->comrev();
-	}
 	if (query->isprotein()) cursd->nuc2tron();
 	swap(*curgr, seqs[1]);		// temporally save
 	Wilip*	wl = (lut && wrkbp->rb < (wrkbp->lb + MaxBlock))?
 	    new Wilip(seqs, pwd, lut, wrkbp->lb - 1, wrkbp->rb):
-	    new Wilip((const Seq**) seqs, pwd, algmode.crs);
+	    new Wilip((const Seq**) seqs, pwd, algmode.lvl);
+	BPAIR	orgbp = *wrkbp;
 	swap(*curgr, seqs[1]);		// restore
 	WLUNIT*	wlu = wl->begin();
-	if (!wlu) {delete wl; return (false);}
-	cursd->saverange(&rng);
+	if (!wlu) {delete wl; return (2);}
+	cursd->saverange(&grng);
 	int	n = min((int) OutPrm.MaxOut2, wl->size());
 	JUXT	lend = {query->right, 0};
 	JUXT	rend = {query->left, 0};
 	int	nbetter = 0;
+	int	multi = 0;
+	VTYPE	lcritjscr = critjscr;
 	for ( ; n--; ++wlu) {
-	    if (wlu->scr < critjscr) break;
-	    ++nbetter;
-	    JUXT*	wjxt = wlu->jxt;
-	    if (lend.jx > wjxt->jx) lend = *wjxt;
-	    wjxt += wlu->num - 1;
-	    int	l = wjxt->jx + wjxt->jlen;
-	    if (rend.jx < l) {
-		rend.jx = l;
-		rend.jy = wjxt->jy + bbt * wjxt->jlen;
+	    if (wlu->num > 1) ++multi;
+	    if ((wlu->scr += (wlu->num - 1) * IntronPrm.ip) >= lcritjscr) {
+		++nbetter;
+		lcritjscr = wlu->scr - vthr;
+		JUXT*	wjxt = wlu->jxt;
+	 	if (lend.jx > wjxt->jx) lend = *wjxt;
+	 	wjxt += wlu->num - 1;
+	 	int	l = wjxt->jx + wjxt->jlen;
+	 	if (rend.jx < l) {
+		    rend.jx = l;
+		    rend.jy = wjxt->jy + bbt * wjxt->jlen;
+		}
+	    } else {
+		for (WLUNIT* wwl = wl->begin(); wwl < wlu; ++wwl) {
+		    if (wwl->llmt <= wlu->ulmt && wwl->llmt > wlu->llmt)
+			wwl->llmt = wlu->llmt;
+		    if (wwl->ulmt >= wlu->llmt && wwl->ulmt < wlu->ulmt)
+			wwl->ulmt = wlu->ulmt;
+		}
 	    }
 	}
-	if (!nbetter) {delete wl; return (false);}
-	int	lrextend = 0;				// try extended blocks
-	if (lend.jx < prv.left && ((rvs && wrkbp->rb < zr) || (!rvs && wrkbp->lb > zl))) {
+	if (!nbetter) {delete wl; return (multi? 2: 0);}
+
+	int	lrextend = 0;			// try extended blocks
+	if (lend.jx && lend.jx < prv.left) {
 	    prv.left = lend.jx;
-	    if (lend.jx > (int) wlprm->width) {
-		lrextend = 1;
-		if (rvs) {
-		    INT	p = min(wrkbp->rb + ExtBlock, zr);
-		    while (++wrkbp->rb < p)
-			if (bh4->bscr[wrkbp->d][wrkbp->rb]) break;
-		} else {
-		    INT	p = max(wrkbp->lb - ExtBlock, zl);
-		    while (--wrkbp->lb > p)
-			if (bh4->bscr[wrkbp->e][wrkbp->lb]) break;
+	    if (lend.jx > min_agap) lrextend = 1;
+	    if (rvs) {
+		if (lend.jx <= min_agap)
+		    wrkbp->rb = wrkbp->db;
+		else {
+		    wrkbp->rb = min(wrkbp->rb + ExtBlockL, wrkbp->zr);
+		    for ( ; wrkbp->rb > wrkbp->db; --wrkbp->rb)
+			if (bh4->bscr[2][wrkbp->rb]) break;
 		}
+		wrkbp->db = min(wrkbp->rb + ExtBlock, wrkbp->zr);
+	    } else {
+		if (lend.jx <= min_agap)
+		    wrkbp->lb = wrkbp->ub;
+		else {
+		    INT	x = wrkbp->lb > ExtBlockL? wrkbp->lb - ExtBlockL: 0;
+		    wrkbp->lb = max(x, wrkbp->zl);
+		    for ( ; wrkbp->lb < wrkbp->ub; ++wrkbp->lb)
+			if (bh4->bscr[0][wrkbp->lb]) break;
+		}
+		INT	x = wrkbp->lb > ExtBlock? wrkbp->lb - ExtBlock: 0;
+		wrkbp->ub = max(x, wrkbp->zl);
 	    }
 	}
-	if (rend.jx > prv.right && ((rvs && wrkbp->lb > zl) || (!rvs && wrkbp->rb < zr))) {
+	if (query->right > rend.jx && rend.jx > prv.right) {
 	    prv.right = rend.jx;
-	    if (query->right - rend.jx > (int) wlprm->width) {
-		lrextend |= 2;
-		if (rvs) {
-		    INT	p = max(wrkbp->lb - ExtBlock, zl);
-		    while (--wrkbp->lb > p)
-			if (bh4->bscr[wrkbp->e][wrkbp->lb]) break;
-		} else {
-		    INT p = min(wrkbp->rb + ExtBlock, zr);
-		    while (++wrkbp->rb < p)
-			if (bh4->bscr[wrkbp->d][wrkbp->rb]) break;
+	    int	dlt = query->right - rend.jx;
+	    if (dlt > min_agap) lrextend += 2;
+	    if (rvs) {
+		if (dlt == 1 && wrkbp->lb > wrkbp->ub)
+		    --wrkbp->lb;
+		else if (dlt < min_agap)
+		    wrkbp->lb = wrkbp->ub;
+		else {
+		    INT	x = wrkbp->lb > ExtBlockL? wrkbp->lb - ExtBlockL: 0;
+		    wrkbp->lb = max(x, wrkbp->zl);
+		    for ( ; wrkbp->lb < wrkbp->ub; ++wrkbp->lb)
+			if (bh4->bscr[3][wrkbp->lb]) break;
 		}
+		INT	x = wrkbp->lb > ExtBlock? wrkbp->lb - ExtBlock: 0;
+		wrkbp->ub = max(x, wrkbp->zl);
+	    } else {
+		if (dlt == 1 && wrkbp->rb < wrkbp->db)
+		    ++wrkbp->rb;
+		else if (dlt < min_agap)
+		    wrkbp->rb = wrkbp->db;
+		else {
+		    wrkbp->rb = min(wrkbp->rb + ExtBlockL, wrkbp->zr);
+		    for ( ; wrkbp->rb > wrkbp->db; --wrkbp->rb)
+			if (bh4->bscr[1][wrkbp->rb]) break;
+		}
+		wrkbp->db = min(wrkbp->rb + ExtBlock, wrkbp->zr);
 	    }
 	}
-	if (lrextend && ntry++ < 3) {
+	if (lrextend && retry_no++ < NoRetry) {
 	    delete wl;
+	    orgbp = *wrkbp;
 	    goto retry;
 	}
-	wlu  = wl->begin();
+
+	int	lbias = orgbp.lb - wrkbp->lb;
+	int	ubias = wrkbp->rb - orgbp.rb;
+	if (lbias || ubias) {
+	    cursd = setgnmrng(wrkbp);
+	    if (!cursd) return (0);
+	    if (rvs) swap(lbias, ubias);
+	    cursd->inex.intr = intr;
+	    if (query->isprotein()) cursd->nuc2tron();
+	    if (lbias) {
+		int	partial_block_len = (rvs && wrkbp->rb == wrkbp->zr)?	 // chromosomal end
+		    (wcp.blklen - cursd->len % wcp.blklen): 0;
+		lbias = lbias * wcp.blklen - partial_block_len;
+	    }
+	    wl->shift_y(lbias, cursd->len);
+	}
+	cursd->saverange(&grng);
+	wlu = wl->begin();
 	wrkbp->jscr = wlu->scr;
 	Seq**	wrkgr;
 	for ( ; wlu->num; ++wlu) {
+	    if (wlu->scr < lcritjscr) break;
 	    JUXT*	wjxt = wlu->jxt;
 	    if (wrkbp - bh4->bpair >= (int) OutPrm.MaxOut && wlu->scr < critjscr)
 		break;
 	    if (wlu > wl->begin()) {
 		if (cursd != *curgr) cursd->aliaseq(*curgr);
-		(*curgr)->restrange(&rng);
+		(*curgr)->restrange(&grng);
 	    }
 	    (*curgr)->jscr = (VTYPE) wlu->scr;
 	    (*curgr)->CdsNo = 0;
 	    (*curgr)->left = wlu->llmt;
-	    (*curgr)->right = wlu->ulmt;
+	    if (wlu->ulmt < (*curgr)->right) (*curgr)->right = wlu->ulmt;
 	    int	y = query->right - query->left;
 	    if (wlu->tlen > y) {
 		double	x = (*curgr)->jscr;
@@ -2551,119 +2537,124 @@ const	bool	rvs = wrkbp->d > 1;
 	}
 	delete wl;
 	if (curgr == lstgr) (*curgr)->refresh();
-	return (true);
+	return (1);
+}
+
+SHORT SrchBlk::extract_to_work(int d)
+{
+	SHORT	e = d + 1;
+	SHORT	f = (SHORT) (d >> 1);
+	if (!bh4->sign[d] && !bh4->sign[e]) return (0);
+	SHORT	j = 0;
+	BLKTYPE*&	sw = bh4->sigw[f];
+	while (j < bh4->sign[d]) {
+	    BlkScr&	bs = (*bh4->prqueue_b[d])[j];
+	    sw[j++] = bs.key << 1;
+	}
+	for (SHORT k = 0; k < bh4->sign[e]; ++k) {
+	    BlkScr&	bs = (*bh4->prqueue_b[e])[k];
+	    sw[j++] = (bs.key << 1) + 1;
+	}
+	if (j == 1) {
+	    sw[0] &= ~1;
+	    sw[1] = INT_MAX;
+	    return (1);
+	}
+	qsort((UPTR) sw, j, sizeof(BLKTYPE), (CMPF) cmpf);
+	BLKTYPE	p = sw[0] >> 1;
+	if (d && j > 1) {
+	    for (SHORT i = 1; i < j; ++i) {
+		BLKTYPE	q = sw[i] >> 1;
+		if (p == q) swap(sw[i - 1], sw[i]);
+		else	p = q;
+	    }
+	}
+	p = sw[0] >> 1;
+	bool	pr = (sw[0] & 1) ^ f;
+	int	cp = findChrNo(p);
+	sw[0] &= ~1;		// reset lsb
+	SHORT	k = 0;
+	SHORT	c = 0;
+	for (SHORT i = 1; i < j; ++i) {
+	    BLKTYPE	q = sw[i] >> 1;
+	    bool	qr = (sw[i] & 1) ^ f;
+	    int	cq = findChrNo(q);
+	    sw[i] &= ~1;	// reset lsb
+	    int	s = q - p;
+	    if (cp == cq && (s < 2 ||	// contiguous
+		(!pr && qr && s <= int(MaxBlock)) ||
+		(pr == qr && s <= int(ExtBlock)))) {
+		if (!c++) sw[k++] = sw[i - 1];
+	    } else {	// separate
+		sw[k++] = sw[i - 1] | (c? 1: 0);
+		c = 0;
+	    }
+	    p = q;
+	    pr = qr;
+	    cp = cq;
+	}
+	sw[k++] = sw[j - 1] + (c? 1: 0);
+	sw[k] = INT_MAX;
+	return (k);
 }
 
 int SrchBlk::TestOutput(int force)
 {
-	SHORT	d, e, i, j, k, phase1;
-	INT	x, y, z;
-	int	c1, c2;
-	BLKTYPE	p, q;
 	int	ReportAln = algmode.nsa != MAP1_FORM && algmode.nsa != MAP2_FORM;
 	BPAIR*	wrkbp = bh4->bpair;
-	BPAIR*	sigbp = bh4->bpair;
 	BPAIR*	curbp = bh4->bpair;
 	BPAIR*	lstbp = bh4->bpair + Ncand;
 	Seq**	wrkgr;
-	SHORT	sigm[4];
-static	char	ofmt[] = "%-7s %c %5d %5d %-7s %5d %5d %6.2f %6.2f %3d %3d %2d %2d %2d %2d %d %d\n";
-static	char	ofmt2[] = "%-7s %c %5d %5d %-7s %5d %5d %6.2f %6.2f %3d %3d %2d %2d %2d %2d\n";
+	SHORT	sigm[2];
+static	const	char	ofmt[] = 
+	"%-7s %c %5d %5d %-7s %5d %5d %6.2f %6.2f %3ld %3ld %2d %2d %2d %2d %d %d\n";
+static	const	char	ofmt2[] = 
+	"%-7s %c %5d %5d %-7s %5d %5d %6.2f %6.2f %3d %3d %2d %2d %2d %2d\n";
 
 	curgr = gener;
 	curbp->bscr = 0;
 	for (wrkgr = gener; wrkgr < lstgr; ++wrkgr) (*wrkgr)->len = 0;
-	for (d = 0; d < 4; ++d)		// sort on position
-	    sigm[d] = bh4->extract_to_work(d);
-	for (d = 0; d < 4; d += 2) {	// pair end
-	    e = d + 1;
-	    i = j = 0;
-	    int	bscrThr = rdbt->randbs(bh4->mmct[d] + bh4->mmct[e]) + rdbt->Phase1T;
-	    while (i < sigm[d] && j < sigm[e]) {
-		p = bh4->sigb[d][i];
-		q = bh4->sigb[e][j];
-		c1 = findChrNo(p);
-		c2 = findChrNo(q);
-		int	s = q - p;
-		if (d) s = -s;
-		if (c1 != c2 || s > MaxBlock || s < 0) {
-		    if (p < q) ++i; else ++j;
-		    continue;
-		}
+	for (SHORT f = 0; f < 2; ++f)		// sort on position
+	    sigm[f] = extract_to_work(f << 1);
+	for (SHORT f = 0; f < 2; ++f) {
+	    SHORT	d = f << 1;
+	    SHORT	e = d + 1;
+	    BLKTYPE	pu = 0;
+	    for (SHORT i = 0; i < sigm[f]; ++i) {
+		BLKTYPE	p = bh4->sigw[f][i] >> 1;
+		BLKTYPE	q = bh4->sigw[f][i + 1 < sigm[f]? i + 1: i];
+		bool	ispair = q & 1;
+		q >>= 1;
+		if (ispair) ++i;	// block pair
+		else	q = p;	// sigleton
+		BLKTYPE	qd = bh4->sigw[f][i + 1] >> 1;
 		curbp->jscr = 0;
-		curbp->chr = c1;
-		if (d) {
-		    int	k = i;
-		    while (++k < sigm[d] && bh4->sigb[d][k] < q + poslmt) ;
-		    p = bh4->sigb[d][--k];
-		} else {
-		    int	k = j;
-		    while (++k < sigm[e] && bh4->sigb[e][k] < p + poslmt) ;
-		    q = bh4->sigb[e][--k];
+		curbp->rvs = f;
+		int	c1 = curbp->chr = findChrNo(q);
+		curbp->zl = chrblk(c1);
+		curbp->zr = chrblk(c1 + 1) - 1;
+		curbp->lb = p;
+		curbp->rb = q;
+		curbp->bscr = 0;
+		for (BLKTYPE r = curbp->lb; r <= curbp->rb; ++r)
+		    curbp->bscr += bh4->bscr[d][r] + bh4->bscr[e][r];
+		BLKTYPE	exb = ExtBlock;
+		BLKTYPE r = curbp->lb;
+		BLKTYPE	z = max3((r > exb)? r - exb: 0, curbp->zl, pu);
+		while (r && --r >= z && (bh4->bscr[d][r] + bh4->bscr[e][r])) {
+		    curbp->lb = r;
+		    curbp->bscr += bh4->bscr[d][r] + bh4->bscr[e][r];
 		}
-		curbp->bscr = bh4->bscr[e][q] + bh4->bscr[d][p];
-		if (s > poslmt) {
-		    s -= poslmt;
-		    curbp->bscr -= (int) (s * s);
+		curbp->ub = max((r > exb)? r - exb: 0, curbp->zl);
+
+		r = curbp->rb;
+		z = min3(r + exb, curbp->zr, qd);
+		while (++r < z && (bh4->bscr[d][r] + bh4->bscr[e][r])) {
+		    curbp->rb = r;
+		    curbp->bscr += bh4->bscr[d][r] + bh4->bscr[e][r];
 		}
-		if (curbp->bscr < bscrThr) {
-		    if (p < q) ++i; else ++j;
-		    continue;
-		}
-		curbp->d = d;
-		curbp->e = e;
-		curbp->lb = d? q: p;
-		curbp->rb = d? p: q;
-		for (wrkbp = curbp; --wrkbp >= bh4->bpair; ) {
-		    if (wrkbp[1].bscr > wrkbp->bscr) {
-			swap(wrkbp[0], wrkbp[1]);
-		    } else break;	// sort in decending order
-		}
-		if (curbp < lstbp) {
-		    ++curbp;
-		    bh4->sigb[d][i] = bh4->sigb[e][j] = Undef;
-		}
-		++i; ++j;
-	    }
-	}
-	for (d = 0; d < 4; ++d) {	// single end
-	    if (d % 2)	{j = e = d - 1; k = d;}
-	    else	{k = e = d + 1; j = d;}
-	    for (i = 0; i < sigm[d]; ++i) {
-		p = bh4->sigb[d][i];
-		if (p == Undef) continue;
-		c1 = findChrNo(p);
-		curbp->chr = c1;
-		curbp->bscr = bh4->bscr[d][p];
-		curbp->jscr = 0;
-		curbp->d = curbp->e = d;
-		curbp->lb = curbp->rb = p;
-		curbp->bscr += bh4->bscr[e][p];
-		BLKTYPE	z = max(chrblk(c1),p - MaxBlock + 1);
-		for (q = p; q && --q >= z; ) {
-		    if (bh4->bscr[j][q]) {
-			curbp->bscr += bh4->bscr[j][q];
-			curbp->lb = q;
-		    } else if (j != d && bh4->bscr[d][q]) {
-			curbp->bscr += bh4->bscr[d][q];
-			curbp->lb = q;
-		    } else break;
-		}
-		z = min(chrblk(c1+1), p + MaxBlock);
-		for (q = p; ++q < z; ) {
-		    if (bh4->bscr[k][q]) {
-			curbp->bscr += bh4->bscr[k][q];
-			curbp->rb = q;
-		    } else if (k != d && bh4->bscr[d][q]) {
-			curbp->bscr += bh4->bscr[d][q];
-			curbp->rb = q;
-		    } else break;
-		}
-		int	s = curbp->rb - curbp->lb;
-		if (s > poslmt) {
-		    s -= poslmt;
-		    curbp->bscr -= (int) (s * s);
-		}
+		curbp->db = min(r + exb, curbp->zr);
+		pu = curbp->rb + 1;
 		for (wrkbp = curbp; --wrkbp >= bh4->bpair; ) {
 		    if (wrkbp[1].bscr > wrkbp->bscr) {
 			swap(wrkbp[0], wrkbp[1]);
@@ -2672,56 +2663,43 @@ static	char	ofmt2[] = "%-7s %c %5d %5d %-7s %5d %5d %6.2f %6.2f %3d %3d %2d %2d 
 		if (curbp < lstbp) ++curbp;
 	    }
 	}
+
 	if (curbp == bh4->bpair) return (force? ERROR: 0);
 	++force;
-	lstbp = curbp;		// merge overlaps
-	for (wrkbp = curbp = bh4->bpair; ++wrkbp < lstbp; ) {
-	    d = wrkbp->d / 2;
-	    for (sigbp = bh4->bpair; sigbp < wrkbp; ++sigbp) {
-		if (sigbp->d / 2 == d &&
-		    ((sigbp->lb <= wrkbp->rb) && (wrkbp->lb <= sigbp->rb))) {
-			if (sigbp->lb > wrkbp->lb) sigbp->lb = wrkbp->lb;
-			if (sigbp->rb < wrkbp->rb) sigbp->rb = wrkbp->rb;
-			wrkbp->bscr = 0;	// overlap
-		}
-	    }
-	}
-	phase1 = 0;	// look for best block pair
-	int	nfail = 0;
-	for (wrkbp = curbp = bh4->bpair; wrkbp < lstbp && nfail < 2; ++wrkbp) {
+	lstbp = curbp;
+	int	phase1 = 0;	// look for best block pair
+	INT	nfail = OutPrm.MaxOut2 + 2;
+	for (wrkbp = curbp = bh4->bpair; wrkbp < lstbp && nfail; ++wrkbp) {
 	    if (wrkbp->bscr == 0) continue;
-	    d = wrkbp->d; e = wrkbp->e;
+	    SHORT	d = wrkbp->rvs << 1;
+	    SHORT	e = d + 1;
 	    if (force != 2 && (wrkbp->bscr < 
 		rdbt->randbs(bh4->mmct[d] + bh4->mmct[e]) + rdbt->Phase1T))
 		continue;
-	    if (FindHsp(wrkbp)) ++phase1;
-	    else	++nfail;
-	    if (wrkbp->jscr > curbp->jscr) curbp = wrkbp;
+	    switch (FindHsp(wrkbp)) {
+		case 1: ++phase1; break;
+		case 2: --nfail; break;
+		default: break;
+	    }
 	}
 	if (phase1) {			// phase1 passed
-#if PRUNE == 2
-	    VTYPE	scr = (*gener)->jscr - DeltaPhase2;
-	    for (wrkgr = gener; wrkgr < curgr; ++wrkgr) {  // close relatives
-		if ((*wrkgr)->jscr < scr) break;
-	    }
-	    for (curgr = wrkgr; wrkgr < lstgr && (*wrkgr)->many; ++wrkgr)
-		(*wrkgr)->refresh((*wrkgr)->many);    // clean other candidates
-#endif
 	    if (ReportAln) return (curgr - gener);
 	} else if (force < 2) return (0);	// next reccurence
 	else if (ReportAln && query->isprotein() && algmode.slv) {	// examine all positive blocks
 	    curgr = gener;
 	    curbp = bh4->bpair + 1;
 	    curbp->bscr = 0;
-	    for (d = 0; d < 4; d += 2) {
-		bh4->bpair->d = d;
-		bh4->bpair->e = e = d + 1;
+	    for (SHORT d = 0; d < 4; d += 2) {
+		bh4->bpair->rvs = d > 1;
 		bh4->bpair->bscr = 0;
 		bh4->bpair->chr = 0;
 		SHORT	s = pbwc->AvrScr;
-		for (y = z = x = c2 = 0; ++x < nseg; ) {
+		int	c2 = 0;
+		SHORT	e = d + 1;
+		INT	x, y, z;
+		for (y = z = x = c2; ++x < nseg; ) {
 		    if (bh4->bscr[d][x] || bh4->bscr[e][x]) {
-			c1 = findChrNo(x);
+			int	c1 = findChrNo(x);
 			if (((!y && z) || c1 != c2) && bh4->bpair->bscr >= s) {
 			    FindHsp(bh4->bpair);
 			    if (bh4->bpair->bscr > curbp->bscr) *curbp = *bh4->bpair;
@@ -2746,10 +2724,10 @@ static	char	ofmt2[] = "%-7s %c %5d %5d %-7s %5d %5d %6.2f %6.2f %3d %3d %2d %2d 
 	    }
 	    if (curgr > gener) return (curgr - gener);
 	}
-	d = curbp->d;				// map only or phase1 failed
-	e = curbp->e;
-	p = d? curbp->rb: curbp->lb;
-	q = d? curbp->lb: curbp->rb;
+	SHORT	d = curbp->rvs << 1;				// map only or phase1 failed
+	SHORT	e = d + 1;
+	BLKTYPE	p = d? curbp->rb: curbp->lb;
+	BLKTYPE	q = d? curbp->lb: curbp->rb;
 	char*	cid = dbf->entname(curbp->chr);
 	if (algmode.nsa == MAP1_FORM) {
 	    printf(ofmt, query->sqname(), dir[d / 2], query->left, query->right, cid, p, q,
@@ -2759,8 +2737,8 @@ static	char	ofmt2[] = "%-7s %c %5d %5d %-7s %5d %5d %6.2f %6.2f %3d %3d %2d %2d 
 		bh4->as[e][bh4->maxs[e]] - query->at(0), 
 		bh4->mmct[d], bh4->mmct[e], bh4->nhit[d], bh4->nhit[e], bh4->testword[d], bh4->testword[e]);
 	} else if (algmode.nsa == MAP2_FORM) {
-	    x = p - chrblk(curbp->chr);
-	    y = q - chrblk(curbp->chr);
+	    int	x = p - chrblk(curbp->chr);
+	    int	y = q - chrblk(curbp->chr);
 	    if (x > 0) x = (x - 1) * wcp.blklen;
 	    y *= wcp.blklen;
 	    printf("%s\t%s\t%7d\t%7d %c\t%7d\t%7d\n",
@@ -2784,13 +2762,12 @@ Bhit4::Bhit4(int nseg)
 	bscr[0] = new int[4 * nseg];
 	ascr[0] = new int[4 * nseg];
 	as[0] = new const CHAR*[4 * wcp.Nshift];
-	sigw = new BLKTYPE[Ncand];
-	sigb[0] = new BLKTYPE[4 * Ncand];
+	sigw[0] = new BLKTYPE[Ncand * 2 + 1];
+	sigw[1] = new BLKTYPE[Ncand * 2 + 1];
 	for (int d = 1; d < 4; ++d) {
 	    bscr[d] = bscr[d-1] + nseg;
 	    ascr[d] = ascr[d-1] + nseg;
 	    as[d] = as[d-1] + wcp.Nshift;
-	    sigb[d] = sigb[d-1] + Ncand;
 	}
 	bpair = new BPAIR[Ncand + 1];
 	INT	na = Nascr + 1;
@@ -2799,8 +2776,8 @@ Bhit4::Bhit4(int nseg)
 	vclear(blkscr, 4 * (nc + na));
 	BlkScr*	bs = blkscr;
 	for (int d = 0; d < 4; ++d, bs += nc) {
-	    prqueue_a[d] = new PrQueue<BlkScr>(bs, Nascr, 0, false, true);
-	    prqueue_b[d] = new PrQueue<BlkScr>(bs += na, Ncand, 0, false, true);
+	    prqueue_a[d] = new PrQueue_wh<BlkScr>(bs, Nascr, 0, false, true);
+	    prqueue_b[d] = new PrQueue_wh<BlkScr>(bs += na, Ncand, 0, false, true);
 	}
 }
 
@@ -2808,8 +2785,8 @@ Bhit4::~Bhit4()
 {
 	delete[] bscr[0];
 	delete[] ascr[0];
-	delete[] sigw;
-	delete[] sigb[0];
+	delete[] sigw[0];
+	delete[] sigw[1];
 	delete[] bpair;
 	delete[] as[0];
 	delete[] blkscr;
@@ -2832,30 +2809,6 @@ int Bhit4::update_b(int d, BLKTYPE blk)
 	int	p = prqueue_b[d]->find(sb);
 	prqueue_b[d]->put(sb, p);
 	return (sign[d] = prqueue_b[d]->size());
-}
-
-SHORT Bhit4::extract_to_work(int d)
-{
-	for (SHORT i = 0; i < sign[d]; ++i) {
-	    BlkScr&	bs = (*prqueue_b[d])[i];
-	    sigw[i] = bs.key;
-	}
-	if (sign[d] < 2) {
-	    sigb[d][0] = sigw[0];
-	    return (sign[d]);
-	}
-	qsort((UPTR) sigw, (INT) sign[d], sizeof(BLKTYPE), (CMPF) cmpf);
-	SHORT	j = 0;
-	for (SHORT i = 0; i < sign[d]; ++i) {
-	    bool	s = i && (sigw[i] > sigw[i-1] + 1);
-	    if (s) ++j;					// discontinuous
-	    if (d == 1 || d == 2) {
-		sigb[d][j] = sigw[i];		// last block
-	    } else {
-		if (!i || s) sigb[d][j] = sigw[i];	// first block
-	    }
-	}
-	return (++j);
 }
 
 Qwords::Qwords(int k, int nc, CHAR* ct, ContBlk* pwc, Bitpat** bp, Seq* a) :

@@ -40,8 +40,8 @@ typedef int (*CMPF)(const UPTR, const UPTR);
 #define OK	0
 #define ABORT	INT_MIN
 #define MAXL	256
-#ifndef	LINE_MAX
-#define	LINE_MAX	2048
+#ifndef LINE_MAX
+#define LINE_MAX	2048
 #endif
 #define ON	1
 #define OFF	0
@@ -86,7 +86,7 @@ static	const	char	OPTCHAR = '-';
 //	if no zlib.h #define USE_ZLIB 0
 
 #ifndef USE_ZLIB
-#define USE_ZLIB 0
+#define USE_ZLIB 1
 #endif
 #if USE_ZLIB
 #include <zlib.h>

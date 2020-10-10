@@ -37,9 +37,7 @@
 #define isnumer(c) (isdigit(c)||c=='.'||c=='+'||c=='-'||c=='e'||c=='E')
 
 FILE*	out_fd = stdout;
-static	const	int	MAXARG = 4;
 static	const	int	NEG = -1;
-static	const	int	gzCompress_rate = 10;
 
 const	char*	no_file = "\'%s\' cannot be created!\n";
 const	char*	not_found = "\'%s\' is not found!\n";

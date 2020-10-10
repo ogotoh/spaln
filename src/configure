@@ -12,8 +12,9 @@ RANLIB=${RANLIB-"ranlib"}
 exec_prefix=${exec_prefix-${PWD}/../bin}
 table_dir=${table_dir-${PWD}/../table}
 alndbs_dir=${alndbs_dir-${PWD}/../seqdb}
-use_zlib=0
+use_zlib=1
 LLIB="-lpthread -lm"
+DEFLT="-Wall -DM_THREAD=1"
 
 while test $# -ge 1
 do
@@ -58,14 +59,14 @@ if ($CXX -c $CFLAGS $test.cc) 2>/dev/null; then
   echo "OK, CXX=$CXX CFLAGS=$CFLAGS"
 else
   CXX="g++"
-  CFLASS="-O3"
+  CFLAGS="-O3"
   echo "use CXX=$CXX CFLAGS=$CFLAGS"
 fi
 
 if [ $use_zlib == "1" ] ; then
-  CFLAGS="${CFLAGS} -DUSE_ZLIB=1"
+  DEFLT="${DEFLT} -DUSE_ZLIB=1"
   LLIB="${LLIB} -lz"
-echo "$use_zlib $CFLAGS"
+  echo "$use_zlib $CFLAGS"
 fi
 
 if ($RANLIB -V) >/dev/null 2>/dev/null; then
@@ -86,6 +87,7 @@ echo "alndbs install to $alndbs_dir"
 sed < Makefile.in "
 /^CXX *=/s%=.*%= $CXX%
 /^CFLAGS *=/s%=.*%= $CFLAGS%
+/^DEFLT *=/s%=.*%= $DEFLT%
 /^LLIB *=/s%=.*%= $LLIB%
 /^LD *=/s%=.*%= $LD%
 /^AR *=/s%=.*%= $AR%

@@ -25,7 +25,7 @@
 #include "cmn.h"
 
 struct	ALPRM {float u, v, u0, u1, v0, tgapf, thr, scale, maxsp, gamma; int k1, ls, sh, mtx_no;};
-struct	ALPRM2 {float x, y, z, o, bti, spb, Z, sss; int jneibr, termk1;};
+struct	ALPRM2 {float x, y, z, o, w, bti, spb, Z, sss; int jneibr, termk1;};
 struct	ALPRM3 {float scnd, hydr, hpmt; int hpwing, no_angle;};
 struct	DefSetup {int defmolc, delamb; InputMode def_input_mode;};
 
@@ -349,6 +349,7 @@ const	char*	sqname(bool fpri = false) const {
 	void	comple();
 	void	comrev() {reverse(); if (!isprotein()) comple();}
 	void	comrev(Seq** sqs);
+	JUXT*	revjxt();
 	void	setanti(Seq** cmpl) {anti_ = cmpl;}
 	Seq**	getanti() {return (anti_);}
 	void	copyattr(Seq* dest) const;
@@ -402,7 +403,7 @@ template <typename file_t>
 	Seq*	read_dbseq(DbsDt* dbf, long pos);
 	Seq*	getdbseq(DbsDt* dbf, const char* code, int c = -1, bool readin = true);
 	Seq*	apndseq(char* aname);
-	void	fphseq(FILE* fd = 0, int n = 2) const;
+	void	fphseq(FILE* fd = 0, int n = 3) const;
 	FTYPE*	composition();
 	void	printseq(FILE* fdi, int);
 	void	fpmem_len(FILE* fd);
@@ -1131,7 +1132,7 @@ eol:
 	    molc = (cmp[aton('T')] >= cmp[aton('U')])? DNA: RNA;
 	else if (tmark && 100. * (tmark + cmp[aton('O')]) / total > MinPctTronChar) {
 	    molc = TRON;
-	    prompt("Warning: %s is regared as TRON sequence!\n", spath);
+	    prompt("Warning: %s is regarded as TRON sequence!\n", sqname());
 	}
 	setSeqCode(this, molc);
 	return molc;
@@ -1454,7 +1455,7 @@ extern	FILE*	setup_output(int omode = 0, const char* def_fn = 0, bool setup_out_
 extern	void	close_output();
 extern	void	closeGeneRecord();
 extern	void	setprmode(int pmd, int lorn, int trc);
-extern	void	fphseqs(const Seq* seqs[], int n, FILE* fd = 0);
+extern	void	fphseqs(const Seq* seqs[], int n = 3, FILE* fd = 0);
 extern	void	GBcdsForm(const RANGE* rng, const Seq* sd, FILE* fd = 0);
 extern	void	fprint_seq_mem(const Seq* seqs[], int n, FILE* fd = 0);
 extern	void	pralnseq(const GAPS** gaps, Seq* seqs[], int seqnum, FILE* fd = 0);

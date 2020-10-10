@@ -43,14 +43,4 @@ struct Subset {
 	void	rsubset(int n, const char* ps = 0, FILE* fd = 0);
 };
 
-struct Lutab {
-	int*	tab;
-	int	tsz;
-	int*	ent;
-	int*	mem;
-	int	esz;
-	Lutab(int* tab, int tsz);
-	~Lutab();
-};
-
 #endif

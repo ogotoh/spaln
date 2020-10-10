@@ -62,13 +62,12 @@ const	char*	simfile;
 };
 
 class Simmtxes {
-	ComPmt	mab;
 	double*	mdmcomp;
 	int	current;
 	Simmtx*	storedSimmtx[max_simmtxes];
 public:
 	double*	get_mdmcmp();
-	Simmtxes() : mab(DxD), mdmcomp(0), current(0) {
+	Simmtxes() : mdmcomp(0), current(0) {
 	    vclear(storedSimmtx, max_simmtxes);
 	}
 	~Simmtxes();

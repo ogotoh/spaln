@@ -30,7 +30,6 @@ static	const	char	DEF_CDI[] = "BLASTCDI";
 static	const	int	PassCom = 0x08;
 static	const	int	MAXICD = 4;
 static	const	int	MAXTCD = 16;
-static	const	float	ambLimit = 0.2;
 
 inline	bool	isNucAmb(int c) {return (c != A && c != C && c != G && c != T); }
 
@@ -38,7 +37,7 @@ CHAR gencode[64] = {
 	LYS,ASN,LYS,ASN,THR,THR,THR,THR,ARG,SER,ARG,SER,ILE,ILE,MET,ILE,
 	GLN,HIS,GLN,HIS,PRO,PRO,PRO,PRO,ARG,ARG,ARG,ARG,LEU,LEU,LEU,LEU,
 	GLU,ASP,GLU,ASP,ALA,ALA,ALA,ALA,GLY,GLY,GLY,GLY,VAL,VAL,VAL,VAL,
-	TRM,TYR,TRM,TYR,SER,SER,SER,SER,TRM,CYS,TRP,CYS,LEU,PHE,LEU,PHE
+	TRM,TYR,TRM,TYR,SER,SER,SER,SER,TRM2,CYS,TRP,CYS,LEU,PHE,LEU,PHE
 };
 
 float CodonUsage[64] = {
@@ -229,7 +228,7 @@ int initcodon(int code)
 	  case 0: 		// Reset to Universal codon
 		gencode[AAA] = LYS; gencode[AGA] = gencode[AGG] = ARG; gencode[AUA] = ILE;
 		gencode[CUA] = gencode[CUC] = gencode[CUG] = gencode[CUU] = LEU;
-		gencode[UAA] = gencode[UAG] = gencode[UGA] = TRM;
+		gencode[UAA] = gencode[UAG] = TRM; gencode[UGA] = TRM2;
 		break;
 	  case 1: case 11:	// Universal
 		break;
@@ -319,7 +318,7 @@ int initcodon(int code)
 	for (i = j = k = 0; i < 64; i++) {
 	    if (gencode[i] == MET && j++ < MAXICD)
 		ic = de_codon(ic, i);
-	    if (gencode[i] == TRM && k++ < MAXTCD)
+	    if ((gencode[i] == TRM || gencode[i] == TRM2) && k++ < MAXTCD)
 		tc = de_codon(tc, i);
 	}
 	ic[-1] = tc[-1] = 0;
@@ -429,7 +428,7 @@ const	CHAR*	redctab = isdrna()? ncredctab: tnredctab;
 		  case 12:	/* TAG */
 		    if (gencode[UAG] != TRM) break;
 		  case 13:	/* TGA */
-		    if (gencode[UGA] != TRM) break;
+		    if (gencode[UGA] != TRM2) break;
 		    f = (n - 2) % 3;
 		    if (cur[f].frm == 1 || cur[f].frm == 2)
 			cur[f].len = n - 2 - cur[f].pos;
@@ -571,7 +570,7 @@ const	CHAR*	seq = at(left);
 		fprintf(fd, form->SeqForm, i + 1);
 	    int	aa = toaa(seq);
 	    m += 3;
-	    if (aa == TRM && (at_term == STOP ||
+	    if ((aa == TRM || aa == TRM2) && (at_term == STOP ||
 		(at_term == 0 && m >= right))) break;
 	    putc(amino[aa], fd);
 	    if (++i % width == 0) putc('\n', fd);
@@ -607,7 +606,7 @@ void Seq::fmtranslate(FILE* fd, int at_term, int orfn) const
 		int j = 0;
 		for ( ; j++ < c; b += 3 * many) {
 		    int	aa = toaa3(b, many);
-		    if (aa == TRM && (at_term == STOP ||
+		    if ((aa == TRM || aa == TRM2) && (at_term == STOP ||
 			(at_term == 0 && j == c && c < OutPrm.lpw))) break;
 		    putc(amino[aa], fd);
 		    if (aa != UNP) label[i]++;

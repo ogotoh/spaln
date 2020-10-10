@@ -333,7 +333,7 @@ public:
 	X	oldest() const {return queue[qp];}
 };
 
-// priority queue
+// priority queue simple version without heap
 
 template <typename val_t>
 class PrQueue {
@@ -343,10 +343,9 @@ private:
 	int	front;
 	bool	dec_order;	// default is ascending order
 	bool	replace;	// may replace older value
-	Dhash<int, int>*	hpos;	// heap position of key
 public:				// initial data size, ascending order, never replace data
 	PrQueue(val_t* _data, int _size, int fr = 0, bool maxi = false, bool rep = false);
-	~PrQueue() {delete hpos;}
+	~PrQueue() {}
 	void	downheap(int k, int kk = 0);
 	void	upheap(int k);
 	val_t	shift();
@@ -356,7 +355,7 @@ public:				// initial data size, ascending order, never replace data
 	val_t&	operator[](int i) {return (data[i]);}
 	bool	empty() const{return front == 0;}
 	int	size() const {return front;}
-	void	reset() {front = 0; if (hpos) hpos->clear();}
+	void	reset() {front = 0;}
 	void	hsort();
 	int	find(const val_t& x);
 	bool	lt(const val_t& a, const val_t& b) const {
@@ -368,7 +367,6 @@ template <typename val_t>
 PrQueue<val_t>::PrQueue(val_t* _data, int _size, int fr, bool maxi, bool rep)
 	: data(_data), capacity(_size), front(fr), dec_order(maxi), replace(rep)
 {
-	hpos = (rep && capacity > HashovLS)? new Dhash<int, int>(2 * capacity, -1): 0;
 	for (int k = front / 2; --k >= 0; ) downheap(k);
 }
 
@@ -383,11 +381,9 @@ void PrQueue<val_t>::downheap(int k, int kmax)
 	    if (r < kmax && lt(data[r], data[l])) ++l;
 	    if (!lt(data[l], v)) break;
 	    data[k] = data[l];
-	    if (hpos) hpos->assign(data[k].key, k);
 	    k = l;
 	}
 	data[k] = v;
-	if (hpos) hpos->assign(data[k].key, k);
 }
 
 template <typename val_t>
@@ -397,12 +393,10 @@ void PrQueue<val_t>::upheap(int k)
 	int	h = (k - 1) / 2;
 	while (k && lt(v, data[h])) {
 	    data[k] = data[h];
-	    if (hpos) hpos->assign(data[k].key, k);
 	    k = h;
 	    h = (h - 1) / 2;
 	}
 	data[k] = v;
-	if (hpos) hpos->assign(data[k].key, k);
 }
 
 template <typename val_t>
@@ -410,7 +404,6 @@ val_t PrQueue<val_t>::shift()
 {
 	val_t v = data[0];
 	if (front > 0) {
-	    if (hpos) hpos->remove(data[0].key);
 	    data[0] = data[--front];
 	    downheap(0);
 	}
@@ -422,7 +415,6 @@ val_t PrQueue<val_t>::shift(val_t& x)
 {
 	val_t v = data[0];
 	if (front == capacity) {
-	    if (hpos) hpos->remove(data[0].key);
 	    data[0] = data[--front];
 	    downheap(0);
 	}
@@ -442,7 +434,6 @@ void PrQueue<val_t>::put(const val_t& x, int p)
 	    } else	p = 0;
 	}
 	if (lt(data[p], x)) {		// exam
-	    if (hpos) hpos->remove(data[p].key);
 	    data[p] = x;		// replace
 	    downheap(p);
 	}
@@ -452,10 +443,6 @@ void PrQueue<val_t>::put(const val_t& x, int p)
 template <typename val_t>	// default key finder
 int PrQueue<val_t>::find(const val_t& x)
 {
-	if (hpos) {
-	    KVpair<int, int>* kv = hpos->find(x.key);
-	    return kv? kv->val: -1;
-	}
         for (int i = 0; i < front; ++i)
             if (x == data[i]) return (i);
         return (-1);
@@ -463,6 +450,138 @@ int PrQueue<val_t>::find(const val_t& x)
 
 template <typename val_t>
 void PrQueue<val_t>::hsort()	// heap sort data
+{
+	for (int k = front; --k > 0; ) {
+	    swap(data[0], data[k]);
+	    downheap(0, k);
+	}
+}
+
+// priority queue without hash
+
+template <typename val_t>
+class PrQueue_wh {
+private:
+	val_t*	data;
+	int	capacity;
+	int	front;
+	bool	dec_order;	// default is ascending order
+	bool	replace;	// may replace older value
+	Dhash<int, int>*	hpos;	// heap position of key
+public:				// initial data size, ascending order, never replace data
+	PrQueue_wh(val_t* _data, int _size, int fr = 0, bool maxi = false, bool rep = false);
+	~PrQueue_wh() {delete hpos;}
+	void	downheap(int k, int kk = 0);
+	void	upheap(int k);
+	val_t	shift();
+	val_t	shift(val_t& x);
+	void	put(const val_t& x, int p = -1);
+	val_t	gettop() {return data[0];}
+	val_t&	operator[](int i) {return (data[i]);}
+	bool	empty() const{return front == 0;}
+	int	size() const {return front;}
+	void	reset() {front = 0; if (hpos) hpos->clear();}
+	void	hsort();
+	int	find(const val_t& x);
+	bool	lt(const val_t& a, const val_t& b) const {
+		     return (dec_order? b < a: a < b);
+		}
+};
+
+template <typename val_t>
+PrQueue_wh<val_t>::PrQueue_wh(val_t* _data, int _size, int fr, bool maxi, bool rep)
+	: data(_data), capacity(_size), front(fr), dec_order(maxi), replace(rep)
+{
+	hpos = new Dhash<int, int>(2 * capacity, -1);
+	for (int k = front / 2; --k >= 0; ) downheap(k);
+}
+
+template <typename val_t>
+void PrQueue_wh<val_t>::downheap(int k, int kmax)
+{
+	val_t	v = data[k];
+	if (kmax == 0) kmax = front;
+	while (k < kmax / 2) {
+	    int	l = 2 * k + 1;
+	    int	r = l + 1;
+	    if (r < kmax && lt(data[r], data[l])) ++l;
+	    if (!lt(data[l], v)) break;
+	    data[k] = data[l];
+	    hpos->assign(data[k].key, k);
+	    k = l;
+	}
+	data[k] = v;
+	hpos->assign(data[k].key, k);
+}
+
+template <typename val_t>
+void PrQueue_wh<val_t>::upheap(int k)
+{
+	val_t	v = data[k];
+	int	h = (k - 1) / 2;
+	while (k && lt(v, data[h])) {
+	    data[k] = data[h];
+	    hpos->assign(data[k].key, k);
+	    k = h;
+	    h = (h - 1) / 2;
+	}
+	data[k] = v;
+	hpos->assign(data[k].key, k);
+}
+
+template <typename val_t>
+val_t PrQueue_wh<val_t>::shift()
+{
+	val_t v = data[0];
+	if (front > 0) {
+	    hpos->remove(data[0].key);
+	    data[0] = data[--front];
+	    downheap(0);
+	}
+	return (v);
+}
+
+template <typename val_t>
+val_t PrQueue_wh<val_t>::shift(val_t& x)
+{
+	val_t v = data[0];
+	if (front == capacity) {
+	    hpos->remove(data[0].key);
+	    data[0] = data[--front];
+	    downheap(0);
+	}
+	data[front] = x;
+	upheap(front++);
+	return (v);
+}
+
+template <typename val_t>
+void PrQueue_wh<val_t>::put(const val_t& x, int p)
+{
+	if (p < 0) {			// new member
+	    if (front < capacity) {
+		data[front] = x;	// add
+		upheap(front++);
+		return;
+	    } else	p = 0;
+	}
+	if (lt(data[p], x)) {		// exam
+	    hpos->remove(data[p].key);
+	    data[p] = x;		// replace
+	    downheap(p);
+	}
+
+}
+
+template <typename val_t>	// default key finder
+int PrQueue_wh<val_t>::find(const val_t& x)
+{
+	KVpair<int, int>* kv = hpos->find(x.key);
+	return kv? kv->val: -1;
+}
+
+template <typename val_t>
+void PrQueue_wh<val_t>::hsort()	// heap sort data
 {
 	for (int k = front; --k > 0; ) {
 	    swap(data[0], data[k]);

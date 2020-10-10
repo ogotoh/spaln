@@ -699,7 +699,7 @@ bool Gsinfo::intronless() const
 {
 	if (!eijnc) return false;
 const	EISCR*	fst = eijnc->begin();
-	return ((noeij < 2) && (fstat.unp < IntronPrm.llmt) &&
+	return ((noeij < 2) && (fstat.unp < IntronPrm.minl) &&
 	    (fst->unp5 + fst->mmc5 <= end_error_thr) &&
 	    (fst->unp3 + fst->mmc3 <= end_error_thr));
 }

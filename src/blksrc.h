@@ -361,7 +361,6 @@ static	const	float	RbsFactLog = 0.4;
 static	const	float	RbsFactSqr = 0.303 * 2;
 static	const	float	RlnFact = 0.00520 * 2;
 static	const	INT	NRTAB = 128;
-static	const	char	ipstat[] = "IldModel.txt";
 union	BYTE4	{INT i; CHAR c[4];};
 union	BYTE2	{SHORT s; CHAR c[2];};
 typedef	INT	BLKTYPE;
@@ -369,8 +368,10 @@ typedef	INT	BLKTYPE;
 struct BPAIR {
 	int	bscr, chr;
 	VTYPE	jscr;
-	SHORT	d, e;
-	BLKTYPE	lb, rb;
+	BLKTYPE	lb, rb;		// left-most & right-most blocks
+	BLKTYPE	ub, db;		// nearest upstream & downstream bolck pairs
+	BLKTYPE zl, zr;		// chromosomal boundaries
+	SHORT	rvs;		// reverse strnad
 };
 
 struct BlkScr {
@@ -383,13 +384,12 @@ struct BlkScr {
 class Bhit4 {
 	BlkScr*	blkscr;
 public:
-	PrQueue<BlkScr>*	prqueue_a[4];
-	PrQueue<BlkScr>*	prqueue_b[4];
+	PrQueue_wh<BlkScr>*	prqueue_a[4];
+	PrQueue_wh<BlkScr>*	prqueue_b[4];
 	INT	sigm;
 	BPAIR*	bpair;
 const	CHAR**	as[4];
-	BLKTYPE*	sigb[4];	// top blocks with high bscr values
-	BLKTYPE*	sigw;		// working 
+	BLKTYPE*	sigw[2];	// working 
 	SHORT	sign[4];
 	SHORT	maxs[4];
 	SHORT	nhit[4];
@@ -400,7 +400,6 @@ const	CHAR**	as[4];
 	INT	testword[4];
 	void	update_a(int d, BLKTYPE blk);
 	int	update_b(int d, BLKTYPE blk);
-	SHORT	extract_to_work(int d);
 	Bhit4(int nseg);
 	~Bhit4();
 };
@@ -470,31 +469,29 @@ class SrchBlk {
 	int	kk;
 	int	DRNA;
 	bool	gnmdb;
-	VTYPE	vthr;
+	VTYPE	vthr;	// each gene
 	VTYPE	critjscr;
 	int	DeltaPhase2;
 	SHORT	ptpl;
-	int	MaxBlock;
-	INT	ExtBlock;
 	INT	maxmmc;
 	CHAR*	ConvTab;
 	ContBlk*	pbwc;
 	Block2Chr*	pb2c;
 	INT*	SegLen;
 	INT	MinGeneLen;
-	short	poslmt;
+	int	min_agap;	// codons
 	Bhit2*	bh2;	// thread specific
 	Bhit4*	bh4;
 	SrchBlk*	master;
-	int	prelude;
 	void	initialize(Seq** sqs, const char* fn = "");
 	void	init2(const Seq* sd);
 	void	init4(const Seq* sd);
-	bool	FindHsp(BPAIR* wrkbp);
+	int	FindHsp(BPAIR* wrkbp);
 	int	TestOutput(int force);
 	INT	bestref(Seq* sqs[], KVpair<INT, int>* sh, int n);
-	Seq*	setgnmrng(BPAIR* wrkbp);
+	Seq*	setgnmrng(const BPAIR* wrkbp);
 	void	setaaseq(Seq* sd, int chn);
+	SHORT	extract_to_work(int d);
 	INT	chrblk(int m) {
 	    return (pbwc->ChrID? pbwc->ChrID[m].segn: m + 1);
 	}
@@ -502,7 +499,6 @@ class SrchBlk {
 	    return (pbwc->ChrID? pbwc->ChrID[m + 1].spos - pbwc->ChrID[m].spos:
 		dbf->recidx[m].seqlen);
 	}
-	INT	max_intron_len(const char* fn);
 #if TESTRAN
 	Testran*	tstrn;
 #endif
@@ -576,14 +572,6 @@ extern	int	genemergin(int agap, int mingap, Seq* sd, bool rend);
 extern	bool	extend_gene_rng(Seq* sqs[], const PwdB* pwd, DbsDt* dbf);
 extern	void	set_max_extend_gene_rng(int n, bool forced = false);
 extern	int	get_max_extend_gene_rng();
-
-/*****************************************************
-	Frechet Distribution
-*****************************************************/
-
-inline	double frechet_quantile(double p, double mu, double th, double ki) {
-	    return (mu + (p > 0.? th / pow(-log(p), 1. / ki): 0));
-};
 
 #endif
 

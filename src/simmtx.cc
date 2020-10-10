@@ -25,9 +25,12 @@
 #include "aln.h"
 #include "mdm.h"
 #include "simmtx.h"
+#include "wln.h"
 #include <math.h>
 
 #define level(i, j) (4 - 9 * countbit((i) & (j))/countbit(i)/countbit(j)/2)
+
+#define USE_GLX 0
 
 /* arbitrarily assign termination code vs others */
 
@@ -41,8 +44,8 @@ static	const	char*	strscale = "scale";
 
 //		   u,      v,   u0, u1, v0, tgapf, thr, sclase, maxsp, gamma, k1, ls, sh, mtx_no
 ALPRM	alprm = {FQUERY, FQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 0};
-//		   x,   y,      z,   o, bti, spb, Z, sss, jneibr termk1
-ALPRM2	alprm2 = {30., FQUERY, FQUERY, 30., 8., 20., 0., -1., 10, 45};
+//		   x,   y,      z,   o, m, bti, spb, Z, sss, jneibr termk1
+ALPRM2	alprm2 = {30., FQUERY, FQUERY, 30., 8., 8., 20., 0., -1., 10, 45};
 //		scnd, hydr, hpmt, hpwing, no_angle
 ALPRM3	alprm3 = {0., 0., 0., 3, 0};
 
@@ -51,9 +54,9 @@ BPPRM	bpprm = {0., 1., 1., 100};
 static	int	glocal = GLOBAL;
 static	float	smn[] = {2., 1., 0., -1., -2.};
 static	DefPrm	defNprm[max_simmtxes+1] = 
-{{3., 8., -6., 0., 1}, {2., 6., -2., 0., 1}, {3., 8., -6., 0., 1}, {0}};
+{{3., 8., -6., 0., 1}, {2., 6., -4., 0., 1}, {2., 4., -2., 0., 1}, {0}};
 static	DefPrm	defPprm[max_simmtxes+1] = 
-{{4., 10., 0., 0., 100}, {2., 9., 0., 0., 250}, {4., 10., 0., 0., 100}, {0}};
+{{4., 10., 0., 0., 100}, {2., 9., 0., 0., 150}, {2., 9., 0., 0., 250}, {0}};
 
 void optimize(int gl, int mnmx)
 {
@@ -317,8 +320,11 @@ void Simmtx::Pmtx()
 		mtx[ii][jj] = mtx[jj][ii] = (VTYPE) buf[k];
 	    }
 	}
-	for (int i = AMB; i < ASIMD; ++i)
+	for (int i = AMB; i < ASIMD; ++i) {
 	    mtx[i][UNP] = mtx[UNP][i] = unp_aas;
+// modified on 2020-03-17
+	    mtx[i][SEC] = mtx[SEC][i] = mtx[i][CYS];
+	}
 	mtx[UNP][UNP] = 0;
 	for (int i = 0; i < ASIMD; ++i)
 	    mtx[i][NIL] = mtx[NIL][i] = 0;
@@ -336,7 +342,9 @@ void Simmtx::Pmtx(const char* fname)
 	int	nrow[26];
 	int	amb = 0;
 	int	asx = 0;
+#if USE_GLX
 	int	glx = 0;
+#endif
 	float	scale = 1.;
 	VTYPE	unp_aas = (VTYPE) -(alprm.scale * param->u);
 
@@ -371,7 +379,9 @@ void Simmtx::Pmtx(const char* fname)
 		switch (xref[i++]) {
 		    case AMB: ++amb; break;
 		    case ASX: ++asx; break;
+#if USE_GLX
 		    case GLX: ++glx; break;
+#endif
 		}
 	    } else if (*ps == '*' || (*ps == '-' && isspace(ps[1])))
 		xref[i++] = gap_code;
@@ -396,7 +406,7 @@ void Simmtx::Pmtx(const char* fname)
 	    }
 	    nrow[i] = j;
 	}
-/*	trianglurer matrix	*/
+//	trianglurer matrix
 	avtrc = 0.;
 	for (int k = AMB; k < ASX; ++k) {
 	    for (int j = nrow[k]; j < ASX; ++j)
@@ -418,10 +428,16 @@ void Simmtx::Pmtx(const char* fname)
 	    for (int j = AMB; j < AAS; ++j)
 		mtx[ASX][j] = mtx[j][ASX] = 
 		    (mtx[ASN][j] + mtx[ASP][j]) / 2;
+//	 modified on 2020-03-17
+#if USE_GLX
 	if (!glx)
 	    for (int j = AMB; j < AAS; ++j)
 		mtx[GLX][j] = mtx[j][GLX] = 
 		    (mtx[GLN][j] + mtx[GLU][j]) / 2;
+#else
+	for (int j = AMB; j < AAS; ++j)
+	    mtx[SEC][j] = mtx[j][SEC] = mtx[j][CYS];
+#endif	// USE_GLX
 	fclose(fd);
 	simunp = mtx[gap_code];
 	minscr = mtx[TRP][CYS];
@@ -434,23 +450,27 @@ void Simmtx::Hmtx(ComPmt compmt, Simmtx* pm)
 	rows = compmt == TxT? dim: SER2;
 	mtx = SquareMtx();
 	VTYPE	unp_aas = (VTYPE) -(alprm.scale * param->u);
+	VTYPE	trm_aas = (VTYPE) -(alprm.scale * alprm2.o);
+	VTYPE	trm_trm = (VTYPE) (alprm.scale * pm->mtx[ALA][ALA]);
 	nrmlf = pm->nrmlf;
 	avtrc = pm->avtrc;
-	VTYPE	trm_aas = (VTYPE) (alprm.scale * pm->mtx[TRP][PRO]);
-	VTYPE	trm_trm = (VTYPE) (alprm.scale * pm->mtx[ALA][ALA]);
 	for (int i = 0; i < SER2; ++i) {
 	    for (int j = 0; j < i; ++j)
 		mtx[i][j] = mtx[j][i] = pm->mtx[i][j];
 	    mtx[i][i] = pm->mtx[i][i];
 	}
-	for (int i = 0; i < TSIMD; ++i) {
+	for (int i = 0; i < TSIMD; ++i)
 	    mtx[i][SER2] = mtx[SER2][i] = mtx[SER][i];
-	    mtx[i][TRM2] = mtx[i][TRM] = mtx[TRM2][i] = mtx[TRM][i] = 
-		compmt == TxT? (i > SER2? trm_trm: trm_aas): 0;
-	}
-	for (int i = AMB; i < TSIMD; ++i)
+	for (int i = AMB; i < TSIMD; ++i) {
 	    mtx[UNP][i] = mtx[i][UNP] = unp_aas;
+	    mtx[SEC][i] = mtx[i][SEC] = 
+	    mtx[TRM][i] = mtx[i][TRM] = trm_aas;
+	}
 	mtx[UNP][UNP] = 0;
+	mtx[SEC][SEC] = mtx[CYS][CYS];
+	if (compmt == TxT)
+	    mtx[TRM][TRM] = mtx[TRM][TRM2] = 
+	    mtx[TRM2][TRM] = mtx[TRM2][TRM2] = trm_trm;
 	for (int i = 0; i < TSIMD; ++i)
 	    mtx[NIL][i] = mtx[i][NIL] = 0;
 	simunp = mtx[gap_code];
@@ -604,8 +624,9 @@ const	char&	opt = argv[0][oc];
 const	char*	vl = getarg(argc, argv, num, ++oc);
 	if (!vl && !(opt == 'H' || opt == 'S')) return;
 
-	const	char*	ps = strchr(vl, ':');
-	int	k = ps? atoi(ps + 1): 0;
+	const	char*	ps;
+	const	char*	cs = strchr(vl, ':');
+	int	k = cs? atoi(cs + 1): 0;
 	if (k > max_simmtxes - 1) k = 0;
 	switch (opt) {
 	    case 'a': algmode.any = *vl? atoi(vl): 3; break;	// boundary stringency
@@ -627,16 +648,16 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 		if (smn[4] > 0) smn[4] = -smn[4];
 		defPprm[k].n = smn[4]; break;
 	    case 'o': alprm2.o = atof(vl); break;	// premature termination
-	    case 'p': defPprm[k].p = atoi(vl); break;	// 1st pam
-	    case 'q': defPprm[1].p = atoi(vl); break;	// 2nd pam
+	    case 'p': defPprm[algmode.crs].p = atoi(vl); break;	// 1st pam
+	    case 'q': defPprm[WlnPamNo].p = atoi(vl); break;	// 2nd pam
 	    case 'r': 
 		if ((ps = strchr(vl, ','))) alprm3.no_angle = atoi(ps + 1);
 		if (!ps || ps > vl) alprm3.hpmt = atof(vl);
 		break;					// hydrophobicity moment
 	    case 's': alprm3.scnd = atof(vl); break;	// secondary structure prop.
 	    case 't': alprm.tgapf = atof(vl); break;	// reduced terminal gap factor
-	    case 'u': defPprm[k].u = atof(vl); break;	// gap extension
-	    case 'v': defPprm[k].v = atof(vl); break;	// gap open
+	    case 'u': alprm.u = atof(vl); break;	// gap extension
+	    case 'v': alprm.v = atof(vl); break;	// gap open
 	    case 'w': alprm.sh = atoi(vl); break;	// band width
 	    case 'x': alprm2.x = atof(vl); break;	// frame shift
 	    case 'y': alprm2.y = atof(vl); break;	// boundary signal
@@ -671,7 +692,9 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 		break;
 	    case 'T': IntronPrm.tlmt = atoi(vl); break;	// 
 	    case 'V': alprm.maxsp = atof(vl); break;	// max traceback volume
-	    case 'X': algmode.crs = vl? atoi(vl): 1; break;	// set cross-species switch
+	    case 'W': alprm2.w = atof(vl); break;	// match factor in very short alignment
+	    case 'X': algmode.crs = vl? atoi(vl): 2;
+			break;				// set cross-species switch
 	    case 'Y': IntronPrm.fact = atof(vl); break;	// amplitude of intron pen.
 	    case 'Z': alprm2.Z = atof(vl); break;	// intron potential
 	    default:  break;

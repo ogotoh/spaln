@@ -20,9 +20,9 @@
 *****************************************************************************/
 
 #include <new>
-#include "seq.h"
+#include <math.h>
+#include "makdbs.h"
 
-static	const	INT	ddelim = SEQ_DELIM + (SEQ_DELIM << 4);
 static	bool	comment = false;
 static	void	usage(const char* fmt = 0, const char* arg = 0);
 static	int	cmpkey(INT* a, INT* b);
@@ -36,57 +36,6 @@ static	char	dbname[LINE_MAX] = "";
 static	const	char*	srcpath = 0;
 static	const	char*	dstpath = "";
 static	bool	gzout = false;
-
-class Makdbs {
-	int	molc;
-	int	bias;
-	int	ceil;
-	bool	cridxf;
-	SeqDb*	db;
-	SEQ_CODE*	defcode;
-	size_t	recnbr;
-	FILE*	fgrp;
-	FILE*	fseq;
-	FILE*	fidx;
-	FILE*	fent;
-	char	str[MAXL];
-	char	prv[MAXL];
-	bool	halfway;
-#if USE_ZLIB
-	gzFile	gzseq;
-#endif
-	int	encode(int c);
-	char*	getDbEntry(DbsRec* rec, int idf);
-template <typename file_t, typename ofile_t>
-	int	convert(file_t fsrc, ofile_t);
-template <typename file_t, typename ofile_t>
-	int	convert2(file_t fsrc, ofile_t);
-	void	initialize(const char* av);
-template <typename file_t>
-	char*	get_str(file_t fsrc);
-template <typename file_t>
-	void	skip_till_nl(file_t fsrc);
-template <typename file_t, typename ofile_t>
-	void	makdbs(file_t fsrc, ofile_t);
-
-public:
-	Makdbs(int ac, const char** av, int mlc);
-	~Makdbs();
-	void	makdbs(const char* fn);
-	void	mkidx();
-	void	stamp21() {
-	    DbsRec	rec21 = {magicver21, comment, 0};
-	    fwrite(&rec21, sizeof(DbsRec), 1, fidx);	// header record
-	}
-	void	wrtgrp(const char* ps) {
-	    long	fpos = 0L;
-	    if (fseq)	fpos = ftell(fseq);
-#if USE_ZLIB
-	    else	fpos = ftell(gzseq);
-#endif
-	    fprintf(fgrp, "%8ld %u %s\n", fpos, (INT) recnbr, ps);
-	}
-};
 
 static void usage(const char* fmt, const char* arg)
 {
@@ -211,7 +160,7 @@ int Makdbs::encode(int c)
 char* Makdbs::getDbEntry(DbsRec* rec, int idf)
 {
 	char*	ps = str;
-	char*	sp;
+	char*	sp = str;
 	if (db->FormID == FASTA) {
 	    char*	sb = 0;
 	    sp = ps++;
@@ -236,6 +185,12 @@ char* Makdbs::getDbEntry(DbsRec* rec, int idf)
 	fputs(ps, fent);
 	fputc('\0', fent);
 	return (ps);
+}
+
+void Makdbs::stamp21()
+{
+	DbsRec	rec21 = {magicver21, comment, 0};
+	fwrite(&rec21, sizeof(DbsRec), 1, fidx);	// header record
 }
 
 static	DbsRec*	rbuf;

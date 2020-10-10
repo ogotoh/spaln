@@ -35,8 +35,10 @@
 enum {Ad, Cy, Gu, Ty};
 enum {AA, AC, AG, AT, CA, CC, CG, CT, GA, GC, GG, GT, TA, TC, TG, TT};
 
-//		     ip, fact, mean, llmt, mu, rlmt, minexon, tlmt, maxl, array, table
-INTRONPEN IntronPrm = {FQUERY, FQUERY, -2.767, 20, 224, 825, 2, 5, 0, 0, 0,
+INTRONPEN IntronPrm = {FQUERY, FQUERY, -2.767, 20, 224, 
+//		     	ip, 	fact,	mean,llmt,  mu, 
+	825, 2, 5, 20, 0, 0, 0, 0,
+//	rlmt, minexon, tlmt, maxl, array, table
 	0.2767, -22.80, 83.35, 5.488, 21.870, 223.95, 0.7882,
 //	a1      m1      t1     k1     m2      t2      k2
 	0, 0, 0, 0};
@@ -53,7 +55,7 @@ struct DefPrm2 {float y, Y;};
 // exon-intron junction signals
 
 struct Sig53 {
-	VTYPE**	sig53tab;
+	STYPE**	sig53tab;
 	Sig53(const FTYPE fS = 1, const char* fname = INT53PAT);
 	~Sig53();
 };
@@ -61,9 +63,8 @@ struct Sig53 {
 static	double	ProbDist(int i, double mu, double th, double kk);
 
 // [Dvsp][crs]
-static	DefPrm2	defprm2[2][2] = {{{4., 4.}, {4., 4.}}, {{5., 5.}, {8., 8.}}};
+static	DefPrm2	defprm2[2] = {{4., 4.}, {8., 8.}};
 static  float	avrsig53[2] = {2.446, 4.807};
-static	const	float	imaxfact = 5.;
 
 static	Sig53*	stdSig53 = 0;
 static	FTYPE	stdfS = 0.;
@@ -72,22 +73,19 @@ inline	VTYPE	GapPenalty(int k) {return VTYPE(alprm.u * k + alprm.v);}
 
 SpJunc::SpJunc(const Seq* sd) : b(sd)
 {
-static	SPJ	nullspj = {0, 0, 0, 0, 0};
-
 	nent = (sd->right - sd->left) / FoldSpjunc;
 	nent = (nent / 6) * 6 + 5;
 	max_nent = FoldStore * nent;
-	hashent = new SPJ*[nent];
-	spjunc = new SPJ[max_nent];
-	juncseq = new CHAR[2 * max_nent];
-	spliced = new CHAR[6];
-		 /* 2 trons  + 4 bases */
-	pyrim = new CHAR[2];
-	for (int i = 0; i < nent; ++i) hashent[i] = 0;
-	for (int i = 0; i < max_nent; ++i) spjunc[i] = nullspj;
-	for (int i = 0; i < 2; ) pyrim[i++] = PHE;	/* TT <- YY */
+
+	hashent = new SPJ*[nent + 1];
+	spjunc = new SPJ[max_nent + 1];
+	juncseq = new CHAR[2 * max_nent + 2];
+
+	vclear(hashent, nent + 1);
+	vclear(spjunc, max_nent + 1);
+	pyrim[0] = pyrim[1] = PHE;	// TT <- YY
 	spp = spjunc;
-	jsp = juncseq;
+	jsp = 0;
 }
 
 SpJunc::~SpJunc()
@@ -95,39 +93,37 @@ SpJunc::~SpJunc()
 	delete[] hashent;
 	delete[] spjunc;
 	delete[] juncseq;
-	delete[] spliced;
-	delete[] pyrim;
 }
 
 CHAR* SpJunc::spjseq(int n5, int n3)
 {
-	int     cc = n5 + n3;
-	SPJ*    find;
-	SPJ**   htop = hashent + (cc % nent);
-const	CHAR*   b5 = b->at(n5 - 2);
-const	CHAR*   b3 = b->at(n3);
+	int	key = (n5 + n3) % nent + 1;
+	SPJ**	htop = hashent + key;
+	SPJ*	find = *htop;
+const	CHAR*	b5 = b->at(n5 - 2);
+const	CHAR*	b3 = b->at(n3);
 
-	for (find = *htop; find; find = find->dlnk)
+	for ( ; find > spjunc; find = spjunc + find->dlnk)
 	    if (find->n5 == n5 && find->n3 == n3)
-		return(find->junc);
+		return(juncseq + find->junc);
 
 	if (spp - spjunc == max_nent) {
 	    spp = spjunc;
-	    jsp = juncseq;
+	    jsp = 0;
 	}
 
-	find = spp++;
-	if (find->ulnk) *find->ulnk = 0;        /* cut the previous link */
+	find = ++spp;		// cut the previous link
+	if (find->ulnk) hashent[find->ulnk] = 0;
 	find->n5 = n5;
 	find->n3 = n3;
 	spliceTron(spliced, b5, n3? b3: pyrim, 1);
-	memcpy(jsp, spliced, 2);
+	memcpy(juncseq + jsp, spliced, 2);
 	find->junc = jsp;
 	jsp += 2;
-	find->dlnk = *htop;     /* old 1st link */
-	find->ulnk = htop;      /* put the new record */
-	*htop = find;           /* at the top of list */
-	return (find->junc);
+	find->dlnk = *htop? *htop - spjunc: 0;	// old 1st link
+	find->ulnk = key;	// put the new record
+	*htop = find;		// at the top of list
+	return (juncseq + find->junc);
 }
 
 inline	bool	Exinon::within(const Seq* sd) const
@@ -135,15 +131,15 @@ inline	bool	Exinon::within(const Seq* sd) const
 	return (bias < sd->left && sd->right < (bias + size));
 }
 
-VTYPE	Premat::prematT(const CHAR* ps) const
+STYPE	Premat::prematT(const CHAR* ps) const
 {
 	if (bn == 1)
-	    return (VTYPE) ((*ps == TRM || *ps == TRM2)? fO: 0);
+	    return (STYPE) ((*ps == TRM || *ps == TRM2)? fO: 0);
 	int	tp = 0;
 	for (int n = bn; n--; ++ps) {
 	    if (*ps == TRM || *ps == TRM2) ++tp;
 	}
-	return (VTYPE) (fO * tp);
+	return (STYPE) (fO * tp);
 }
 
 Premat::Premat(const Seq* seqs[])
@@ -170,14 +166,15 @@ static double ProbDist(int i, double mu, double th, double kk)
 	return (kk / th * z * zz * exp(-zz));
 }
 
-IntronPenalty::IntronPenalty(VTYPE f, int hh, EijPat* eijpat, ExinPot* exinpot)
-	: array(0), table(0), optlen(0)
+IntronPenalty::IntronPenalty(VTYPE f, int dvsp, EijPat* eijpat, ExinPot* exinpot)
+	: optip(SHRT_MIN), array(0), table(0)
 {
-	if (IntronPrm.fact == FQUERY) IntronPrm.fact = defprm2[hh > 0][algmode.crs].Y;
-	if (alprm2.y == FQUERY) alprm2.y = defprm2[hh > 0][algmode.crs].y;
+	if (IntronPrm.fact == FQUERY) IntronPrm.fact = defprm2[dvsp > 0].Y;
+	if (alprm2.y == FQUERY) alprm2.y = defprm2[dvsp > 0].y;
+	if (IntronPrm.ip == FQUERY) IntronPrm.ip = dvsp? 15: 12;
 
 	if (IntronPrm.maxl <= 0)
-	    IntronPrm.maxl = int (imaxfact * (IntronPrm.t2 > 0.? IntronPrm.t2: IntronPrm.t1));
+	    IntronPrm.maxl = max_intron_len(0.99, 0);
 	FTYPE	expsig = 0;
 	FTYPE	fy = f * alprm2.y;
 	FTYPE	fY = f * IntronPrm.fact;
@@ -191,18 +188,19 @@ IntronPenalty::IntronPenalty(VTYPE f, int hh, EijPat* eijpat, ExinPot* exinpot)
 	    } else	expsig += fy * avrsig53[1];
 	}
 	if (exinpot) expsig += exinpot->avrpot(f * alprm2.Z);
-	AvrSig = (VTYPE) expsig;
-	VTYPE	IntPen = (VTYPE) (expsig + fY * IntronPrm.mean +
-		f * ((IntronPrm.ip == FQUERY)? GapPenalty(Ip_equ_k): IntronPrm.ip));
-	GapWI = (VTYPE) (fY * IntronPrm.mean) - IntPen;
+	AvrSig = (STYPE) expsig;
+	STYPE	IntPen = (STYPE) (expsig + fY * IntronPrm.mean + f * IntronPrm.ip);
+	GapWI = (STYPE) (fY * IntronPrm.mean) - IntPen;
 	int	i = IntronPrm.rlmt - IntronPrm.llmt + 1;
-	array = new VTYPE[i];
+	array = new STYPE[i];
 	table = array - IntronPrm.llmt;
-	VTYPE*	pentab = array;
-
+	STYPE*	pentab = array;
 	float	a2 = IntronPrm.a2? IntronPrm.a2: 1 - IntronPrm.a1;
 	float	a3 = IntronPrm.a2? 1 - IntronPrm.a1 - IntronPrm.a2: 0;
-	VTYPE	optgp = NEVSEL;
+
+	VTYPE	gep = f * alprm.u;
+	VTYPE	gappen = -(f * alprm.v + IntronPrm.llmt * gep);
+	IntronPrm.minl = 0;
 	for (i = IntronPrm.llmt; i <= IntronPrm.rlmt; ++i) {
 	    double z = ProbDist(i, IntronPrm.m1, IntronPrm.t1, IntronPrm.k1);
 	    if (a2 > 0.) {
@@ -211,13 +209,18 @@ IntronPenalty::IntronPenalty(VTYPE f, int hh, EijPat* eijpat, ExinPot* exinpot)
 		if (a3) 
 		    z += a3 * ProbDist(i, IntronPrm.m3, IntronPrm.t3, IntronPrm.k3);
 	    }
-	    VTYPE	gp = (VTYPE) (fY * log10(z)) - IntPen;
+	    STYPE	gp = (STYPE) (fY * log10(z)) - IntPen;
 	    *pentab++ = gp;
-	    if (gp > optgp) {
-		optgp = gp;
-		optlen = i;
+	    if (gp > optip) {
+		optip = gp;
+		IntronPrm.mode = i;
+	    }
+	    if (!IntronPrm.minl) {
+		if (gp > gappen) IntronPrm.minl = i;
+		else	gappen -= gep;
 	    }
 	}
+	if (!IntronPrm.minl) IntronPrm.minl = IntronPrm.llmt;
 	int	k = 1;
 	double	z = ProbDist(IntronPrm.rlmt, IntronPrm.m1, IntronPrm.t1, IntronPrm.k1);
 	double	zz = a2? ProbDist(IntronPrm.rlmt, IntronPrm.m2, IntronPrm.t2, IntronPrm.k2): 0;
@@ -242,11 +245,11 @@ IntronPenalty::IntronPenalty(VTYPE f, int hh, EijPat* eijpat, ExinPot* exinpot)
 #endif
 }
 
-EijPat::EijPat(int hh)
+EijPat::EijPat(int dvsp)
 {
 const	char*	fn;
 
-	if (alprm2.y == FQUERY) alprm2.y = defprm2[hh > 0][algmode.crs].y;
+	if (alprm2.y == FQUERY) alprm2.y = defprm2[dvsp > 0].y;
 	if (alprm2.y > 0.) {
 	    pattern5 = new PatMat(fn = SPLICE5PAT);
 	    if (!pattern5->mtx) fatal("Can't open %s file!", fn);
@@ -310,9 +313,9 @@ Exinon::~Exinon()
 	}
 }
 
-VTYPE Exinon::sig53(int m, int n, INTENDS c) const
+STYPE Exinon::sig53(int m, int n, INTENDS c) const
 {
-	VTYPE	sig = 0;
+	STYPE	sig = 0;
 	if (alprm2.sss < 1.) {
 	  switch (c) {		// canonical signal
 	    case IE5:	sig = sig53tab[0][int53[m].dinc5]; break;
@@ -324,7 +327,7 @@ VTYPE Exinon::sig53(int m, int n, INTENDS c) const
 	  }
 	}
 	if (!data) return sig;
-	VTYPE	sss = 0;	// species specific signal
+	STYPE	sss = 0;	// species specific signal
 	switch (c) {
 	    case IE5:	sss = data[m].sig5; break;
 	    case IE35:	sss = data[m].sig5; break;
@@ -332,7 +335,7 @@ VTYPE Exinon::sig53(int m, int n, INTENDS c) const
 	    case IE53:	sss = data[n].sig3; break;
 	    case IE5P3:	sss = data[m].sig5 + data[n].sig3; break;
 	}
-	sig = (VTYPE) ((1. - alprm2.sss) * sig + alprm2.sss * sss);
+	sig = (STYPE) ((1. - alprm2.sss) * sig + alprm2.sss * sss);
 	if (alprm2.Z > 0) {
 	    if (c == IE53 || c == IE5P3) sig += exinpot->intpot(data + m, data + n);
 	    else if (c == IE35) sig += exinpot->intpot(data + n, data + m);
@@ -342,8 +345,8 @@ VTYPE Exinon::sig53(int m, int n, INTENDS c) const
 
 Sig53::Sig53(const FTYPE fS, const char* fname)
 {
-	sig53tab = new VTYPE*[4];
-	sig53tab[0] = new VTYPE[544];
+	sig53tab = new STYPE*[4];
+	sig53tab[0] = new STYPE[544];
 	sig53tab[1] = sig53tab[0] + 16;
 	sig53tab[2] = sig53tab[1] + 16;
 	sig53tab[3] = sig53tab[2] + 256;
@@ -355,25 +358,25 @@ Sig53::Sig53(const FTYPE fS, const char* fname)
 	ptmt = new PatMat(fd);	/* INT5PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 16; ++i)
-	    sig53tab[0][i] = (VTYPE) (fS * ptmt->mtx[i]);
+	    sig53tab[0][i] = (STYPE) (fS * ptmt->mtx[i]);
 	delete ptmt;
 
 	ptmt = new PatMat(fd);	/* INT3PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 16; ++i)
-	    sig53tab[1][i] = (VTYPE) (fS * ptmt->mtx[i]);
+	    sig53tab[1][i] = (STYPE) (fS * ptmt->mtx[i]);
 	delete ptmt;
 
 	ptmt = new PatMat(fd);	/* INT53PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 256; ++i)
-	    sig53tab[2][i] = (VTYPE) (fS * ptmt->mtx[i]);
+	    sig53tab[2][i] = (STYPE) (fS * ptmt->mtx[i]);
 	delete ptmt;
 
 	ptmt = new PatMat(fd);	/* INT35PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 256; ++i)
-	    sig53tab[3][i] = (VTYPE) (fS * ptmt->mtx[i]);
+	    sig53tab[3][i] = (STYPE) (fS * ptmt->mtx[i]);
 	delete ptmt;
 	fclose(fd);
 	return;
@@ -384,18 +387,18 @@ abort:
 	delete ptmt;
 }
 
-VTYPE** new53tab(const FTYPE fS, const Sig53* srcSig53)
+STYPE** new53tab(const FTYPE fS, const Sig53* srcSig53)
 {
-	VTYPE**	newtab = new VTYPE*[4];
-	newtab[0] = new VTYPE[544];
+	STYPE**	newtab = new STYPE*[4];
+	newtab[0] = new STYPE[544];
 	newtab[1] = newtab[0] + 16;
 	newtab[2] = newtab[1] + 16;
 	newtab[3] = newtab[2] + 256;
 
-	VTYPE*	s = srcSig53->sig53tab[0];
-	VTYPE*	d = newtab[0];
-	VTYPE*	t = d + 544;
-	while (d < t) *d++ = (VTYPE) (fS * *s++);
+	STYPE*	s = srcSig53->sig53tab[0];
+	STYPE*	d = newtab[0];
+	STYPE*	t = d + 544;
+	while (d < t) *d++ = (STYPE) (fS * *s++);
 	return (newtab);
 }
 
@@ -495,9 +498,9 @@ void Intron53(Seq* sd, const PwdB* pwd, bool both_ori)
 #endif
 
 	--sd->left; ++sd->right;
-	VTYPE	th3 = (VTYPE) (fS * pwd->eijpat->tonic3);
-	VTYPE	th5 = (VTYPE) (fS * pwd->eijpat->tonic5);
-	VTYPE	thB = (VTYPE) (pwd->eijpat->tonicB);
+	STYPE	th3 = (STYPE) (fS * pwd->eijpat->tonic3);
+	STYPE	th5 = (STYPE) (fS * pwd->eijpat->tonic5);
+	STYPE	thB = (STYPE) (pwd->eijpat->tonicB);
 	float*	pref5 = pwd->eijpat->pattern5? pwd->eijpat->pattern5->calcPatMat(sd): 0;
 	float*	pref3 = pwd->eijpat->pattern3? pwd->eijpat->pattern3->calcPatMat(sd): 0;
 	float*	prefS = pwd->eijpat->patternI? pwd->eijpat->patternI->calcPatMat(sd): 0;
@@ -524,27 +527,27 @@ void Intron53(Seq* sd, const PwdB* pwd, bool both_ori)
 
 	sd->exin->clear();
 	CHAR*	ss = sd->at(sd->left);
-	VTYPE	sigB = 0;
+	STYPE	sigB = 0;
 	CHAR*	posB = 0;
 	EXIN*	last = sd->exin->end();
 	INT53*	wk53 = sd->exin->int53 + sd->exin->bias + 1;
 	for (EXIN* wkb = sd->exin->begin(); ++wkb < last; ++ss, ++wk53) {
-	    wkb->sigS = (VTYPE) (fT * *prfS++);
-	    wkb->sigT = (VTYPE) (fT * *prfT++);
+	    wkb->sigS = (STYPE) (fT * *prfS++);
+	    wkb->sigT = (STYPE) (fT * *prfT++);
 	    if (prfE) {
 		FTYPE	sigE = fE * *prfE++;
 		if (*ss == TRM || *ss == TRM2) sigE += fO;
 		else if (wkb + 3 < last && (ss[3] == TRM || ss[3] == TRM2)) sigE = 0;
-		wkb->sigE = (VTYPE) sigE;
+		wkb->sigE = (STYPE) sigE;
 	    } else	wkb->sigE = 0;
-	    wkb->sigI = prfI? (VTYPE) (fI * *prfI++): 0;
-	    VTYPE	sig5 = pref5? (VTYPE) (fS * *prf5++): 0;
-	    VTYPE	sig3 = pref3? (VTYPE) (fS * *prf3++): 0;
+	    wkb->sigI = prfI? (STYPE) (fI * *prfI++): 0;
+	    STYPE	sig5 = pref5? (STYPE) (fS * *prf5++): 0;
+	    STYPE	sig3 = pref3? (STYPE) (fS * *prf3++): 0;
 	    if (prefB) {
 		sig3 += sigB;
 		FTYPE	sigb = *prfB++;
 		if (sigb > thB) {	// stronger than given threshold
-		    sigB = (VTYPE) (fB * sigb);
+		    sigB = (STYPE) (fB * sigb);
 		    posB = ss;
 		}	// reset bp signal if bp-3'ss distance exeeds the threshold
 		if (posB && ss - posB > bpprm.maxb3d) {
@@ -575,21 +578,60 @@ void Intron53(Seq* sd, const PwdB* pwd, bool both_ori)
 	delete[] prefB; delete[] prefE; delete[] prefI;
 }
 
-VTYPE IntronPenalty::Penalty(int n) const 
+STYPE IntronPenalty::Penalty(int n) const 
 {
 	if (n < 0 || !array) return (GapWI);
-	if (n < IntronPrm.llmt) return (NEVSEL);
+	if (n < IntronPrm.llmt) return (SHRT_MIN);
 	if (n >= IntronPrm.rlmt)
-	    return (VTYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)));
+	    return (STYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)));
 	return (table[n]);
 }
 
-VTYPE IntronPenalty::Penalty(int n, bool addsig) const 
+STYPE IntronPenalty::Penalty(int n, bool addsig) const 
 {
-	if (n < IntronPrm.llmt) return (NEVSEL);
+	if (n < IntronPrm.llmt) return (SHRT_MIN);
 	if (!array) return (GapWI + AvrSig);
 	if (n >= IntronPrm.rlmt)
-	    return (VTYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)) + AvrSig);
+	    return (STYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)) + AvrSig);
 	return (table[n] + AvrSig);
+}
+
+INT max_intron_len(float p, const char* fn)
+{
+	INT	observed = 0;
+	double	mu = IntronPrm.m2;
+	double	th = IntronPrm.t2;
+	double	ki = IntronPrm.k2;
+	if (IntronPrm.a2 > 0.) {
+	    mu = IntronPrm.m3;
+	    th = IntronPrm.t3;
+	    ki = IntronPrm.k3;
+	} else if (IntronPrm.a1 == 0) {
+	    mu = IntronPrm.m1;
+	    th = IntronPrm.t1;
+	    ki = IntronPrm.k1;
+	}
+	if (fn) {
+	    FILE*	fd = ftable.fopen(ipstat, "r");
+	    if (!fd) goto ild_model;
+	    const	char*	sl = strrchr(fn, '/');
+	    if (sl) fn = sl + 1;
+	    char	str[LINE_MAX];
+	    while (fgets(str, LINE_MAX, fd)) {
+		if (strncmp(str, fn, 8)) continue;
+		Strlist	stl(str, stddelim);
+		if (atoi(stl[2]) < 1000) break;
+		observed = atoi(stl[5]);
+		int	n = stl.size() - 6;
+		mu = atof(stl[n]);
+		th = atof(stl[n + 1]);
+		ki = atof(stl[n + 2]);
+		break;
+	    }
+	    fclose(fd);
+	}
+ild_model:
+	INT	q99 = (INT) frechet_quantile(p, mu, th, ki);
+	return (max(observed, q99));
 }
 

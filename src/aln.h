@@ -27,7 +27,7 @@
 #include "simmtx.h"
 
 static	const	int	NOL = 3;
-static	const	int	NOD = 2 * NOL + 1;
+static	const	int	NOD = 2 * NOL - 1;
 static	const	int	INTR = 2;
 static	const	int	NCANDS = INTR * NOL;
 static	const	int	MAXR = 4;
@@ -41,7 +41,7 @@ static	const	float	def_alprm2z = 2.;
 static	const	int	end_of_ulk = INT_MIN;
 static	const	int	dir2nod[16] = 
 	{-1, -1, 0, 0, 2, 2, 2, 4, 1, 1, 1, 3, 2, 1, -1, -1};
-static	const	float	defSss[2][2] = {{0., 0.50}, {0.30, 0.50}};
+static	const	float	defSss[2] = {0.3, 0.50};
 static	const	int	N_Out_Modes = 16;
 
 enum TraceBackDir {
@@ -277,7 +277,6 @@ const	Simmtx*	simmtx;
 	    if (d <= codonk1) return unp;
 	    return (unp + diffu * (d - codonk1));
 	}
-	VTYPE	prematT(const CHAR* ps) const {return prematT(ps);}
 	VTYPE	GapPenalty3(int i) const {return GapPenalty3(i, BasicGOP);}
 	VTYPE	GapPenalty3(int i, VTYPE bgop) const;
 	VTYPE	UnpPenalty3(int i) const {

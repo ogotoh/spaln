@@ -48,6 +48,7 @@ typedef	float	FTYPE;
 #if FVAL
 
 typedef	FTYPE	VTYPE;
+typedef	FTYPE	STYPE;
 typedef	float	PVTYPE;	// printf
 static	const	FTYPE	VABORT = -1.e127;
 static	const	FTYPE	fepsilon = 1.e-7;
@@ -67,19 +68,17 @@ inline	bool le(FTYPE a, FTYPE b) {return (a <= (b + fepsilon * MAX(1., fabs(b)))
 #define	VABORT	ABORT
 #if LVAL
 typedef	long 	VTYPE;
+typedef	int	STYPE;
+static	const	VTYPE	NEVSEL = (LONG_MIN / 16 * 7);
+static	const	VTYPE	fInfinit = LONG_MAX;
 #else	// !LVAL
 typedef	int	VTYPE;
+typedef	short	STYPE;
+static	const	VTYPE	NEVSEL = (INT_MIN / 16 * 7);
+static	const	VTYPE	fInfinit = INT_MAX;
 #endif	// LVAL
 typedef	int	PVTYPE;
 static	const	FTYPE	fepsilon = 0;
-static	const	VTYPE	fInfinit = INT_MAX;
-#if LVAL
-typedef	long	VTYPE;
-static	const	VTYPE	NEVSEL = (LONG_MIN / 16 * 7);
-#else
-typedef	int	VTYPE;
-static	const	VTYPE	NEVSEL = (INT_MIN / 16 * 7);
-#endif
 inline	bool gt(int a, int b) {return (a >  b);}
 inline	bool ge(int a, int b) {return (a >= b);}
 inline	bool lt(int a, int b) {return (a <  b);}
@@ -109,8 +108,8 @@ enum {LINEAR, CIRCLE};
 enum {RAWSEQ, VECTOR, PROVEC, VECPRO};
 enum {Ade, Cyt, Gua, Thy};
 enum {___,_,A,C,M,G,R,S,V,T,U=9,W,Y,H,K,D,B,N,NTS=16,Z};
-enum {NIL,UNP,AMB,ALA,ARG,ASN,ASP,CYS,GLN,GLU,GLY,HIS,ILE,LEU,LYS,MET,
-PHE,PRO,SER,THR,TRP,TYR,VAL,ASX,SER2=23,GLX,TRM2=24,AAS=24,TRM,ZZZ};
+enum {NIL,UNP,AMB,ALA,ARG,ASN,ASP,CYS,GLN,GLU,GLY,HIS,ILE,LEU,LYS,MET,PHE,
+PRO,SER,THR,TRP,TYR,VAL,ASX,SER2=23,GLX,SEC=24,TRM2=24,AAS=24,TRM,ZZZ};
 enum {MINIMUM, MAXIMUM};
 
 inline	int	elem(int i, int j) {

@@ -50,6 +50,7 @@ public:
 	}
 	long	writevmf(SKLP* rec);
 	long	vmfseek(long recno);
+	long	size() const {return (idx);}
 	int	readvmf(SKLP* rec, long recno);
 	SKL*	traceback(long pp);
 	SKL*	vmferror(Mfile& mfd);

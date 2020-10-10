@@ -111,39 +111,3 @@ Subset::~Subset()
 	delete[] pool;
 }
 
-Lutab::Lutab(int* tab, int tsz)
-{
-	tsz = tsz;
-	esz = *vmax(tab, tsz) + 1;
-	tab = new int[tsz];
-	ent = new int[esz];
-	mem = new int[esz];
-
-	for (int i = 0; i < esz; i++) {
-	    ent[i] = EOTAB;
-	    mem[i] = 0;
-	}
-	for (int i = 0; i < tsz; i++, tab++) {
-	    tab[i] = ent[*tab];
-	    mem[*tab]++;
-	    ent[*tab] = i;
-	}
-	int	j = 0;
-	for (int i = 0; i < esz; i++) {
-	    if (ent[i] != EOTAB) {
-		if (i != j) {
-		    ent[j] = ent[i];
-		    mem[j] = mem[i];
-		}
-		j++;
-	    }
-	}
-	esz = j;
-}
-
-Lutab::~Lutab()
-{
-	delete[] tab;
-	delete[] ent;
-	delete[] mem;
-}

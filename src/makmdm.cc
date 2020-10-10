@@ -1000,7 +1000,7 @@ int main(int argc, char** argv)
 	double	b[20][20];
 	double	comp[20];
 	double	psetp = (double) PAMSTEP;
-static	char*	fn = 0;
+const	char*	fn = 0;
 static	struct wmode wmd = {1, 1, 0, 0};
 
 	while (--argc > 0) {

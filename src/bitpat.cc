@@ -25,22 +25,22 @@
 
 const	char*	DefConvPat[] = {
 	"A|C|G|TU|BDHKMNRSJVWXY",			// FourN
-	"C|SJTPAG|NDEQBZ|HRK|MILV|FYW|X",		// Dayh6
-	"ASJT|CP|DEHKNQR|FWY|G|ILMV|X",			// SEB6
-	"ASJT|CP|DHN|EKQR|FWY|G|ILMV|X",		// SEB7
-	"ASJT|C|DHN|EKQR|FWY|G|ILMV|P|X",		// SEB8
-	"ASJT|C|DEN|H|KQR|FWY|G|ILMV|P|X",		// SEB9
-	"ASJT|C|DEN|FY|G|H|ILMV|KQR|P|W|X",		// SEB10
-	"A|C|DEN|FY|G|H|ILMV|KQR|P|SJT|W|X",		// SEB11
-	"A|C|DN|EQ|FY|G|H|ILMV|KR|P|SJT|W|X",		// SEB12
-	"A|C|DN|EQ|FY|G|H|IV|KR|LM|P|SJT|W|X",		// SEB13
-	"A|C|D|EQ|FY|G|H|IV|KR|LM|N|P|SJT|W|X",		// SEB14
-	"A|C|D|E|FY|G|H|ILMV|KR|N|P|Q|SJ|T|W|X",	// SEB15
-	"A|C|DE|Q|F|Y|G|H|IV|KR|L|M|N|P|SJT|W|X",	// SEB16
-	"A|C|DE|Q|F|Y|G|H|IV|K|R|L|M|N|P|SJT|W|X",	// SEB17
-	"A|C|DE|Q|F|Y|G|H|IV|K|R|L|M|N|P|SJ|T|W|X",	// SEB18
-	"A|C|DE|Q|F|Y|G|H|I|V|K|R|L|M|N|P|SJ|T|W|X",	// SEB19
-	"A|R|N|BD|C|Q|EZ|G|H|I|L|K|M|F|P|SJ|T|W|Y|V|X"	// EachAa
+	"C|SJTPANDEQBZ|HRK|MILV|FYW|X|U",		// Dayh6
+	"ASJT|CP|DEHKNQR|FWY|G|ILMV|X|U",		// SEB6
+	"ASJT|CP|DHN|EKQR|FWY|G|ILMV|X|U",		// SEB7
+	"ASJT|C|DHN|EKQR|FWY|G|ILMV|P|X|U",		// SEB8
+	"ASJT|C|DEN|H|KQR|FWY|G|ILMV|P|X|U",		// SEB9
+	"ASJT|C|DEN|FY|G|H|ILMV|KQR|P|W|X|U",		// SEB10
+	"A|C|DEN|FY|G|H|ILMV|KQR|P|SJT|W|X|U",		// SEB11
+	"A|C|DN|EQ|FY|G|H|ILMV|KR|P|SJT|W|X|U",		// SEB12
+	"A|C|DN|EQ|FY|G|H|IV|KR|LM|P|SJT|W|X|U",	// SEB13
+	"A|C|D|EQ|FY|G|H|IV|KR|LM|N|P|SJT|W|X|U",	// SEB14
+	"A|C|D|E|FY|G|H|ILMV|KR|N|P|Q|SJ|T|W|X|U",	// SEB15
+	"A|C|DE|Q|F|Y|G|H|IV|KR|L|M|N|P|SJT|W|X|U",	// SEB16
+	"A|C|DE|Q|F|Y|G|H|IV|K|R|L|M|N|P|SJT|W|X|U",	// SEB17
+	"A|C|DE|Q|F|Y|G|H|IV|K|R|L|M|N|P|SJ|T|W|X|U",	// SEB18
+	"A|C|DE|Q|F|Y|G|H|I|V|K|R|L|M|N|P|SJ|T|W|X|U",	// SEB19
+	"A|R|N|D|C|Q|E|G|H|I|L|K|M|F|P|SJ|T|W|Y|V|X|U"	// EachAa
 };
 
 const int DefConvPatNo[21] = 
@@ -72,9 +72,6 @@ ReducWord::ReducWord(const Seq* sd, INT elms, const char* ap) :
 		fatal("Alphabet size %d is not supported !\n", Nalpha);
 	    if (!ap) ap = DefConvPat[aaPat];
  	} else if (!ap) ap = DefConvPat[FourN];
-	Nalpha = 0;
-	for (const char* sp = ap; *sp; ++sp)
-	    if (!isalpha(*sp)) ++Nalpha;
 	aConvTab = new CHAR[26];
 	iConvTab = new CHAR[ConvTabSize];
 	vset(aConvTab, CHAR(UCHAR_MAX), 26);
@@ -87,13 +84,14 @@ ReducWord::ReducWord(const Seq* sd, INT elms, const char* ap) :
 		    iConvTab[c] = Nalpha;
 	    }
 	}
+	if (!sd->isdrna())
+	    aConvTab['U' - 'A'] = iConvTab[sd->code->max_code] = --Nalpha;
+	a2r = sd->isprotein()? aConvTab: ntconv;
 	if (sd->istron()) {
             g2r = new CHAR[64];
             for (int g = 0; g < 64; ++g)
                 g2r[g] = aConvTab[acodon[gencode[g]] - 'A'];
         }
-	a2r = sd->isprotein()? aConvTab: ntconv;
-	if (sd->isprotein()) iConvTab[sd->code->max_code] = Nalpha;
 }
 
 // least significant bit of npat = left most position

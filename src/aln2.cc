@@ -86,10 +86,10 @@ int prePwd(const Seq** seqs, bool use_mdm)
 	int	dvsp = seqs[0]->isprotein() + 2 * seqs[1]->isprotein();
 	if (dvsp == 2) dvsp = 1;		// swap later
 	if (!dvsp && seqs[0]->istron() && seqs[1]->istron()) dvsp = 4;
-	if (algmode.crs == 3) algmode.crs = dvsp? 1: 0;	// cross-species
-	if (OutPrm.SkipLongGap == 3) OutPrm.SkipLongGap = dvsp == 1? 1: 0;
+	if (algmode.crs == 3) algmode.crs = 1;	// cross-species
+	if (OutPrm.SkipLongGap == 3) OutPrm.SkipLongGap = algmode.lsg? 1: 0;
 	setSimmtxes((ComPmt) dvsp, use_mdm);		// default
-	if (alprm2.sss < 0.) alprm2.sss = defSss[dvsp > 0][algmode.crs];
+	if (alprm2.sss < 0.) alprm2.sss = defSss[algmode.crs];
 	if (alprm2.z < 0) alprm2.z = dvsp? def_alprm2z: 0;
 	return (dvsp);
 }
