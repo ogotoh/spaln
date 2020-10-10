@@ -2408,7 +2408,6 @@ VTYPE Aln2h1::shortcutH_ng(int ovr, const BOUND& bab)
 
 VTYPE Aln2h1::openendH_ng(int cmode)
 {
-printf("%s\t%s\n", (*a->sname)[0], (*b->sname)[0]);
 	vmf = new Vmf();
 	long	ptr;
 	WINDOW	wdw;
