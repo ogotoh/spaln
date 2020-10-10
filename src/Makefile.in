@@ -56,12 +56,12 @@ install:
 	test -d $(exec_prefix) || mkdir -p $(exec_prefix)
 	cp $(PROG) $(exec_prefix)
 	test -d $(table_dir) || mkdir -p $(table_dir)
-	@if test "$(table_dir)" != "$(CURDIR)/../table"; then \
+	@if test "$(table_dir)" != "$(PWD)/../table"; then \
 		cp -pfR ../table/* $(table_dir); \
 	fi
 	./makmdm $(table_dir)
 	test -d $(alndbs_dir) || mkdir -p $(alndbs_dir)
-	@if test "$(alndbs_dir)" != "$(CURDIR)/../seqdb"; then \
+	@if test "$(alndbs_dir)" != "$(PWD)/../seqdb"; then \
 		cp -pfR ../seqdb/????* $(alndbs_dir); \
 	fi
 

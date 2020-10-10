@@ -1,688 +1,2001 @@
-aaosarxi	Dothide2	Aaosphaeria arxii       	F
-acidrich	Dothide1	Acidomyces richmondensis       	F
-acrealca	Sordari1	Acremonium alcalophilum        	F
-acyrpisu	InsectDm	Acyrthosiphon pisum       	A_I
-aedeaegy	InsectDm	Aedes aegypti             	A_I
-agarbisp	Agarico1	Agaricus bisporus            	F
-agarhyph	Agarico2	Agaricostilbum hyphaenes   	F
-ailumela	Tetrapod	Ailuropoda melanoleuca         	A_M
-albulaib	albulaib	Albugo laibachii           	O
-allomacr	Blastocl	Allomyces macrogynus          	F
-altebras	Dothide2	Alternaria brassicicola        	F
-amanmusc	Agaricom	Amanita muscaria            	F
-amanthie	Agarico2	Amanita thiersii            	F
-ambotric	ambotric	Amborella trichopoda          	P
-amnilign	Dothide2	Amniculicola lignicola     	F
-amorresi	Leotiom1	Amorphotheca resinae    	F
-amphquee	amphquee	Amphimedon queenslandica       	A_O
-anasplat	Tetrapod	Anas platyrhynchos       	A_B
-anolcaro	Tetrapod	Anolis carolinensis        	A_R
-anopdarl	InsectAg	Anopheles darlingi            	A_I
-anopgamb	InsectAg	Anopheles gambiae             	A_I
-anthavoc	Sordari1	Anthostoma avocetta            	F
-antolocu	FungiAll	Antonospora locustae     	F
-antrsinu	Agarico2	Antrodia sinuosa             	F
-apiomont	Sordari1	Apiospora montagnei           	F
-apisflor	InsectAg	Apis florea              	A_I
-apismell	InsectAg	Apis mellifera          	A_I                 	
-aplakerg	Labyrint	Aplanochytrium kerguelense   	O
-aploprun	Dothide2	Aplosporella prunicola  	F
-aplycali	ChordatU	Aplysia californica         	A_mo
-aquicoer	Eudicoty	Aquilegia coerulea            	P
-arablyra	Eudicoty	Arabidopsis lyrata      	P
-arabthal	Eudicoty	Arabidopsis thaliana    	P
-armimell	Agaricom	Armillaria mellea              	F
-arthbenh	Eurotio1	Arthroderma benhamiae   	F
-artholig	Sordari1	Arthrobotrys oligospora  	F
-ascoimme	Pezizomy	Ascobolus immersus            	F
-ascorube	Saccharo	Ascoidea rubescens           	F
-ascosarc	Leotiom1	Ascocoryne sarcoides           	F
-ashbgoss	Saccharo	Ashbya gossypii            	F
-aspeacid	Eurotio2	Aspergillus acidus      	F
-aspeacul	Eurotio2	Aspergillus aculeatus   	F
-aspebras	Eurotio2	Aspergillus brasiliensis	F
-aspecarb	Eurotio2	Aspergillus carbonarius 	F
-aspeclav	Eurotio2	Aspergillus clavatus    	F
-aspeflav	Eurotio2	Aspergillus flavus      	F
-aspefumi	Eurotio2	Aspergillus fumigatus   	F
-aspeglau	Eurotio2	Aspergillus glaucus     	F
-aspekawa	Eurotio2	Aspergillus kawachii    	F
-aspenidu	Eurotio2	Aspergillus nidulans    	F
-aspenige	Eurotio2	Aspergillus niger	       	F
-aspeoryz	Eurotio2	Aspergillus oryzae	      	F
-aspesydo	Eurotio2	Aspergillus sydowii	     	F
-aspeterr	Eurotio2	Aspergillus terreus	     	F
-aspetubi	Eurotio2	Aspergillus tubingensis	 	F
-aspevers	Eurotio2	Aspergillus versicolor	  	F
-aspewent	Eurotio2	Aspergillus wentii	      	F
-aspezona	Eurotio2	Aspergillus zonatus	     	F
-astespec	astespec	Asterochloris spec_Cgr/DA1pho  	P
-astymexi	Fish_lng	Astyanax mexicanus	   	A_F
-atraspec	atraspec	Atractiellales spec		F
-attaceph	InsectAc	Atta cephalotes          	A_I
-aulohede	Dothide2	Aulographum hederae            	F
-auralima	Labyrint	Aurantiochytrium limacinum   	O
-aureanop	Pelagoph	Aureococcus anophagefferens    	O
-aurepull	Dothide2	Aureobasidium pulm_lulans 	F
-aurepulm	Dothide2	Aureobasidium pulm_lulans 	F
-aurepuln	Dothide2	Aureobasidium puln_lulans 	F
-aurepulp	Dothide2	Aureobasidium pulp_lulans	F
-aurepuls	Dothide2	Aureobasidium puls_lulans  	F
-aurideli	Agarico1	Auricularia delicata	    	F
-aurisubg	Agarico1	Auricularia subglabra	   	F
-babjinos	Saccharo	Babjeviella inositovor	  	F
-backcirc	Mucorale	Backusella circina	     	F
-batrdend	Puccinia	Batrachochytrium dendrobatidis	F
-baudcomp	Dothide2	Baudoinia compniacensis       	F
-beaubass	Sordario	Beauveria bassiana	    	F
-bigenata	Pelagoph	Bigelowiella natans	      	O
-bjeradus	Agarico1	Bjerkandera adusta	      	F
-blasderm	Eurotio3	Blastomyces dermatitidis	F
-blumgram	Leotiomy	Blumeria graminis            	F
-boecstri	Eudicoty	Boechera stricta             	P
-boleedul	Agarico2	Boletus edulis              	F
-bombimpa	InsectAg	Bombus impatiens           	A_I
-bombmori	InsectBm	Bombyx mori                	A_I
-bombterr	InsectAg	Bombus terrestris          	A_I
-bos_taur	Tetrapod	Bos taurus              	A_M
-botrbotr	Agarico4	Botryobasidium botryosum   	F
-botrcinb	Leotiom2	Botrytis cinb0510            	F
-botrcine	Leotiom2	Botrytis cinerea             	F
-botrcint	Leotiom2	Botrytis cint4          	F
-botrdoth	Dothide2	Botryosphaeria dothidea	    	F
-botrfuck	Leotiom2	Botryotinia fuckeliana	  	F
-bracdist	Magnolio	Brachypodium distachyon	  	P
-branflor	ChordatC	Branchiostoma floridae	    	A_C
-brasrapa	brasrapa	Brassica rapa                	P
-brugmala	NematodO	Brugia malayi              	A_N
-cadospec	Leotiom1	Cadophora spec                	F
-caenbren	NematodC	Caenorhabditis brenneri	    	A_N
-caenbrig	NematodC	Caenorhabditis briggsae	    	A_N
-caeneleg	NematodC	Caenorhabditis elegans	     	A_N
-caenjapo	NematodC	Caenorhabditis japonica	    	A_N
-caenrema	NematodC	Caenorhabditis remanei	     	A_N
-cajacaja	Eudicoty	Cajanus cajan               	P
-calljacc	Tetrapod	Callithrix jacchus             	A_M
-calocorn	Dacrymyc	Calocera cornea              	F
-calovisc	Dacrymyc	Calocera viscosa             	F
-camesine	Eudicoty	Camellia sinensis       	P
-candalbi	Saccharo	Candida albicans            	F
-candarab	Saccharo	Candida arabinofermentans   	F
-candcase	Saccharo	Candida caseinolytica       	F
-canddubl	Saccharo	Candida dubliniensis        	F
-candglab	Saccharo	Candida glabrata            	F
-candguil	Saccharo	Candida guilliermondii      	F
-candlusi	Saccharo	Candida lusitaniae          	F
-candtanz	Saccharo	Candida tanzawaensis        	F
-candtenu	Saccharo	Candida tenuis              	F
-candtrop	Saccharo	Candida tropicalis          	F
-canifami	Tetrapod	Canis familiaris          	A_M
-cannsati	Eudicoty	Cannabis sativa              	P
-capitele	capitele	Capitella teleta              	A_O
-caprhirc	Tetrapod	Capra hircus              	A_M
-capsannu	Eudicoty	Capsicum annuum              	P
-capsgran	Eudicoty	Capsella grandiflora         	P
-capsowcz	Ichthyos	Capsaspora owczarzaki          	O
-capsrube	Eudicoty	Capsella rubella             	P
-caripapa	Eudicoty	Carica papaya              	P
-cateangu	Blastocl	Catenaria anguillulae         	F
-caviporc	Tetrapod	Cavia porcellus           	A_M
-cenogeop	Dothide2	Cenococcum geophilum           	F
-ceracapi	InsectDm	Ceratitis capitata            	A_I
-cerasimu	Tetrapod	Ceratotherium simum     	A_M
-cerczeae	Dothide2	Cercospora zeaemaydis          	F
-cerisubv	Agarico2	Ceriporiopsis subvermispora     F
-cerrunic	Agarico2	Cerrena unicolor            	F
-chaeglob	Sordari1	Chaetomium globosum            	F
-challong	Leotiom1	Chalara longipes            	F
-chinlani	Tetrapod	Chinchilla lanigera            	A_M
-chlarein	Chlospec	Chlamydomonas reinhardtii  	P
-chlovari	Chlospec	Chlorella variabilis_NC64A    	P
-chlovulg	Chlospec	Chlorella vulgaris	    	P
-choiveno	Pezizomy	Choiromyces venosus     	F
-cholfoff	Tetrapod	Choloepus hoffmanni           	A_M
-chrypict	Tetrapod	Chrysemys picta bellii	        A_R
-cicearie	Eudicoty	Cicer arietinum           	P
-cioninte	ChordatC	Ciona intestinalis        	A_C
-cionsavi	ChordatC	Ciona savignyi            	A_C
-citrclem	Eudicoty	Citrus clementina          	P
-citrlana	Eudicoty	Citrullus lanatus             	P
-citrsine	Eudicoty	Citrus sinensis            	P
-cladfulv	Dothide2	Cladosporium fulvum     	F
-cladgray	cladgray	Cladonia grayi               	F
-clavpyxi	Agarico2	Clavicorona pyxidata    	F
-coccimmi	Eurotio3	Coccidioides immitis     	F
-coccporm	Eurotio1	Coccidioides pormscc     	F
-coccposa	Eurotio1	Coccidioides posadasii   	F
-coccposi	Eurotio1	Coccidioides posilveira  	F
-coccsube	Chlospec	Coccomyxa subellipsoidea      	P
-cochcarb	Dothide2	Cochliobolus carbonum    	F
-cochhet4	Dothide2	Cochliobolus het4        	F
-cochhete	Dothide2	Cochliobolus heterostrophus 	F
-cochluna	Dothide2	Cochliobolus lunatus     	F
-cochmiya	Dothide2	Cochliobolus miyabeanus  	F
-cochsati	Dothide2	Cochliobolus sativus     	F
-cochvict	Dothide2	Cochliobolus victoriae   	F
-coemreve	Mortiere	Coemansia reversa             	F
-collgram	Sordario	Colletotrichum graminicola 	F
-collhigg	Sordario	Colletotrichum higginsianum	F
-colulivi	Tetrapod	Columba livia               	A_B
-condcris	Tetrapod	Condylura cristata            	A_M
-conicoro	conicoro	Conidiobolus coronatus   	F
-conipute	Agarico2	Coniophora puteana             	F
-coprcine	Agarico2	Coprinopsis cinerea     	F
-cordmili	Sordario	Cordyceps militaris           	F
-cortglau	Agarico2	Cortinarius glaucopus   	F
-corycass	Dothideo	Corynespora cassicola   	F
-crasgiga	Mollusca	Crassostrea gigas       	A_mo
-cricgris	Tetrapod	Cricetulus griseus             	A_M
-cronquer	Puccinia	Cronartium quercuum            	F
-crypgatt	Tremell1	Cryptococcus gattii      	F
-crypneof	Tremell1	Cryptococcus neoformans  	F
-cryppara	Sordari3	Cryphonectria parasitica  	F
-crypparv	Conoidas	Cryptosporidium parvum      	O
-crypvish	Tremell1	Cryptococcus vishniacii  	F
-cucuberb	Dothide2	Cucurbitaria berberidis  	F
-cucusati	Eudicoty	Cucumis sativus             	P
-culequin	InsectDm	Culex quinquefasciatus    	A_I
-cybejadi	Saccharo	Cyberlindnera jadinii     	F
-cylitorr	cylitorr	Cylindrobasidium torrendii   	F
-cynosemi	Fish_mdl	Cynoglossus semilaevis  	A_F
-dacrspec	Dacrymyc	Dacryopinax species     	F
-daedquer	Agarico2	Daedalea quercina            	F
-daldesch	Sordari1	Daldinia eschscholzii        	F
-danaplex	InsectAc	Danaus plexippus           	A_I
-danireri	Fish_lng	Danio rerio               	A_F
-daphpule	InsectDm	Daphnia pulex               	A_I
-dasynove	Tetrapod	Dasypus novemcinctus        	A_M
-debahans	Saccharo	Debaryomyces hansenii    	F
-dekkbrux	Saccharo	Dekkera bruxellensis        	F
-deliconf	Agaricom	Delitschia confertaspora       	F
-dendbisp	Agarico2	Dendrothele bispora     	F
-dendpond	InsectAc	Dendroctonus ponderosae 	A_I                 	
-dichsqua	Agarico2	Dichomitus squalens            	F
-dictdisc	dictdisc	Dictyostelium discoideum   	O
-dictpurp	dictpurp	Dictyostelium purpureum   	O
-didyexig	Dothide4	Didymella exigua              	F
-dioscryo	Tremell2	Dioszegia cryoxerica          	F
-dipoordi	Tetrapod	Dipodomys ordii               	A_M
-dissacic	Dothide1	Dissoconium aciculare           F
-dothsept	Dothide2	Dothistroma septosporum         F
-dothsymp	Dothide2	Dothidotthia symphoricarpi      F
-drosanan	InsectDm	Drosophila ananassae           	A_I
-droserec	InsectDm	Drosophila erecta              	A_I
-drosgrim	InsectDm	Drosophila grimshawi           	A_I
-drosmela	InsectDm	Drosophila melanogaster        	A_I
-drosmoja	InsectDm	Drosophila mojavensis          	A_I
-drospers	InsectDm	Drosophila persimilis          	A_I
-drospseu	InsectDm	Drosophila pseudoobscura       	A_I
-drossech	InsectDm	Drosophila sechellia           	A_I
-drossimu	InsectDm	Drosophila simulans            	A_I
-drosviri	InsectDm	Drosophila virilis             	A_I
-droswill	InsectDm	Drosophila willistoni          	A_I
-drosyaku	InsectDm	Drosophila yakuba              	A_I
-echitelf	Tetrapod	Echinops telfairi            	A_M
-emilhuxl	emilhuxl	Emiliania huxleyi             	O
-encecuni	FungiAll	Encephalitozoon cuniculi    	F
-encehell	FungiAll	Encephalitozoon hellem      	F
-enceinte	FungiAll	Encephalitozoon intestinalis	F
-enceroma	FungiAll	Encephalitozoon romaleae    	F
-entahist	Archamoe	Entamoeba histolytica         	O
-entebien	FungiAll	Enterocytozoon bieneusi    	F
-equucaba	Tetrapod	Equus caballus            	A_M
-eremcymb	Saccharo	Eremothecium cymbalariae 	F
-eremgoss	Saccharo	Eremothecium gossypii    	F
-erineuro	Tetrapod	Erinaceus europaeus           	A_M
-eucacama	Eudicoty	Eucalyptus camaldulensis 	P                   	
-eucagran	Eudicoty	Eucalyptus grandis             	P
-euroherb	Eurotio1	Eurotium herbariorum         	F
-eutrsals	Eudicoty	Eutrema salsugineum         	P
-eutylata	Sordari1	Eutypa lata                	F
-exidglan	Agarico1	Exidia glandulosa          	F
-exobvacc	exobvacc	Exobasidium vaccinii    	F
-falccher	Tetrapod	Falco cherrug             	A_B
-falcpere	Tetrapod	Falco peregrinus          	A_B
-felicatu	Tetrapod	Felis catus               	A_M
-fibrradi	Agarico2	Fibroporia radiculosa          	F
-fibuspec	Agarico2	Fibulorhizoctonia spec        	F
-ficealbi	Tetrapod	Ficedula albicollis          	A_B
-fisthepa	Agaricom	Fistulina hepatica            	F
-fomimedi	Agarico2	Fomitiporia mediterranea	F
-fomipini	Agarico2	Fomitopsis pinicola            	F
-fraganan	Eudicoty	Fragariax ananassa            	P
-fragcyli	Heterolo	Fragilariopsis cylindrus   	O
-fragvesc	Eudicoty	Fragaria vesca               	P
-fusafuji	fusagram	Fusarium fujikuroi           	F
-fusagram	fusagram	Fusarium graminearum         	F
-fusaoxys	fusagram	Fusarium oxysporum           	F
-fusavert	fusagram	Fusarium verticillioides     	F
-gadumorh	Fish_mdl	Gadus morhua              	A_F
-gaeugram	Agarico2	Gaeumannomyces graminis    	F
-galemarg	Agarico2	Galerina marginata           	F
-gallgall	Tetrapod	Gallus gallus              	A_B
-ganospec	Agarico2	Ganoderma species             	F
-gastacul	Fish_mdl	Gasterosteus aculeatus   	A_F
-giarlamb	Archamoe	Giardia lamblia             	O
-gibbmoni	Sordario	Gibberella moniliformis        	F
-gibbzeae	Sordari5	Gibberella zeae                	F
-glarlozo	Leotiom1	Glarea lozoyensis       	F
-gloetrab	Agarico2	Gloeophyllum trabeum     	F
-glomacut	Sordari1	Glomerella acutata             	F
-glomcing	Sordari5	Glomerella cingulata           	F
-glomgram	Sordari5	Glomerella graminicola         	F
-glycmax_	Eudicoty	Glycine max                 	P
-gonaprol	gonaprol	Gonapodya prolifera           	F
-gorigori	Tetrapod	Gorilla gorilla             	A_M
-gossraim	Eudicoty	Gossypium raimondii           	P
-grosclav	Sordario	Grosmannia clavigera           	F
-guilthet	guilthet	Guillardia theta               	O
-gymnaura	Eurotio2	Gymnascella aurantiaca  	F
-gymnchry	Agarico2	Gymnopilus chrysopellus        	F
-gymncitr	Eurotio2	Gymnascella citrina     	F
-gymnluxu	Agarico2	Gymnopus luxurians           	F
-gyrolivi	Agarico2	Gyrodon lividus	                F
-hanspoly	Saccharo	Hansenula polymorpha          	F
-hansvalb	Saccharo	Hanseniaspora valbyensis  	F
-hebecyli	Agarico2	Hebeloma cylindrosporum      	F
-helimelp	InsectAc	Heliconius melpomene           	A_I
-helorobu	Echinode	Helobdella robusta             	A_O
-heteanno	Agarico2	Heterobasidion annosum     	F
-heteglab	Tetrapod	Heterocephalus glaber      	A_M
-hetepycn	hetepycn	Heterogastridium pycnidioideum	F
-histcag1	Eurotio3	Histoplasma cag186ar    	F
-histcah1	Eurotio3	Histoplasma cah143      	F
-histcah8	Eurotio3	Histoplasma cah88       	F
-histcana	Eurotio3	Histoplasma canam1      	F
-histcaps	Eurotio3	Histoplasma capsulatum  	F
-homosapi	Tetrapod	Homo sapiens             	A_M
-hyalarab	Oomycet1	Hyaloperonospora arabidopsidis	O
-hydnpina	Agarico2	Hydnomerulius pinastri    	F
-hydrmagn	Echinode	Hydra magnipapillata      	A_O
-hyphburt	Saccharo	Hyphopichia burtonii    	F
-hyphsubl	Agarico2	Hypholoma sublateritium       	F
-hypospco	Sordari1	Hypoxylon spCO275             	F
-hypospec	Sordari1	Hypoxylon species             	F
-hystpuli	Dothideo	Hysterium pulicare            	F
-ictitrid	Tetrapod	Ictidomys tridecemlineatus    	A_M
-ilyoradi	Sordari5	Ilyonectria radicola    	F
-ixodscap	InsectBm	Ixodes scapularis          	A_I
-jaapargi	Agarico2	Jaapia argillacea          	F
-jacujacu	Tetrapod	Jaculus jaculus             	A_M
-jatrcurc	Eudicoty	Jatropha curcas              	P
-karsrhod	Dothide4	Karstenula rhodostom    	F
-kazaafri	Saccharo	Kazachstania africana    	F
-kluylact	Saccharo	Kluyveromyces lactis      	F
-komapast	Saccharo	Komagataella pastoris    	F
-laccamet	Agarico2	Laccaria amethystina         	F
-laccbico	Agarico1	Laccaria bicolor             	F
-lachkluy	Saccharo	Lachancea Lachancea           	F
-lachther	Saccharo	Lachancea thermotolerans      	F
-laetsulp	Agarico2	Laetiporus sulphureus          	F
-latichal	Tetrapod	Latimeria chalumnae           	A_A
-leisbraz	Archamoe	Leishmania braziliensis        	O
-leisdono	Archamoe	Leishmania donovani            	O
-leisinfa	Archamoe	Leishmania infantum            	O
-leismajo	Archamoe	Leishmania major               	O
-lentfluv	Dothide2	Lentithecium fluviatile 	F
-lenttigr	Agarico2	Lentinus tigrinus            	F
-lepiocul	Fish_lng	Lepisosteus oculatus    	A_F
-lepipalu	Dothide2	Lepidopterella palustri    	F
-leptmacu	Dothideo	Leptosphaeria maculans    	F
-leucgong	Agarico2	Leucoagaricus gongylophorus	F
-leucmoll	Agarico2	Leucogyrophana mollusca    	F
-lichhyal	Mucorale	Lichtheimia hyalospora  	F
-linuusit	Eudicoty	Linum usitatissimum       	P
-lipostar	Saccharo	Lipomyces starkeyi            	F
-loa_loa_	NematodO	Loa loa                 	A_N
-loddelon	Saccharo	Lodderomyces elongisporus	F
-lophmacr	Dothide2	Lophiostoma macrostomum 	F
-lophmyti	Dothide2	Lophium mytilinum           	F
-lottgiga	Mollusca	Lottia gigantea            	A_mo
-lotujapo	Eudicoty	Lotus japonicus           	P
-loxoafri	Tetrapod	Loxodonta africana            	A_M
-macafasc	Tetrapod	Macaca fascicularis        	A_M
-macamula	Tetrapod	Macaca mulatta             	A_M
-macranom	Dothide4	Macroventuria anomochaeta 	F
-macreuge	Tetrapod	Macropus eugenii             	A_M
-macrfuli	Agarico1	Macrolepiota fuliginosa  	F
-macrphas	Dothide2	Macrophomina phaseolina  	F
-magngris	Sordari3	Magnaporthe grisea      	F
-magnoryz	Sordari3	Magnaporthe oryzae      	F
-magnpoae	Sordari3	Magnaporthe poae        	F
-malaglob	Schizosa	Malassezia globosa             	F
-malasymp	FungiAll	Malassezia sympodialis         	F
-maludome	Eudicoty	Malus domesticas          	P
-maniescu	Eudicoty	Manihot esculenta           	P
-maylzebr	Fish_mdl	Maylandia　zebra        	A_B                 	
-meditrun	Eudicoty	Medicago truncatula          	P
-megarotu	InsectAg	Megachile rotundata           	A_I
-megascal	InsectDm	Megaselia scalaris            	A_I
-melalari	Puccinia	Melampsora laricispopulina     	F
-melapulv	Dothide2	Melanomma pulvis-pyrius       	F
-melaspnr	melaspnr	Melanconium spNRRL      	F
-melegall	Tetrapod	Meleagris gallopavo           	A_B
-melibico	Leotiom1	Meliniomyces bicolor     	F
-melicinx	melicinx	Melitaea cinxia         	A_I 	
-melivari	Leotiom1	Meliniomyces variabilis  	F
-meloundu	Tetrapod	Melopsittacus undulatus   	A_B
-mesoaura	Tetrapod	Mesocricetus auratus     	A_M
-metaacri	Sordario	Metarhizium acridum     	F
-metaanis	Sordario	Metarhizium anisopliae  	F
-metaocci	metaocci	Metaseiulus occidentalis	A_I
-metarobe	Sordario	Metarhizium robertsii   	F
-metsbicu	Saccharo	Metschnikowia bicuspidata 	F
-micrcani	Eurotio1	Microsporum canis       	F
-micrgyps	Eurotio1	Microsporum gypseum     	F
-micrmuri	Tetrapod	Microcebus murinus             	A_M
-microchr	Tetrapod	Microtus ochrogaster         	A_M
-micrpusi	Micrspec	Micromonas pusilla             	P
-micrrcc2	Micrspec	Micromonas rcc299              	P
-mimugutt	Eudicoty	Mimulus guttatus            	P
-mixiosmu	mixiosmu	Mixia osmundae            	F
-monahapt	Sordari1	Monacrosporium haptotylum  	F
-monapurp	Eurotio1	Monascus purpureus           	F
-monarube	Eurotio1	Monascus ruber               	F
-monipern	Agaricom	Moniliophthora perniciosa  	F
-monobrev	monobrev	Monosiga brevicollis         	O
-monodome	Tetrapod	Monodelphis domestica   	A_M
-morcconi	Pezizomy	Morchella conica              	F
-mortelon	Mortiere	Mortierella elongata    	F
-mortvert	Mortiere	Mortierella verticillata	F
-mucocirc	Mucorale	Mucor circinelloides      	F
-mus_musc	Tetrapod	Mus musculus            	A_M
-musaacum	Magnolio	Musa acuminata           	P
-mustputo	Tetrapod	Mustela putorius        	A_M
-mycether	Sordari1	Myceliophthora thermophila 	F
-mycofiji	Dothide2	Mycosphaerella fijiensis   	F
-mycogram	Dothide2	Mycosphaerella graminicola 	F
-myotluci	Tetrapod	Myotis lucifugus           	A_M
-myriduri	Dothide2	Myriangium duriaei             	F
-nadsfulv	Saccharo	Nadsonia fulvescens          	F
-naeggrub	Heterolo	Naegleria gruberi             	O
-naiaflui	naiaflui	Naiadella fluitansa           	F
-nasovitr	InsectAg	Nasonia vitripennis         	A_I
-necthaem	Sordari5	Nectria haematococca        	F
-nemapari	FungiAll	Nematocida parisii             	F
-nemavect	Echinode	Nematostella vectensis   	A_O
-neofparv	Dothide2	Neofusicoccum parvum      	F
-neollepi	Agarico2	Neolentinus lepideus    	F
-neosfisc	Eurotio2	Neosartorya fischeri    	F
-neurcras	Sordari1	Neurospora crassa              	F
-neurdisc	Sordari1	Neurospora discreta            	F
-neurtetr	Sordari1	Neurospora tetrasperma         	F
-nicobent	Eudicoty	Nicotiana benthamiana   	P                   	
-nomaleuc	Tetrapod	Nomascus leucogenys          	A_M
-nosecera	FungiAll	Nosema ceranae             	F
-obbarivu	Agarico2	Obba rivulosa             	F
-ochoprin	Tetrapod	Ochotona princeps            	A_M
-octodegu	Tetrapod	Octodon degus               	A_M
-odobrosm	Tetrapod	Odobenus rosmarus       	A_M
-oidimaiu	Leotiom1	Oidiodendron maius      	F
-ompholea	Agaricom	Omphalotus olearius            	F
-onchvolv	onchvolv	Onchocerca volvulus     	A_N                 	
-ophidiss	Dothide4	Ophiostoma piceae              	F
-ophipice	Sordario	Ophiostoma piceae              	F
-orciorca	Tetrapod	Orcinus orca                	A_M
-oreonilo	Fish_mdl	Oreochromis niloticus   	A_F
-ornianat	Tetrapod	Ornithorhynchus anatinus    	A_M
-orpispec	Ichthyos	Orpinomyces spec        	F
-oryccuni	Tetrapod	Oryctolagus cuniculus   	A_M
-oryzbrac	Magnolio	Oryza brachyantha         	P
-oryzlati	Fish_mdl	Oryzias latipes             	A_F
-oryzsati	Magnolio	Oryza sativa              	P
-oryzsatj	Magnolio	Oryza sativa              	P
-ostrluci	Ostrspec	Ostreococcus lucimarinus 	P
-ostrrcc8	Ostrspec	Ostreococcus rcc809      	P
-ostrtaur	Ostrspec	Ostreococcus tauri       	P
-otolgarn	Tetrapod	Otolemur garnettii           	A_M
-ovisarie	Tetrapod	Ovis aries               	A_M
-pachtann	Saccharo	Pachysolen tannophilus         	F
-pan_pani	Tetrapod	Pan paniscus            	A_M
-pan_trog	Tetrapod	Pan troglodytes         	A_M
-panivirg	Magnolio	Panicum virgatum            	P
-papianub	Tetrapod	Papio anubis              	A_M
-parabra1	Eurotio3	Paracoccidioides bra1        	F
-parabras	Eurotio3	Paracoccidioides brasiliensis	F
-paratetr	paratetr	Paramecium tetraurelia         	O
-pateatra	Dothide2	Patellaria atrata              	F
-paxiinvo	Agarico2	Paxillus involutus           	F
-paxirubi	Agarico2	Paxillus rubicundulus        	F
-pedihuma	InsectAg	Pediculus humanus             	A_I
-pelosine	Tetrapod	Pelodiscus sinensis            	A_R
-penibila	Eurotio1	Penicillium bilaiae     	F
-penibrev	Eurotio2	Penicillium brevicompactum	F
-penicane	Eurotio2	Penicillium canescens   	F
-penichry	Eurotio2	Penicillium chrysogenum 	F
-penidigi	Eurotio2	Penicillium digitatum   	F
-peniexpa	Eurotio2	Penicillium expansum    	F
-penifell	Eurotio2	Penicillium fellutanum  	F
-peniglab	Eurotio2	Penicillium glabrum     	F
-penijant	Eurotio1	Penicillium janthinellum	F
-penilano	Eurotio2	Penicillium lanosocoeruleum	F
-penioxal	Eurotiom	Penicillium oxalicum    	F
-penirais	Eurotio2	Penicillium raistrickii 	F
-petrmari	ChordatU	Petromyzon marinus     		A_C
-phaealeo	Sordario	Phaeoacremonium aleophilum  	F
-phaenodo	phaenodo	Phaeosphaeria nodorum     	F
-phaetric	Bacillar	Phaeodactylum tricornutum 	O
-phancarn	Agarico1	Phanerochaete carnosa     	F
-phanchry	Agarico1	Phanerochaete chrysosporium	F
-phasvulg	Eudicoty	Phaseolus vulgaris            	P
-phlebrev	Agarico2	Phlebia brevispora          	F
-phlegiga	Agarico1	Phlebiopsis gigantea    	F
-phoedact	Magnolio	Phoenix dactylifera         	P
-phomtrac	Dothide2	Phoma tracheiphila        	F
-phycblak	Mucorale	Phycomyces blakesleeanus       	F
-phylhete	Magnolio	Phyllostachys heterocycla 	P
-physpate	physpate	Physcomitrella patens      	P
-physpoly	Sordario	Physarum polycephalum        	F
-phytcaps	Oomycet2	Phytophthora capsici     	O
-phytcinn	Oomycet2	Phytophthora cinnamomi   	O
-phytinfe	Oomycet1	Phytophthora infestans   	O
-phytramo	Oomycet1	Phytophthora ramorum     	O
-phytsoja	Oomycet1	Phytophthora sojae       	O
-pichmemb	Saccharo	Pichia membranifaciens     	F
-pichpast	Saccharo	Pichia pastoris            	F
-pichstip	Saccharo	Pichia stipitis            	F
-piedhort	Dothide4	Piedraia hortae              	F
-pilocroc	Agarico2	Piloderma croceum             	F
-piriindi	Agarico1	Piriformospora indica      	F
-pirospec	Ichthyos	Piromyces species             	F
-pisomicr	Agarico2	Pisolithus microcarpus         	F
-pisotinc	Agarico2	Pisolithus tinctorius          	F
-plasberg	Aconoida	Plasmodium berghei             	O
-plaschab	Aconoida	Plasmodium chabaudi            	O
-plasfalc	Aconoida	Plasmodium falciparum          	O
-plasknow	Aconoida	Plasmodium knowlesi            	O
-plasviva	Aconoida	Plasmodium vivax               	O
-pleosipa	Dothide2	Pleomassaria siparia     	F
-pleuostr	Agarico1	Pleurotus ostreatus           	F
-pliccris	Agarico2	Plicaturopsis crispa      	F
-pneujiro	FungiAll	Pneumocystis jirovecii   	F
-podoanse	Sordari1	Podospora anserina            	F
-poecform	Fish_lng	Poecilia formosa        	A_F                 	
-polyarcu	Agarico2	Polyporus arcularius          	F
-polycitr	Dothide1	Polychaeton citri       	F
-pongabel	Tetrapod	Pongo abelii              	A_M
-poputric	Eudicoty	Populus trichocarpa         	P
-postplac	Agarico2	Postia placenta            	F
-prispaci	prispaci	Pristionchus pacificus   	A_N
-proccape	Tetrapod	Procavia capensis            	A_M
-prunmume	Eudicoty	Prunus mume                	P
-prunpers	Eudicoty	Prunus persica             	P
-pseuanta	Sordari3	Pseudozyma antarctica          	F
-pseuhube	Ichthyos	Pseudozyma hubeiensis          	F
-pseuhumi	Tetrapod	Pseudopodoces humilis     	A_B
-pseumult	Bacillar	Pseudo-nitzschia multiseries 	O
-ptervamp	Tetrapod	Pteropus vampyrus            	A_M
-puccgram	Puccinia	Puccinia graminis            	F
-puccstri	Puccinia	Puccinia striiformis         	F
-pucctrit	Puccinia	Puccinia triticina           	F
-puncstri	Agarico2	Punctularia strigosozonata	F
-pycncinn	FungiAll	Pycnoporus cinnabarinus        	F
-pycncocc	Agarico2	Pycnoporus coccineus           	F
-pycnsang	Agarico2	Pycnoporus sanguineus          	F
-pyretere	Dothide2	Pyrenophora teres       	F
-pyretrit	Dothide2	Pyrenophora tritici     	F
-pyroconf	Pezizomy	Pyronema confluens           	F
-pythulti	Oomycet2	Pythium ultimum             	O
-pythvexa	pythvexa	Pythium	vexans          	O
-rattnorv	Tetrapod	Rattus norvegicus          	A_M
-rhizirre	Blastocl	Rhizophagus irregularis 	F
-rhizmicr	Mucorale	Rhizopus microsporus         	F
-rhizoryz	Mucorale	Rhizopus oryzae              	F
-rhizsola	Agarico4	Rhizoctonia solani      	F
-rhizvini	Agarico1	Rhizopus microsporus         	F
-rhodgram	rhodgram	Rhodotorula graminis    	F
-rhodminu	rhodminu	Rhodotorula minuta      	F
-rhodprol	InsectAc	Rhodnius prolixus            	A_I
-rhytrufu	Dothideo	Rhytidhysteron rufulum     	F
-ricicomm	Eudicoty	Ricinus communis            	P
-rickmell	Agarico1	Rickenella mellea              	F
-rozeallo	Tremell2	Rozella allomycis           	F
-saccbaya	Saccharo	Saccharomyces bayanus     	F
-sacccast	Saccharo	Saccharomyces castellii   	F
-sacccere	Saccharo	Saccharomyces cerevisiae  	F
-sacckluy	Saccharo	Saccharomyces kluyveri    	F
-sacckowa	Tetrapod	Saccoglossus kowalevskii 	A_C
-sacckudr	Saccharo	Saccharomyces kudriavzevii	F
-saccmika	Saccharo	Saccharomyces mikatae     	F
-saccpara	Saccharo	Saccharomyces paradoxus   	F
-saccpast	Saccharo	Saccharomyces pastorianus 	F
-saccprot	Saccharo	Saccharata proteae             	F
-saimboli	Tetrapod	Saimiri boliviensis         	A_M
-saitcomp	Agarico1	Saitoella complicata          	F
-salprose	salprose	Salpingoeca rosetta     	O
-sarcharr	Tetrapod	Sarcophilus harrisii    	A_M
-schiaggr	Labyrint	Schizochytrium aggregatum  	O
-schicom3	Agarico1	Schizophyllum com3        	F
-schicoml	Agarico1	Schizophyllum comL      	F
-schicomm	Agarico1	Schizophyllum commune     	F
-schicomt	Agarico1	Schizophyllum comT        	F
-schicryo	Schizosa	Schizosaccharomyces cryophilus	F
-schijapo	Schizosa	Schizosaccharomyces japonicus	F
-schimans	schimans	Schistosoma mansoni     	A_O
-schiocto	Schizosa	Schizosaccharomyces octosporus 	F
-schipara	Agarico2	Schizopora paradoxa            	F
-schipomb	Schizosa	Schizosaccharomyces pombe 	F
-sclecitr	Agarico2	Scleroderma citrinum    	F
-sclescle	Leotiom2	Sclerotinia sclerotiorum	F
-sebaverm	Agarico1	Sebacina vermifera           	F
-selamoel	selamoel	Selaginella moellendorffii	P
-septmusi	Dothide1	Septoria musiva              	F
-septpopu	Dothide1	Septoria populicola          	F
-serplacr	Agarico2	Serpula lacrymans           	F
-setaital	Magnolio	Setaria italica             	P
-setoturc	Dothide2	Setosphaeria turcica     	F
-sistbrin	Agarico2	Sistotrema brinkmannii         	F
-sistnive	Agarico1	Sistotremastrum niveocremeu    	F
-sistsuec	Agarico1	Sistotremastrum suecicum    	F
-sodialka	Sordari3	Sodiomyces alkalinus           	F
-solalyco	Eudicoty	Solanum lycopersicum        	P
-solatube	Eudicoty	Solanum tuberosum           	P
-soleinvi	InsectDm	Solenopsis invicta      	A_I                 	
-sorearan	Tetrapod	Sorex araneus             	A_M
-sorgbico	Magnolio	Sorghum bicolor             	P
-spatpass	Saccharo	Spathaspora passalidarum	F
-sphaarct	Ichthyos	Sphaeroforma arctica     	F
-sphastel	Agarico1	Sphaerobolus stellatus   	F
-spizpunc	FungiAll	Spizellomyces punctatus   	F
-sporfime	Dothide4	Sporormia fimetaria           	F
-sporlind	Agaricom	Sporobolomyces linderae    	F
-sporreil	Puccinia	Sporisorium reilianum   	F
-sporrose	Puccinia	Sporobolomyces roseus      	F
-sporther	Sordari1	Sporotrichum thermophile 	F
-stagnodo	Dothideo	Stagonospora nodorum     	F
-sterhirs	Agarico4	Stereum hirsutum            	F
-strimari	InsectDm	Strigamia maritima            	A_I
-stropurp	ChordatU	Strongylocentrotus purpuratus  	A_C
-suilbrev	Agarico1	Suillus brevipes            	F
-suillute	Agarico2	Suillus luteus              	F
-sus_scro	Tetrapod	Sus scrofa              	A_M
-symbkoch	symbkoch	Symbiotaphrina kochii      	F
-taengutt	Tetrapod	Taeniopygia guttata     	A_B
-takirubr	Fish_sht	Takifugu rubripes            	A_F
-talaacul	Eurotio2	Talaromyces aculeatus   	F
-talamarn	Eurotio2	Talaromyces marneffei   	F
-talastip	Eurotio2	Talaromyces stipitatus  	F
-taphdefo	Dothide4	Taphrina deformans           	F
-tarssyri	Tetrapod	Tarsius syrichta            	A_M
-terfboud	Pezizomy	Terfezia boudieri            	F
-tetrnigr	Fish_sht	Tetraodon nigroviridis        	A_F
-tetrphaf	Saccharo	Tetrapisispora phaffii     	F
-tetrther	tetrther	Tetrahymena thermophila 	O
-tetrurti	InsectAg	Tetranychus urticae     	A_I
-thalpseu	thalpseu	Thalassiosira pseudonana  	O
-thectrah	FungiAll	Thecamonas trahens             	O
-theiannu	Theileri	Theileria annulata            	A_O
-theiparv	Theileri	Theileria parva               	A_O
-thelhalo	Eudicoty	Thellungiella halophila   	P
-thelparv	Eudicoty	Thellungiella parvula     	P
-theocaca	Eudicoty	Theobroma cacao               	P
-theraura	Eurotio2	Thermoascus aurantiacus 	F
-thieanta	FungiAll	Thielavia antarctica          	F
-thieappe	Sordari1	Thielavia appendiculata       	F
-thiearen	Sordari1	Thielavia arenaria            	F
-thiehyrc	Sordari1	Thielavia hyrcaniae           	F
-thieterr	Sordari1	Thielavia terrestris          	F
-tillanom	tillanom	Tilletiaria anomala     	F
-torudelb	Saccharo	Torulaspora delbrueckii 	F
-toxogond	Conoidas	Toxoplasma gondii              	O
-tramvers	Agarico2	Trametes versicolor          	F
-tremmese	Tremell2	Tremella mesenterica         	F
-trempert	trempert	Trematosphaeria pertusa     	F
-tremspec	Tremell2	Tremella species             	F
-tribcast	tribcast	Tribolium castaneum           	A_I
-tricabie	Agarico2	Trichaptum abietinum           	F
-tricadha	tricadha	Trichoplax adhaerens           	A_O
-tricaspe	Sordari1	Trichoderma asperellum  	F
-tricatro	Sordari1	Trichoderma atroviride  	F
-triccitr	Sordario	Trichoderma citrinoviride	F
-tricequi	Eurotio2	Trichophyton equinum     	F
-tricharz	Sordari1	Trichoderma harzianum   	F
-triclong	Sordari1	Trichoderma longibrachiatum	F
-tricmana	Tetrapod	Trichechus manatus      	A_M
-tricmats	Agarico1	Tricholoma matsutake           	F
-tricolea	Tremell2	Trichosporon oleaginosus 	F
-tricrees	Sordari1	Trichoderma reesei      	F
-tricrubr	Eurotio1	Trichophyton rubrum      	F
-tricspir	tribcast	Trichinella spiralis    	A_O
-trictons	Eurotio1	Trichophyton tonsurans   	F
-tricverr	Eurotio1	Trichophyton verrucosum  	F
-tricvire	Sordari1	Trichoderma virens      	F
-tritaesa	Magnolio	Triticum aestivum            	P
-tritaesb	Magnolio	Triticum aestivum            	P
-tritaesd	Magnolio	Triticum aestivum            	P
-tritspec	tritspec	Tritirachium species     	F
-trypbruc	Archamoe	Trypanosoma brucei      	O
-trypelut	Dothide2	Trypethelium eluteriae   	F
-tubemela	Pezizomy	Tuber melanosporum        	F
-tulacalo	Agarico4	Tulasnella calospora           	F
-tupabela	Tetrapod	Tupaia belangeri           	A_M
-turstrun	Tetrapod	Tursiops truncatus           	A_M
-umberama	Mucorale	Umbelopsis ramanniana          	F
-uncirees	Eurotio1	Uncinocarpus reesii      	F
-ustimayd	Eurotio3	Ustilago maydis              	F
-vertalbo	Sordario	Verticillium alboatrum   	F
-vertalfa	Sordario	Verticillium alfalfae    	F
-vertdahl	Sordario	Verticillium dahliae     	F
-vicupaco	Tetrapod	Vicugna pacos               	A_
-vitivini	Eudicoty	Vitis vinifera            	P
-volvcart	Chlospec	Volvox carteri             	P
-volvvolv	Agaricom	Volvariella volvacea    	F
-wallicht	Dothide4	Wallemia ichthyophaga        	F
-wallsebi	wallsebi	Wallemia sebi           	F
-wickanom	Saccharo	Wickerhamomyces anomalus    	F
-wilcmiko	Pezizomy	Wilcoxina mikolae             	F
-wolfcoco	Agarico2	Wolfiporia cocos               	F
-xantpari	Agarico2	Xanthoria parietina           	F
-xenotrop	Tetrapod	Xenopus tropicalis          	A_A
-xiphmacu	Fish_mdl	Xiphophorus maculatus   	A_F
-xyloheve	xyloheve	Xylona heveae              	F
-yarrlipo	Saccharo	Yarrowia lipolytica          	F
-zasmcell	Dothide2	Zasmidium cellare             	F
-zea_mays	Magnolio	Zea mays                	P
-zonoalbi	Tetrapod	Zonotrichia albicollis  	A_B
-zopfrhiz	Dothide2	Zopfia rhizophila          	F
-zygoroux	Saccharo	Zygosaccharomyces rouxii       	F
-zymotrit	Dothide2	Zymoseptoria tritici     	F
+aaosarxi	Dothide1	Aaosphaeria arxii              	F_As	Pleosporales -
+aborbien	unknown 	Abortiporus biennis            	F_Ba	Polyporales Coriolaceae
+absiglau	unknown 	Absidia glauca                 	F_Mu	Mucorales Cunninghamellaceae
+absipade	unknown 	Absidia padenii                	F_Mu	Mucorales Cunninghamellaceae
+absirepe	unknown 	Absidia repens                 	F_Mu	Mucorales Cunninghamellaceae
+acancast	acancast	Acanthamoeba castellanii       	O_Am	Longamoebia -
+acanchlo	Tetrapod	Acanthisitta chloris           	M_Av	Passeriformes Acanthisittidae
+acanplan	unknown 	Acanthaster planci             	M_Ec	Valvatida Acanthasteridae
+acanpoly	unknown 	Acanthochromis polyacanthus    	M_Fs	- Pomacentridae
+acanvite	NematodO	Acanthocheilonema viteae       	M_Ne	Spirurida Onchocercidae
+acaringo	unknown 	Acaromyces ingoldii            	F_Ba	Exobasidiales Cryptobasidiaceae
+acepmacr	unknown 	Acephala macrosclerotiorum     	F_As	Helotiales -
+acidacid	unknown 	Acidothrix acidophila          	F_As	- Amplistromataceae
+acidrich	Dothide1	Acidomyces richmondensis       	F_As	- -
+acinjuba	Tetrapod	Acinonyx jubatus               	M_Mm	Carnivora Felidae
+acrealca	Sordari3	Acremonium alcalophilum        	F_As	- -
+acrechry	Sordari3	Acremonium chrysogenum         	F_As	- -
+acrestri	Sordari3	Acremonium strictum            	F_As	- -
+acrodigi	ChordatC	Acropora digitifera            	M_Cn	Scleractinia Acroporidae
+acroechi	Echinode	Acromyrmex echinatior          	M_In	Hymenoptera Formicidae
+acyrpisu	InsectCl	Acyrthosiphon pisum            	M_In	Hemiptera Aphididae
+acytsubg	acytsubg	Acytostelium subglobosum       	O_Am	Dictyosteliida -
+adinvaga	unknown 	Adineta vaga                   	M_Ro	Adinetida Adinetidae
+aedeaegy	aedeaegy	Aedes aegypti                  	M_In	Diptera Culicidae
+aedealbo	unknown 	Aedes albopictus               	M_In	Diptera Culicidae
+aegitaus	unknown 	Aegilops tauschii              	P_Mo	Poales Poaceae
+aethtumi	unknown 	Aethina tumida                 	M_In	Coleoptera Nitidulidae
+agarbisp	Dothide1	Agaricus bisporus              	F_Ba	Agaricales Agaricaceae
+agarhyph	Sordari1	Agaricostilbum hyphaenes       	F_Ba	Agaricostilbales Agaricostilbaceae
+agriplan	InsectCo	Agrilus planipennis            	M_In	Coleoptera Buprestidae
+agropedi	unknown 	Agrocybe pediades              	F_Ba	Agaricales Bolbitiaceae
+ailumela	Tetrapod	Ailuropoda melanoleuca         	M_Mm	Carnivora Ursidae
+albucand	Albugina	Albugo candida                 	O_St	Albuginales Albuginaceae
+albulaib	Albugina	Albugo laibachii               	O_St	Albuginales Albuginaceae
+aliqkhao	unknown 	Aliquandostipite khaoyaiensis  	F_As	Jahnulales Aliquandostipitaceae
+allimiss	Tetrapod	Alligator mississippiensis     	M_Rp	Crocodylia Alligatoridae
+allisine	Tetrapod	Alligator sinensis             	M_Rp	Crocodylia Alligatoridae
+allomacr	Blastocl	Allomyces macrogynus           	F_Bl	Blastocladiales Blastocladiaceae
+altealte	Dothide1	Alternaria alternata           	F_As	Pleosporales Pleosporaceae
+altebras	Dothide1	Alternaria brassicicola        	F_As	Pleosporales Pleosporaceae
+amanmusc	Dothide1	Amanita muscaria               	F_Ba	Agaricales Amanitaceae
+amanthie	Dothide1	Amanita thiersii               	F_Ba	Agaricales Amanitaceae
+amarhypo	Angiosp 	Amaranthus hypochondriacus     	P_Eu	Caryophyllales Amaranthaceae
+ambotric	Angiosp 	Amborella trichopoda           	P_Am	Amborellales Amborellaceae
+amnilign	Dothide1	Amniculicola lignicola         	F_As	Pleosporales Amniculicolaceae
+amorresi	Dothide1	Amorphotheca resinae           	F_As	- Myxotrichaceae
+ampequis	unknown 	Ampelomyces quisqualis         	F_As	Pleosporales Leptosphaeriaceae
+amphquee	amphquee	Amphimedon queenslandica       	M_Po	Haplosclerida Niphatidae
+amphspec	unknown 	Amphiamblys spec               	F_Mi	Amphiacanthidae -	 
+amyetran	Mollusca	Amyelois transitella           	M_In	Lepidoptera Pyralidae
+amylchai	unknown 	Amylostereum chailletii        	F_Ba	Russulales Stereaceae
+anacocci	unknown 	Anacardium occidentale         	P_Eu	Sapindales Anacardiaceae
+anaerobu	unknown 	Anaeromyces robustus           	F_Ne	Neocallimastigales Neocallimastigaceae
+anancomo	Angiosp 	Ananas comosus                 	P_Mo	Poales Bromeliaceae
+anasplat	Tetrapod	Anas platyrhynchos             	M_Av	Anseriformes Anatidae
+ancycani	NematodN	Ancylostoma caninum            	M_Ne	Rhabditida Ancylostomatidae
+ancyceyl	NematodN	Ancylostoma ceylanicum         	M_Ne	Rhabditida Ancylostomatidae
+ancyduod	NematodN	Ancylostoma duodenale          	M_Ne	Rhabditida Ancylostomatidae
+angicant	NematodN	Angiostrongylus cantonensis    	M_Ne	Rhabditida Angiostrongylidae
+angicost	NematodN	Angiostrongylus costaricensis  	M_Ne	Rhabditida Angiostrongylidae
+angodean	Archamoe	Angomonas deanei               	O_Eu	Kinetoplastida Trypanosomatidae
+anissimp	NematodO	Anisakis simplex               	M_Ne	Ascaridida Anisakidae
+anncalge	unknown 	Anncaliia algerae              	F_Mi	- Tubulinosematidae
+anolcaro	Tetrapod	Anolis carolinensis            	M_Rp	Squamata Iguanidae
+anombomb	unknown 	Anomoporia bombycina           	F_Ba	Amylocorticiales Amylocorticiaceae
+anopalbi	InsectAg	Anopheles albimanus            	M_In	Diptera Culicidae
+anoparab	InsectAg	Anopheles arabiensis           	M_In	Diptera Culicidae
+anopatro	InsectAg	Anopheles atroparvus           	M_In	Diptera Culicidae
+anopchri	InsectAg	Anopheles christyi             	M_In	Diptera Culicidae
+anopcolu	InsectAg	Anopheles coluzzii             	M_In	Diptera Culicidae
+anopdarl	InsectAn	Anopheles darlingi             	M_In	Diptera Culicidae
+anopdiru	InsectAg	Anopheles dirus                	M_In	Diptera Culicidae
+anopepir	InsectAg	Anopheles epiroticus           	M_In	Diptera Culicidae
+anopfara	InsectAg	Anopheles farauti              	M_In	Diptera Culicidae
+anopfune	InsectAg	Anopheles funestus             	M_In	Diptera Culicidae
+anopgamb	InsectAn	Anopheles gambiae              	M_In	Diptera Culicidae
+anopglab	InsectCo	Anoplophora glabripennis       	M_In	Coleoptera Cerambycidae
+anopkoli	InsectAg	Anopheles koliensis            	M_In	Diptera Culicidae
+anopmacu	InsectAg	Anopheles maculatus            	M_In	Diptera Culicidae
+anopmela	InsectAg	Anopheles melas                	M_In	Diptera Culicidae
+anopmeru	InsectAg	Anopheles merus                	M_In	Diptera Culicidae
+anopmini	InsectAg	Anopheles minimus              	M_In	Diptera Culicidae
+anopnili	InsectAg	Anopheles nili                 	M_In	Diptera Culicidae
+anoppunc	InsectAg	Anopheles punctulatus          	M_In	Diptera Culicidae
+anopquad	InsectAg	Anopheles quadriannulatus      	M_In	Diptera Culicidae
+anopsine	InsectAn	Anopheles sinensis             	M_In	Diptera Culicidae
+anopstep	InsectAg	Anopheles stephensi            	M_In	Diptera Culicidae
+ansecygn	Tetrapod	Anser cygnoides                	M_Av	Anseriformes Anatidae
+anthavoc	Dothide1	Anthostoma avocetta            	F_As	Xylariales Diatrypaceae
+anthfloc	unknown 	Anthracocystis flocculosa      	F_Ba	Ustilaginales Ustilaginaceae
+antolocu	FungiAll	Antonospora locustae           	F_Mi	- -
+antrcaro	unknown 	Antrostomus carolinensis       	M_Av	Caprimulgiformes Caprimulgidae
+antrseri	Dothide1	Antrodia serialis              	F_Ba	Polyporales Fomitopsidaceae
+antrsinu	Dothide1	Antrodia sinuosa               	F_Ba	Polyporales Fomitopsidaceae
+aotunanc	Tetrapod	Aotus nancymaae                	M_Mm	Fabales Fabaceae
+apalvitt	Tetrapod	Apaloderma vittatum            	M_Av	Trogoniformes Trogonidae
+aphaasta	aphaasta	Aphanomyces astaci             	O_St	Saprolegniales Saprolegniaceae
+aphainva	Saproleg	Aphanomyces invadans           	O_St	Saprolegniales Saprolegniaceae
+apioback	unknown 	Apiosordaria backusii          	F_As	Sordariales Lasiosphaeriaceae
+apiomont	Dothide1	Apiospora montagnei            	F_As	Xylariales Apiosporaceae
+apiscera	unknown 	Apis cerana                    	M_In	Hymenoptera Apidae
+apisdors	InsectAp	Apis dorsata                   	M_In	Hymenoptera Apidae
+apisflor	InsectAp	Apis florea                    	M_In	Hymenoptera Apidae
+apismell	InsectAp	Apis mellifera                 	M_In	Hymenoptera Apidae
+aplakerg	Cyanidia	Aplanochytrium kerguelense     	O_St	- Thraustochytriaceae
+aploprun	Dothide1	Aplosporella prunicola         	F_As	Botryosphaeriales Aplosporellaceae
+aplycali	ChordatU	Aplysia californica            	M_Mo	- Aplysiidae
+aporcary	Sordari1	Aporpium caryae                	F_Ba	Auriculariales Aporpiaceae
+apteaust	Tetrapod	Apteryx australis              	M_Av	Apterygiformes Apterygidae
+aptefors	Tetrapod	Aptenodytes forsteri           	M_Av	Sphenisciformes Spheniscidae
+aquichry	Tetrapod	Aquila chrysaetos              	M_Av	Falconiformes Accipitridae
+aquicoer	Angiosp 	Aquilegia coerulea             	P_Eu	Ranunculales Ranunculaceae
+arabhall	Angiosp 	Arabidopsis halleri            	P_Eu	Brassicales Brassicaceae
+arablyra	Angiosp 	Arabidopsis lyrata             	P_Eu	Brassicales Brassicaceae
+arabthal	Angiosp 	Arabidopsis thaliana           	P_Eu	Brassicales Brassicaceae
+aracdura	Angiosp 	Arachis duranensis             	P_Eu	Fabales Fabaceae
+armicepi	Dothide1	Armillaria cepistipes          	F_Ba	Agaricales Physalacriaceae
+armigall	Dothide1	Armillaria gallica             	F_Ba	Agaricales Physalacriaceae
+armimell	Dothide1	Armillaria mellea              	F_Ba	Agaricales Physalacriaceae
+armiosto	Dothide1	Armillaria ostoyae             	F_Ba	Agaricales Physalacriaceae
+armisoli	Dothide1	Armillaria solidipes           	F_Ba	Agaricales Physalacriaceae
+arthbenh	Dothide1	Arthroderma benhamiae          	F_As	Onygenales Arthrodermataceae
+arthferm	unknown 	Arthroascus fermentans         	F_As	Saccharomycetales Saccharomycopsidaceae
+artholig	Dothide1	Arthrobotrys oligospora        	F_As	Orbiliales Orbiliaceae
+arthotae	Dothide1	Arthroderma otae               	F_As	Onygenales Arthrodermataceae
+artoeleg	unknown 	Artolenzites elegans           	F_Ba	Polyporales Polyporaceae	 
+ascalumb	NematodA	Ascaris lumbricoides           	M_Ne	Ascaridida Ascarididae
+ascasuum	NematodA	Ascaris suum                   	M_Ne	Ascaridida Ascarididae
+aschaley	unknown 	Aschersonia aleyrodis          	F_As	Hypocreales Clavicipitaceae
+ascoapis	unknown 	Ascosphaera apis               	F_As	Onygenales Ascosphaeraceae
+ascoimme	Dothide1	Ascobolus immersus             	F_As	Pezizales Ascobolaceae
+asconigr	Dothide1	Ascodesmis nigricans           	F_As	Pezizales Ascodesmidaceae
+ascorabi	unknown 	Ascochyta rabiei               	F_As	Pleosporales Didymellaceae
+ascorube	Sacchar2	Ascoidea rubescens             	F_As	Arthropoda Arachnida
+ascosarc	Dothide1	Ascocoryne sarcoides           	F_As	Helotiales Helotiaceae
+ashbgoss	Saccharo	Ashbya gossypii                	F_As	Saccharomycetales Saccharomycetaceae
+aspeacid	Dothide1	Aspergillus acidus             	F_As	Eurotiales Aspergillaceae
+aspeacul	Dothide1	Aspergillus aculeatus          	F_As	Eurotiales Aspergillaceae
+aspebomb	Dothide1	Aspergillus bombycis           	F_As	Eurotiales Aspergillaceae
+aspebras	Dothide1	Aspergillus brasiliensis       	F_As	Eurotiales Aspergillaceae
+aspebrun	Dothide1	Aspergillus brunneoviolaceus   	F_As	Eurotiales Aspergillaceae
+aspecali	Dothide1	Aspergillus calidoustus        	F_As	Eurotiales Aspergillaceae
+aspecamp	Dothide1	Aspergillus campestris         	F_As	Eurotiales Aspergillaceae
+aspecarb	Dothide1	Aspergillus carbonarius        	F_As	Eurotiales Aspergillaceae
+aspeclav	Dothide1	Aspergillus clavatus           	F_As	Eurotiales Aspergillaceae
+aspecost	Dothide1	Aspergillus costaricaensis     	F_As	Eurotiales Aspergillaceae
+aspecris	Dothide1	Aspergillus cristatus          	F_As	Eurotiales Aspergillaceae
+aspeelli	Dothide1	Aspergillus ellipticus         	F_As	Eurotiales Aspergillaceae
+aspeeuca	Dothide1	Aspergillus eucalypticola      	F_As	Eurotiales Aspergillaceae
+aspefiji	Dothide1	Aspergillus fijiensis          	F_As	Eurotiales Aspergillaceae
+aspefisc	Dothide1	Aspergillus fischeri           	F_As	Eurotiales Aspergillaceae
+aspeflav	Dothide1	Aspergillus flavus             	F_As	Eurotiales Aspergillaceae
+aspefumi	Dothide1	Aspergillus fumigatus          	F_As	Eurotiales Aspergillaceae
+aspeglau	Dothide1	Aspergillus glaucus            	F_As	Eurotiales Aspergillaceae
+aspehete	Dothide1	Aspergillus heteromorphus      	F_As	Eurotiales Aspergillaceae
+aspehomo	Dothide1	Aspergillus homomorphus        	F_As	Eurotiales Aspergillaceae
+aspeiber	Dothide1	Aspergillus ibericus           	F_As	Eurotiales Aspergillaceae
+aspeindo	Dothide1	Aspergillus indologenus        	F_As	Eurotiales Aspergillaceae
+aspejapo	Dothide1	Aspergillus japonicus          	F_As	Eurotiales Aspergillaceae
+aspekawa	Dothide1	Aspergillus kawachii           	F_As	Eurotiales Aspergillaceae
+aspelact	Dothide1	Aspergillus lacticoffeatus     	F_As	Eurotiales Aspergillaceae
+aspelent	Dothide1	Aspergillus lentulus           	F_As	Eurotiales Aspergillaceae
+aspeluch	Dothide1	Aspergillus luchuensis         	F_As	Eurotiales Aspergillaceae
+aspeneon	Dothide1	Aspergillus neoniger           	F_As	Eurotiales Aspergillaceae
+aspenidu	Dothide1	Aspergillus nidulans           	F_As	Eurotiales Aspergillaceae
+aspenige	Dothide1	Aspergillus niger              	F_As	Eurotiales Aspergillaceae
+aspenomi	Dothide1	Aspergillus nomius             	F_As	Eurotiales Aspergillaceae
+aspenovo	Dothide1	Aspergillus novofumigatus      	F_As	Eurotiales Aspergillaceae
+aspeochr	Dothide1	Aspergillus ochraceoroseus     	F_As	Eurotiales Aspergillaceae
+aspeoryz	Dothide1	Aspergillus oryzae             	F_As	Eurotiales Aspergillaceae
+aspepara	Dothide1	Aspergillus parasiticus        	F_As	Eurotiales Aspergillaceae
+aspephoe	Dothide1	Aspergillus phoenicis          	F_As	Eurotiales Aspergillaceae
+aspepipe	Dothide1	Aspergillus piperis            	F_As	Eurotiales Aspergillaceae
+asperamb	Dothide1	Aspergillus rambellii          	F_As	Eurotiales Aspergillaceae
+asperube	Dothide1	Aspergillus ruber              	F_As	Eurotiales Aspergillaceae
+aspesacc	Dothide1	Aspergillus saccharolyticus    	F_As	Eurotiales Aspergillaceae
+aspescle	Dothide1	Aspergillus sclerotiicarbonarius	F_As	Eurotiales Aspergillaceae
+aspescln	Dothide1	Aspergillus sclnrotioniger     	F_As	Eurotiales Aspergillaceae
+aspestey	Dothide1	Aspergillus steynii            	F_As	Eurotiales Aspergillaceae
+aspesydo	Dothide1	Aspergillus sydowii            	F_As	Eurotiales Aspergillaceae
+aspeterr	Dothide1	Aspergillus terreus            	F_As	Eurotiales Aspergillaceae
+aspetubi	Dothide1	Aspergillus tubingensis        	F_As	Eurotiales Aspergillaceae
+aspeudag	Dothide1	Aspergillus udagawae           	F_As	Eurotiales Aspergillaceae
+aspeustu	Dothide1	Aspergillus ustus              	F_As	Eurotiales Aspergillaceae
+aspeuvar	Dothide1	Aspergillus uvarum             	F_As	Eurotiales Aspergillaceae
+aspevade	Dothide1	Aspergillus vadensis           	F_As	Eurotiales Aspergillaceae
+aspevers	Dothide1	Aspergillus versicolor         	F_As	Eurotiales Aspergillaceae
+aspeviol	Dothide1	Aspergillus violaceofuscus     	F_As	Eurotiales Aspergillaceae
+aspewent	Dothide1	Aspergillus wentii             	F_As	Eurotiales Aspergillaceae
+aspezona	Dothide1	Aspergillus zonatus            	F_As	Eurotiales Aspergillaceae
+astespec	astespec	Asterochloris spec_Cgr/DA1pho  	P_Ch	Microthamniales -
+astymexi	Tetrapod	Astyanax mexicanus             	M_Fs	Characiformes Characidae
+atharosa	InsectAg	Athalia rosae                  	M_In	Hymenoptera Tenthredinidae
+atrarhiz	Agarico1	Atractiellales rhizophila      	F_Ba	Basidiomycota Atractiellomycetes
+atraspec	Agarico1	Atractiellales spec            	F_Ba	Basidiomycota Atractiellomycetes
+attaceph	Echinode	Atta cephalotes                	M_In	Hymenoptera Formicidae
+attacolo	unknown 	Atta colombica                 	M_In	Hymenoptera Formicidae
+aulohede	Dothide1	Aulographum hederae            	F_As	- Aulographaceae
+auralima	auralima	Aurantiochytrium limacinum     	O_St	- Thraustochytriaceae
+aureanop	aureanop	Aureococcus anophagefferens    	O_St	Pelagomonadales -
+auremela	Dothide1	Aureobasidium melanogenum      	F_As	Dothideales Aureobasidiaceae
+aurenami	Dothide1	Aureobasidium namibiae         	F_As	Dothideales Aureobasidiaceae
+aurepull	Dothide1	Aureobasidium pulm_lulans      	F_As	Dothideales Aureobasidiaceae
+aurepulm	Dothide1	Aureobasidium pulm_lulans      	F_As	Dothideales Aureobasidiaceae
+aurepuln	Dothide1	Aureobasidium puln_lulans      	F_As	Dothideales Aureobasidiaceae
+aurepulp	Dothide1	Aureobasidium pulp_lulans      	F_As	Dothideales Aureobasidiaceae
+aurepuls	Dothide1	Aureobasidium puls_lulans      	F_As	Dothideales Aureobasidiaceae
+auresubg	Dothide1	Aureobasidium subglaciale      	F_As	Dothideales Aureobasidiaceae
+auriampl	unknown 	Auriculariopsis ampla          	F_Ba	Agaricales Schizophyllaceae
+aurideli	Agarico1	Auricularia delicata           	F_Ba	Auriculariales Auriculariaceae
+aurisubg	Agarico1	Auricularia subglabra          	F_Ba	Auriculariales Auriculariaceae
+aurivulg	Sordari1	Auriscalpium vulgare           	F_Ba	Russulales Auriscalpiaceae
+austlimn	Fish_mdl	Austrofundulus limnaeus        	M_Fs	Cyprinodontiformes -
+auxeprot	Chlospec	Auxenochlorella protothecoides 	P_Ch	Chlorellales Chlorellaceae
+babebige	Babesia 	Babesia bigemina               	O_Al	- Babesiidae
+babebovi	Babesia 	Babesia bovis                  	O_Al	- Babesiidae
+babeequi	Babesia 	Babesia equi                   	O_Al	- Babesiidae
+babemicr	babemicr	Babesia microti                	O_Al	- Babesiidae
+babjinos	Saccharo	Babjeviella inositovor         	F_As	Saccharomycetales Debaryomycetaceae
+backcirc	Mucoral2	Backusella circina             	F_Fu	Mucorales Backusellaceae
+bactcucu	InsectMd	Bactrocera cucurbitae          	M_In	Diptera Tephritidae
+bactdors	InsectMd	Bactrocera dorsalis            	M_In	Diptera Tephritidae
+bactlati	unknown 	Bactrocera latifrons           	M_In	Diptera Tephritidae
+bactolea	InsectMd	Bactrocera oleae               	M_In	Diptera Tephritidae
+bacttryo	InsectMd	Bactrocera tryoni              	M_In	Diptera Tephritidae
+balaacut	Tetrapod	Balaenoptera acutorostrata     	M_Mm	Cetacea Balaenopteridae
+baleregu	Tetrapod	Balearica regulorum            	M_Av	Gruiformes Gruidae
+basimeri	unknown 	Basidiobolus meristosporus     	F_En	Basidiobolales Basidiobolaceae
+basiundu	unknown 	Basidioascus undulatus         	F_Ba	Geminibasidiales Geminibasidiaceae
+batrdend	batrdend	Batrachochytrium dendrobatidis 	F_Ch	Rhizophydiales -
+batrsala	batrdend	Batrachochytrium salamandrivorans	F_Ch	Rhizophydiales -
+baudcomp	Dothide1	Baudoinia compniacensis        	F_As	Capnodiales Teratosphaeriaceae
+baudpana	Dothide1	Baudoinia panamericana         	F_As	Capnodiales Teratosphaeriaceae
+beaubass	Dothide1	Beauveria bassiana             	F_As	Hypocreales Cordycipitaceae
+belganta	InsectMd	Belgica antarctica             	M_In	Diptera Chironomidae
+bemitaba	unknown 	Bemisia tabaci                 	M_In	Hemiptera Aleyrodidae
+betavulg	Angiosp 	Beta vulgaris                  	P_Eu	Orthoptera Acrididae
+bigenata	bigenata	Bigelowiella natans            	O_Rh	- -
+bimunova	Dothide1	Bimuria novae-zelandiae        	F_As	Pleosporales Didymosphaeriaceae
+biomglab	InsectBm	Biomphalaria glabrata          	M_Mo	- Planorbidae
+bipomayd	unknown 	Bipolaris maydis               	F_As	Pleosporales Pleosporaceae
+bipooryz	unknown 	Bipolaris oryzae               	F_As	Pleosporales Pleosporaceae
+biposoro	unknown 	Bipolaris sorokiniana          	F_As	Pleosporales Pleosporaceae
+bipovict	unknown 	Bipolaris victoriae            	F_As	Pleosporales Pleosporaceae
+bipozeic	unknown 	Bipolaris zeicola              	F_As	Pleosporales Pleosporaceae
+biscnumm	unknown 	Biscogniauxia nummularia       	F_As	Xylariales Xylariaceae
+bisobiso	Tetrapod	Bison bison                    	M_Mm	- Bovidae
+bispspec	unknown 	Bisporella spec                	F_As	Helotiales Helotiaceae
+bjeradus	Sordari1	Bjerkandera adusta             	F_Ba	Polyporales Meruliaceae
+blaktris	unknown 	Blakeslea trispora             	F_Mu	Mucorales Choanephoraceae
+blasaden	Trichomo	Blastobotrys adeninivorans     	F_As	Saccharomycetales Trichomonascaceae
+blasbrit	unknown 	Blastocladiella britannica     	F_Bl	Blastocladiales Blastocladiaceae
+blasderm	Dothide1	Blastomyces dermatitidis       	F_As	Onygenales Ajellomycetaceae
+blasgilc	Dothide1	Blastomyces gilchristii        	F_As	Onygenales Ajellomycetaceae
+blashomi	Blastocy	Blastocystis hominis           	O_St	- -
+blasperc	Dothide1	Blastomyces percursus          	F_As	Onygenales Ajellomycetaceae
+blasspec	Blastocy	Blastocystis sp                	O_St	- -
+blatgerm	blatgerm	Blattella germanica            	M_In	Blattodea Ectobiidae
+blecayal	unknown 	Blechomonas ayalai      	O_Eu	Kinetoplastida Trypanosomatidae
+blumgram	Leotiomy	Blumeria graminis              	F_As	Erysiphales Erysiphaceae
+bodosalt	unknown 	Bodo saltans       		O_Eu	Kinetoplastida Bodonidae
+boecstri	Angiosp 	Boechera stricta               	P_Eu	Brassicales Brassicaceae
+bolbvite	unknown 	Bolbitius vitellinus           	F_Ba	Agaricales Bolbitiaceae
+boleedul	Dothide1	Boletus edulis                 	F_Ba	Boletales Boletaceae
+bolepect	unknown 	Boleophthalmus pectinirostris  	M_Fs	Gobiiformes Gobiidae
+bombbomb	unknown 	Bombardia bombarda             	F_As	Sordariales Lasiosphaeriaceae
+bombimpa	InsectAg	Bombus impatiens               	M_In	Hymenoptera Apidae
+bombmori	Mollusca	Bombyx mori                    	M_In	Lepidoptera Bombycidae
+bombterr	InsectAg	Bombus terrestris              	M_In	Hymenoptera Apidae
+bos_indi	unknown 	Bos indicus                    	M_Mm	- Bovidae
+bos_mutu	Tetrapod	Bos mutus                      	M_Mm	- Bovidae
+bos_taur	Tetrapod	Bos taurus                     	M_Mm	- Bovidae
+botrbotr	Dothide1	Botryobasidium botryosum       	F_Ba	Cantharellales Botryobasidiaceae
+botrcinb	Dothide1	Botrytis cinb0510              	F_As	Helotiales Sclerotiniaceae
+botrcine	Dothide1	Botrytis cinerea               	F_As	Helotiales Sclerotiniaceae
+botrdoth	Dothide1	Botryosphaeria dothidea        	F_As	Botryosphaeriales Botryosphaeriaceae
+botrfuck	Dothide1	Botryotinia fuckeliana         	F_As	Helotiales Sclerotiniaceae
+bracdist	Angiosp 	Brachypodium distachyon        	P_Mo	Poales Poaceae
+bracstac	Angiosp 	Brachypodium stacei            	P_Mo	Poales Poaceae
+bracsylv	unknown 	Brachypodium sylvaticum        	P_Mo	Poales Poaceae
+branbelc	unknown 	Branchiostoma belcheri         	M_Ch	- Branchiostomidae
+branflor	ChordatC	Branchiostoma floridae         	M_Ch	- Branchiostomidae
+brasnapu	Angiosp 	Brassica napus                 	P_Eu	Brassicales Brassicaceae
+brasoler	Angiosp 	Brassica oleracea              	P_Eu	Brassicales Brassicaceae
+brasrapa	Angiosp 	Brassica rapa                  	P_Eu	Brassicales Brassicaceae
+bretbrux	unknown 	Brettanomyces bruxellensis     	F_As	Saccharomycetales Pichiaceae
+brugmala	NematodO	Brugia malayi                  	M_Ne	Spirurida Onchocercidae
+brugpaha	NematodO	Brugia pahangi                 	M_Ne	Spirurida Onchocercidae
+brugtimo	NematodO	Brugia timori                  	M_Ne	Spirurida Onchocercidae
+bubabuba	Tetrapod	Bubalus bubalis                	M_Mm	- Bovidae
+bucerhin	Tetrapod	Buceros rhinoceros             	M_Av	Bucerotiformes Bucerotidae
+bulginqu	unknown 	Bulgaria inquinans             	F_As	Phacidiales Bulgariaceae
+bursxylo	bursxylo	Bursaphelenchus xylophilus     	M_Ne	Tylenchida Aphelenchoididae
+bysscirc	Dothide1	Byssothecium circinans         	F_As	Pleosporales Massarinaceae
+byssspec	unknown 	Byssochlamys spectabilis       	F_As	Eurotiales Thermoascaceae
+cadospec	Dothide1	Cadophora spec                 	F_As	Helotiales -
+caenanga	NematodC	Caenorhabditis angaria         	M_Ne	Rhabditida Rhabditidae
+caenbren	NematodC	Caenorhabditis brenneri        	M_Ne	Rhabditida Rhabditidae
+caenbrig	NematodC	Caenorhabditis briggsae        	M_Ne	Rhabditida Rhabditidae
+caeneleg	NematodC	Caenorhabditis elegans         	M_Ne	Rhabditida Rhabditidae
+caenjapo	NematodC	Caenorhabditis japonica        	M_Ne	Rhabditida Rhabditidae
+caenrema	NematodC	Caenorhabditis remanei         	M_Ne	Rhabditida Rhabditidae
+caensini	unknown 	Caenorhabditis sinica          	M_Ne	Rhabditida Rhabditidae
+caentrop	NematodC	Caenorhabditis tropicalis      	M_Ne	Rhabditida Rhabditidae
+cajacaja	Angiosp 	Cajanus cajan                  	P_Eu	Fabales Fabaceae
+caliorie	Dothide1	Caliciopsis orientalis         	F_As	Coryneliales Coryneliaceae
+calipugn	Tetrapod	Calidris pugnax                	M_Av	Charadriiformes Scolopacidae
+calljacc	Tetrapod	Callithrix jacchus             	M_Mm	Primates Cebidae
+callmili	Tetrapod	Callorhinchus milii            	M_Ch	Chimaeriformes Callorhinchidae
+calocorn	Sordari1	Calocera cornea                	F_Ba	Dacrymycetales Dacrymycetaceae
+calofulg	unknown 	Caloscypha fulgens             	F_As	Pezizales Caloscyphaceae
+calopulc	Dothide1	Calosphaeria pulchella         	F_As	Calosphaeriales Calosphaeriaceae
+calovisc	Sordari1	Calocera viscosa               	F_Ba	Dacrymycetales Dacrymycetaceae
+calyanna	Tetrapod	Calypte anna                   	M_Av	Trochiliformes Trochilidae
+camebact	Tetrapod	Camelus bactrianus             	M_Mm	- Camelidae
+camedrom	Tetrapod	Camelus dromedarius            	M_Mm	- Camelidae
+cameferu	Tetrapod	Camelus ferus                  	M_Mm	- Camelidae
+camesati	Angiosp 	Camelina sativa                	P_Eu	Brassicales Brassicaceae
+camesine	Angiosp 	Camellia sinensis              	P_Eu	Ericales Theaceae
+campflor	Echinode	Camponotus floridanus          	M_In	Hymenoptera Formicidae
+candalbi	CandidaA	Candida albicans               	F_As	Saccharomycetales Debaryomycetaceae
+candarab	CandidaA	Candida arabinofermentans      	F_As	Saccharomycetales Debaryomycetaceae
+candauri	CandidaA	Candida auris                  	F_As	Saccharomycetales Debaryomycetaceae
+candcase	CandidaA	Candida caseinolytica          	F_As	Saccharomycetales Debaryomycetaceae
+canddubl	CandidaA	Candida dubliniensis           	F_As	Saccharomycetales Debaryomycetaceae
+candglab	CandidaA	Candida glabrata               	F_As	Saccharomycetales Debaryomycetaceae
+candguil	CandidaA	Candida guilliermondii         	F_As	Saccharomycetales Debaryomycetaceae
+candlusi	CandidaA	Candida lusitaniae             	F_As	Saccharomycetales Debaryomycetaceae
+candmalt	CandidaA	Candida maltosa                	F_As	Saccharomycetales Debaryomycetaceae
+candorth	CandidaA	Candida orthopsilosis          	F_As	Saccharomycetales Debaryomycetaceae
+candpara	CandidaA	Candida parapsilosis           	F_As	Saccharomycetales Debaryomycetaceae
+candtanz	CandidaA	Candida tanzawaensis           	F_As	Saccharomycetales Debaryomycetaceae
+candtenu	CandidaA	Candida tenuis                 	F_As	Saccharomycetales Debaryomycetaceae
+candtrop	CandidaA	Candida tropicalis             	F_As	Saccharomycetales Debaryomycetaceae
+canifami	Tetrapod	Canis familiaris               	M_Mm	Carnivora Canidae
+canilupu	Tetrapod	Canis lupus                    	M_Mm	Carnivora Canidae
+cannsati	Angiosp 	Cannabis sativa                	P_Eu	Rosales Cannabaceae
+cantanzu	unknown 	Cantharellus anzutake          	F_Ba	Cantharellales Cantharellaceae
+capitele	capitele	Capitella teleta               	M_An	Capitellida Capitellidae
+caprcaro	Tetrapod	Caprimulgus carolinensis       	M_Av	Caprimulgiformes Caprimulgidae
+caprcoro	unknown 	Capronia coronata              	F_As	Chaetothyriales Herpotrichiellaceae
+caprepim	unknown 	Capronia epimyces              	F_As	Chaetothyriales Herpotrichiellaceae
+caprhirc	Tetrapod	Capra hircus                   	M_Mm	- Bovidae
+caprsemi	unknown 	Capronia semiimmersa           	F_As	Chaetothyriales Herpotrichiellaceae
+capsannu	Angiosp 	Capsicum annuum                	P_Eu	Solanales Solanaceae
+capsgran	Angiosp 	Capsella grandiflora           	P_Eu	Veneroida Donacidae
+capsowcz	Oomycete 	Capsaspora owczarzaki          	O_Op	Ministeriida Capsasporidae
+capsrube	Angiosp 	Capsella rubella               	P_Eu	Veneroida Donacidae
+cardobsc	unknown 	Cardiocondyla obscurior        	M_In	Hymenoptera Formicidae
+caricris	Tetrapod	Cariama cristata               	M_Av	Gruiformes Cariamidae
+caripapa	Angiosp 	Carica papaya                  	P_Eu	Brassicales Caricaceae
+carlsyri	Tetrapod	Carlito syrichta                M_Mm	
+castcana	unknown 	Castor canadensis              	M_Mm	Rodentia Castoridae
+cataaqui	InsectGn	Catajapyx aquilonaris          	M_In	Diplura Japygidae
+cateangu	Blastocl	Catenaria anguillulae          	F_Bl	Blastocladiales Catenariaceae
+caviporc	Tetrapod	Cavia porcellus                	M_Mm	Rodentia Caviidae
+cebucapu	unknown 	Cebus capucinus                	M_Mm	Primates Cebidae
+cenogeop	Dothide1	Cenococcum geophilum           	F_As	- Gloniaceae
+centscul	unknown 	Centruroides sculpturatus      	M_Ar	Scorpiones Buthidae
+cephalbi	Sacchar1	Cephaloascus albidus           	F_As	Saccharomycetales Cephaloascaceae
+cephcinc	InsectAg	Cephus cinctus                 	M_In	Hymenoptera Cephidae
+cephfrag	Sacchar1	Cephaloascus fragrans          	F_As	Saccharomycetales Cephaloascaceae
+cerabiro	Echinode	Cerapachys biroi               	M_In	Hymenoptera Formicidae
+cerabomb	unknown 	Ceraceosorus bombacis          	F_Ba	Ceraceosorales Ceraceosoraceae
+ceracalc	unknown 	Ceratina calcarata             	M_In	Hymenoptera Apidae
+ceracapi	InsectMd	Ceratitis capitata             	M_In	Diptera Tephritidae
+ceraguam	unknown 	Ceraceosorus guamensis         	F_Ba	Ceraceosorales Ceraceosoraceae
+ceraplat	unknown 	Ceratocystis platani           	F_As	Microascales Ceratocystidaceae
+cerasimu	Tetrapod	Ceratotherium simum            	M_Mm	Perissodactyla Rhinocerotidae
+cerasolm	Echinode	Ceratosolen solmsi             	M_In	Hymenoptera Agaonidae
+ceraspec	unknown 	Ceratobasidium spec            	F_Ba	Cantharellales Ceratobasidiaceae
+cercatys	Tetrapod	Cercocebus atys                	M_Mm	Primates Cercopithecidae
+cerccaud	unknown 	Cercophora caudata             	F_As	Sordariales Lasiosphaeriaceae
+cercnewf	unknown 	Cercophora newfieldiana        	F_As	Sordariales Lasiosphaeriaceae
+cerczeae	Dothide1	Cercospora zeaemaydis          	F_As	Capnodiales Mycosphaerellaceae
+cericera	unknown 	Cerinomyces ceraceus           	F_Ba	Dacrymycetales Cerinomycetaceae
+cerisubv	Sordari1	Ceriporiopsis subvermispora    	F_Ba	Polyporales Meruliaceae
+cerrunic	Dothide1	Cerrena unicolor               	F_Ba	Polyporales Polyporaceae
+chaeglob	Dothide1	Chaetomium globosum            	F_As	Sordariales Chaetomiaceae
+chaeinnu	unknown 	Chaetosphaeria innumera        	F_As	Hypocreales -
+chaepela	Tetrapod	Chaetura pelagica              	M_Av	Apodiformes Apodidae
+chaether	Dothide1	Chaetomium thermophilum        	F_As	Sordariales Chaetomiaceae
+challong	Dothide1	Chalara longipes               	F_As	Helotiales -
+charvoci	Tetrapod	Charadrius vociferus           	M_Av	Charadriiformes Charadriidae
+chelmyda	Tetrapod	Chelonia mydas                 	M_Rp	Testudines Cheloniidae
+chenquin	Angiosp 	Chenopodium quinoa             	P_Eu	Caryophyllales Chenopodiaceae
+chilsupp	Echinode	Chilo suppressalis             	M_In	Lepidoptera Crambidae
+chinlani	Tetrapod	Chinchilla lanigera            	M_Mm	Rodentia Chinchillidae
+chioapob	chioapob	Chionosphaera apobasidialis    	F_Ba	Agaricostilbales Chionosphaeraceae
+chiocuni	chioapob	Chionosphaera cuniculicola     	F_Ba	Agaricostilbales Chionosphaeraceae
+chirtent	chirtent	Chironomus tentans             	M_In	Diptera Chironomidae
+chlamacq	Tetrapod	Chlamydotis macqueenii         	M_Av	Gruiformes Otididae
+chlarein	Chlospec	Chlamydomonas reinhardtii      	P_Ch	Chlamydomonadales Chlamydomonadaceae
+chlosaba	Tetrapod	Chlorocebus sabaeus            	M_Mm	Primates Cercopithecidae
+chlovari	Chlospec	Chlorella variabilis_NC64A     	P_Ch	Prasiolales -
+chlovulg	Chlospec	Chlorella vulgaris             	P_Ch	Prasiolales -
+choacucu	unknown 	Choanephora cucurbitarum       	F_Mu	Mucorales Choanephoraceae
+choiveno	Dothide1	Choiromyces venosus            	F_As	Pezizales Tuberaceae
+cholfoff	Tetrapod	Choloepus hoffmanni            	M_Mm	Pilosa Megalonychidae
+choncris	Oomycete	Chondrus crispus               	P_Rh	Gigartinales Gigartinaceae
+chromeso	Chroomon	Chroomonas mesostigmatica      	O_Cr	Pyrenomonadales Chroomonadaceae
+chroveli	chroveli	Chromera velia                 	O_Al	- -
+chrozofi	unknown 	Chromochloris zofingiensis     	P_Ch	Sphaeropleales Chromochloridaceae
+chryasia	Tetrapod	Chrysochloris asiatica         	M_Mm	- Chrysochloridae
+chrypict	Tetrapod	Chrysemys picta                	M_Rp	Testudines Emydidae
+chytlage	unknown 	Chytridium lagenaria           	F_Ch	Chytridiales Chytridiaceae
+chytspec	unknown 	Chytriomyces spec              	F_Ch	Chytridiales Chytriomycetaceae
+cicearie	Angiosp 	Cicer arietinum                	P_Eu	Fabales Fabaceae
+cimelect	InsectCl	Cimex lectularius              	M_In	Hemiptera Cimicidae
+cioninte	Mollusca	Ciona intestinalis             	M_Ch	Enterogona Cionidae
+cionsavi	ChordatC	Ciona savignyi                 	M_Ch	Enterogona Cionidae
+circumbe	unknown 	Circinella umbellata           	F_Mu	Mucorales Lichtheimiaceae
+citrclem	Angiosp 	Citrus clementina              	P_Eu	Sapindales Rutaceae
+citrlana	Angiosp 	Citrullus lanatus              	P_Eu	Cucurbitales Cucurbitaceae
+citrsine	Angiosp 	Citrus sinensis                	P_Eu	Sapindales Rutaceae
+cladbant	unknown 	Cladophialophora bantiana      	F_As	Chaetothyriales Herpotrichiellaceae
+cladbulb	unknown 	Cladorrhinum bulbillosum       	F_As	Sordariales Lasiosphaeriaceae
+cladcarr	unknown 	Cladophialophora carrionii     	F_As	Chaetothyriales Herpotrichiellaceae
+cladfulv	Dothide1	Cladosporium fulvum            	F_As	Capnodiales Cladosporiaceae
+cladgray	Dothide1	Cladonia grayi                 	F_As	Lecanorales Cladoniaceae
+cladimmu	unknown 	Cladophialophora immunda       	F_As	Chaetothyriales Herpotrichiellaceae
+cladpsam	unknown 	Cladophialophora psammophila   	F_As	Chaetothyriales Herpotrichiellaceae
+cladspha	Dothide1	Cladosporium sphaerospermum    	F_As	Capnodiales Cladosporiaceae
+cladyegr	unknown 	Cladophialophora yegresii      	F_As	Chaetothyriales Herpotrichiellaceae
+clatelyn	Dothide1	Clathrospora elynae            	F_As	Pleosporales Diademaceae
+clavlusi	unknown 	Clavispora lusitaniae          	F_As	Saccharomycetales Metschnikowiaceae
+clavpurp	unknown 	Claviceps purpurea             	F_As	Hypocreales Clavicipitaceae
+clavpyxi	Sordari1	Clavicorona pyxidata           	F_Ba	Russulales Auriscalpiaceae
+clavspec	Dothide1	Clavulina spec                 	F_Ba	Cantharellales Clavulinaceae
+climbore	unknown 	Climacocystis borealis         	F_Ba	Polyporales Hapalopilaceae
+clitgibb	unknown 	Clitocybe gibba                	F_Ba	Agaricales Tricholomataceae
+clohaqua	unknown 	Clohesyomyces aquaticus        	F_As	Pleosporales Lindgomycetaceae
+clonrose	unknown 	Clonostachys rosea             	F_As	Hypocreales Bionectriaceae
+clonsine	NematodF	Clonorchis sinensis            	M_Pl	Opisthorchiida Opisthorchiidae
+cluphare	Fish_mdl	Clupea harengus                	M_Fs	Clupeiformes Clupeidae
+coccbart	unknown 	Coccodinium bartschii          	F_As	- Coccodiniaceae
+coccimmi	Dothide1	Coccidioides immitis           	F_As	Onygenales -
+coccporm	Dothide1	Coccidioides pormscc           	F_As	Onygenales -
+coccposa	Dothide1	Coccidioides posadasii         	F_As	Onygenales -
+coccposi	Dothide1	Coccidioides posilveira        	F_As	Onygenales -
+coccstro	unknown 	Coccomyces strobi              	F_As	Rhytismatales Rhytismataceae
+coccsube	Chlospec	Coccomyxa subellipsoidea       	P_Ch	Bivalvulida Coccomyxidae
+cochcarb	Dothide1	Cochliobolus carbonum          	F_As	Pleosporales Pleosporaceae
+cochhet4	Dothide1	Cochliobolus het4              	F_As	Pleosporales Pleosporaceae
+cochhete	Dothide1	Cochliobolus heterostrophus    	F_As	Pleosporales Pleosporaceae
+cochluna	Dothide1	Cochliobolus lunatus           	F_As	Pleosporales Pleosporaceae
+cochmiya	Dothide1	Cochliobolus miyabeanus        	F_As	Pleosporales Pleosporaceae
+cochsati	Dothide1	Cochliobolus sativus           	F_As	Pleosporales Pleosporaceae
+cochvict	Dothide1	Cochliobolus victoriae         	F_As	Pleosporales Pleosporaceae
+coemreve	coemreve	Coemansia reversa              	F_Fu	Kickxellales Kickxellaceae
+coemspir	coemreve	Coemansia spiralis             	F_Ki	Kickxellales Kickxellaceae
+cokerecu	unknown 	Cokeromyces recurvatus         	F_Mu	Mucorales Mucoraceae
+colistri	Tetrapod	Colius striatus                	M_Av	Coliiformes Coliidae
+collacut	Dothide1	Colletotrichum acutatum        	F_As	Glomerellales Glomerellaceae
+collcaud	Dothide1	Colletotrichum caudatum        	F_As	Glomerellales Glomerellaceae
+collcere	Dothide1	Colletotrichum cereale         	F_As	Glomerellales Glomerellaceae
+collchlo	Dothide1	Colletotrichum chlorophyti     	F_As	Glomerellales Glomerellaceae
+collerem	Dothide1	Colletotrichum eremochloae     	F_As	Glomerellales Glomerellaceae
+collfalc	Dothide1	Colletotrichum falcatum        	F_As	Glomerellales Glomerellaceae
+collfior	Dothide1	Colletotrichum fioriniae       	F_As	Glomerellales Glomerellaceae
+collgloe	Dothide1	Colletotrichum gloeosporioides 	F_As	Glomerellales Glomerellaceae
+collgode	Dothide1	Colletotrichum godetiae        	F_As	Glomerellales Glomerellaceae
+collgram	Dothide1	Colletotrichum graminicola     	F_As	Glomerellales Glomerellaceae
+collhigg	Dothide1	Colletotrichum higginsianum    	F_As	Glomerellales Glomerellaceae
+collinca	Dothide1	Colletotrichum incanum         	F_As	Glomerellales Glomerellaceae
+colllupi	Dothide1	Colletotrichum lupini          	F_As	Glomerellales Glomerellaceae
+collnavi	Dothide1	Colletotrichum navitas         	F_As	Glomerellales Glomerellaceae
+collnymp	Dothide1	Colletotrichum nymphaeae       	F_As	Glomerellales Glomerellaceae
+collorbi	Dothide1	Colletotrichum orbiculare      	F_As	Glomerellales Glomerellaceae
+collorch	Dothide1	Colletotrichum orchidophilum   	F_As	Glomerellales Glomerellaceae
+collphor	Dothide1	Colletotrichum phormii         	F_As	Glomerellales Glomerellaceae
+collsali	Dothide1	Colletotrichum salicis         	F_As	Glomerellales Glomerellaceae
+collsimm	Dothide1	Colletotrichum simmondsii      	F_As	Glomerellales Glomerellaceae
+collsome	Dothide1	Colletotrichum somersetensis   	F_As	Glomerellales Glomerellaceae
+collsubl	Dothide1	Colletotrichum sublineola      	F_As	Glomerellales Glomerellaceae
+colltofi	Dothide1	Colletotrichum tofieldiae      	F_As	Glomerellales Glomerellaceae
+collzoys	Dothide1	Colletotrichum zoysiae         	F_As	Glomerellales Glomerellaceae
+coloango	Tetrapod	Colobus angolensis             	M_Mm	Primates Cercopithecidae
+colulivi	Tetrapod	Columba livia                  	M_Av	Columbiformes Columbidae
+condcris	Tetrapod	Condylura cristata             	M_Mm	Insectivora Talpidae
+coniapol	unknown 	Coniosporium apollinis         	F_As	Chaetothyriales Herpotrichiellaceae
+conicoro	conicoro	Conidiobolus coronatus         	F_En	Entomophthorales Ancylistaceae
+conilign	Dothide1	Coniochaeta ligniaria          	F_As	Coniochaetales Coniochaetaceae
+conilust	unknown 	Coniella lustricola            	F_As	Diaporthales Schizoparmaceae
+conioliv	Dothide1	Coniophora olivacea            	F_Ba	Boletales Coniophoraceae
+conipute	Dothide1	Coniophora puteana             	F_Ba	Boletales Coniophoraceae
+conispec	Dothide1	Coniochaeta spec               	F_As	Coniochaetales Coniochaetaceae
+conithro	conicoro	Conidiobolus thromboides       	F_En	Entomophthorales Ancylistaceae
+copiflor	InsectAg	Copidosoma floridanum          	M_In	Hymenoptera Encyrtidae
+coprcine	Dothide1	Coprinopsis cinerea            	F_Ba	Agaricales Psathyrellaceae
+coprmarc	Dothide1	Coprinopsis marcescibilis      	F_Ba	Agaricales Psathyrellaceae
+coprmica	unknown 	Coprinellus micaceus           	F_Ba	Agaricales Psathyrellaceae
+coprpell	unknown 	Coprinellus pellucidus         	F_Ba	Agaricales Psathyrellaceae
+coprscle	Dothide1	Coprinopsis sclerotiger        	F_Ba	Agaricales Psathyrellaceae
+corccaps	unknown 	Corchorus capsularis           	P_Eu	Malvales Malvaceae
+cordbron	Dothide1	Cordyceps brongniartii         	F_As	Hypocreales Cordycipitaceae
+cordconf	Dothide1	Cordyceps confragosa           	F_As	Hypocreales Cordycipitaceae
+cordmili	Dothide1	Cordyceps militaris            	F_As	Hypocreales Cordycipitaceae
+coromari	unknown 	Corollospora maritima          	F_As	Microascales Halosphaeriaceae
+cortglau	Dothide1	Cortinarius glaucopus          	F_Ba	Agaricales Cortinariaceae
+corvbrac	Tetrapod	Corvus brachyrhynchos          	M_Av	Passeriformes Corvidae
+corvcorn	Tetrapod	Corvus cornix                  	M_Av	Passeriformes Corvidae
+corycass	Dothide1	Corynespora cassicola          	F_As	Pleosporales Corynesporascaceae
+cotevest	InsectAp	Cotesia vestalis               	M_In	Hymenoptera Braconidae
+cotujapo	Tetrapod	Coturnix japonica              	M_Av	Galliformes Phasianidae
+crasgiga	Echinode	Crassostrea gigas              	M_Mo	Ostreoida Ostreidae
+crasvirg	unknown 	Crassostrea virginica          	M_Mo	Ostreoida Ostreidae
+crepvari	unknown 	Crepidotus variabilis          	F_Ba	Agaricales Crepidotaceae
+cricgris	Tetrapod	Cricetulus griseus             	M_Mm	Rodentia Cricetidae
+critfasc	Archamoe	Crithidia fasciculata          	O_Eu	Kinetoplastida Trypanosomatidae
+crocporo	unknown 	Crocodylus porosus             	M_Rp	Crocodylia Crocodylidae
+cronquer	Puccinia	Cronartium quercuum            	F_Ba	Pucciniales Cronartiaceae
+cruclaev	unknown 	Crucibulum laeve               	F_Ba	Agaricales Nidulariaceae
+crypamyl	FungiAll	Cryptococcus amylolentus       	F_Ba	Filobasidiales Filobasidiaceae
+crypande	Sporadot	Cryptosporidium andersoni	O_Al	Eucoccidiorida Cryptosporidiidae
+crypcurv	FungiAll	Cryptococcus curvatus          	F_Ba	Filobasidiales Filobasidiaceae
+crypdepa	FungiAll	Cryptococcus depauperatus      	F_Ba	Filobasidiales Filobasidiaceae
+crypgatt	FungiAll	Cryptococcus gattii            	F_Ba	Filobasidiales Filobasidiaceae
+cryphomi	Sporadot	Cryptosporidium hominis        	O_Al	Eucoccidiorida Cryptosporidiidae
+crypmuri	Sporadot	Cryptosporidium muris          	O_Al	Eucoccidiorida Cryptosporidiidae
+crypneof	FungiAll	Cryptococcus neoformans        	F_Ba	Filobasidiales Filobasidiaceae
+cryppara	ProtisGn	Cryptomonas paramecium  	O_Cr	Cryptomonadaceae Cryptomonas
+crypparf	Oomycete	Cryphonectria parasitica       	F_As	Diaporthales Cryphonectriaceae
+crypparv	Sporadot	Cryptosporidium parvum         	O_Al	Eucoccidiorida Cryptosporidiidae
+cryppopu	unknown 	Cryptodiaporthe populea        	F_As	Diaporthales Valsaceae
+crypterr	FungiAll	Cryptococcus terricola         	F_Ba	Filobasidiales Filobasidiaceae
+crypubiq	Sporadot	Cryptosporidium ubiquitum	O_Al	Eucoccidiorida Cryptosporidiidae
+crypvish	FungiAll	Cryptococcus vishniacii        	F_Ba	Filobasidiales Filobasidiaceae
+crypwier	FungiAll	Cryptococcus wieringae         	F_Ba	Filobasidiales Filobasidiaceae
+cucuberb	Dothide1	Cucurbitaria berberidis        	F_As	Pleosporales Cucurbitariaceae
+cucucano	Tetrapod	Cuculus canorus                	M_Av	Cuculiformes Cuculidae
+cucumelo	Angiosp 	Cucumis melo                   	P_Eu	Cucurbitales Cucurbitaceae
+cucusati	Angiosp 	Cucumis sativus                	P_Eu	Cucurbitales Cucurbitaceae
+culequin	InsectDm	Culex quinquefasciatus         	M_In	Diptera Culicidae
+cunnechi	unknown 	Cunninghamella echinulata      	F_Mu	Mucorales Cunninghamellaceae
+cutaolea	unknown 	Cutaneotrichosporon oleaginosus	F_Ba	Trichosporonales Trichosporonaceae
+cyanmero	Cyanidia	Cyanidioschyzon merolae        	P_Ba	Cyanidiales Cyanidiaceae
+cyatstri	unknown 	Cyathus striatus               	F_Ba	Agaricales Nidulariaceae
+cybefabi	Dothide1	Cyberlindnera fabianii         	F_As	Saccharomycetales Phaffomycetaceae
+cybejadi	Dothide1	Cyberlindnera jadinii          	F_As	Saccharomycetales Phaffomycetaceae
+cyclcaye	unknown 	Cyclospora cayetanensis		O_Al	Eimeriidae Cyclospora
+cyligold	NematodW	Cylicostephanus goldi          	M_Ne	Rhabditida Strongylidae
+cylitorr	Sordari1	Cylindrobasidium torrendii     	F_Ba	Corticiales Corticiaceae
+cynosemi	Fish_mdl	Cynoglossus semilaevis         	M_Fs	Pleuronectiformes Cynoglossidae
+cyphcost	unknown 	Cyphomyrmex costatus           	M_In	Hymenoptera Formicidae
+cypheuro	unknown 	Cyphellophora europaea         	F_As	Chaetothyriales Cyphellophoraceae
+cyprcarp	unknown 	Cyprinus carpio                	M_Fs	Cypriniformes Cyprinidae
+cyprvari	Fish_mdl	Cyprinodon variegatus          	M_Fs	Cyprinodontiformes Cyprinodontidae
+cystmurr	unknown 	Cystostereum murrayi           	F_Ba	Polyporales Cystostereaceae
+cytafeli	cytafeli	Cytauxzoon felis               	O_Al	- Theileriidae
+cytimelz	unknown 	Cytidiella melzeri             	F_Ba	Polyporales Phanerochaetaceae
+dacrprim	Sordari1	Dacryopinax primogenitus       	F_Ba	Dacrymycetales Dacrymycetaceae
+dacrspec	Sordari1	Dacryopinax species            	F_Ba	Dacrymycetales Dacrymycetaceae
+dactcocc	InsectCl	Dactylopius coccus             	M_In	Hemiptera Dactylopiidae
+dacthapt	unknown 	Dactylellina haptotyla         	F_As	Orbiliales Orbiliaceae
+daedquer	Sordari1	Daedalea quercina              	F_Ba	Polyporales Coriolaceae
+daldesch	Dothide1	Daldinia eschscholzii          	F_As	Xylariales Xylariaceae
+danaplex	Echinode	Danaus plexippus               	M_In	Lepidoptera Nymphalidae
+danireri	Fish_mdl	Danio rerio                    	M_Fs	Cypriniformes Cyprinidae
+daphpule	ArthroDu	Daphnia pulex                  	M_Ar	Diplostraca Daphniidae
+dasynove	Tetrapod	Dasypus novemcinctus           	M_Mm	Cingulata Dasypodidae
+dauccaro	Angiosp 	Daucus carota                  	P_Eu	Apiales Apiaceae
+debafabr	Saccharo	Debaryomyces fabryi            	F_As	Saccharomycetales Debaryomycetaceae
+debahans	Saccharo	Debaryomyces hansenii          	F_As	Saccharomycetales Debaryomycetaceae
+decogaud	unknown 	Decorospora gaudefroyi         	F_As	Pleosporales Pleosporaceae
+dekkbrux	unknown 	Dekkera bruxellensis           	F_As	Saccharomycetales Pichiaceae
+deliconf	Dothide1	Delitschia confertaspora       	F_As	Pleosporales Delitschiaceae
+delpleuc	unknown 	Delphinapterus leucas          	M_Mm	Cetacea Monodontidae
+delpstro	unknown 	Delphinella strobiligena       	F_As	Dothideales Dothioraceae
+dendbisp	Dothide1	Dendrothele bispora            	F_Ba	Corticiales Corticiaceae
+dendpond	InsectCo	Dendroctonus ponderosae        	M_In	Coleoptera Curculionidae
+dentspec	unknown 	Dentipellis spec               	F_Ba	Russulales Hericiaceae
+diacallo	Echinode	Diachasma alloeum              	M_In	Hymenoptera Braconidae
+diapampe	unknown 	Diaporthe ampelina             	F_As	Diaporthales Diaporthaceae
+diapcitr	ChordatC	Diaphorina citri               	M_In	Hemiptera Psyllidae
+diapheli	unknown 	Diaporthe helianthi            	F_As	Diaporthales Diaporthaceae
+dicheleg	unknown 	Dichotomocladium elegans       	F_Mu	Mucorales Lichtheimiaceae
+dichsqua	Sordari1	Dichomitus squalens            	F_Ba	Polyporales Polyporaceae
+dictdisc	Dictyost	Dictyostelium discoideum       	O_Am	Dictyosteliida -
+dictfasc	Dictyost	Dictyostelium fasciculatum     	O_Am	Dictyosteliida -
+dictlact	Dictyost	Dictyostelium lacteum   	O_Am	Dictyosteliida -
+dictpurp	Dictyost	Dictyostelium purpureum        	O_Am	Dictyosteliida -
+dictvivi	NematodN	Dictyocaulus viviparus         	M_Ne	Rhabditida Dictyocaulidae
+didyexig	Dothide1	Didymella exigua               	F_As	Pleosporales Didymellaceae
+didysada	unknown 	Didymocrea sadasivanii         	F_As	- Zopfiaceae
+didyzeae	Dothide1	Didymella zeae-maydis          	F_As	Pleosporales Didymellaceae
+dinoquad	Echinode	Dinoponera quadriceps          	M_In	Hymenoptera Formicidae
+dioscryo	dioscryo	Dioszegia cryoxerica           	F_Ba	Tremellales -
+diphlatu	NematodF	Diphyllobothrium latum         	M_Pl	Diphyllobothriidea Diphyllobothriidae
+diplcort	unknown 	Diplodia corticola             	F_As	Botryosphaeriales Botryosphaeriaceae
+diplseri	unknown 	Diplodia seriata               	F_As	Botryosphaeriales Botryosphaeriaceae
+dipoordi	Tetrapod	Dipodomys ordii                	M_Mm	Rodentia Heteromyidae
+diroimmi	NematodO	Dirofilaria immitis            	M_Ne	Spirurida Onchocercidae
+dissacic	Dothide1	Dissoconium aciculare          	F_As	Capnodiales Dissoconiaceae
+ditydest	unknown 	Ditylenchus destructor         	M_Ne	Tylenchida Anguinidae
+diurnoxi	InsectCl	Diuraphis noxia                	M_In	Hemiptera Aphididae
+dothsept	Dothide1	Dothistroma septosporum        	F_As	Capnodiales Mycosphaerellaceae
+dothsymp	Dothide1	Dothidotthia symphoricarpi     	F_As	Pleosporales Dothidotthiaceae
+dracmedi	NematodO	Dracunculus medinensis         	M_Ne	Spirurida Dracunculidae
+drecconi	unknown 	Drechmeria coniospora          	F_As	Hypocreales Ophiocordycipitaceae
+drecsten	unknown 	Drechslerella stenobrocha      	F_As	Orbiliales Orbiliaceae
+drosalbo	InsectDm	Drosophila albomicans          	M_In	Diptera Drosophilidae
+drosanan	InsectDm	Drosophila ananassae           	M_In	Diptera Drosophilidae
+drosariz	unknown 	Drosophila arizonae            	M_In	Diptera Drosophilidae
+drosbiar	InsectDm	Drosophila biarmipes           	M_In	Diptera Drosophilidae
+drosbipe	InsectDm	Drosophila bipectinata         	M_In	Diptera Drosophilidae
+drosbusc	unknown 	Drosophila busckii             	M_In	Diptera Drosophilidae
+droseleg	InsectDm	Drosophila elegans             	M_In	Diptera Drosophilidae
+droserec	InsectDm	Drosophila erecta              	M_In	Diptera Drosophilidae
+droseugr	InsectDm	Drosophila eugracilis          	M_In	Diptera Drosophilidae
+drosficu	InsectDm	Drosophila ficusphila          	M_In	Diptera Drosophilidae
+drosgrim	InsectDm	Drosophila grimshawi           	M_In	Diptera Drosophilidae
+droskikk	InsectDm	Drosophila kikkawai            	M_In	Diptera Drosophilidae
+drosmela	InsectDm	Drosophila melanogaster        	M_In	Diptera Drosophilidae
+drosmira	InsectDm	Drosophila miranda             	M_In	Diptera Drosophilidae
+drosmoja	InsectDm	Drosophila mojavensis          	M_In	Diptera Drosophilidae
+drosnavo	unknown 	Drosophila navojoa             	M_In	Diptera Drosophilidae
+drosobsc	unknown 	Drosophila obscura             	M_In	Diptera Drosophilidae
+drospers	InsectDm	Drosophila persimilis          	M_In	Diptera Drosophilidae
+drospseu	InsectDm	Drosophila pseudoobscura       	M_In	Diptera Drosophilidae
+drosrhop	InsectDm	Drosophila rhopaloa            	M_In	Diptera Drosophilidae
+drossech	InsectDm	Drosophila sechellia           	M_In	Diptera Drosophilidae
+drosserr	unknown 	Drosophila serrata             	M_In	Diptera Drosophilidae
+drossimu	InsectDm	Drosophila simulans            	M_In	Diptera Drosophilidae
+drossuzu	InsectDm	Drosophila suzukii             	M_In	Diptera Drosophilidae
+drostaka	InsectDm	Drosophila takahashii          	M_In	Diptera Drosophilidae
+drosviri	InsectDm	Drosophila virilis             	M_In	Diptera Drosophilidae
+droswill	InsectMd	Drosophila willistoni          	M_In	Diptera Drosophilidae
+drosyaku	InsectDm	Drosophila yakuba              	M_In	Diptera Drosophilidae
+dufonova	InsectAg	Dufourea novaeangliae          	M_In	Teloschistales Teloschistaceae
+dunasali	dunasali	Dunaliella salina              	P_Ch	Chlamydomonadales Dunaliellaceae
+echicana	NematodB	Echinococcus canadensis        	M_Pl	Cyclophyllidea Taeniidae
+echicapr	NematodF	Echinostoma caproni            	M_Pl	Plagiorchiida Echinostomatidae
+echigran	NematodB	Echinococcus granulosus        	M_Pl	Cyclophyllidea Taeniidae
+echimult	NematodB	Echinococcus multilocularis    	M_Pl	Cyclophyllidea Taeniidae
+echitelf	Tetrapod	Echinops telfairi              	M_Mm	Asterales Asteraceae
+edhaaedi	unknown 	Edhazardia aedis               	F_Mi	- Culicosporidae
+egregarz	Tetrapod	Egretta garzetta               	M_Av	Pelecaniformes Ardeidae
+eimeacer	Eimeria 	Eimeria acervulina             	O_Al	Eucoccidiorida Eimeriidae
+eimebrun	Eimeria 	Eimeria brunetti               	O_Al	Eucoccidiorida Eimeriidae
+eimefalc	Eimeria 	Eimeria falciformis     	O_Al	Eucoccidiorida Eimeriidae
+eimemaxi	Eimeria 	Eimeria maxima                 	O_Al	Eucoccidiorida Eimeriidae
+eimemiti	Eimeria 	Eimeria mitis                  	O_Al	Eucoccidiorida Eimeriidae
+eimeneca	Eimeria 	Eimeria necatrix               	O_Al	Eucoccidiorida Eimeriidae
+eimeprae	Eimeria 	Eimeria praecox                	O_Al	Eucoccidiorida Eimeriidae
+eimetene	Eimeria 	Eimeria tenella                	O_Al	Eucoccidiorida Eimeriidae
+elaeelap	NematodO	Elaeophora elaphi              	M_Ne	Spirurida Onchocercidae
+elaeguin	Angiosp 	Elaeis guineensis              	P_Mo	Arecales Arecaceae
+elepedwa	Tetrapod	Elephantulus edwardii          	M_Mm	Macroscelidea Macroscelididae
+elsiampe	unknown 	Elsinoe ampelina               	F_As	Myriangiales Elsinoaceae
+emerpast	unknown 	Emergomyces pasteuriana        	F_As	Onygenales Ajellomycetaceae	 
+emilhuxl	emilhuxl	Emiliania huxleyi              	O_Ha	Isochrysidales Noelaerhabdaceae
+emmocres	unknown 	Emmonsia crescens              	F_As	Onygenales Ajellomycetaceae
+emmoparv	unknown 	Emmonsia parva                 	F_As	Onygenales Ajellomycetaceae
+emmospec	unknown 	Emmonsia spec                  	F_As	Onygenales Ajellomycetaceae
+encecuni	FungiAll	Encephalitozoon cuniculi       	F_Mi	- Unikaryonidae
+encehell	FungiAll	Encephalitozoon hellem         	F_Mi	- Unikaryonidae
+enceinte	FungiAll	Encephalitozoon intestinalis   	F_Mi	- Unikaryonidae
+enceroma	FungiAll	Encephalitozoon romaleae       	F_Mi	- Unikaryonidae
+endomont	Archamoe	Endotrypanum monterogeii       	O_Eu	Kinetoplastida Trypanosomatidae
+endopusi	unknown 	Endocarpon pusillum            	F_As	Verrucariales Verrucariaceae
+enhylutr	unknown 	Enhydra lutris                 	M_Mm	Carnivora Mustelidae
+entadisp	Archamoe	Entamoeba dispar               	O_Am	- -
+entahist	Archamoe	Entamoeba histolytica          	O_Am	- -
+entainva	Archamoe	Entamoeba invadens             	O_Am	- -
+entamosh	Archamoe	Entamoeba moshkovskii          	O_Am	- -
+entanutt	Archamoe	Entamoeba nuttalli             	O_Am	- -
+entebien	FungiAll	Enterocytozoon bieneusi        	F_Mi	- Enterocytozoonidae
+entecanc	unknown 	Enterospora canceri            	F_Mi	- Enterocytozoonidae
+entehepa	FungiAll	Enterocytozoon hepatopenaei    	F_Mi	- Enterocytozoonidae
+enteverm	NematodO	Enterobius vermicularis        	M_Ne	Oxyurida Oxyuridae
+entoheli	unknown 	Entophlyctis helioformis       	F_Ch	Chytridiales Chytriomycetaceae
+entomamm	unknown 	Entoleuca mammata              	F_As	Xylariales Xylariaceae
+eperfalc	Eimeria 	Epermenia falciformis          	O_Op	Lepidoptera Epermeniidae
+ephedani	InsectGn	Ephemera danica                	M_In	Ephemeroptera Ephemeridae
+eptefusc	Tetrapod	Eptesicus fuscus               	M_Mm	Chiroptera Vespertilionidae
+equuasin	Tetrapod	Equus asinus                   	M_Mm	Perissodactyla Equidae
+equucaba	Tetrapod	Equus caballus                 	M_Mm	Perissodactyla Equidae
+equuprze	Tetrapod	Equus przewalskii              	M_Mm	Perissodactyla Equidae
+erembila	Dothide1	Eremomyces bilateralis         	F_As	- Eremomycetaceae
+eremcymb	Saccharo	Eremothecium cymbalariae       	F_As	Saccharomycetales Saccharomycetaceae
+eremgoss	Saccharo	Eremothecium gossypii          	F_As	Saccharomycetales Saccharomycetaceae
+eremsine	Saccharo	Eremothecium sinecaudum        	F_As	Saccharomycetales Saccharomycetaceae
+erineuro	Tetrapod	Erinaceus europaeus            	M_Mm	Insectivora Erinaceidae
+erysneca	unknown 	Erysiphe necator               	F_As	Erysiphales Erysiphaceae
+erytgutt	Angiosp 	Erythranthe guttata            	P_Eu	Lamiales Phrymaceae
+erythase	Sordari1	Erythrobasidium hasegawianum   	F_Ba	Erythrobasidiales Erythrobasidiaceae
+escowebe	unknown 	Escovopsis weberi              	F_As	Hypocreales Hypocreaceae
+esoxluci	Fish_mdl	Esox lucius                    	M_Fs	Esociformes Esocidae
+eucacama	Angiosp 	Eucalyptus camaldulensis       	P_Eu	Myrtales Myrtaceae
+eucagran	Angiosp 	Eucalyptus grandis             	P_Eu	Myrtales Myrtaceae
+eufrmexi	unknown 	Eufriesea mexicana             	M_In	Hymenoptera Apidae
+eugldile	unknown 	Euglossa dilemma               	M_In	Hymenoptera Apidae
+euroherb	Dothide1	Eurotium herbariorum           	F_As	Eurotiales Aspergillaceae
+eurorubr	Dothide1	Eurotium rubrum                	F_As	Eurotiales Aspergillaceae
+euryaffi	unknown 	Eurytemora affinis             	M_Ar	Calanoida Temoridae
+euryheli	Tetrapod	Eurypyga helias                	M_Av	Gruiformes Eurypygidae
+eutrsals	Angiosp 	Eutrema salsugineum            	P_Eu	Brassicales Brassicaceae
+eutylata	Dothide1	Eutypa lata                    	F_As	Xylariales Diatrypaceae
+exaipall	unknown 	Exaiptasia pallida             	M_Cn	Actiniaria Aiptasiidae
+exidglan	Sordari1	Exidia glandulosa              	F_Ba	Auriculariales Exidiaceae
+exobvacc	exobvacc	Exobasidium vaccinii           	F_Ba	Exobasidiales Exobasidiaceae
+exopalca	unknown 	Exophiala alcalophila          	F_As	Chaetothyriales Chaetothyriaceae
+exopaqua	unknown 	Exophiala aquamarina           	F_As	Chaetothyriales Chaetothyriaceae
+exopderm	unknown 	Exophiala dermatitidis         	F_As	Chaetothyriales Chaetothyriaceae
+exopmeso	unknown 	Exophiala mesophila            	F_As	Chaetothyriales Chaetothyriaceae
+exopolig	unknown 	Exophiala oligosperma          	F_As	Chaetothyriales Chaetothyriaceae
+exopside	unknown 	Exophiala sideris              	F_As	Chaetothyriales Chaetothyriaceae
+exopspin	unknown 	Exophiala spinifera            	F_As	Chaetothyriales Chaetothyriaceae
+exopxeno	unknown 	Exophiala xenobiotica          	F_As	Chaetothyriales Chaetothyriaceae
+falccher	Tetrapod	Falco cherrug                  	M_Av	Falconiformes Falconidae
+falcpere	Tetrapod	Falco peregrinus               	M_Av	Falconiformes Falconidae
+faschepa	faschepa	Fasciola hepatica              	M_Pl	Plagiorchiida Fasciolidae
+felicatu	Tetrapod	Felis catus                    	M_Mm	Carnivora Felidae
+fellpeni	unknown 	Fellomyces penicillatus        	F_Ba	Tremellales -
+fennspec	unknown 	Fennellomyces spec             	F_Mu	Mucorales Lichtheimiaceae
+fibrradi	Dothide1	Fibroporia radiculosa          	F_Ba	Polyporales Polyporaceae
+fibuinco	unknown 	Fibulobasidium inconspicuum    	F_Ba	Tremellales Sirobasidiaceae
+fibuspec	Dothide1	Fibulorhizoctonia spec         	F_Ba	Atheliales Atheliaceae
+ficealbi	Tetrapod	Ficedula albicollis            	M_Av	Passeriformes Muscicapidae
+fisthepa	Dothide1	Fistulina hepatica             	F_Ba	Agaricales Fistulinaceae
+folscand	unknown 	Folsomia candida               	M_Ar	- Isotomidae
+fomefome	unknown 	Fomes fomentarius              	F_Ba	Polyporales Coriolaceae
+fomimedi	Dothide1	Fomitiporia mediterranea       	F_Ba	Hymenochaetales Hymenochaetaceae
+fomipini	Sordari1	Fomitopsis pinicola            	F_Ba	Polyporales Fomitopsidaceae
+fonserec	unknown 	Fonsecaea erecta               	F_As	Chaetothyriales Herpotrichiellaceae
+fonsmono	unknown 	Fonsecaea monophora            	F_As	Chaetothyriales Herpotrichiellaceae
+fonsmult	unknown 	Fonsecaea multimorphosa        	F_As	Chaetothyriales Herpotrichiellaceae
+fonsnubi	unknown 	Fonsecaea nubica               	F_As	Chaetothyriales Herpotrichiellaceae
+fonspedr	unknown 	Fonsecaea pedrosoi             	F_As	Chaetothyriales Herpotrichiellaceae
+fontalba	fontalba 	Fonticula alba                 	O_Op	Fonticulida Fonticulaceae
+fopiaris	Echinode	Fopius arisanus                	M_In	Hymenoptera Braconidae
+fraganan	Angiosp 	Fragaria ananassa              	P_Eu	Rosales Rosaceae
+fragcyli	fragcyli	Fragilariopsis cylindrus       	O_St	Bacillariales Bacillariaceae
+fragvesc	Angiosp 	Fragaria vesca                 	P_Eu	Rosales Rosaceae
+franocci	InsectAg	Frankliniella occidentalis     	M_In	Thysanoptera Thripidae
+fukodama	Tetrapod	Fukomys damarensis             	M_Mm	Rodentia Bathyergidae
+fulmglac	Tetrapod	Fulmarus glacialis             	M_Av	Procellariiformes Procellariidae
+fundhete	Fish_mdl	Fundulus heteroclitus          	M_Fs	Cyprinodontiformes Fundulidae
+fusaculm	Dothide1	Fusarium culmorum              	F_As	Hypocreales Nectriaceae
+fusafuji	Dothide1	Fusarium fujikuroi             	F_As	Hypocreales Nectriaceae
+fusagram	Dothide1	Fusarium graminearum           	F_As	Hypocreales Nectriaceae
+fusalang	Dothide1	Fusarium langsethiae           	F_As	Hypocreales Nectriaceae
+fusamang	Dothide1	Fusarium mangiferae            	F_As	Hypocreales Nectriaceae
+fusaoxys	Dothide1	Fusarium oxysporum             	F_As	Hypocreales Nectriaceae
+fusapoae	Dothide1	Fusarium poae                  	F_As	Hypocreales Nectriaceae
+fusaprol	Dothide1	Fusarium proliferatum          	F_As	Hypocreales Nectriaceae
+fusapseu	Dothide1	Fusarium pseudograminearum     	F_As	Hypocreales Nectriaceae
+fusaredo	Dothide1	Fusarium redolens              	F_As	Hypocreales Nectriaceae
+fusasola	Dothide1	Fusarium solani                	F_As	Hypocreales Nectriaceae
+fusavert	Dothide1	Fusarium verticillioides       	F_As	Hypocreales Nectriaceae
+gadumorh	Fish_mdl	Gadus morhua                   	M_Fs	Gadiformes Gadidae
+gaersemi	unknown 	Gaertneriomyces semiglobifer   	F_Ch	Spizellomycetales Spizellomycetaceae
+gaeugram	Sordari3	Gaeumannomyces graminis        	F_As	Magnaporthales Magnaporthaceae
+gaeutrit	Sordari3	Gaeumannomyces tritici         	F_As	Magnaporthales Magnaporthaceae
+galdsulp	Cyanidia	Galdieria sulphuraria          	P_Ba	Cyanidiales Cyanidiaceae
+galemarg	Dothide1	Galerina marginata             	F_Ba	Agaricales Strophariaceae
+galeocci	unknown 	Galendromus occidentalis       	M_Ar	Mesostigmata Phytoseiidae
+galevari	Tetrapod	Galeopterus variegatus         	M_Mm	Dermoptera Cynocephalidae
+gallgall	Tetrapod	Gallus gallus                  	M_Av	Galliformes Phasianidae
+ganospec	Sordari1	Ganoderma species              	F_Ba	Polyporales Ganodermataceae
+gastacul	Fish_mdl	Gasterosteus aculeatus         	M_Fs	Perciformes Gasterosteidae
+gautmorc	unknown 	Gautieria morchelliformis      	F_Ba	Gomphales Gautieriaceae
+gavigang	unknown 	Gavialis gangeticus            	M_Rp	Crocodylia Gavialidae
+gavistel	Tetrapod	Gavia stellata                 	M_Av	Gaviiformes Gaviidae
+gekkjapo	Tetrapod	Gekko japonicus                	M_Rp	Squamata Gekkonidae
+gelasubv	unknown 	Gelatoporia subvermispora      	F_Ba	Polyporales Coriolaceae
+geosfort	Tetrapod	Geospiza fortis                	M_Av	Passeriformes Thraupidae
+geotcand	unknown 	Geotrichum candidum            	F_As	Saccharomycetales Dipodascaceae
+gerrbuen	InsectCl	Gerris buenoi                  	M_In	Hemiptera Gerridae
+giarinte	Archamoe	Giardia intestinalis           	O_Fo	- Hexamitidae
+giarlamb	Archamoe	Giardia lamblia                	O_Fo	- Hexamitidae
+gibbmoni	Dothide1	Gibberella moniliformis        	F_As	
+gibbzeae	Dothide1	Gibberella zeae                	F_As	
+gilbpers	unknown 	Gilbertella persicaria         	F_Mu	Mucorales Choanephoraceae
+glarlozo	Dothide1	Glarea lozoyensis              	F_As	Helotiales Helotiaceae
+globpall	NematodE	Globodera pallida              	M_Ne	Tylenchida Heteroderidae
+globpoll	unknown 	Globomyces pollinis-pini       	F_Ch	Rhizophydiales Globomycetaceae
+globrost	unknown 	Globodera rostochiensis        	M_Ne	Tylenchida Heteroderidae
+gloeconv	unknown 	Gloeopeniophorella convolvens  	F_Ba	Corticiales Corticiaceae
+gloetrab	Sordari1	Gloeophyllum trabeum           	F_Ba	Gloeophyllales Gloeophyllaceae
+glomacut	Dothide1	Glomerella acutata             	F_As	Coleoptera Coccinellidae
+glomcing	Dothide1	Glomerella cingulata           	F_As	Coleoptera Coccinellidae
+glomgram	Dothide1	Glomerella graminicola         	F_As	Coleoptera Coccinellidae
+glonstel	Dothide1	Glonium stellatum              	F_As	- Gloniaceae
+glosaust	InsectGl	Glossina austeni               	M_In	Diptera Glossinidae
+glosbrev	InsectGl	Glossina brevipalpis           	M_In	Diptera Glossinidae
+glosfusc	InsectGl	Glossina fuscipes              	M_In	Diptera Glossinidae
+glosmors	InsectGl	Glossina morsitans             	M_In	Diptera Glossinidae
+glospall	InsectGl	Glossina pallidipes            	M_In	Diptera Glossinidae
+glospalp	InsectGl	Glossina palpalis              	M_In	Diptera Glossinidae
+glycmax_	Angiosp 	Glycine max                    	P_Eu	Fabales Fabaceae
+gonaprol	gonaprol	Gonapodya prolifera            	F_Ch	Monoblepharidales Gonapodyaceae
+gongbutl	unknown 	Gongronella butleri            	F_Mu	Mucorales Cunninghamellaceae
+gongpulc	NematodA	Gongylonema pulchrum           	M_Ne	Spirurida Gongylonematidae
+gorigori	Tetrapod	Gorilla gorilla                	M_Mm	Primates Hominidae
+gosshirs	unknown 	Gossypium hirsutum             	P_Eu	Malvales Malvaceae
+gossraim	Angiosp 	Gossypium raimondii            	P_Eu	Malvales Malvaceae
+gregniph	gregniph	Gregarina niphandrodes         	O_Al	Eugregarinorida Gregarinidae
+gremabie	unknown 	Gremmeniella abietina          	F_As	Helotiales Helotiaceae
+griffron	unknown 	Grifola frondosa               	F_Ba	Agaricales Schizophyllaceae
+grosclav	Sordari1	Grosmannia clavigera           	F_As	Ophiostomatales Ophiostomataceae
+guilthet	Chroomon	Guillardia theta               	O_Cr	Pyrenomonadales Geminigeraceae
+guyanecr	Dothide1	Guyanagaster necrorhiza        	F_Ba	Agaricales Physalacriaceae
+gymnandr	Dothide1	Gymnopus androsaceus           	F_Ba	Agaricales Omphalotaceae
+gymnaura	Dothide1	Gymnascella aurantiaca         	F_As	Onygenales Gymnoascaceae
+gymnchry	Dothide1	Gymnopilus chrysopellus        	F_Ba	Agaricales Cortinariaceae
+gymncitr	Dothide1	Gymnascella citrina            	F_As	Onygenales Gymnoascaceae
+gymnearl	Dothide1	Gymnopus earleae               	F_Ba	Agaricales Omphalotaceae
+gymnjuno	Dothide1	Gymnopilus junonius            	F_Ba	Agaricales Cortinariaceae
+gymnluxu	Dothide1	Gymnopus luxurians             	F_Ba	Agaricales Omphalotaceae
+gyroescu	unknown 	Gyromitra esculenta            	F_As	Pezizales Discinaceae
+gyrolivi	Dothide1	Gyrodon lividus                	F_Ba	Boletales Gyrodontaceae
+gyrosala	unknown 	Gyrodactylus salaris           	M_Pl	- Gyrodactylidae
+habrlabo	unknown 	Habropoda laboriosa            	M_In	Hymenoptera Apidae
+haemcont	NematodN	Haemonchus contortus           	M_Ne	Rhabditida Haemonchidae
+haemplac	NematodN	Haemonchus placei              	M_Ne	Rhabditida Haemonchidae
+halialbi	Tetrapod	Haliaeetus albicilla           	M_Av	Falconiformes Accipitridae
+halileuc	Tetrapod	Haliaeetus leucocephalus       	M_Av	Falconiformes Accipitridae
+halyhaly	ArthroPe	Halyomorpha halys              	M_In	Hemiptera Pentatomidae
+hammhamm	Conoida1	Hammondia hammondi             	O_Al	Eucoccidiorida Sarcocystidae
+hansguil	Saccharo	Hanseniaspora guilliermondii   	F_As	Saccharomycetales Saccharomycodaceae
+hansopun	Saccharo	Hanseniaspora opuntiae         	F_As	Saccharomycetales Saccharomycodaceae
+hansosmo	Saccharo	Hanseniaspora osmophila        	F_As	Saccharomycetales Saccharomycodaceae
+hanspoly	Saccharo	Hansenula polymorpha           	F_As	Saccharomycetales Pichiaceae
+hansuvar	Saccharo	Hanseniaspora uvarum           	F_As	Saccharomycetales Saccharomycodaceae
+hansvalb	Saccharo	Hanseniaspora valbyensis       	F_As	Saccharomycetales Saccharomycodaceae
+haplburt	Fish_mdl	Haplochromis burtoni           	M_Fs	Cichliformes Cichlidae
+harpsalt	Echinode	Harpegnathos saltator          	M_In	Hymenoptera Formicidae
+hebecyli	Dothide1	Hebeloma cylindrosporum        	F_Ba	Agaricales Cortinariaceae
+heliannu	unknown 	Helianthus annuus              	P_Eu	Asterales Asteraceae
+heliarmi	unknown 	Helicoverpa armigera           	M_In	Lepidoptera Noctuidae
+helimelp	InsectAc	Heliconius melpomene           	M_In	Lepidoptera Nymphalidae
+helipoly	NematodN	Heligmosomoides polygyrus      	M_Ne	Rhabditida Heligmosomatidae
+helisulc	unknown 	Heliocybe sulcata              	F_Ba	Polyporales Polyporaceae
+helivire	unknown 	Heliothis virescens            	M_In	Lepidoptera Noctuidae
+helorobu	helorobu	Helobdella robusta             	M_An	Rhynchobdellida Glossiphoniidae
+hemiande	unknown 	Hemiselmis andersenii   	O_Cr	Hemiselmidaceae Hemiselmis
+hepaerio	unknown 	Hepatospora eriocheir          	F_Mi	- Enterocytozoonidae
+hessvesi	hessvesi	Hesseltinella vesiculosa       	F_Fu	Mucorales Cunninghamellaceae
+heteanno	Sordari1	Heterobasidion annosum         	F_Ba	Russulales Bondarzewiaceae
+hetebact	hetebact	Heterorhabditis bacteriophora  	M_Ne	Rhabditida Heterorhabditidae
+heteglab	Tetrapod	Heterocephalus glaber          	M_Mm	Rodentia Bathyergidae
+heteirre	Sordari1	Heterobasidion irregulare      	F_Ba	Russulales Bondarzewiaceae
+hetepycn	hetepycn	Heterogastridium pycnidioideum 	F_Ba	Heterogastridiales Heterogastridiaceae
+hexaniti	unknown 	Hexagonia nitida               	F_Ba	Polyporales Polyporaceae
+hipparmi	unknown 	Hipposideros armiger           	M_Mm	Chiroptera Hipposideridae
+hippcome	unknown 	Hippocampus comes              	M_Fs	Syngnathiformes Syngnathidae
+hirsminn	unknown 	Hirsutella minnesotensis       	F_As	Hypocreales Ophiocordycipitaceae
+histcag1	Dothide1	Histoplasma cag186ar           	F_As	Onygenales Ajellomycetaceae
+histcah1	Dothide1	Histoplasma cah143             	F_As	Onygenales Ajellomycetaceae
+histcah8	Dothide1	Histoplasma cah88              	F_As	Onygenales Ajellomycetaceae
+histcana	Dothide1	Histoplasma canam1             	F_As	Onygenales Ajellomycetaceae
+histcaps	Dothide1	Histoplasma capsulatum         	F_As	Onygenales Ajellomycetaceae
+homavitr	InsectHe	Homalodisca vitripennis        	M_In	Hemiptera Cicadellidae
+homopoly	unknown 	Homolaphlyctis polyrhiza       	F_Ch	Rhizophydiales -
+homosapi	Tetrapod	Homo sapiens                   	M_Mm	Primates Hominidae
+hordvulg	unknown 	Hordeum vulgare                	P_Mo	Poales Poaceae
+hortacid	unknown 	Hortaea acidophila             	F_As	Dothideales -
+hortwern	unknown 	Hortaea werneckii              	F_As	Dothideales -
+hyalarab	Oomycete	Hyaloperonospora arabidopsidis 	O_St	Peronosporales Peronosporaceae
+hyalazte	unknown 	Hyalella azteca                	M_Ar	Amphipoda Hyalellidae
+hyalblep	unknown 	Hyalopycnis blepharistoma      	F_Ba	Heterogastridiales Heterogastridiaceae
+hydataen	NematodB	Hydatigera taeniaeformis       	M_Pl	Cyclophyllidea Taeniidae
+hydnfimb	unknown 	Hydnopolyporus fimbriatus      	F_Ba	Polyporales Meripilaceae
+hydnpina	Dothide1	Hydnomerulius pinastri         	F_Ba	Boletales Paxillaceae
+hydnrufe	unknown 	Hydnum rufescens               	F_Ba	Cantharellales Hydnaceae
+hydrmagn	Echinode	Hydra magnipapillata           	M_Cn	Anthoathecata Hydridae
+hydrvulg	hydrvulg	Hydra vulgaris                 	M_Cn	Anthoathecata Hydridae
+hymedimi	Hymenole	Hymenolepis diminuta           	M_Pl	Asterales Asteraceae
+hymemicr	Hymenole	Hymenolepis microstoma         	M_Pl	Asterales Asteraceae
+hymenana	Hymenole	Hymenolepis nana               	M_Pl	Asterales Asteraceae
+hymeradi	unknown 	Hymenopellis radicata          	F_Ba	Agaricales Physalacriaceae
+hymevari	unknown 	Hymenoscyphus varicosporoides  	F_As	Helotiales Helotiaceae
+hyphburt	hyphburt	Hyphopichia burtonii           	F_As	Saccharomycetales Debaryomycetaceae
+hyphsubl	Dothide1	Hypholoma sublateritium        	F_Ba	Agaricales Strophariaceae
+hypohamp	InsectCo	Hypothenemus hampei            	M_In	Coleoptera Curculionidae
+hypospco	Sordari1	Hypoxylon spCO275              	F_As	Xylariales Xylariaceae
+hypospec	Sordari1	Hypoxylon species              	F_As	Xylariales Xylariaceae
+hypsmarm	unknown 	Hypsizygus marmoreus           	F_Ba	Agaricales Lyophyllaceae
+hystpuli	Dothide1	Hysterium pulicare             	F_As	Hysteriales Hysteriaceae
+ichtmult	ichtmult	Ichthyophthirius multifiliis   	O_Al	Hymenostomatida -
+ictapunc	unknown 	Ictalurus punctatus            	M_Fs	Siluriformes Ictaluridae
+ictitrid	Tetrapod	Ictidomys tridecemlineatus     	M_Mm	Rodentia Sciuridae
+ilyoeuro	FungiAll	Ilyonectria europaea           	F_As	Hypocreales Nectriaceae
+ilyoradi	FungiAll	Ilyonectria radicola           	F_As	Hypocreales Nectriaceae
+ilyorobu	FungiAll	Ilyonectria robusta            	F_As	Hypocreales Nectriaceae
+ilyospec	FungiAll	Ilyonectria spec               	F_As	Hypocreales Nectriaceae
+irpelact	unknown 	Irpex lacteus                  	F_Ba	Polyporales -
+isarfumo	unknown 	Isaria fumosorosea             	F_As	Hypocreales Cordycipitaceae
+ixodscap	ixodscap	Ixodes scapularis              	M_Ar	Ixodida Ixodidae
+jaapargi	Dothide1	Jaapia argillacea              	F_Ba	Jaapiales Jaapiaceae
+jacujacu	Tetrapod	Jaculus jaculus                	M_Mm	Rodentia Dipodidae
+jamispec	jamispec	Jaminaea spec                  	F_Ba	Microstromatales -
+jatrcurc	Angiosp 	Jatropha curcas                	P_Eu	Malpighiales Euphorbiaceae
+kalafedt	unknown 	Kalanchoe fedtschenkoi         	P_Eu	Saxifragales Crassulaceae
+kalalaxi	Angiosp 	Kalanchoe laxiflora            	P_Eu	Saxifragales Crassulaceae
+kalamarn	Angiosp 	Kalanchoe marnieriana          	P_Eu	Saxifragales Crassulaceae
+kalapfei	unknown 	Kalaharituber pfeilii          	F_As	Pezizales Pezizaceae
+kalmbras	unknown 	Kalmanozyma brasiliensis       	F_Ba	Ustilaginales Ustilaginaceae
+karsrhod	Dothide1	Karstenula rhodostom           	F_As	Pleosporales Didymosphaeriaceae
+kazaafri	Saccharo	Kazachstania africana          	F_As	Saccharomycetales Saccharomycetaceae
+kazanaga	Saccharo	Kazachstania naganishii        	F_As	Saccharomycetales Saccharomycetaceae
+khusoryz	unknown 	Khuskia oryzae                 	F_As	Trichosphaeriales Trichosphaeriaceae
+kickalab	unknown 	Kickxella alabastrina          	F_Ki	Kickxellales Kickxellaceae
+kluylact	Saccharo	Kluyveromyces lactis           	F_As	Saccharomycetales Saccharomycetaceae
+kluymarx	Saccharo	Kluyveromyces marxianus        	F_As	Saccharomycetales Saccharomycetaceae
+kockimpe	unknown 	Kockovaella imperatae          	F_Ba	Tremellales -
+komapast	Saccharo	Komagataella pastoris          	F_As	Saccharomycetales Phaffomycetaceae
+komaphaf	Saccharo	Komagataella phaffii           	F_As	Saccharomycetales Phaffomycetaceae
+krypmarm	unknown 	Kryptolebias marmoratus        	M_Fs	Cyprinodontiformes -
+kuracaps	unknown 	Kuraishia capsulata            	F_As	Saccharomycetales -
+kwonbest	unknown 	Kwoniella bestiolae            	F_Ba	Tremellales -
+kwondeje	unknown 	Kwoniella dejecticola          	F_Ba	Tremellales -
+kwonheve	unknown 	Kwoniella heveanensis          	F_Ba	Tremellales -
+kwonmang	unknown 	Kwoniella mangroviensis        	F_Ba	Tremellales -
+kwonpini	unknown 	Kwoniella pini                 	F_Ba	Tremellales -
+labrberg	unknown 	Labrus bergylta                	M_Fs	Labriformes Labridae
+laccamet	Dothide1	Laccaria amethystina           	F_Ba	Agaricales Tricholomataceae
+laccbico	Dothide1	Laccaria bicolor               	F_Ba	Agaricales Tricholomataceae
+lachdasi	Saccharo	Lachancea dasiensis            	F_As	Saccharomycetales Saccharomycetaceae
+lachferm	Saccharo	Lachancea fermentati           	F_As	Saccharomycetales Saccharomycetaceae
+lachkluy	Saccharo	Lachancea Lachancea            	F_As	Saccharomycetales Saccharomycetaceae
+lachlanz	Saccharo	Lachancea lanzarotensis        	F_As	Saccharomycetales Saccharomycetaceae
+lachmeye	Saccharo	Lachancea meyersii             	F_As	Saccharomycetales Saccharomycetaceae
+lachmira	Saccharo	Lachancea mirantina            	F_As	Saccharomycetales Saccharomycetaceae
+lachnoth	Saccharo	Lachancea nothofagi            	F_As	Saccharomycetales Saccharomycetaceae
+lachspec	Saccharo	Lachancea spec                 	F_As	Saccharomycetales Saccharomycetaceae
+lachther	Saccharo	Lachancea thermotolerans       	F_As	Saccharomycetales Saccharomycetaceae
+lactquie	unknown 	Lactarius quietus              	F_Ba	Russulales Russulaceae
+lactsati	unknown 	Lactuca sativa                 	P_Eu	Asterales Asteraceae
+lactsubv	unknown 	Lactifluus subvellereus        	F_Ba	Russulales Russulaceae
+lactvole	unknown 	Lactifluus volemus             	F_Ba	Russulales Russulaceae
+ladofulv	InsectGn	Ladona fulva                   	M_In	Odonata Libellulidae
+laetsulp	Sordari1	Laetiporus sulphureus          	F_Ba	Polyporales Coriolaceae
+laricroc	Fish_mdl	Larimichthys crocea            	M_Fs	- Sciaenidae
+lasialbi	unknown 	Lasioglossum albipes           	M_In	Hymenoptera Halictidae
+lasihirs	unknown 	Lasiosphaeris hirsuta          	F_As	Sordariales Lasiosphaeriaceae
+lasimini	unknown 	Lasiosphaeria miniovina        	F_As	Sordariales Lasiosphaeriaceae
+latecalc	unknown 	Lates calcarifer               	M_Fs	- Centropomidae
+latichal	ChordatU	Latimeria chalumnae            	M_Sa	Coelacanthiformes Coelacanthidae
+latrhesp	unknown 	Latrodectus hesperus           	M_Ar	Araneae Theridiidae
+lecyspec	unknown 	Lecythophora spec              	F_As	Coniochaetales Coniochaetaceae	 
+leerperr	unknown 	Leersia perrieri               	P_Mo	Poales Poaceae
+leiolact	Sordari1	Leiotrametes lactinea          	F_Ba	Polyporales Coriolaceae
+leiospec	Sordari1	Leiotrametes sp                	F_Ba	Polyporales Coriolaceae
+leisaeth	Archamoe	Leishmania aethiopica          	O_Eu	Kinetoplastida Trypanosomatidae
+leisarab	Archamoe	Leishmania arabica             	O_Eu	Kinetoplastida Trypanosomatidae
+leisbraz	Archamoe	Leishmania braziliensis        	O_Eu	Kinetoplastida Trypanosomatidae
+leisdono	Archamoe	Leishmania donovani            	O_Eu	Kinetoplastida Trypanosomatidae
+leisenri	Archamoe	Leishmania enriettii           	O_Eu	Kinetoplastida Trypanosomatidae
+leisgerb	Archamoe	Leishmania gerbilli            	O_Eu	Kinetoplastida Trypanosomatidae
+leisinfa	Archamoe	Leishmania infantum            	O_Eu	Kinetoplastida Trypanosomatidae
+leismajo	Archamoe	Leishmania major               	O_Eu	Kinetoplastida Trypanosomatidae
+leismexi	Archamoe	Leishmania mexicana            	O_Eu	Kinetoplastida Trypanosomatidae
+leispana	Archamoe	Leishmania panamensis          	O_Eu	Kinetoplastida Trypanosomatidae
+leisspec	Archamoe	Leishmania sp.          	O_Eu	Kinetoplastida Trypanosomatidae
+leistare	Archamoe	Leishmania tarentolae          	O_Eu	Kinetoplastida Trypanosomatidae
+leistrop	Archamoe	Leishmania tropica             	O_Eu	Kinetoplastida Trypanosomatidae
+leistura	Archamoe	Leishmania turanica            	O_Eu	Kinetoplastida Trypanosomatidae
+lentedod	unknown 	Lentinula edodes               	F_Ba	Agaricales Omphalotaceae
+lentfluv	Dothide1	Lentithecium fluviatile        	F_As	Pleosporales Lentitheciaceae
+lenttigr	Sordari1	Lentinus tigrinus              	F_Ba	Polyporales Lentinaceae
+lentvulp	unknown 	Lentinellus vulpinus           	F_Ba	Russulales Auriscalpiaceae
+lepesalm	ArthroLe	Lepeophtheirus salmonis        	M_Ar	Siphonostomatoida Caligidae
+lepicoro	unknown 	Lepidothrix coronata           	M_Av	Passeriformes Pipridae
+lepinuda	unknown 	Lepista nuda                   	F_Ba	Agaricales Tricholomataceae
+lepiocul	Tetrapod	Lepisosteus oculatus           	M_Fs	Semionotiformes Lepisosteidae
+lepipalu	Dothide1	Lepidopterella palustri        	F_As	- Argynnaceae
+leptdece	InsectCo	Leptinotarsa decemlineata      	M_In	Coleoptera Chrysomelidae
+leptdisc	Tetrapod	Leptosomus discolor            	M_Av	Coraciiformes Leptosomidae
+leptmacu	Dothide1	Leptosphaeria maculans         	F_As	Pleosporales Leptosphaeriaceae
+leptpyrr	Archamoe	Leptomonas pyrrhocoris         	O_Eu	Kinetoplastida Trypanosomatidae
+leptseym	Archamoe	Leptomonas seymouri            	O_Eu	Kinetoplastida Trypanosomatidae
+leptspec	unknown 	Leptodontium spec       	F_As    Helotiales incertae sedis
+leptspma	Archamoe	Leptomonas spma                	O_Eu	Kinetoplastida Trypanosomatidae
+leptwedd	Tetrapod	Leptonychotes weddellii        	M_Mm	Carnivora Phocidae
+leuccrea	unknown 	Leucosporidiella creatinivora  	F_Ba	Leucosporidiales Leucosporidiaceae
+leucgong	Dothide1	Leucoagaricus gongylophorus    	F_Ba	Agaricales Agaricaceae
+leucmoll	Dothide1	Leucogyrophana mollusca        	F_Ba	Boletales -
+leucspec	Dothide1	Leucoagaricus spec             	F_Ba	Agaricales Agaricaceae
+lichcory	Mucoral1	Lichtheimia corymbifera        	F_Mu	Mucorales Lichtheimiaceae
+lichhyal	Mucoral1	Lichtheimia hyalospora         	F_Fu	Mucorales Lichtheimiaceae
+lichramo	Mucoral1	Lichtheimia ramosa             	F_Mu	Mucorales Lichtheimiaceae
+limnluna	InsectGn	Limnephilus lunatus            	M_In	Trichoptera Limnephilidae
+limupoly	InsectBm	Limulus polyphemus             	M_Ar	Xiphosura Limulidae
+lindingo	Dothide2	Lindgomyces ingoldianus        	F_As	Pleosporales Lindgomycetaceae
+lindpenn	unknown 	Linderina pennispora           	F_Ki	Kickxellales Kickxellaceae
+lindthal	unknown 	Lindra thalassiae       	F_As    Lulworthiales Lulworthiaceae	
+linehumi	Echinode	Linepithema humile             	M_In	Hymenoptera Formicidae
+linerhiz	unknown 	Lineolata rhizophorae          	F_As	Dothideales -
+linganat	Mollusca	Lingula anatina                	M_Br	Lingulida Lingulidae
+linuusit	Angiosp 	Linum usitatissimum            	P_Eu	Malpighiales Linaceae
+lipostar	Dothide1	Lipomyces starkeyi             	F_As	Saccharomycetales Lipomycetaceae
+lipovexi	Tetrapod	Lipotes vexillifer             	M_Mm	Cetacea Lipotidae
+litosigm	NematodO	Litomosoides sigmodontis       	M_Ne	Spirurida Onchocercidae
+lizoempi	unknown 	Lizonia empirigonia            	F_As	- Pseudoperisporiaceae
+loa_loa_	NematodO	Loa loa                        	M_Ne	Spirurida Onchocercidae
+lobapulm	unknown 	Lobaria pulmonaria             	F_As	Peltigerales Lobariaceae
+lobotran	unknown 	Lobosporangium transversale    	F_Mo	Mortierellales Mortierellaceae
+locumigr	InsectGn	Locusta migratoria             	M_In	Orthoptera Acrididae
+loddelon	Saccharo	Lodderomyces elongisporus      	F_As	Saccharomycetales Debaryomycetaceae
+lollminu	unknown 	Lollipopaia minuta             	F_As	Diaporthales Valsaceae
+loncstri	unknown 	Lonchura striata               	M_Av	Passeriformes Estrildidae
+lophmacr	Dothide1	Lophiostoma macrostomum        	F_As	Pleosporales Lophiostomataceae
+lophmyti	Dothide1	Lophium mytilinum              	F_As	Mytilinidiales Mytilinidiaceae
+lophnucu	unknown 	Lophiotrema nucula             	F_As	Pleosporales Lophiotremataceae
+lorajunc	Dothide1	Loramyces juncicola            	F_As	Helotiales Loramycetaceae
+loramacr	Dothide1	Loramyces macrosporus          	F_As	Helotiales Loramycetaceae
+lothocea	ProtisGn	Lotharella oceanica     	O_Rh	- -
+lothspec	ProtisGn	Lotharella spec                	O_Rh	- -
+lottgiga	lottgiga	Lottia gigantea                	M_Mo	- Lottiidae
+lotujapo	Angiosp 	Lotus japonicus                	P_Eu	Fabales Fabaceae
+loxoafri	Tetrapod	Loxodonta africana             	M_Mm	Proboscidea Elephantidae
+loxorecl	unknown 	Loxosceles reclusa             	M_Ar	Araneae Sicariidae
+lucicupr	ArthroLe	Lucilia cuprina                	M_In	Asterales Asteraceae
+lutzlong	lutzlong	Lutzomyia longipalpis          	M_In	Diptera Psychodidae
+lycoperl	unknown 	Lycoperdon perlatum            	F_Ba	Agaricales Lycoperdaceae
+macafasc	Tetrapod	Macaca fascicularis            	M_Mm	Primates Cercopithecidae
+macamula	Tetrapod	Macaca mulatta                 	M_Mm	Primates Cercopithecidae
+macaneme	Tetrapod	Macaca nemestrina              	M_Mm	Primates Cercopithecidae
+macranom	Dothide1	Macroventuria anomochaeta      	F_As	Pleosporales Didymellaceae
+macrcing	InsectAp	Macrocentrus cingulum   	M_In	Hymenoptera Braconidae
+macreuge	Tetrapod	Macropus eugenii               	M_Mm	Diprotodontia Macropodidae
+macrfuli	Dothide1	Macrolepiota fuliginosa        	F_Ba	Agaricales Agaricaceae
+macrlign	unknown 	Macrostomum lignano            	M_Pl	Macrostomida Macrostomidae
+macrphas	Dothide1	Macrophomina phaseolina        	F_As	Botryosphaeriales Botryosphaeriaceae
+madumyce	unknown 	Madurella mycetomatis          	F_As	Sordariales -
+magngris	magngris	Magnaporthe grisea             	F_As	Magnaporthales Magnaporthaceae
+magnoryz	magngris	Magnaporthe oryzae             	F_As	Magnaporthales Magnaporthaceae
+magnpoae	magngris	Magnaporthe poae               	F_As	Magnaporthales Magnaporthaceae
+malaglob	malaglob	Malassezia globosa             	F_Ba	Malasseziales Malasseziaceae
+malapach	malaglob	Malassezia pachydermatis       	F_Ba	Malasseziales Malasseziaceae
+malasymp	malaglob	Malassezia sympodialis         	F_Ba	Malasseziales Malasseziaceae
+maludome	Angiosp 	Malus domesticas               	P_Eu	Rosales Rosaceae
+manavite	Tetrapod	Manacus vitellinus             	M_Av	Passeriformes Pipridae
+mandleuc	Tetrapod	Mandrillus leucophaeus         	M_Mm	Primates Cercopithecidae
+mandsext	mandsext	Manduca sexta                  	M_In	Lepidoptera Sphingidae
+maniescu	Angiosp 	Manihot esculenta              	P_Eu	Malpighiales Euphorbiaceae
+manijava	unknown 	Manis javanica                 	M_Mm	Pholidota Manidae
+marafiar	Dothide1	Marasmius fiardii              	F_Ba	Agaricales Marasmiaceae
+marcpoly	MossWorts	Marchantia polymorpha          	P_Ma	Marchantiales Marchantiaceae
+marispec	unknown 	Mariannaea spec                	F_As	Hypocreales Nectriaceae
+marmmarm	Tetrapod	Marmota marmota                	M_Mm	Rodentia Sciuridae
+marsbrun	Dothide1	Marssonina brunnea             	F_As	Helotiales Dermateaceae
+martpter	martpter	Martensiomyces pterosporus     	F_Fu	Kickxellales Kickxellaceae
+massebur	Dothide1	Massarina eburnea              	F_As	Pleosporales Massarinaceae
+massphae	unknown 	Massariosphaeria phaeospora    	F_As	Pleosporales -
+mayedest	InsectDi	Mayetiola destructor           	M_In	Diptera Cecidomyiidae
+maylzebr	Fish_mdl	Maylandia zebra                	M_Fs	Cichliformes Cichlidae
+meditrun	Angiosp 	Medicago truncatula            	P_Eu	Fabales Fabaceae
+megarotu	InsectAg	Megachile rotundata            	M_In	Hymenoptera Megachilidae
+megascal	megascal	Megaselia scalaris             	M_In	Diptera Phoridae
+meirmilt	meirmilt	Meira miltonrushii             	F_Eu	Coleoptera Curculionidae
+melaalli	Puccinia	Melampsora allii-populina      	F_Ba	Pucciniales Melampsoraceae
+melaendo	unknown 	Melanotaenium endogenum        	F_Ba	Urocystidales Melanotaeniaceae
+melalari	Puccinia	Melampsora laricispopulina     	F_Ba	Pucciniales Melampsoraceae
+melalini	Puccinia	Melampsora lini                	F_Ba	Pucciniales Melampsoraceae
+melapulv	Dothide1	Melanomma pulvis-pyrius        	F_As	Lepidoptera Erebidae
+melaspec	Dothide1	Melanconium spec               	F_As	Diaporthales Melanconidaceae
+melaspnr	Dothide1	Melanconium spNRRL             	F_As	Diaporthales Melanconidaceae
+melatiff	unknown 	Melanospora tiffanyae          	F_As	Melanosporales Melanosporaceae
+melegall	Tetrapod	Meleagris gallopavo            	M_Av	Galliformes Phasianidae
+melibico	Dothide1	Meliniomyces bicolor           	F_As	Helotiales Helotiaceae
+melicinx	InsectAc	Melitaea cinxia                	M_In	Lepidoptera Nymphalidae
+meliquad	unknown 	Melipona quadrifasciata        	M_In	Hymenoptera Apidae
+melivari	Dothide1	Meliniomyces variabilis        	F_As	Helotiales Helotiaceae
+meloflor	NematodM	Meloidogyne floridensis        	M_Ne	Tylenchida Meloidogynidae
+melohapl	NematodM	Meloidogyne hapla              	M_Ne	Tylenchida Meloidogynidae
+meloinco	NematodM	Meloidogyne incognita          	M_Ne	Tylenchida Meloidogynidae
+meloundu	Tetrapod	Melopsittacus undulatus        	M_Av	Psittaciformes Psittaculidae
+mengmold	InsectGn	Mengenilla moldrzyki           	M_In	Strepsiptera Mengenillidae
+mereebur	unknown 	Meredithblackwellia eburnea    	F_Ba	Kriegeriales Kriegeriaceae
+meriungu	unknown 	Meriones unguiculatus          	M_Mm	Rodentia Muridae
+meronubi	Tetrapod	Merops nubicus                 	M_Av	Coraciiformes Meropidae
+mesiunic	Tetrapod	Mesitornis unicolor            	M_Av	Gruiformes Mesitornithidae
+mesoaura	Tetrapod	Mesocricetus auratus           	M_Mm	Rodentia Cricetidae
+mesocort	NematodB	Mesocestoides corti            	M_Pl	Cyclophyllidea Mesocestoididae
+metaacri	Dothide1	Metarhizium acridum            	F_As	Hypocreales Clavicipitaceae
+metaalbu	Dothide1	Metarhizium album              	F_As	Hypocreales Clavicipitaceae
+metaanis	Dothide1	Metarhizium anisopliae         	F_As	Hypocreales Clavicipitaceae
+metabrun	Dothide1	Metarhizium brunneum           	F_As	Hypocreales Clavicipitaceae
+metaguiz	Dothide1	Metarhizium guizhouense        	F_As	Hypocreales Clavicipitaceae
+metamaju	Dothide1	Metarhizium majus              	F_As	Hypocreales Clavicipitaceae
+metaocci	metaocci	Metaseiulus occidentalis       	M_Ar	Mesostigmata Phytoseiidae
+metarile	Dothide1	Metarhizium rileyi             	F_As	Hypocreales Clavicipitaceae
+metarobe	Dothide1	Metarhizium robertsii          	F_As	Hypocreales Clavicipitaceae
+metsbicu	metsbicu	Metschnikowia bicuspidata      	F_As	Saccharomycetales Metschnikowiaceae
+metsfruc	metsbicu	Metschnikowia fructicola       	F_As	Saccharomycetales Metschnikowiaceae
+meyeguil	unknown 	Meyerozyma guilliermondii      	F_As	Saccharomycetales Debaryomycetaceae
+micrboll	unknown 	Microdochium bolleyi           	F_As	Xylariales Microdochiaceae
+micrcani	Dothide1	Microsporum canis              	F_As	Onygenales Arthrodermataceae
+micrdemo	InsectAp	Microplitis demolitor          	M_In	Hymenoptera Braconidae
+micrgyps	Dothide1	Microsporum gypseum            	F_As	Onygenales Arthrodermataceae
+micrlych	unknown 	Microbotryum lychnidis-dioicae 	F_Ba	Microbotryales Microbotryaceae
+micrmicr	unknown 	Microthyrium microscopicum     	F_As	Microthyriales Microthyriaceae
+micrmuri	Tetrapod	Microcebus murinus             	M_Mm	Primates Cheirogaleidae
+microchr	Tetrapod	Microtus ochrogaster           	M_Mm	Rodentia Cricetidae
+micromon	Micromon	Micromonas omon             	P_Ch	Tissierellales Peptoniphilaceae
+microssp	Dothide1	Microsporum species            	F_As	Onygenales Arthrodermataceae
+micrpusi	Micromon	Micromonas pusilla             	P_Ch	Tissierellales Peptoniphilaceae
+micrrcc2	Micromon	Micromonas rcc299              	P_Ch	Tissierellales Peptoniphilaceae
+micrspec	FungiAll	Microstromatales spec          	F_Ba	Basidiomycota Exobasidiomycetes
+micrtric	unknown 	Microdochium trichocladiopsis  	F_As	Xylariales Microdochiaceae
+micrtrig	Dothide1	Microascus trigonosporus       	F_As	Microascales Microascaceae
+micrviol	unknown 	Microbotryum violaceum         	F_Ba	Microbotryales Microbotryaceae
+millfari	unknown 	Millerozyma farinosa           	F_As	Saccharomycetales Debaryomycetaceae
+mimugutt	Angiosp 	Mimulus guttatus               	P_Eu	Decapoda Epialtidae
+mininata	unknown 	Miniopterus natalensis         	M_Mm	Chiroptera Vespertilionidae
+mitodaph	unknown 	Mitosporidium daphniae         	F_Mi	- -
+mixiosmu	Sordari1	Mixia osmundae                 	F_Ba	Mixiales Mixiaceae
+mizuyess	unknown 	Mizuhopecten yessoensis        	M_Mo	Pectinoida Pectinidae
+mnemleid	mnemleid	Mnemiopsis leidyi              	M_Ct	Lobata Bolinopsidae
+moesanta	unknown 	Moesziomyces antarcticus       	F_Ba	Ustilaginales Ustilaginaceae
+moesaphi	unknown 	Moesziomyces aphidis           	F_Ba	Ustilaginales Ustilaginaceae
+monahapt	Dothide1	Monacrosporium haptotylum      	F_As	Orbiliales Orbiliaceae
+monapurp	Dothide1	Monascus purpureus             	F_As	Strigeidida Fellodistomidae
+monarube	Dothide1	Monascus ruber                 	F_As	Strigeidida Fellodistomidae
+monipern	Dothide1	Moniliophthora perniciosa      	F_Ba	Agaricales Marasmiaceae
+monirore	Dothide1	Moniliophthora roreri          	F_Ba	Agaricales Marasmiaceae
+monispec	unknown 	Moniliella spec                	F_Ba	Moniliellales Moniliellaceae
+monoalbu	unknown 	Monopterus albus               	M_Ch	Synbranchiformes Synbranchidae
+monobrev	monobrev	Monosiga brevicollis           	O_Op	Choanoflagellida Codonosigidae
+monodome	Tetrapod	Monodelphis domestica          	M_Mm	Didelphimorphia Didelphidae
+mononegl	Chlospec	Monoraphidium neglectum        	P_Ch	Sphaeropleales Selenastraceae
+monophar	Echinode	Monomorium pharaonis           	M_In	Hymenoptera Formicidae
+morcconi	Dothide1	Morchella conica               	F_As	Pezizales Morchellaceae
+morcimpo	Dothide1	Morchella importuna            	F_As	Pezizales Morchellaceae
+mortelon	Mortiere	Mortierella elongata           	F_Fu	Mortierellales Mortierellaceae
+morthumi	Mortiere	Mortierella humilis            	F_Mo	Mortierellales Mortierellaceae
+mortmult	Mortiere	Mortierella multidivaricata    	F_Mo	Mortierellales Mortierellaceae
+mortspec	Mortiere	Mortierella spec               	F_Mo	Mortierellales Mortierellaceae
+mortvert	Mortiere	Mortierella verticillata       	F_Fu	Mortierellales Mortierellaceae
+morunota	Angiosp 	Morus notabilis                	P_Eu	Pelecaniformes Sulidae
+mrakfrig	unknown 	Mrakia frigida                 	F_Ba	Cystofilobasidiales Mrakiaceae
+mucoambi	Mucoral1	Mucor ambiguus                 	F_Mu	Mucorales Mucoraceae
+mucocirc	Mucoral1	Mucor circinelloides           	F_Fu	Mucorales Mucoraceae
+mucocord	Mucoral1	Mucor cordense                 	F_Mu	Mucorales Mucoraceae
+mucohete	Mucoral1	Mucor heterogamus              	F_Mu	Mucorales Mucoraceae
+multochr	unknown 	Multifurca ochricompacta       	F_Ba	Russulales Russulaceae
+mus_caro	unknown 	Mus caroli                     	M_Mm	Rodentia Muridae
+mus_musc	Tetrapod	Mus musculus                   	M_Mm	Rodentia Muridae
+mus_paha	unknown 	Mus pahari                     	M_Mm	Rodentia Muridae
+musaacum	Angiosp 	Musa acuminata                 	P_Mo	Zingiberales Musaceae
+muscdome	InsectMd	Musca domestica                	M_In	Diptera Muscidae
+mustputo	Tetrapod	Mustela putorius               	M_Mm	Carnivora Mustelidae
+mutieleg	unknown 	Mutinus elegans                	F_Ba	Phallales Phallaceae
+mycecapi	unknown 	Mycena capillaripes            	F_Ba	Agaricales Tricholomataceae
+myceepip	unknown 	Mycena epipterygia             	F_Ba	Agaricales Tricholomataceae
+mycegalo	unknown 	Mycena galopus                 	F_Ba	Agaricales Tricholomataceae
+mycehaem	unknown 	Mycena haematopus              	F_Ba	Agaricales Tricholomataceae
+mycehete	Dothide1	Myceliophthora heterothallica  	F_As	Sordariales Chaetomiaceae
+mycerose	unknown 	Mycena rosella                 	F_Ba	Agaricales Tricholomataceae
+mycespec	unknown 	Mycena spec                    	F_Ba	Agaricales Tricholomataceae
+mycether	Dothide1	Myceliophthora thermophila     	F_As	Sordariales Chaetomiaceae
+mycoafri	unknown 	Mycotypha africana             	F_Mu	Mucorales Mycotyphaceae
+mycoeumu	Dothide2	Mycosphaerella eumusae         	F_As	Capnodiales Mycosphaerellaceae
+mycofiji	Dothide2	Mycosphaerella fijiensis       	F_As	Capnodiales Mycosphaerellaceae
+mycogram	Dothide2	Mycosphaerella graminicola     	F_As	Capnodiales Mycosphaerellaceae
+myotbran	Tetrapod	Myotis brandtii                	M_Mm	Chiroptera Vespertilionidae
+myotdavi	Tetrapod	Myotis davidii                 	M_Mm	Chiroptera Vespertilionidae
+myotluci	Tetrapod	Myotis lucifugus               	M_Mm	Chiroptera Vespertilionidae
+myriduri	Dothide1	Myriangium duriaei             	F_As	Myriangiales Myriangiaceae
+myroinun	Dothide1	Myrothecium inundatum          	F_As	Hypocreales Stachybotriaceae
+mytiresi	Dothide1	Mytilinidion resinicola        	F_As	Mytilinidiales Mytilinidiaceae
+myzupers	unknown 	Myzus persicae                 	M_Ar	Hemiptera Aphididae
+nadsfulv	nadsfulv	Nadsonia fulvescens            	F_As	Saccharomycetales -
+naegfowl	naegfowl	Naegleria fowleri              	O_He	Schizopyrenida Vahlkampfiidae
+naeggrub	naeggrub	Naegleria gruberi              	O_He	Schizopyrenida Vahlkampfiidae
+naiaflui	unknown 	Naiadella fluitans             	F_Ba	Classiculales Classiculaceae_	 
+nakabaci	unknown 	Nakaseomyces bacillisporus     	F_As	Saccharomycetales Saccharomycetaceae
+nakadelp	unknown 	Nakaseomyces delphensis        	F_As	Saccharomycetales Saccharomycetaceae
+nanngadi	Aconoid2	Nannochloropsis gaditana       	O_St	Eustigmatales Monodopsidaceae
+nanngali	Tetrapod	Nannospalax galili             	M_Mm	Rodentia Spalacidae
+nanngyps	unknown 	Nannizzia gypsea               	F_As	Onygenales Arthrodermataceae_	
+nanopark	unknown 	Nanorana parkeri               	M_Ch	Anura Dicroglossidae
+naohseba	unknown 	Naohidea sebacea               	F_Ba	Naohideales Naohideaceae
+nasogira	InsectAg	Nasonia giraulti               	M_In	Hymenoptera Pteromalidae
+nasolong	InsectAg	Nasonia longicornis            	M_In	Hymenoptera Pteromalidae
+nasovitr	InsectAg	Nasonia vitripennis            	M_In	Hymenoptera Pteromalidae
+naumcast	unknown 	Naumovozyma castellii          	F_As	Saccharomycetales Saccharomycetaceae
+naumdair	unknown 	Naumovozyma dairenensis        	F_As	Saccharomycetales Saccharomycetaceae
+necaamer	NematodN	Necator americanus             	M_Ne	Rhabditida Ancylostomatidae
+necthaem	Dothide1	Nectria haematococca           	F_As	Valvatida Oreasteridae
+nelunuci	Angiosp 	Nelumbo nucifera               	P_Eu	Proteales Nelumbonaceae
+nemaausu	FungiAll	Nematocida ausubeli            	F_Mi	- -
+nemadisp	FungiAll	Nematocida displodere          	F_Mi	- -
+nemapari	FungiAll	Nematocida parisii             	F_Mi	- -
+nemaspec	FungiAll	Nematocida spec                	F_Mi	- -
+nemavect	ChordatC	Nematostella vectensis         	M_Cn	Actiniaria Edwardsiidae
+neoccali	unknown 	Neocallimastix californiae     	F_Ne	Neocallimastigales Neocallimastigaceae
+neodleco	Echinode	Neodiprion lecontei            	M_In	Hymenoptera Diprionidae
+neofparv	Sordari1	Neofusicoccum parvum           	F_As	Botryosphaeriales Botryosphaeriaceae
+neolbric	Fish_mdl	Neolamprologus brichardi       	M_Fs	Cichliformes Cichlidae
+neolirre	unknown 	Neolecta irregularis           	F_As	Neolectales Neolectaceae
+neollepi	Dothide1	Neolentinus lepideus           	F_Ba	Gloeophyllales Gloeophyllaceae
+neomscha	Tetrapod	Neomonachus schauinslandi      	M_Mm	Carnivora Phocidae 
+neonditi	unknown 	Neonectria ditissima           	F_As	Hypocreales Nectriaceae
+neoscani	Conoida1	Neospora caninum               	O_Al	Eucoccidiorida Sarcocystidae
+neosfisc	Dothide1	Neosartorya fischeri           	F_As	Eurotiales Aspergillaceae
+nestnota	Tetrapod	Nestor notabilis               	M_Av	Psittaciformes Psittacidae
+neurcras	Dothide1	Neurospora crassa              	F_As	Sordariales Sordariaceae
+neurdisc	Dothide1	Neurospora discreta            	F_As	Sordariales Sordariaceae
+neurhisp	Dothide1	Neurospora hispaniola          	F_As	Sordariales Sordariaceae
+neurtetr	Dothide1	Neurospora tetrasperma         	F_As	Sordariales Sordariaceae
+nicobent	Angiosp 	Nicotiana benthamiana          	P_Eu	Solanales Solanaceae
+nicosylv	Angiosp 	Nicotiana sylvestris           	P_Eu	Solanales Solanaceae
+nicotome	Angiosp 	Nicotiana tomentosiformis      	P_Eu	Solanales Solanaceae
+nicrvesp	unknown 	Nicrophorus vespilloides       	M_In	Coleoptera Silphidae
+niesexil	Dothide1	Niesslia exilis                	F_As	Hypocreales Niessliaceae
+nilaluge	nilaluge	Nilaparvata lugens             	M_In	Hemiptera Delphacidae
+nippbras	NematodN	Nippostrongylus brasiliensis   	M_Ne	Rhabditida Heligmonellidae
+nippnipp	Tetrapod	Nipponia nippon                	M_Av	Pelecaniformes Threskiornithidae
+nomaleuc	Tetrapod	Nomascus leucogenys            	M_Mm	Primates Hylobatidae
+noseapis	FungiAll	Nosema apis                    	F_Mi	- Nosematidae
+nosebomb	FungiAll	Nosema bombycis                	F_Mi	- Nosematidae
+nosecera	FungiAll	Nosema ceranae                 	F_Mi	- Nosematidae
+nothfurz	Fish_mdl	Nothobranchius furzeri         	M_Fs	Cyprinodontiformes Nothobranchiidae
+notocori	Fish_mdl	Notothenia coriiceps           	M_Fs	Perciformes Nototheniidae
+numimele	unknown 	Numida meleagris               	M_Av	Galliformes Numididae
+obbarivu	Sordari1	Obba rivulosa                  	F_Ba	Polyporales Meruliaceae
+ochoprin	Tetrapod	Ochotona princeps              	M_Mm	Lagomorpha Ochotonidae
+octobima	InsectBm	Octopus bimaculoides           	M_Mo	Octopoda Octopodidae
+octodegu	Tetrapod	Octodon degus                  	M_Mm	Rodentia Octodontidae
+odobrosm	Tetrapod	Odobenus rosmarus              	M_Mm	Carnivora Odobenidae
+odocvirg	unknown 	Odocoileus virginianus         	M_Mm	- Cervidae
+oesodent	NematodN	Oesophagostomum dentatum       	M_Ne	Rhabditida Cloacinidae
+ogatpara	unknown 	Ogataea parapolymorpha         	F_As	Saccharomycetales Pichiaceae
+ogatpoly	unknown 	Ogataea polymorpha             	F_As	Saccharomycetales Pichiaceae
+oidimaiu	Dothide1	Oidiodendron maius             	F_As	- Myxotrichaceae
+oleaeuro	unknown 	Olea europaea                  	P_Eu	Lamiales Oleaceae
+ompholea	Dothide1	Omphalotus olearius            	F_Ba	Agaricales Omphalotaceae
+onchflex	NematodO	Onchocerca flexuosa            	M_Ne	Spirurida Onchocercidae
+onchoche	NematodO	Onchocerca ochengi             	M_Ne	Spirurida Onchocercidae
+onchvolv	NematodO	Onchocerca volvulus            	M_Ne	Spirurida Onchocercidae
+oncofasc	oncofasc	Oncopeltus fasciatus           	M_In	Hemiptera Lygaeidae
+oncokisu	unknown 	Oncorhynchus kisutch           	M_Fs	Salmoniformes Salmonidae
+oncomyki	unknown 	Oncorhynchus mykiss            	M_Fs	Salmoniformes Salmonidae
+onniscau	unknown 	Onnia scaura                   	F_Ba	Hymenochaetales Hymenochaetaceae
+onthtaur	InsectCo	Onthophagus taurus             	M_In	Coleoptera Scarabaeidae
+oocebiro	unknown 	Ooceraea biroi                 	M_In	Hymenoptera Formicidae	 
+ophidiss	Dothide1	Ophiostoma piceae              	F_As	Ophiostomatales Ophiostomataceae
+ophinovo	Dothide1	Ophiostoma novo-ulmi           	F_As	Ophiostomatales Ophiostomataceae
+ophipice	Dothide1	Ophiostoma piceae              	F_As	Ophiostomatales Ophiostomataceae
+ophipili	Dothide1	Ophiostoma piliferum           	F_As	Ophiostomatales Ophiostomataceae
+ophisine	unknown 	Ophiocordyceps sinensis        	F_As	Hypocreales Ophiocordycipitaceae
+ophiunil	unknown 	Ophiocordyceps unilateralis    	F_As	Hypocreales Ophiocordycipitaceae
+opishoaz	Tetrapod	Opisthocomus hoazin            	M_Av	Opisthocomiformes Opisthocomidae
+opisvive	NematodF	Opisthorchis viverrini         	M_Pl	Opisthorchiida Opisthorchiidae
+orbifave	unknown 	Orbicella faveolata            	M_Cn	Scleractinia Merulinidae
+orciorca	Tetrapod	Orcinus orca                   	M_Mm	Cetacea Delphinidae
+ordocoll	unknown 	Ordospora colligata            	F_Mi	- Ordosporidae
+oreonilo	Fish_mdl	Oreochromis niloticus          	M_Fs	Cichliformes Cichlidae
+ornianat	Tetrapod	Ornithorhynchus anatinus       	M_Mm	Monotremata Ornithorhynchidae
+oropthom	Angiosp 	Oropetium thomaeum             	P_Mo	Poales Poaceae
+orpispec	Ichthyos	Orpinomyces spec               	F_Ne	Neocallimastigales Neocallimastigaceae
+orusabie	InsectAg	Orussus abietinus              	M_In	Hymenoptera Orussidae
+orycafer	Tetrapod	Orycteropus afer               	M_Mm	Tubulidentata Orycteropodidae
+oryccuni	Tetrapod	Oryctolagus cuniculus          	M_Mm	Lagomorpha Leporidae
+oryzbart	unknown 	Oryza barthii                  	P_Mo	Poales Poaceae
+oryzbrac	Angiosp 	Oryza brachyantha              	P_Mo	Poales Poaceae
+oryzglab	unknown 	Oryza glaberrima               	P_Mo	Poales Poaceae
+oryzglum	unknown 	Oryza glumaepatula             	P_Mo	Poales Poaceae
+oryzindi	unknown 	Oryza indica                   	P_Mo	Poales Poaceae
+oryzlati	Fish_mdl	Oryzias latipes                	M_Fs	Beloniformes Adrianichthyidae
+oryzlong	unknown 	Oryza longistaminata           	P_Mo	Poales Poaceae
+oryzmeri	unknown 	Oryza meridionalis             	P_Mo	Poales Poaceae
+oryzniva	unknown 	Oryza nivara                   	P_Mo	Poales Poaceae
+oryzpunc	unknown 	Oryza punctata                 	P_Mo	Poales Poaceae
+oryzrufi	unknown 	Oryza rufipogon                	P_Mo	Poales Poaceae
+oryzsati	Angiosp 	Oryza sativa                   	P_Mo	Poales Poaceae
+oryzsatj	Angiosp 	Oryza sativa                   	P_Mo	Poales Poaceae
+ostrluci	Ostrspec	Ostreococcus lucimarinus       	P_Ch	Mamiellales Bathycoccaceae
+ostrrcc8	Ostrspec	Ostreococcus rcc809            	P_Ch	Mamiellales Bathycoccaceae
+ostrtaur	Ostrspec	Ostreococcus tauri             	P_Ch	Mamiellales Bathycoccaceae
+otolgarn	Tetrapod	Otolemur garnettii             	M_Mm	Primates Galagidae
+oudemuci	unknown 	Oudemansiella mucida           	F_Ba	Agaricales Physalacriaceae
+ovisarie	Tetrapod	Ovis aries                     	M_Mm	- Bovidae
+oxyttrif	Sporadot	Oxytricha trifallax            	O_Al	Sporadotrichida Oxytrichidae
+pachtann	pachtann	Pachysolen tannophilus         	F_As	Saccharomycetales Saccharomycetaceae
+pachvenu	pachvenu	Pachypsylla venusta            	M_In	Hemiptera Psyllidae
+pan_pani	Tetrapod	Pan paniscus                   	M_Mm	Primates Hominidae
+pan_trog	Tetrapod	Pan troglodytes                	M_Mm	Primates Hominidae
+panapapi	unknown 	Panaeolus papilionaceus        	F_Ba	Agaricales Bolbitiaceae
+panaredi	NematodN	Panagrellus redivivus          	M_Ne	Rhabditida Panagrolaimidae
+panestip	Sordari1	Panellus stipticus             	F_Ba	Agaricales Tricholomataceae
+panihall	Angiosp 	Panicum hallii                 	P_Mo	Poales Poaceae
+panivirg	Angiosp 	Panicum virgatum               	P_Mo	Poales Poaceae
+panthodg	Tetrapod	Pantholops hodgsonii           	M_Mm	- Bovidae
+pantpard	unknown 	Panthera pardus                	M_Mm	Carnivora Felidae
+panttigr	Tetrapod	Panthera tigris                	M_Mm	Carnivora Felidae
+panurudi	Dothide1	Panus rudis                    	F_Ba	Polyporales Lentinaceae
+papianub	Tetrapod	Papio anubis                   	M_Mm	Primates Cercopithecidae
+papiglau	Echinode	Papilio glaucus                	M_In	Lepidoptera Papilionidae
+papimach	Echinode	Papilio machaon                	M_In	Lepidoptera Papilionidae
+papipoly	Echinode	Papilio polytes                	M_In	Lepidoptera Papilionidae
+papixuth	Echinode	Papilio xuthus                 	M_In	Lepidoptera Papilionidae
+parabra1	Dothide1	Paracoccidioides bra1          	F_As	Onygenales -
+parabras	Dothide1	Paracoccidioides brasiliensis  	F_As	Onygenales -
+paraequo	NematodA	Parascaris equorum             	M_Ne	Ascaridida Ascarididae
+paralutz	Dothide1	Paracoccidioides lutzii        	F_As	Onygenales -
+paranodo	unknown 	Parastagonospora nodorum       	F_As	Pleosporales Phaeosphaeriaceae
+paraoliv	unknown 	Paralichthys olivaceus         	M_Fs	Pleuronectiformes Paralichthyidae
+parapara	unknown 	Parasitella parasitica         	F_Mu	Mucorales Mucoraceae
+parasede	unknown 	Paraphysoderma sedebokerense   	F_Bl	Blastocladiales Physodermataceae
+paraspec	Dothide1	Paracoccidioides spec          	F_As	Onygenales -
+paraspor	Dothide1	Paraconiothyrium sporulosum    	F_As	Pleosporales Didymosphaeriaceae
+paratepi	ArthroPe	Parasteatoda tepidariorum      	M_Ar	Araneae Theridiidae
+paratetr	paratetr	Paramecium tetraurelia         	O_Al	Peniculida Parameciidae
+paratric	NematodS	Parastrongyloides trichosuri   	M_Ne	Rhabditida Strongyloididae
+parumajo	Tetrapod	Parus major                    	M_Av	Passeriformes Paridae
+pateatra	Dothide1	Patellaria atrata              	F_As	Patellariales Patellariaceae
+paulchro	ProtisGn	Paulinella chromatophora       	O_Rh	Euglyphida Paulinellidae
+paxiadel	Dothide1	Paxillus adelphus              	F_Ba	Boletales Paxillaceae
+paxiammo	Dothide1	Paxillus ammoniavirescens      	F_Ba	Boletales Paxillaceae
+paxiinvo	Dothide1	Paxillus involutus             	F_Ba	Boletales Paxillaceae
+paxirubi	Dothide1	Paxillus rubicundulus          	F_Ba	Boletales Paxillaceae
+pedihuma	InsectAp	Pediculus humanus              	M_In	Phthiraptera Pediculidae
+pelecris	Tetrapod	Pelecanus crispus              	M_Av	Pelecaniformes Pelecanidae
+pelosine	Tetrapod	Pelodiscus sinensis            	M_Rp	Testudines Trionychidae
+penianta	Dothide1	Penicillium antarcticum        	F_As	Eurotiales Aspergillaceae
+peniariz	Dothide1	Penicillium arizonense         	F_As	Eurotiales Aspergillaceae
+penibila	Dothide1	Penicillium bilaiae            	F_As	Eurotiales Aspergillaceae
+penibras	Dothide1	Penicillium brasilianum        	F_As	Eurotiales Aspergillaceae
+penibrev	Dothide1	Penicillium brevicompactum     	F_As	Eurotiales Aspergillaceae
+penicame	Dothide1	Penicillium camemberti         	F_As	Eurotiales Aspergillaceae
+penicane	Dothide1	Penicillium canescens          	F_As	Eurotiales Aspergillaceae
+penichry	Dothide1	Penicillium chrysogenum        	F_As	Eurotiales Aspergillaceae
+penicopr	Dothide1	Penicillium coprophilum        	F_As	Eurotiales Aspergillaceae
+penidecu	Dothide1	Penicillium decumbens          	F_As	Eurotiales Aspergillaceae
+penidigi	Dothide1	Penicillium digitatum          	F_As	Eurotiales Aspergillaceae
+peniexpa	Dothide1	Penicillium expansum           	F_As	Eurotiales Aspergillaceae
+penifell	Dothide1	Penicillium fellutanum         	F_As	Eurotiales Aspergillaceae
+peniflav	Dothide1	Penicillium flavigenum         	F_As	Eurotiales Aspergillaceae
+penifrei	Dothide1	Penicillium freii              	F_As	Eurotiales Aspergillaceae
+peniglab	Dothide1	Penicillium glabrum            	F_As	Eurotiales Aspergillaceae
+penigris	Dothide1	Penicillium griseofulvum       	F_As	Eurotiales Aspergillaceae
+peniital	Dothide1	Penicillium italicum           	F_As	Eurotiales Aspergillaceae
+penijant	Dothide1	Penicillium janthinellum       	F_As	Eurotiales Aspergillaceae
+penilano	Dothide1	Penicillium lanosocoeruleum    	F_As	Eurotiales Aspergillaceae
+peninalg	Dothide1	Penicillium nalgiovense        	F_As	Eurotiales Aspergillaceae
+peninord	Dothide1	Penicillium nordicum           	F_As	Eurotiales Aspergillaceae
+penioxal	Dothide1	Penicillium oxalicum           	F_As	Eurotiales Aspergillaceae
+penipolo	Dothide1	Penicillium polonicum          	F_As	Eurotiales Aspergillaceae
+penirais	Dothide1	Penicillium raistrickii        	F_As	Eurotiales Aspergillaceae
+peniroqu	Dothide1	Penicillium roqueforti         	F_As	Eurotiales Aspergillaceae
+penirube	Dothide1	Penicillium rubens             	F_As	Eurotiales Aspergillaceae
+penisoli	Dothide1	Penicillium solitum            	F_As	Eurotiales Aspergillaceae
+penispec	unknown 	Peniophora spec                	F_Ba	Russulales Peniophoraceae
+penistec	Dothide1	Penicillium steckii            	F_As	Eurotiales Aspergillaceae
+penisubr	Dothide1	Penicillium subrubescens       	F_As	Eurotiales Aspergillaceae
+penithym	Dothide1	Penicillium thymicola          	F_As	Eurotiales Aspergillaceae
+penivulp	Dothide1	Penicillium vulpinum           	F_As	Eurotiales Aspergillaceae
+penizona	unknown 	Penicilliopsis zonata          	F_As	Eurotiales Aspergillaceae
+perimacr	Dothide1	Periconia macrospinosa         	F_As	Microascales Halosphaeriaceae
+perkmari	perkmari	Perkinsus marinus              	O_Al	Perkinsida Perkinsidae
+perkspec	unknown 	Perkinsela spec         	O_Eu	Kinetoplastida -
+peromani	Tetrapod	Peromyscus maniculatus         	M_Mm	Rodentia Cricetidae
+pestfici	unknown 	Pestalotiopsis fici            	F_As	Xylariales Sporocadaceae
+petrmari	ChordatU	Petromyzon marinus             	M_Ch	Petromyzontiformes Petromyzontidae
+phaealeo	Dothide1	Phaeoacremonium aleophilum     	F_As	Togniniales Togniniaceae
+phaechla	unknown 	Phaeomoniella chlamydospora    	F_As	Phaeomoniellales -
+phaefl08	Dothide1	Phaeoacremonium FL08           	F_As	Togniniales Togniniaceae
+phaelept	Tetrapod	Phaethon lepturus              	M_Av	Pelecaniformes Phaethontidae
+phaemini	Dothide1	Phaeoacremonium minimum        	F_As	Togniniales Togniniaceae
+phaenodo	FungiAll	Phaeosphaeria nodorum          	F_As	Pleosporales Phaeosphaeriaceae
+phaepmi8	unknown 	Phaeosphaeriaceae PMI8         	F_As	Dothideomycetes Pleosporales
+phaetric	Oomycete	Phaeodactylum tricornutum      	O_St	Naviculales Phaeodactylaceae
+phalcarb	Tetrapod	Phalacrocorax carbo            	M_Av	Pelecaniformes Phalacrocoracidae
+phancarn	Sordari1	Phanerochaete carnosa          	F_Ba	Polyporales Phanerochaetaceae
+phanchry	Sordari1	Phanerochaete chrysosporium    	F_Ba	Polyporales Phanerochaetaceae
+phasarti	unknown 	Phascolomyces articulosus      	F_Mu	Mucorales Lichtheimiaceae
+phascine	unknown 	Phascolarctos cinereus         	M_Mm	Diprotodontia Phascolarctidae
+phasvulg	Angiosp 	Phaseolus vulgaris             	P_Eu	Fabales Fabaceae
+phelferr	unknown 	Phellinus ferrugineofuscus     	F_Ba	Hymenochaetales Hymenochaetaceae
+phiaamer	unknown 	Phialophora americana          	F_As	- -
+phiaatta	unknown 	Phialophora attae              	F_As	- -
+phiascop	unknown 	Phialocephala scopiformis      	F_As	Ophiostomatales Ophiostomataceae
+phiasuba	unknown 	Phialocephala subalpina        	F_As	Ophiostomatales Ophiostomataceae
+phlebrev	Dothide1	Phlebia brevispora             	F_Ba	Corticiales Corticiaceae
+phlecent	Dothide1	Phlebia centrifuga             	F_Ba	Corticiales Corticiaceae
+phlegiga	Sordari1	Phlebiopsis gigantea           	F_Ba	Polyporales Phanerochaetaceae
+phlepapa	phlepapa	Phlebotomus papatasi           	M_In	Diptera Psychodidae
+phoedact	Angiosp 	Phoenix dactylifera            	P_Mo	Arecales Arecaceae
+pholalni	unknown 	Pholiota alnicola              	F_Ba	Agaricales Strophariaceae
+pholconi	unknown 	Pholiota conissans             	F_Ba	Agaricales Strophariaceae
+phomtrac	Dothide1	Phoma tracheiphila             	F_As	Pleosporales Didymellaceae
+phycblak	Mucoral2	Phycomyces blakesleeanus       	F_Fu	Mucorales Phycomycetaceae
+phycnite	Mucoral2	Phycomyces nitens              	F_Mu	Mucorales Phycomycetaceae
+phylcapi	Dothide1	Phyllosticta capitalensis      	F_As	Botryosphaeriales Phyllostictaceae
+phylcitb	Dothide1	Phyllosticta citbibraziliensis 	F_As	Botryosphaeriales Phyllostictaceae
+phylcitc	Dothide1	Phyllosticta citcichinaensis   	F_As	Botryosphaeriales Phyllostictaceae
+phylcitr	Dothide1	Phyllosticta citriasiana       	F_As	Botryosphaeriales Phyllostictaceae
+phylhete	Angiosp 	Phyllostachys heterocycla      	P_Mo	Poales Poaceae
+phylspec	Dothide1	Phyllosticta spec              	F_As	Botryosphaeriales Phyllostictaceae
+physcato	Tetrapod	Physeter catodon               	M_Mm	Cetacea Physeteridae
+physpate	MossWorts	Physcomitrella patens          	P_Fu	Funariales Funariaceae
+physpoly	Dothide1	Physarum polycephalum          	F_My	Physariida Physaraceae
+phytcaps	Oomycete	Phytophthora capsici           	O_St	Peronosporales -
+phytcinn	Oomycete	Phytophthora cinnamomi         	O_St	Peronosporales -
+phytinfe	Oomycete	Phytophthora infestans         	O_St	Peronosporales -
+phytkern	Oomycete	Phytophthora kernoviae         	O_St	Peronosporales -
+phytlate	Oomycete	Phytophthora lateralis         	O_St	Peronosporales -
+phytnico	Oomycete	Phytophthora nicotianae 	O_St	Peronosporales ^
+phytpara	Oomycete	Phytophthora parasitica        	O_St	Peronosporales -
+phytramo	Oomycete	Phytophthora ramorum           	O_St	Peronosporales -
+phytsoja	Oomycete	Phytophthora sojae             	O_St	Peronosporales -
+phytspec	Archamoe	Phytomonas spec                	O_Eu	Kinetoplastida Trypanosomatidae
+pichkudr	pichmemb	Pichia kudriavzevii            	F_As	Saccharomycetales Pichiaceae
+pichmemb	pichmemb	Pichia membranifaciens         	F_As	Saccharomycetales Pichiaceae
+pichpast	pichmemb	Pichia pastoris                	F_As	Saccharomycetales Pichiaceae
+pichstip	pichmemb	Pichia stipitis                	F_As	Saccharomycetales Pichiaceae
+picopube	Tetrapod	Picoides pubescens             	M_Av	Piciformes Picidae
+piedhort	Leotiomy	Piedraia hortae                	F_As	Capnodiales Piedraiaceae
+pierrapa	unknown 	Pieris rapae                   	M_In	Lepidoptera Pieridae
+piezguil	InsectHe	Piezodorus guildinii           	M_In	Hemiptera Pentatomidae
+pilaanom	unknown 	Pilaira anomala                	F_Mu	Mucorales Mucoraceae
+pilocroc	Dothide1	Piloderma croceum              	F_Ba	Atheliales Atheliaceae
+piloumbo	unknown 	Pilobolus umbonatus            	F_Mu	Mucorales Pilobolaceae
+piriindi	Leotiomy	Piriformospora indica          	F_Ba	Sebacinales -
+pirofinn	Ichthyos	Piromyces finnis               	F_Ne	Neocallimastigales Neocallimastigaceae
+pirospec	Ichthyos	Piromyces species              	F_Ne	Neocallimastigales Neocallimastigaceae
+pisomicr	Dothide1	Pisolithus microcarpus         	F_Ba	Boletales Pisolithaceae
+pisotinc	Dothide1	Pisolithus tinctorius          	F_Ba	Boletales Pisolithaceae
+plasberg	Aconoid1	Plasmodium berghei             	O_Al	Haemosporida Plasmodiidae
+plasbras	Chroomon	Plasmodiophora brassicae       	O_Rh	- Plasmodiophoridae
+plaschab	Aconoid1	Plasmodium chabaudi            	O_Al	Haemosporida Plasmodiidae
+plascoat	Aconoid2	Plasmodium coatneyi     	O_Al	Haemosporida Plasmodiidae
+plascyno	Aconoid2	Plasmodium cynomolgi           	O_Al	Haemosporida Plasmodiidae
+plasfalc	Aconoid1	Plasmodium falciparum          	O_Al	Haemosporida Plasmodiidae
+plasfrag	Aconoid2	Plasmodium fragile             	O_Al	Haemosporida Plasmodiidae
+plasgabo	Aconoid2	Plasmodium gaboni       	O_Al	Haemosporida Plasmodiidae
+plasgall	Aconoid2	Plasmodium gallinaceum         	O_Al	Haemosporida Plasmodiidae
+plashals	unknown 	Plasmopara halstedii		O_He	Peronosporales Peronosporaceae
+plasinui	Aconoid2	Plasmodium inui                	O_Al	Haemosporida Plasmodiidae
+plasknow	Aconoid2	Plasmodium knowlesi            	O_Al	Haemosporida Plasmodiidae
+plasmala	Aconoid2	Plasmodium malariae     	O_Al	Haemosporida Plasmodiidae
+plasoval	Aconoid2	Plasmodium ovale        	O_Al	Haemosporida Plasmodiidae
+plasreic	Aconoid1	Plasmodium reichenowi          	O_Al	Haemosporida Plasmodiidae
+plasreli	Aconoid2	Plasmodium relictum	        O_Al	Haemosporida Plasmodiidae
+plasvinc	Aconoid1	Plasmodium vinckei             	O_Al	Haemosporida Plasmodiidae
+plasviva	Aconoid2	Plasmodium vivax               	O_Al	Haemosporida Plasmodiidae
+plasyoel	Aconoid1	Plasmodium yoelii              	O_Al	Haemosporida Plasmodiidae
+pleccucu	unknown 	Plectosphaerella cucumerina    	F_As	Glomerellales Plectosphaerellaceae
+plecmela	unknown 	Plectania melastoma            	F_As	Pezizales Sarcosomataceae
+pleosipa	Dothide1	Pleomassaria siparia           	F_As	Pleosporales Pleomassariaceae
+pleueryn	Dothide1	Pleurotus eryngii              	F_Ba	Agaricales Pleurotaceae
+pleuostr	Dothide1	Pleurotus ostreatus            	F_Ba	Agaricales Pleurotaceae
+pliccris	Dothide1	Plicaturopsis crispa           	F_Ba	Agaricales -
+plutcerv	unknown 	Pluteus cervinus               	F_Ba	Agaricales Pluteaceae
+plutxylo	ChordatC	Plutella xylostella            	M_In	Lepidoptera Plutellidae
+pneucari	pneujiro	Pneumocystis carinii           	F_As	Pneumocystidales Pneumocystidaceae
+pneujiro	pneujiro	Pneumocystis jirovecii         	F_As	Pneumocystidales Pneumocystidaceae
+pneumuri	pneujiro	Pneumocystis murina            	F_As	Pneumocystidales Pneumocystidaceae
+pochchla	unknown 	Pochonia chlamydosporia        	F_As	Hypocreales Clavicipitaceae
+podoanse	Dothide1	Podospora anserina             	F_As	Sordariales Lasiosphaeriaceae
+podocurv	Dothide1	Podospora curvicolla           	F_As	Sordariales Lasiosphaeriaceae
+poecform	Fish_mdl	Poecilia formosa               	M_Fs	Cyprinodontiformes Poeciliidae
+poeclati	Fish_mdl	Poecilia latipinna             	M_Fs	Cyprinodontiformes Poeciliidae
+poecmexi	Fish_mdl	Poecilia mexicana              	M_Fs	Cyprinodontiformes Poeciliidae
+poecreti	Fish_mdl	Poecilia reticulata            	M_Fs	Cyprinodontiformes Poeciliidae
+pogobarb	Echinode	Pogonomyrmex barbatus          	M_In	Hymenoptera Formicidae
+pogovitt	unknown 	Pogona vitticeps               	M_Rp	Squamata Agamidae
+policana	InsectAp	Polistes canadensis            	M_In	Hymenoptera Vespidae
+polidomi	InsectAp	Polistes dominula              	M_In	Hymenoptera Vespidae
+polyarcu	Sordari1	Polyporus arcularius           	F_Ba	Polyporales Polyporaceae
+polybrum	Sordari1	Polyporus brumalis             	F_Ba	Polyporales Polyporaceae
+polycitr	Dothide1	Polychaeton citri              	F_As	Capnodiales Capnodiaceae
+polyfusc	Dothide1	Polyplosphaeria fusca          	F_As	Pleosporales Tetraplosphaeriaceae
+polypall	Dictyost	Polysphondylium pallidum       	O_Am	Dictyosteliida -
+polysqua	Sordari1	Polyporus squamosus            	F_Ba	Polyporales Polyporaceae
+pongabel	Tetrapod	Pongo abelii                   	M_Mm	Primates Hominidae
+pongpugm	Tetrapod	Pongo pygmii                   	M_Mm	Primates Hominidae
+popudelt	unknown 	Populus deltoides              	P_Eu	Malpighiales Salicaceae
+popueuph	Angiosp 	Populus euphratica             	P_Eu	Malpighiales Salicaceae
+poputric	Angiosp 	Populus trichocarp             	P_Eu	Malpighiales Salicaceae
+porochry	unknown 	Porodaedalea chrysoloma        	F_Ba	Hymenochaetales Hymenochaetaceae
+poroniem	unknown 	Porodaedalea niemelaei         	F_Ba	Hymenochaetales Hymenochaetaceae
+porpumbi	unknown 	Porphyra umbilicalis           	P_Rh	Bangiales Bangiaceae
+postplac	Sordari1	Postia placenta                	F_Ba	Polyporales Coriolaceae
+priacaud	priacaud	Priapulus caudatus             	M_Pr	- Priapulidae
+priaserr	InsectCo	Priacma serrata                	M_In	Coleoptera Cupedidae
+prisexsp	NematodE	Pristionchus exspectatus       	M_Ne	Diplogasterida Neodiplogasteridae
+prispaci	NematodE	Pristionchus pacificus         	M_Ne	Diplogasterida Neodiplogasteridae
+proccape	Tetrapod	Procavia capensis              	M_Mm	Hyracoidea Procaviidae
+propcoqu	Tetrapod	Propithecus coquereli          	M_Mm	Primates Indriidae
+protinou	protinou	Protomyces inouyei             	F_As	Taphrinales Protomycetaceae
+protlact	protinou	Protomyces lactucaedebilis     	F_As	Taphrinales Protomycetaceae
+protmucr	Tetrapod	Protobothrops mucrosquamatus   	M_Rp	Squamata Viperidae
+protxeno	NematodB	Protopolystoma xenopodis       	M_Pl	Polyopisthocotylea Polystomatidae
+prunmume	Angiosp 	Prunus mume                    	P_Eu	Rosales Rosaceae
+prunpers	Angiosp 	Prunus persica                 	P_Eu	Rosales Rosaceae
+pseuanta	pseuanta	Pseudozyma antarctica          	F_Ba	Ustilaginales Ustilaginaceae
+pseudest	unknown 	Pseudogymnoascus destructans   	F_As	- Pseudeurotiaceae
+pseuelat	Dothide1	Pseudographis elatina          	F_As	Triblidiales Triblidiaceae
+pseufiji	unknown 	Pseudocercospora fijiensis     	F_As	Capnodiales Mycosphaerellaceae
+pseugluc	unknown 	Pseudomicrostroma glucosiphilum	F_Ba	Exobasidiomycetidae Microstromatales
+pseugrac	unknown 	Pseudomyrmex gracilis          	M_In	Hymenoptera Formicidae
+pseuhube	pseuanta	Pseudozyma hubeiensis          	F_Ba	Ustilaginales Ustilaginaceae
+pseuhumi	Tetrapod	Pseudopodoces humilis          	M_Av	Passeriformes Paridae
+pseuhype	Dothide1	Pseudovirgaria hyperparasitica 	F_As	Capnodiales -
+pseumult	pseumult	Pseudo-nitzschia multiseries   	O_St	Bacillariales Bacillariaceae
+pseumusa	unknown 	Pseudocercospora musae         	F_As	Capnodiales Mycosphaerellaceae
+pseuneur	unknown 	Pseudoloma neurophilia         	F_Mi	- -
+pseupers	unknown 	Pseudocohnilembus persalinus	O_Al	Pseudocohnilembidae Pseudocohnilembus
+pseuspec	unknown 	Pseudogymnoascus spec          	F_As	- Pseudeurotiaceae
+pseuverr	unknown 	Pseudogymnoascus verrucosus    	F_As	- Pseudeurotiaceae
+pseuvexa	unknown 	Pseudomassariella vexata       	F_As	Xylariales Pseudomassariaceae
+pteralec	Tetrapod	Pteropus alecto                	M_Mm	Chiroptera Pteropodidae
+ptergrac	unknown 	Pterula gracilis               	F_Ba	Polyporales Pterulaceae
+ptergutt	Tetrapod	Pterocles gutturalis           	M_Av	Ciconiiformes Pteroclidae
+ptervamp	Tetrapod	Pteropus vampyrus              	M_Mm	Chiroptera Pteropodidae
+pucccoro	Puccinia	Puccinia coronata              	F_Ba	Pucciniales Pucciniaceae
+puccgram	Puccinia	Puccinia graminis              	F_Ba	Pucciniales Pucciniaceae
+puccsorg	Puccinia	Puccinia sorghi                	F_Ba	Pucciniales Pucciniaceae
+puccstri	Puccinia	Puccinia striiformis           	F_Ba	Pucciniales Pucciniaceae
+pucctrit	Puccinia	Puccinia triticina             	F_Ba	Pucciniales Pucciniaceae
+puncstri	Sordari1	Punctularia strigosozonata     	F_Ba	Corticiales Punctulariaceae
+pundnyer	Fish_mdl	Pundamilia nyererei            	M_Fs	Cichliformes Cichlidae
+purplila	unknown 	Purpureocillium lilacinum      	F_As	Hypocreales Ophiocordycipitaceae
+purpspec	unknown 	Purpureocillium spec           	F_As	Hypocreales Ophiocordycipitaceae
+pycncinn	Sordari1	Pycnoporus cinnabarinus        	F_Ba	Plagiorchiida Lecithodendriidae
+pycncocc	Sordari1	Pycnoporus coccineus           	F_Ba	Plagiorchiida Lecithodendriidae
+pycnpuni	Sordari1	Pycnoporus puniceus            	F_Ba	Polyporales Polyporaceae
+pycnsang	Sordari1	Pycnoporus sanguineus          	F_Ba	Plagiorchiida Lecithodendriidae
+pygoadel	Tetrapod	Pygoscelis adeliae             	M_Av	Sphenisciformes Spheniscidae
+pygonatt	unknown 	Pygocentrus nattereri          	M_Fs	Characiformes Serrasalmidae
+pyrelyco	Dothide1	Pyrenochaeta lycopersici       	F_As	Pleosporales Cucurbitariaceae
+pyrespec	Dothide1	Pyrenochaeta spec              	F_As	Pleosporales Cucurbitariaceae
+pyretere	Dothide1	Pyrenophora teres              	F_As	Pleosporales Pleosporaceae
+pyretrit	Dothide1	Pyrenophora tritici            	F_As	Pleosporales Pleosporaceae
+pyroconf	Dothide1	Pyronema confluens             	F_As	Pezizales Pyronemataceae
+pyroomph	Dothide1	Pyronema omphalodes            	F_As	Pezizales Pyronemataceae
+pyrubret	Angiosp 	Pyrus bretschneideri           	P_Eu	Rosales Rosaceae
+pythapha	Oomycete	Pythium aphanidermatum         	O_St	Pythiales Pythiaceae
+pytharrh	Oomycete	Pythium arrhenomanes           	O_St	Pythiales Pythiaceae
+pythbivi	Tetrapod	Python bivittatus              	M_Rp	Squamata Pythonidae
+pythirre	Oomycete	Pythium irregulare             	O_St	Pythiales Pythiaceae
+pythiway	Oomycete	Pythium iwayamai               	O_St	Pythiales Pythiaceae
+pythulti	Oomycete	Pythium ultimum                	O_St	Pythiales Pythiaceae
+pythvexa	Oomycete	Pythium vexans                 	O_St	Pythiales Pythiaceae
+rachanta	unknown 	Rachicladosporium antarcticum  	F_As	Capnodiales Cladosporiaceae
+radispec	unknown 	Radiomyces spectabilis         	F_Mu	Mucorales Radiomycetaceae
+ramarube	Dothide1	Ramaria rubella                	F_Ba	Gomphales Gomphaceae
+ramavari	ramavari	Ramazzottius varieornatus      	M_Ar	Parachela Hypsibiidae
+ramibrev	ramibrev	Ramicandelaber brevisporus     	F_Fu	Kickxellales Kickxellaceae
+rasaemer	unknown 	Rasamsonia emersonii           	F_As	Eurotiales Trichocomaceae
+rattnorv	Tetrapod	Rattus norvegicus              	M_Mm	Rodentia Muridae
+retifilo	retifilo	Reticulomyxa filosa            	O_Rh	- Reticulomyxidae
+rhabkr30	rhabkr30	Rhabditophanes kr3021          	M_Ne	Rhabditida Alloionematidae
+rhagzeph	unknown 	Rhagoletis zephyria            	M_In	Diptera Tephritidae
+rhinbiet	unknown 	Rhinopithecus bieti            	M_Mm	Primates Cercopithecidae
+rhinmack	unknown 	Rhinocladiella mackenziei      	F_As	Chaetothyriales Herpotrichiellaceae
+rhinroxe	Tetrapod	Rhinopithecus roxellana        	M_Mm	Primates Cercopithecidae
+rhinsini	unknown 	Rhinolophus sinicus            	M_Mm	Chiroptera Rhinolophidae
+rhintypu	unknown 	Rhincodon typus                	M_Ch	Orectolobiformes Rhincodontidae
+rhipmicr	unknown 	Rhipicephalus microplus        	M_Ar	Ixodida Ixodidae
+rhizdele	Mucoral2	Rhizopus delemar               	F_Mu	Mucorales Rhizopodaceae
+rhizeric	Dothide1	Rhizoscyphus ericae            	F_As	Helotiales Helotiaceae
+rhizglob	unknown 	Rhizoclosmatium globosum       	F_Ch	Chytridiales Chytriomycetaceae
+rhizirre	rhizirre	Rhizophagus irregularis        	F_Gl	Glomerales Glomeraceae
+rhizlign	unknown 	Rhizodiscina lignyota          	F_As	Patellariales Patellariaceae
+rhizmicr	Mucoral2	Rhizopus microsporus           	F_Fu	Mucorales Rhizopodaceae
+rhizoryz	Mucoral2	Rhizopus oryzae                	F_Fu	Mucorales Rhizopodaceae
+rhizsale	Dothide1	Rhizopogon salebrosus          	F_Ba	Boletales Rhizopogonaceae
+rhizsola	Dothide1	Rhizoctonia solani             	F_Ba	Cantharellales Ceratobasidiaceae
+rhizvesi	Dothide1	Rhizopogon vesiculosus         	F_Ba	Boletales Rhizopogonaceae
+rhizvini	Mucoral2	Rhizopus vinicolor           	F_Fu	Mucorales Rhizopodaceae
+rhodbuty	unknown 	Rhodocollybia butyracea        	F_Ba	Agaricales Omphalotaceae
+rhodglut	rhodgram	Rhodotorula glutinis           	F_Ba	- -
+rhodgram	rhodgram	Rhodotorula graminis           	F_Ba	- -
+rhodminu	rhodgram	Rhodotorula minuta             	F_Ba	- -
+rhodmuci	rhodgram	Rhodotorula mucilaginosa       	F_Ba	- -
+rhodprol	InsectAc	Rhodnius prolixus              	M_In	Hemiptera Reduviidae
+rhodspec	rhodgram	Rhodotorula spec               	F_Ba	- -
+rhodspj1	rhodgram	Rhodotorula spJ1               	F_Ba	- -
+rhodspj3	rhodgram	Rhodotorula spJ3               	F_Ba	- -
+rhodtoru	rhodtoru	Rhodosporidium toruloides      	F_Ba	Sporidiobolales Sporidiobolaceae
+rhynagro	unknown 	Rhynchosporium agropyri        	F_As	Helotiales -
+rhyncomm	unknown 	Rhynchosporium commune         	F_As	Helotiales -
+rhynseca	unknown 	Rhynchosporium secalis         	F_As	Helotiales -
+rhytrufu	Dothide1	Rhytidhysteron rufulum         	F_As	Hysteriales Hysteriaceae
+ricicomm	Angiosp 	Ricinus communis               	P_Eu	Phthiraptera Ricinidae
+rickfibu	Sordari1	Rickenella fibula              	F_Ba	Agaricales Tricholomataceae
+rickmell	Sordari1	Rickenella mellea              	F_Ba	Agaricales Tricholomataceae
+rigimicr	unknown 	Rigidoporus microporus         	F_Ba	Polyporales Coriolaceae
+romaculi	romaculi	Romanomermis culicivorax       	M_Ne	Mermithida Mermithidae
+rousaegy	Tetrapod	Rousettus aegyptiacus          	M_Mm	Chiroptera Pteropodidae
+rozeallo	rozeallo	Rozella allomycis              	F_Cr	- -
+russbrev	unknown 	Russula brevipes               	F_Ba	Russulales Russulaceae
+russcomp	unknown 	Russula compacta               	F_Ba	Russulales Russulaceae
+russdiss	unknown 	Russula dissimulans            	F_Ba	Russulales Russulaceae
+russrugu	unknown 	Russula rugulosa               	F_Ba	Russulales Russulaceae
+russvina	unknown 	Russula vinacea                	F_Ba	Russulales Russulaceae
+rutsfirm	unknown 	Rutstroemia firma              	F_As	Helotiales Rutstroemiaceae
+saccarbo	Saccharo	Saccharomyces arboricola       	F_As	Saccharomycetales Saccharomycetaceae
+saccbaya	Saccharo	Saccharomyces bayanus          	F_As	Saccharomycetales Saccharomycetaceae
+sacccast	Saccharo	Saccharomyces castellii        	F_As	Saccharomycetales Saccharomycetaceae
+sacccere	Saccharo	Saccharomyces cerevisiae       	F_As	Saccharomycetales Saccharomycetaceae
+sacceuba	Saccharo	Saccharomyces eubayanus        	F_As	Saccharomycetales Saccharomycetaceae
+sacckluy	Saccharo	Saccharomyces kluyveri         	F_As	Saccharomycetales Saccharomycetaceae
+sacckowa	InsectBm	Saccoglossus kowalevskii       	M_He	- Harrimaniidae
+sacckudr	Saccharo	Saccharomyces kudriavzevii     	F_As	Saccharomycetales Saccharomycetaceae
+saccmika	Saccharo	Saccharomyces mikatae          	F_As	Saccharomycetales Saccharomycetaceae
+saccpara	Saccharo	Saccharomyces paradoxus        	F_As	Saccharomycetales Saccharomycetaceae
+saccpast	Saccharo	Saccharomyces pastorianus      	F_As	Saccharomycetales Saccharomycetaceae
+saccprot	Dothide1	Saccharata proteae             	F_As	Botryosphaeriales Saccharataceae
+saccspec	Saccharo	Saccharomyces spec             	F_As	Saccharomycetales Saccharomycetaceae
+sactspec	unknown 	Sactharomycetaceae spec        	F_As	Saccharomycetales Saccharomycetaceae	 
+saimboli	Tetrapod	Saimiri boliviensis            	M_Mm	Primates Cebidae
+saitcomp	Agarico1	Saitoella complicata           	F_As	- -
+saksvasi	unknown 	Saksenaea vasiformis           	F_Mu	Mucorales Saksenaeaceae
+salipurp	Angiosp 	Salix purpurea                 	P_Eu	Malpighiales Salicaceae
+salmsala	Fish_mdl	Salmo salar                    	M_Fs	Salmoniformes Salmonidae
+salprose	salprose	Salpingoeca rosetta            	O_Op	Choanoflagellida Salpingoecidae
+salvmilt	Angiosp 	Salvia milt                    	P_Eu	Lamiales Lamiaceae
+saprdicl	Saproleg	Saprolegnia diclina            	O_St	Saprolegniales Saprolegniaceae
+saprpara	Saproleg	Saprolegnia parasitica         	O_St	Saprolegniales Saprolegniaceae
+sarccocc	unknown 	Sarcoscypha coccinea           	F_As	Pezizales Sarcoscyphaceae
+sarcharr	Tetrapod	Sarcophilus harrisii           	M_Mm	Dasyuromorphia Dasyuridae
+sarcneur	sarcneur	Sarcocystis neurona3           	O_Al	Eucoccidiorida Sarcocystidae
+sarcscab	ArthroDu	Sarcoptes scabiei              	M_Ar	Astigmata Sarcoptidae
+sarrpurp	Angiosp 	Sarracenia purpurea            	P_Eu	Ericales Sarraceniaceae
+scedapio	unknown 	Scedosporium apiospermum       	F_As	Microascales Microascaceae
+schestip	unknown 	Scheffersomyces stipitis       	F_As	Saccharomycetales Debaryomycetaceae
+schiaggr	schiaggr	Schizochytrium aggregatum      	O_St	- Thraustochytriaceae
+schicom3	Agarico1	Schizophyllum com3             	F_Ba	Agaricales Schizophyllaceae
+schicoml	Agarico1	Schizophyllum comL             	F_Ba	Agaricales Schizophyllaceae
+schicomm	Agarico1	Schizophyllum commune          	F_Ba	Agaricales Schizophyllaceae
+schicomt	Agarico1	Schizophyllum comT             	F_Ba	Agaricales Schizophyllaceae
+schicryo	Schizosa	Schizosaccharomyces cryophilus 	F_As	Schizosaccharomycetales Schizosaccharomycetaceae
+schicura	Schisto 	Schistosoma curassoni          	M_Pl	Strigeidida Schistosomatidae
+schihaem	Schisto 	Schistosoma haematobium        	M_Pl	Strigeidida Schistosomatidae
+schijapa	Schisto 	Schistosoma japonicum          	M_Pl	Strigeidida Schistosomatidae
+schijapo	Schizosa	Schizosaccharomyces japonicus  	F_As	Schizosaccharomycetales Schizosaccharomycetaceae
+schimans	Schisto 	Schistosoma mansoni            	M_Pl	Strigeidida Schistosomatidae
+schimarg	Schisto 	Schistosoma margrebowiei       	M_Pl	Strigeidida Schistosomatidae
+schimatt	Schisto 	Schistosoma mattheei           	M_Pl	Strigeidida Schistosomatidae
+schiocto	Schizosa	Schizosaccharomyces octosporus 	F_As	Schizosaccharomycetales Schizosaccharomycetaceae
+schipara	Dothide1	Schizopora paradoxa            	F_Ba	Corticiales Corticiaceae
+schipomb	Schizosa	Schizosaccharomyces pombe      	F_As	Schizosaccharomycetales Schizosaccharomycetaceae
+schirodh	Schisto 	Schistosoma rodhaini           	M_Pl	Strigeidida Schistosomatidae
+schisoli	NematodF	Schistocephalus solidus        	M_Pl	Diphyllobothriidea Diphyllobothriidae
+schivest	unknown 	Schizothecium vesticola        	F_As	Sordariales Lasiosphaeriaceae
+schmmedi	schmmedi	Schmidtea mediterranea         	M_Pl	Tricladida Dugesiidae
+sclebore	Dothide1	Sclerotinia borealis           	F_As	Helotiales Sclerotiniaceae
+sclecitr	Dothide1	Scleroderma citrinum           	F_Ba	Boletales Sclerodermataceae
+scleform	unknown 	Scleropages formosus           	M_Fs	Osteoglossiformes Osteoglossidae
+sclehyst	unknown 	Sclerogaster hysterangioides   	F_Ba	Boletales Boletaceae
+sclesang	unknown 	Sclerophora sanguinea          	F_As	Coniocybales Coniocybaceae
+sclescle	Dothide1	Sclerotinia sclerotiorum       	F_As	Helotiales Sclerotiniaceae
+scytspec	unknown 	Scytinostroma spec             	F_Ba	Russulales Lachnocladiaceae
+sebaverm	Dothide1	Sebacina vermifera             	F_Ba	Sebacinales Sebacinaceae
+selamoel	selamoel	Selaginella moellendorffii     	P_Ly	Selaginellales Selaginellaceae
+septmusi	Dothide1	Septoria musiva                	F_As	Capnodiales Mycosphaerellaceae
+septpopu	Dothide1	Septoria populicola            	F_As	Capnodiales Mycosphaerellaceae
+septspec	unknown 	Septobasidium spec             	F_Ba	Septobasidiales Septobasidiaceae
+sereindi	unknown 	Serendipita indica             	F_Ba	Sebacinales -
+sereverm	unknown 	Serendipita vermifera          	F_Ba	Sebacinales -
+sericana	Tetrapod	Serinus canaria                	M_Av	Passeriformes Fringillidae
+seridume	unknown 	Seriola dumerili               	M_Fs	Carangiformes Carangidae
+serphima	Dothide1	Serpula himantioides           	F_Ba	Boletales Serpulaceae
+serplacr	Dothide1	Serpula lacrymans              	F_Ba	Sabellida Serpulidae
+sesaindi	Angiosp 	Sesamum indicum                	P_Eu	Lamiales Pedaliaceae
+setaital	Angiosp 	Setaria italica                	P_Mo	Spirurida Setariidae
+setaviri	Angiosp 	Setaria viridis                	P_Mo	Spirurida Setariidae
+setoholm	unknown 	Setomelanomma holmii           	F_As	Pleosporales Phaeosphaeriaceae
+setoturc	Dothide1	Setosphaeria turcica           	F_As	Pleosporales Pleosporaceae
+sinoansh	unknown 	Sinocyclocheilus anshuiensis   	M_Fs	Cypriniformes Cyprinidae
+sinograh	unknown 	Sinocyclocheilus grahami       	M_Fs	Cypriniformes Cyprinidae
+sinorhin	unknown 	Sinocyclocheilus rhinocerous   	M_Fs	Cypriniformes Cyprinidae
+sirointe	unknown 	Sirobasidium intermedium       	F_Ba	Tremellales Sirobasidiaceae
+sistbrin	Dothide1	Sistotrema brinkmannii         	F_Ba	Corticiales Corticiaceae
+sistnive	Dothide1	Sistotremastrum niveocremeu    	F_Ba	Trechisporales Hydnodontaceae
+sistsuec	Dothide1	Sistotremastrum suecicum       	F_Ba	Trechisporales Hydnodontaceae
+smitculi	unknown 	Smittium culicis               	F_Ha	Harpellales Legeriomycetaceae
+smitmucr	unknown 	Smittium mucronatum            	F_Ha	Harpellales Legeriomycetaceae
+sobobatu	NematodW	Soboliphyme baturini           	M_Ne	- Soboliphymatidae
+sodialka	Sordari3	Sodiomyces alkalinus           	F_As	Glomerellales Plectosphaerellaceae
+solalyco	Angiosp 	Solanum lycopersicum           	P_Eu	Solanales Solanaceae
+solapenn	Angiosp 	Solanum pennellii              	P_Eu	Solanales Solanaceae
+solatube	Angiosp 	Solanum tuberosum              	P_Eu	Solanales Solanaceae
+soleinvi	Echinode	Solenopsis invicta             	M_In	Asterales Campanulaceae
+sordmacr	unknown 	Sordaria macrospora            	F_As	Sordariales Sordariaceae
+sorearan	Tetrapod	Sorex araneus                  	M_Mm	Insectivora Soricidae
+sorgbico	Angiosp 	Sorghum bicolor                	P_Mo	Poales Poaceae
+sparlati	unknown 	Sparassis latifolia            	F_Ba	Polyporales Sparassidaceae
+spatflav	Dothide1	Spathularia flavida            	F_As	Rhytismatales Cudoniaceae
+spatpass	spatpass	Spathaspora passalidarum       	F_As	Saccharomycetales Debaryomycetaceae
+sphaarct	sphaarct	Sphaeroforma arctica           	O_Op	Ichthyophonida -
+sphafall	unknown 	Sphagnum fallax                	P_Br	Sphagnales Sphagnaceae
+sphamusi	unknown 	Sphaerulina musiva             	F_As	Capnodiales Mycosphaerellaceae
+sphastel	Dothide1	Sphaerobolus stellatus         	F_Ba	Geastrales Sphaerobolaceae
+spinfusi	unknown 	Spinellus fusiger              	F_Mu	Mucorales Phycomycetaceae
+spirerin	NematodF	Spirometra erinaceieuropaei    	M_Pl	Diphyllobothriidea Diphyllobothriidae
+spirpoly	Angiosp 	Spirodela polyrhiza            	P_Mo	Alismatales Araceae
+spirsalm	Archamoe	Spironucleus salmonicida       	O_Fo	- Hexamitidae
+spizpunc	FungiAll	Spizellomyces punctatus        	F_Ch	Spizellomycetales Spizellomycetaceae
+spodfrug	InsectGn	Spodoptera frugiperda          	M_In	Lepidoptera Noctuidae
+sporbras	unknown 	Sporothrix brasiliensis        	F_As	Ophiostomatales Ophiostomataceae
+sporfime	Dothide1	Sporormia fimetaria            	F_As	Pleosporales Sporormiaceae
+sporinse	unknown 	Sporothrix insectorum          	F_As	Ophiostomatales Ophiostomataceae
+sporlact	unknown 	Sporopachydermia lactativora   	F_As	Saccharomycetales Dipodascaceae
+sporlind	sporlind	Sporobolomyces linderae        	F_Ba	- -
+sporpara	unknown 	Sporidiobolus pararoseus       	F_Ba	Sporidiobolales Sporidiobolaceae
+sporreil	sporreil	Sporisorium reilianum          	F_Ba	Ustilaginales Ustilaginaceae
+sporrose	sporlind	Sporobolomyces roseus          	F_Ba	- -
+sporsalm	unknown 	Sporidiobolus salmonicolor     	F_Ba	Sporidiobolales Sporidiobolaceae
+sporsche	unknown 	Sporothrix schenckii           	F_As	Ophiostomatales Ophiostomataceae
+sporscit	sporreil	Sporisorium scitamineum        	F_Ba	Ustilaginales Ustilaginaceae
+sporther	Sordari1	Sporotrichum thermophile       	F_Ba	- -
+sporumbe	unknown 	Sporodiniella umbellata        	F_Mu	Mucorales Rhizopodaceae
+spraloph	unknown 	Spraguea lophii                	F_Mi	- Spraguidae
+stacchar	unknown 	Stachybotrys chartarum         	F_As	Hypocreales Stachybotriaceae
+stacchlo	unknown 	Stachybotrys chlorohalonata    	F_As	Hypocreales Stachybotriaceae
+staceleg	unknown 	Stachybotrys elegans           	F_As	Hypocreales Stachybotriaceae
+stagnodo	Dothide1	Stagonospora nodorum           	F_As	Pleosporales Massarinaceae
+stagspec	Dothide1	Stagonospora spec              	F_As	Pleosporales Massarinaceae
+stangris	Dothide1	Stanjemonium grisellum         	F_As	- -
+stegmimo	stegmimo	Stegodyphus mimosarum          	M_Ar	Araneae Eresidae
+stegpart	Fish_mdl	Stegastes partitus             	M_Fs	- Pomacentridae
+steicarp	NematodE	Steinernema carpocapsae        	M_Ne	Rhabditida Steinernematidae
+steifelt	NematodE	Steinernema feltiae            	M_Ne	Rhabditida Steinernematidae
+steiglas	NematodE	Steinernema glaseri            	M_Ne	Rhabditida Steinernematidae
+steimont	NematodE	Steinernema monticolum         	M_Ne	Rhabditida Steinernematidae
+steiscap	NematodE	Steinernema scapterisci        	M_Ne	Rhabditida Steinernematidae
+stemlyco	unknown 	Stemphylium lycopersici        	F_As	Pleosporales Pleosporaceae
+stencoer	unknown 	Stentor coeruleus       	O_Al	Stentoridae Stentor
+sterhirs	Dothide1	Stereum hirsutum               	F_Ba	Russulales Stereaceae
+stomcalc	stomcalc	Stomoxys calcitrans            	M_In	Diptera Muscidae
+striculi	Archamoe	Strigomonas culicis            	O_Eu	Kinetoplastida Trypanosomatidae
+strimari	InsectCl	Strigamia maritima             	M_In	Geophilomorpha Linotaeniidae
+stropapi	NematodS	Strongyloides papillosus       	M_Ne	Rhabditida Strongyloididae
+stropurp	ChordatC	Strongylocentrotus purpuratus  	M_Ec	Echinoida Strongylocentrotidae
+stroratt	NematodS	Strongyloides ratti            	M_Ne	Rhabditida Strongyloididae
+stroster	NematodS	Strongyloides stercoralis      	M_Ne	Rhabditida Strongyloididae
+strovene	NematodS	Strongyloides venezuelensis    	M_Ne	Rhabditida Strongyloididae
+strovulg	NematodN	Strongylus vulgaris            	M_Ne	Rhabditida Strongylidae
+strucame	Tetrapod	Struthio camelus               	M_Av	Struthioniformes Struthionidae
+sturvulg	Tetrapod	Sturnus vulgaris               	M_Av	Passeriformes Sturnidae
+styllemn	Sporadot	Stylonychia lemnae             	O_Al	Sporadotrichida Oxytrichidae
+stylpist	unknown 	Stylophora pistillata          	M_Cn	Scleractinia Pocilloporidae
+sugiamer	unknown 	Sugiyamaella americana         	F_As	Saccharomycetales Trichomonascaceae
+sugilign	unknown 	Sugiyamaella lignohabitans     	F_As	Saccharomycetales Trichomonascaceae
+suilamer	Dothide1	Suillus americanus             	F_Ba	Boletales Suillaceae
+suilbrev	Dothide1	Suillus brevipes               	F_Ba	Boletales Suillaceae
+suildeci	Dothide1	Suillus decipiens              	F_Ba	Boletales Suillaceae
+suilgran	Dothide1	Suillus granulatus             	F_Ba	Boletales Suillaceae
+suilhirt	Dothide1	Suillus hirtellus              	F_Ba	Boletales Suillaceae
+suillute	Dothide1	Suillus luteus                 	F_Ba	Boletales Suillaceae
+suilpict	Dothide1	Suillus pictus                 	F_Ba	Boletales Suillaceae
+suilsuba	Dothide1	Suillus subaureus              	F_Ba	Boletales Suillaceae
+suiltome	Dothide1	Suillus tomentosus             	F_Ba	Boletales Suillaceae
+sus_scro	Tetrapod	Sus scrofa                     	M_Mm	- Suidae
+symbkoch	Dothide1	Symbiotaphrina kochii          	F_As	Xylonomycetales -
+sympatti	unknown 	Sympodiomyces attinorum        	F_As	Saccharomycetales -
+syncfusc	unknown 	Syncephalis fuscata            	F_Zo	Zoopagales Piptocephalidaceae
+syncplum	unknown 	Syncephalis plumigaleata       	F_Zo	Zoopagales Piptocephalidaceae
+syncrace	unknown 	Syncephalastrum racemosum      	F_Mu	Mucorales Syncephalastraceae
+syphmuri	NematodO	Syphacia muris                 	M_Ne	Oxyurida Oxyuridae
+taenasia	NematodB	Taenia asiatica                	M_Pl	Cyclophyllidea Taeniidae
+taengutt	Tetrapod	Taeniopygia guttata            	M_Av	Passeriformes Estrildidae
+taensagi	unknown 	Taenia saginata                	M_Pl	Cyclophyllidea Taeniidae
+taensoli	NematodB	Taenia solium                  	M_Pl	Cyclophyllidea Taeniidae
+takirubr	Fish_sht	Takifugu rubripes              	M_Fs	Tetraodontiformes Tetraodontidae
+talaacul	Dothide1	Talaromyces aculeatus          	F_As	Eurotiales Trichocomaceae
+talaatro	Dothide1	Talaromyces atroroseus         	F_As	Eurotiales Trichocomaceae
+talacell	Dothide1	Talaromyces cellulolyticus     	F_As	Eurotiales Trichocomaceae
+talaisla	Dothide1	Talaromyces islandicus         	F_As	Eurotiales Trichocomaceae
+talamarn	Dothide1	Talaromyces marneffei          	F_As	Eurotiales Trichocomaceae
+talaprot	Dothide1	Talaromyces proteolyticus      	F_As	Eurotiales Trichocomaceae
+talastip	Dothide1	Talaromyces stipitatus         	F_As	Eurotiales Trichocomaceae
+taphdefo	Leotiomy	Taphrina deformans             	F_As	Taphrinales Taphrinaceae
+tarehass	Angiosp 	Tarenaya hassleriana           	P_Eu	Brassicales Cleomaceae
+tarssyri	Tetrapod	Tarsius syrichta               	M_Mm	Primates Tarsiidae
+taureryt	Tetrapod	Tauraco erythrolophus          	M_Av	Musophagiformes Musophagidae
+telacirc	NematodN	Teladorsagia circumcincta      	M_Ne	Rhabditida Trichostrongylidae
+teranubi	Dothide1	Teratosphaeria nubilosa        	F_As	Capnodiales Teratosphaeriaceae
+terfboud	Dothide1	Terfezia boudieri              	F_As	Pezizales Pezizaceae
+terfclav	Dothide1	Terfezia claveryi              	F_As	Pezizales Pezizaceae
+termspec	unknown 	Termitomyces spec              	F_Ba	Agaricales Lyophyllaceae
+testcype	unknown 	Testicularia cyperi            	F_Ba	Ustilaginales Anthracoideaceae	 
+tetrblat	Saccharo	Tetrapisispora blattae         	F_As	Saccharomycetales Saccharomycetaceae
+tetrnigr	Fish_sht	Tetraodon nigroviridis         	M_Fs	Tetraodontiformes Tetraodontidae
+tetrphaf	Saccharo	Tetrapisispora phaffii         	F_As	Saccharomycetales Saccharomycetaceae
+tetrther	tetrther	Tetrahymena thermophila        	O_Al	Hymenostomatida Tetrahymenidae
+tetrurti	tetrurti	Tetranychus urticae            	M_Ar	- Tetranychidae
+thalocea	Oomycete	Thalassiosira oceanica         	O_St	Thalassiosirales Thalassiosiraceae
+thalpseu	Oomycete	Thalassiosira pseudonana       	O_St	Thalassiosirales Thalassiosiraceae
+thameleg	unknown 	Thamnidium elegans             	F_Mu	Mucorales Mucoraceae
+thamsirt	Tetrapod	Thamnophis sirtalis            	M_Rp	Squamata Colubridae
+thancucu	unknown 	Thanatephorus cucumeris        	F_Ba	Cantharellales Ceratobasidiaceae
+thectrah	thectrah	Thecamonas trahens             	O_Ap	- Apusomonadidae
+theiannu	Theiler1	Theileria annulata             	O_Al	- Theileriidae
+theiequi	Babesia 	Theileria equi                 	O_Al	- Theileriidae
+theiorie	Theiler1	Theileria orientalis           	O_Al	- Theileriidae
+theiparv	Theiler1	Theileria parva                	O_Al	- Theileriidae
+thelcall	NematodO	Thelazia callipaeda            	M_Ne	Spirurida Thelaziidae
+thelganb	unknown 	Thelephora ganbajun            	F_Ba	Thelephorales Thelephoraceae
+thelhalo	Angiosp 	Thellungiella halophila        	P_Eu	Brassicales Brassicaceae
+thelkita	thelkita	Thelohanellus kitauei          	M_Cn	Bivalvulida Myxobolidae
+thelmicr	Dothide1	Thelebolus microsporus         	F_As	Thelebolales Thelebolaceae
+thelparv	Angiosp 	Thellungiella parvula          	P_Eu	Brassicales Brassicaceae
+thelster	Dothide1	Thelebolus stercoreus          	F_As	Thelebolales Thelebolaceae
+theocaca	Angiosp 	Theobroma cacao                	P_Eu	Malvales Malvaceae
+theraura	Dothide1	Thermoascus aurantiacus        	F_As	Eurotiales Thermoascaceae
+therlanu	unknown 	Thermomyces lanuginosus        	F_As	Eurotiales Trichocomaceae
+therther	unknown 	Thermothelomyces thermophila   	F_As	Sordariales Chaetomiaceae
+thieanta	Sordari1	Thielavia antarctica           	F_As	Sordariales Chaetomiaceae
+thieappe	Sordari1	Thielavia appendiculata        	F_As	Sordariales Chaetomiaceae
+thiearen	Sordari1	Thielavia arenaria             	F_As	Sordariales Chaetomiaceae
+thiehyrc	Sordari1	Thielavia hyrcaniae            	F_As	Sordariales Chaetomiaceae
+thiepunc	unknown 	Thielaviopsis punctulata       	F_As	Microascales Ceratocystidaceae
+thieterr	Sordari1	Thielavia terrestris           	F_As	Sordariales Chaetomiaceae
+thozspec	Dothide1	Thozetella spec                	F_As	Chaetosphaeriales Chaetosphaeriaceae
+tigrcali	unknown 	Tigriopus californicus         	M_Ar	Harpacticoida Harpacticidae
+tillalbe	tillwash	Tilletiopsis albescens         	F_Ba	Entylomatales -
+tillanom	tillanom	Tilletiaria anomala            	F_Ba	Georgefischeriales Tilletiariaceae
+tillcari	unknown 	Tilletia caries                	F_Ba	Tilletiales Tilletiaceae
+tillcont	unknown 	Tilletia controversa           	F_Ba	Tilletiales Tilletiaceae
+tillindi	unknown 	Tilletia indica                	F_Ba	Tilletiales Tilletiaceae
+tillspec	tillwash	Tilletiopsis spec              	F_Ba	Entylomatales -
+tillwalk	unknown 	Tilletia walkeri               	F_Ba	Tilletiales Tilletiaceae
+tillwash	tillwash	Tilletiopsis washingtonensis   	F_Ba	Entylomatales -
+timecris	InsectGn	Timema cristinae               	M_In	Phasmatodea -
+tinagutt	Tetrapod	Tinamus guttatus               	M_Av	Tinamiformes Tinamidae
+tolyinfl	unknown 	Tolypocladium inflatum         	F_As	Hypocreales Ophiocordycipitaceae
+tolyophi	unknown 	Tolypocladium ophioglossoides  	F_As	Hypocreales Ophiocordycipitaceae
+torpradi	unknown 	Torpedospora radiata           	F_As	Torpedosporales Torpedosporaceae
+torrhemi	unknown 	Torrubiella hemipterigena      	F_As	Hypocreales Clavicipitaceae
+tortcase	unknown 	Tortispora caseinolytica       	F_As	Saccharomycetales Trigonopsidaceae
+torudelb	Saccharo	Torulaspora delbrueckii        	F_As	Saccharomycetales Saccharomycetaceae
+tothfusc	Dothide1	Tothia fuscella                	F_As	Venturiales Venturiaceae
+toxocani	NematodA	Toxocara canis                 	M_Ne	Ascaridida Toxocaridae
+toxogond	Conoida1	Toxoplasma gondii              	O_Al	Eucoccidiorida Sarcocystidae
+traccorn	unknown 	Trachymyrmex cornetzi          	M_In	Hymenoptera Formicidae
+trachomi	unknown 	Trachipleistophora hominis     	F_Mi	- Pleistophoridae
+tracsept	unknown 	Trachymyrmex septentrionalis   	M_In	Hymenoptera Formicidae
+traczete	unknown 	Trachymyrmex zeteki            	M_In	Hymenoptera Formicidae
+tramcerv	unknown 	Trametopsis cervina            	F_Ba	Polyporales Hapalopilaceae
+tramcing	Sordari1	Trametes cingulata             	F_Ba	Polyporales Coriolaceae
+tramcinn	Sordari1	Trametes cinnabarina           	F_Ba	Polyporales Coriolaceae
+tramgibb	Sordari1	Trametes gibbosa               	F_Ba	Polyporales Coriolaceae
+tramljub	Sordari1	Trametes ljubarskyi            	F_Ba	Polyporales Coriolaceae
+trammaxi	Sordari1	Trametes maxima                	F_Ba	Polyporales Coriolaceae
+trammeye	Sordari1	Trametes meyenii               	F_Ba	Polyporales Coriolaceae
+trampube	Sordari1	Trametes pubescens             	F_Ba	Polyporales Coriolaceae
+tramvers	Sordari1	Trametes versicolor            	F_Ba	Polyporales Coriolaceae
+tremence	tremmese	Tremella encephala             	F_Ba	Tremellales Tremellaceae
+tremmese	tremmese	Tremella mesenterica           	F_Ba	Tremellales Tremellaceae
+trempert	Dothide1	Trematosphaeria pertusa        	F_As	Pleosporales Trematosphaeriaceae
+tremspec	tremmese	Tremella species               	F_Ba	Tremellales Tremellaceae
+tribcast	tribcast	Tribolium castaneum            	M_In	Poales Poaceae
+tricabie	Dothide1	Trichaptum abietinum           	F_Ba	Polyporales Polyporaceae
+tricadha	tricadha	Trichoplax adhaerens           	M_Pa	- Trichoplacidae
+tricasah	tricchia	Trichosporon asahii            	F_Ba	Trichosporonales Trichosporonaceae
+tricaspe	Dothide1	Trichoderma asperellum         	F_As	Hypocreales Hypocreaceae
+tricatro	Dothide1	Trichoderma atroviride         	F_As	Hypocreales Hypocreaceae
+tricbenh	Dothide1	Trichophyton benhamiae         	F_As	Onygenales Arthrodermataceae
+tricbisp	tricbisp	Trichodelitschia bisporula     	F_As	Phaeotrichales Phaeotrichaceae
+tricbrit	unknown 	Trichinella britovi            	M_Ne	Trichocephalida Trichinellidae
+tricchia	tricchia	Trichosporon chiarellii        	F_Ba	Trichosporonales Trichosporonaceae
+triccitr	Dothide1	Trichoderma citrinoviride      	F_As	Hypocreales Hypocreaceae
+tricequi	Dothide1	Trichophyton equinum           	F_As	Onygenales Arthrodermataceae
+tricgams	Dothide1	Trichoderma gamsii             	F_As	Hypocreales Hypocreaceae
+tricgueh	tricchia	Trichosporon guehoae           	F_Ba	Trichosporonales Trichosporonaceae
+tricguiz	Dothide1	Trichoderma guizhouense        	F_As	Hypocreales Hypocreaceae
+tricharz	Dothide1	Trichoderma harzianum          	F_As	Hypocreales Hypocreaceae
+trichybr	unknown 	Trichophaea hybrida            	F_As	Pezizales Pyronemataceae
+tricinte	Dothide1	Trichophyton interdigitale     	F_As	Onygenales Arthrodermataceae
+triclong	Dothide1	Trichoderma longibrachiatum    	F_As	Hypocreales Hypocreaceae
+tricmana	Tetrapod	Trichechus manatus             	M_Mm	Sirenia Trichechidae
+tricmats	Dothide1	Tricholoma matsutake           	F_Ba	Agaricales Tricholomataceae
+tricmuri	NematodW	Trichuris muris                	M_Ne	Trichocephalida Trichuridae
+tricmurr	unknown 	Trichinella murrelli           	M_Ne	Trichocephalida Trichinellidae
+tricnati	NematodT	Trichinella nativa             	M_Ne	Trichocephalida Trichinellidae
+tricnels	unknown 	Trichinella nelsoni            	M_Ne	Trichocephalida Trichinellidae
+tricolea	tricchia	Trichosporon oleaginosus       	F_Ba	Trichosporonales Trichosporonaceae
+tricpapu	unknown 	Trichinella papuae             	M_Ne	Trichocephalida Trichinellidae
+tricpata	unknown 	Trichinella patagoniensis      	M_Ne	Trichocephalida Trichinellidae
+tricpeta	Trichomo	Trichomonascus petasosporus    	F_As	Saccharomycetales Trichomonascaceae
+tricpret	InsectAg	Trichogramma pretiosum         	M_In	Hymenoptera Trichogrammatidae
+tricpseu	unknown 	Trichinella pseudospiralis     	M_Ne	Trichocephalida Trichinellidae
+tricrees	Dothide1	Trichoderma reesei             	F_As	Hypocreales Hypocreaceae
+tricrege	Schisto 	Trichobilharzia regenti        	M_Pl	Strigeidida Schistosomatidae
+tricrubr	Dothide1	Trichophyton rubrum            	F_As	Onygenales Arthrodermataceae
+tricsoud	Dothide1	Trichophyton soudanense        	F_As	Onygenales Arthrodermataceae
+tricspir	NematodT	Trichinella spiralis           	M_Ne	Trichocephalida Trichinellidae
+tricsuis	NematodW	Trichuris suis                 	M_Ne	Trichocephalida Trichuridae
+trict6__	unknown 	Trichinella t6                 	M_Ne	Trichocephalida Trichinellidae
+trict8__	unknown 	Trichinella t8                 	M_Ne	Trichocephalida Trichinellidae
+trict9__	unknown 	Trichinella t9                 	M_Ne	Trichocephalida Trichinellidae
+trictons	Dothide1	Trichophyton tonsurans         	F_As	Onygenales Arthrodermataceae
+trictric	NematodW	Trichuris trichiura            	M_Ne	Trichocephalida Trichuridae
+tricvagi	ProtisGn	Trichomonas vaginalis          	O_Pa	Trichomonadida Trichomonadidae
+tricverr	Dothide1	Trichophyton verrucosum        	F_As	Onygenales Arthrodermataceae
+tricviol	Dothide1	Trichophyton violaceum         	F_As	Onygenales Arthrodermataceae
+tricvire	Dothide1	Trichoderma virens             	F_As	Hypocreales Hypocreaceae
+triczimb	unknown 	Trichinella zimbabwensis       	M_Ne	Trichocephalida Trichinellidae
+trifprat	Angiosp 	Trifolium pratense             	P_Eu	Fabales Fabaceae
+tringuia	Dothide1	Trinosporium guianense         	F_As	Xylonomycetales Xylonomycetaceae
+tritaesa	Angiosp 	Triticum aestivum              	P_Mo	Poales Poaceae
+tritaesb	Angiosp 	Triticum aestivum              	P_Mo	Poales Poaceae
+tritaesd	Angiosp 	Triticum aestivum              	P_Mo	Poales Poaceae
+tritaest	Angiosp 	Triticum aestivum              	P_Mo	Poales Poaceae
+tritspec	tritspec	Tritirachium species           	F_Ba	Tritirachiales Tritirachiaceae
+triturar	Angiosp 	Triticum urartu                	P_Mo	Poales Poaceae
+trunangu	unknown 	Truncatella angustata          	F_As	Xylariales Sporocadaceae
+trypbruc	Archamoe	Trypanosoma brucei             	O_Eu	Kinetoplastida Trypanosomatidae
+trypcong	Archamoe	Trypanosoma congolense         	O_Eu	Kinetoplastida Trypanosomatidae
+trypcruz	Archamoe	Trypanosoma cruzi              	O_Eu	Kinetoplastida Trypanosomatidae
+trypelut	Dothide1	Trypethelium eluteriae         	F_As	Trypetheliales Trypetheliaceae
+trypevan	Archamoe	Trypanosoma evansi             	O_Eu	Kinetoplastida Trypanosomatidae
+trypgray	Archamoe	Trypanosoma grayi              	O_Eu	Kinetoplastida Trypanosomatidae
+tryprang	Archamoe	Trypanosoma rangeli            	O_Eu	Kinetoplastida Trypanosomatidae
+trypviva	Archamoe	Trypanosoma vivax              	O_Eu	Kinetoplastida Trypanosomatidae
+tsucwing	unknown 	Tsuchiyaea wingfieldii         	F_Ba	Tremellales Tremellaceae
+tubeborc	Dothide1	Tuber borchii                  	F_As	Pezizales Tuberaceae
+tubemela	Dothide1	Tuber melanosporum             	F_As	Pezizales Tuberaceae
+tulacalo	Dothide1	Tulasnella calospora           	F_Ba	Cantharellales Tulasnellaceae
+tupabela	Tetrapod	Tupaia belangeri               	M_Mm	Scandentia Tupaiidae
+tupachin	Tetrapod	Tupaia chinensis               	M_Mm	Scandentia Tupaiidae
+turstrun	Tetrapod	Tursiops truncatus             	M_Mm	Cetacea Delphinidae
+tytoalba	Tetrapod	Tyto alba                      	M_Av	Strigiformes Tytonidae
+umberama	Mucoral1	Umbelopsis ramanniana          	F_Fu	Mucorales Umbelopsidaceae
+umbespec	Mucoral1	Umbelopsis spec                	F_Mu	Mucorales Umbelopsidaceae
+umbipust	unknown 	Umbilicaria pustulata          	F_As	Umbilicariales Umbilicariaceae
+uncirees	Dothide1	Uncinocarpus reesii            	F_As	Onygenales Onygenaceae
+ursumari	Tetrapod	Ursus maritimus                	M_Mm	Carnivora Ursidae
+usneflor	unknown 	Usnea florida                  	F_As	Lecanorales Parmeliaceae
+ustibrom	ustimayd	Ustilago bromivora             	F_Ba	Ustilaginales Ustilaginaceae
+ustihord	ustimayd	Ustilago hordei                	F_Ba	Ustilaginales Ustilaginaceae
+ustimayd	ustimayd	Ustilago maydis                	F_Ba	Ustilaginales Ustilaginaceae
+ustispec	ustispec	Ustilaginomycotina spec        	F_Ba	Fungi Fungi
+ustivire	unknown 	Ustilaginoidea virens          	F_As	Hypocreales -
+valelaxa	Dothide1	Valetoniellopsis laxa          	F_As	Hypocreales Niessliaceae
+valsmali	unknown 	Valsa mali                     	F_As	Diaporthales Valsaceae
+vandpoly	unknown 	Vanderwaltozyma polyspora      	F_As	Saccharomycetales Saccharomycetaceae
+varamini	unknown 	Vararia minispora              	F_Ba	Russulales Lachnocladiaceae
+varrdest	unknown 	Varroa destructor              	M_Ar	Mesostigmata Varroidae
+varrjaco	unknown 	Varroa jacobsoni               	M_Ar	Mesostigmata Varroidae
+vavrculi	unknown 	Vavraia culicis                	F_Mi	- Pleistophoridae
+ventinae	Dothide1	Venturia inaequalis            	F_Eu	Hymenoptera Ichneumonidae
+ventpiri	Dothide1	Venturia pirina                	F_As	Pleosporales Venturiaceae
+verrenal	unknown 	Verruculina enalia             	F_As	Pleosporales Didymosphaeriaceae	 
+verrgall	unknown 	Verruconis gallopava           	F_As	Venturiales Sympoventuriaceae
+vertalbo	Dothide1	Verticillium alboatrum         	F_As	Glomerellales Plectosphaerellaceae
+vertalfa	Dothide1	Verticillium alfalfae          	F_As	Glomerellales Plectosphaerellaceae
+vertdahl	Dothide1	Verticillium dahliae           	F_As	Glomerellales Plectosphaerellaceae
+vertlong	Dothide1	Verticillium longisporum       	F_As	Glomerellales Plectosphaerellaceae
+vicupaco	Tetrapod	Vicugna pacos                  	M_Mm	- Camelidae
+vignradi	Angiosp 	Vigna radiata                  	P_Eu	Fabales Fabaceae
+vignungu	unknown 	Vigna unguiculata              	P_Eu	Fabales Fabaceae
+violpalu	unknown 	Violaceomyces palustris        	F_Ba	Violaceomycetales Violaceomycetaceae
+vitivini	Angiosp 	Vitis vinifera                 	P_Eu	Vitales Vitaceae
+vitrbras	unknown 	Vitrella brassicaformis        	O_Ch	- -
+vittcorn	unknown 	Vittaforma corneae             	F_Mi	- Nosematidae
+vollemer	Echinode	Vollenhovia emeryi             	M_In	Hymenoptera Formicidae
+volvcart	volvcart	Volvox carteri                 	P_Ch	Chlamydomonadales Volvocaceae
+volvvolv	Dothide1	Volvariella volvacea           	F_Ba	Agaricales Pluteaceae
+vuilcome	unknown 	Vuilleminia comedens           	F_Ba	Corticiales Vuilleminiaceae
+wallicht	wallicht	Wallemia ichthyophaga          	F_Ba	Wallemiales -
+wallmell	wallicht	Wallemia mellicola             	F_Ba	Wallemiales -
+wallsebi	wallicht	Wallemia sebi                  	F_Ba	Wallemiales -
+wasmauro	Echinode	Wasmannia auropunctata         	M_In	Hymenoptera Formicidae
+westorna	Dothide1	Westerdykella ornata           	F_As	Pleosporales Sporormiaceae
+wickanom	Sacchar1	Wickerhamomyces anomalus       	F_As	Saccharomycetales Phaffomycetaceae
+wickcife	Sacchar1	Wickerhamomyces ciferrii       	F_As	Saccharomycetales Phaffomycetaceae
+wickdome	unknown 	Wickerhamiella domercqiae      	F_As	Saccharomycetales Trichomonascaceae
+wilcmiko	Dothide1	Wilcoxina mikolae              	F_As	Pezizales Pyronemataceae
+wolfcoco	Sordari1	Wolfiporia cocos               	F_Ba	Polyporales Coriolaceae
+wuchbanc	NematodO	Wuchereria bancrofti           	M_Ne	Spirurida Onchocercidae
+xantdend	unknown 	Xanthophyllomyces dendrorhous  	F_Ba	Cystofilobasidiales Mrakiaceae
+xantpari	Dothide1	Xanthoria parietina            	F_As	Teloschistales Teloschistaceae
+xenavaga	unknown 	Xenasmatella vaga              	F_Ba	Polyporales Xenasmataceae
+xenolaev	unknown 	Xenopus laevis                 	M_Am	Anura Pipidae
+xenotrop	ChordatU	Xenopus tropicalis             	M_Am	Anura Pipidae
+xerobadi	unknown 	Xerocomus badius               	F_Ba	Boletales Boletaceae
+xiphmacu	Fish_mdl	Xiphophorus maculatus          	M_Fs	Cyprinodontiformes Poeciliidae
+xylahypo	unknown 	Xylaria hypoxylon              	F_As	Xylariales Xylariaceae
+xylaspec	unknown 	Xylariales spec                	F_As	Ascomycota Sordariomycetes
+xyloheve	Dothide1	Xylona heveae                  	F_As	Xylonomycetales Xylonomycetaceae
+yarrlipo	Saccharo	Yarrowia lipolytica            	F_As	Saccharomycetales Dipodascaceae
+zancculi	unknown 	Zancudomyces culisetae         	F_Ha	Harpellales Legeriomycetaceae
+zasmcell	Dothide1	Zasmidium cellare              	F_As	Capnodiales Mycosphaerellaceae
+zea_mays	Angiosp 	Zea mays                       	P_Mo	Poales Poaceae
+zeugcucu	unknown 	Zeugodacus cucurbitae          	M_In	Diptera Tephritidae
+zizijuju	Angiosp 	Ziziphus jujuba                	P_Eu	Rosales Rhamnaceae
+zonoalbi	Tetrapod	Zonotrichia albicollis         	M_Av	Passeriformes Passerellidae
+zootneva	Mollusca	Zootermopsis nevadensis        	M_In	Isoptera Termopsidae
+zopfrhiz	Dothide1	Zopfia rhizophila              	F_As	- Zopfiaceae
+zostmari	Angiosp 	Zostera marina                 	P_Mo	Alismatales Zosteraceae
+zychmexi	unknown 	Zychaea mexicana               	F_Mu	Mucorales Lichtheimiaceae
+zygobail	Saccharo	Zygosaccharomyces bailii       	F_As	Saccharomycetales Saccharomycetaceae
+zygohell	unknown 	Zygoascus hellenicus           	F_As	Saccharomycetales Trichomonascaceae
+zygopara	Saccharo	Zygosaccharomyces parabailii   	F_As	Saccharomycetales Saccharomycetaceae
+zygoroux	Saccharo	Zygosaccharomyces rouxii       	F_As	Saccharomycetales Saccharomycetaceae
+zymoarda	Dothide1	Zymoseptoria ardabiliae        	F_As	Capnodiales Mycosphaerellaceae
+zymobrev	Dothide1	Zymoseptoria brevis            	F_As	Capnodiales Mycosphaerellaceae
+zymopseu	Dothide1	Zymoseptoria pseudotritici     	F_As	Capnodiales Mycosphaerellaceae
+zymotrit	Dothide1	Zymoseptoria tritici           	F_As	Capnodiales Mycosphaerellaceae
