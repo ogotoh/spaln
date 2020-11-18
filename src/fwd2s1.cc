@@ -768,6 +768,7 @@ const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	size_t	bufsiz = pwd->Noll * wdw.width;
 	RVWU*	wbuf = new RVWU[bufsiz + bufsiz];
 	vset(wbuf, black_vwu, bufsiz + wdw.width);
+	vclear(hb, NOL);
 	RVWU*	blackvwu = wbuf + bufsiz - 1;	// assume to be const
 	hhg[0] = wbuf - wdw.lw + 1;
 	CHAR*	from_vert = new CHAR[wdw.width] - wdw.lw + 1;

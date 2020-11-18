@@ -6,6 +6,7 @@
 # or for csh/tcsh users:
 #    (setenv exec_prefix $HOME; setenv CXX g++; setenv CFLAGS "-O3"; ./configure)
 #	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+
 VER=`sed -n -e '/VERSION "/s/.*"\(.*\)".*/\1/p' < iolib.src`
 AR=${AR-"ar rc"}
 RANLIB=${RANLIB-"ranlib"}
@@ -66,7 +67,8 @@ fi
 if [ $use_zlib == "1" ] ; then
   DEFLT="${DEFLT} -DUSE_ZLIB=1"
   LLIB="${LLIB} -lz"
-  echo "$use_zlib $CFLAGS"
+else
+  DEFLT="${DEFLT} -DUSE_ZLIB=0"
 fi
 
 if ($RANLIB -V) >/dev/null 2>/dev/null; then

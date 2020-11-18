@@ -1086,6 +1086,7 @@ const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	size_t	bufsiz = pwd->Noll * wdw.width;	// + wdw.width for sj
 	RVDWU*	wbuf = new RVDWU[bufsiz + bufsiz + wdw.width];
 	vset(wbuf, black_vdwu, bufsiz + wdw.width);
+	vclear(hb, NOL);
 	RVDWU*	blackvdwuj = wbuf + bufsiz - 1;	// assume to be const
 	hhg[0] = wbuf - wdw.lw + 3;	 
 	for (int k = 1; k <= pwd->Noll; ++k) hhg[k] = hhg[k-1] + wdw.width;
