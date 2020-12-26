@@ -38,11 +38,14 @@ static	const	int	LARGEN = (INT_MAX / 4 * 3);
 static	const	VTYPE	SKIP = INT_MIN;
 static	const	char	AlnParam[] ="AlnParam";
 static	const	float	def_alprm2z = 2.;
-static	const	int	end_of_ulk = INT_MIN;
+static	const	int	end_of_ulk = INT_MAX - 2;
 static	const	int	dir2nod[16] = 
 	{-1, -1, 0, 0, 2, 2, 2, 4, 1, 1, 1, 3, 2, 1, -1, -1};
 static	const	float	defSss[2] = {0.3, 0.50};
 static	const	int	N_Out_Modes = 16;
+static	const	int	NCAND = 4;
+static	const	int	nextp[3] = {1, 2, 0};
+static	const	int	prevp[3] = {2, 0, 1};
 
 enum TraceBackDir {
 	DEAD, RSRV, DIAG, NEWD, VERT, SLA1, SLA2, VERL, 
@@ -67,6 +70,11 @@ static const bool _is_hori[16] = {0,0,0,0,0,0,0,0,1,1,1,1,0,1,0,0};
 #define isntdiag(x) (!(_is_diag[(x)->dir & 15]))
 #define isntvert(x) (!(_is_vert[(x)->dir & 15]))
 #define isnthori(x) (!(_is_hori[(x)->dir & 15]))
+
+inline void putvar(double x, FILE* fo = stdout) {
+	if (x > NEVSEL) fprintf(fo, " %5.1lf", x);
+	else	fputs("  ****", fo);
+}
 
 enum ALN_MODE {BAD_ALN,
 	NGP_ALN, HLF_ALN, RHF_ALN, GPF_ALN, NTV_ALN,

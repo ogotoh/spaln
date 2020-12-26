@@ -24,7 +24,8 @@
 
 #include "cmn.h"
 
-struct	ALPRM {float u, v, u0, u1, v0, tgapf, thr, scale, maxsp, gamma; int k1, ls, sh, mtx_no;};
+struct	ALPRM {float u, v, u0, u1, v0, tgapf, thr, scale, maxsp, gamma; 
+	    int k1, ls, sh, ubh, mtx_no;};
 struct	ALPRM2 {float x, y, z, o, w, bti, spb, Z, sss; int jneibr, termk1;};
 struct	ALPRM3 {float scnd, hydr, hpmt; int hpwing, no_angle;};
 struct	DefSetup {int defmolc, delamb; InputMode def_input_mode;};
@@ -282,6 +283,7 @@ mutable	int	right;		// right boundary to be operated
 	int	CdsNo;		// number of exons or hsps
 	int	wllvl;		// reserved
 	VTYPE	jscr;		// sum of weight2s
+	int*	lens;		// seq length of each member
 	int*	nbr;		// position of the first residue
 	SEQ_CODE*	code;	// code table
 	char*	spath;		// path name read from
@@ -328,13 +330,13 @@ const	char*	sqname(bool fpri = false) const {
 	Seq*	attrseq(const char* pa);
 	Seq*	splice(Seq* dest, RANGE* rng, const int edit = 0);
 	int	siteno(int n) const {return base_ + n;}
-	int	SiteNm(int n) const {return base_ + ((inex.sens & REVERS)? len - 1 - n: n);}
-	int	SiteNz(int n) const {return base_ + ((inex.sens & REVERS)? len - n: n);}
-	int	SiteLe() const {return base_ + ((inex.sens & REVERS)? len - right: left);}
-	int	SiteRe() const {return base_ + ((inex.sens & REVERS)? len - left: right);}
-	int	SiteNoBO(int n) const {return (inex.sens & REVERS)? len - n: n + 1;}
-	int	SiteNo(int n) const {return base_ + SiteNoBO(n);}
-	int	SiteOn(int n) const {return (inex.sens & REVERS)? len - n + base_: n - 1 - base_;}
+	int	SiteNm(int n, int m = 0) const {return base_ + ((inex.sens & REVERS)? lens[m] - 1 - n: n);}
+	int	SiteNz(int n, int m = 0) const {return base_ + ((inex.sens & REVERS)? lens[m] - n: n);}
+	int	SiteLe(int m = 0) const {return base_ + ((inex.sens & REVERS)? lens[m] - right: left);}
+	int	SiteRe(int m = 0) const {return base_ + ((inex.sens & REVERS)? lens[m] - left: right);}
+	int	SiteNoBO(int n, int m = 0) const {return (inex.sens & REVERS)? lens[m] - n: n + 1;}
+	int	SiteNo(int n, int m = 0) const {return base_ + SiteNoBO(n, m);}
+	int	SiteOn(int n, int m = 0) const {return (inex.sens & REVERS)? lens[m] - n + base_: n - 1 - base_;}
 	int	senschar() const {return SensChar[inex.sens];}
 	int	index(CHAR* ss) const {return (ss - seq_) / many;}
 	void	seqalloc(int num, int length, bool keep = false);
@@ -405,6 +407,7 @@ template <typename file_t>
 	Seq*	apndseq(char* aname);
 	void	fphseq(FILE* fd = 0, int n = 3) const;
 	FTYPE*	composition();
+	FTYPE*	composition(FTYPE* cmps) const;
 	void	printseq(FILE* fdi, int);
 	void	fpmem_len(FILE* fd);
 #if USE_ZLIB
@@ -809,6 +812,9 @@ CHAR* Seq::get_msf_aln(file_t fd, char* str, RANGE* pcr)
 	}
 
 	seqalloc(num, len);
+	delete[]	lens;
+	lens = new int[many];
+	vclear(lens, many);
 	delete[]	nbr;
 	nbr = new int[many];
 	vclear(nbr, many);
@@ -835,7 +841,7 @@ CHAR* Seq::get_msf_aln(file_t fd, char* str, RANGE* pcr)
 	}
 	return (ss);
 }
-    
+
 template <typename file_t>
 CHAR* Seq::seq_readin(file_t fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd)
 {
@@ -916,6 +922,7 @@ CHAR* Seq::seq_readin(file_t fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd)
 
 	if (sscanf(ps, "%d", nbr + mem) > 0)	nbr[mem]--;
 	else					nbr[mem] = 0;
+	nbr[mem] -= pcr->left;
 	GAPS*	gwk = gg;
 	bool	readspb = alprm2.spb > 0 && inex.molc != GENOME;
 	RANGE*&	cr = exons;
@@ -961,29 +968,28 @@ CHAR* Seq::seq_readin(file_t fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd)
 			pcr++;
 		    }
 		    ++total;
-		    if (flag == 1) {
-			push(c, ns, many);
-			if (bcr && bcr < cr + CdsNo) {
-			    if (IsGap(c))	unps += step;
-			    else		nres += step;
-			    if ((step == 3 && cds < nres + 2) || cds == nres) {
-				bcr->left = eij + unps;
-				++bcr;
-				if (gg) {
-				    if (rev) {
-					while (gaps_intr(gwk) && gwk->gps > bcr->left)
-					    cds += (gwk++)->gln;
-				    } else {
-					while (gaps_intr(gwk) && gwk->gps < bcr->right)
-					    cds += (gwk++)->gln;
-				    }
+		    if (IsntGap(c)) ++lens[mem];
+		    if (flag == 1) push(c, ns, many);
+		    else if (flag == -1 && IsntGap(c)) ++nbr[mem];
+		    if (bcr && bcr < cr + CdsNo) {
+			if (IsGap(c))	unps += step;
+			else		nres += step;
+			if ((step == 3 && cds < nres + 2) || cds == nres) {
+			    bcr->left = eij + unps;
+			    ++bcr;
+			    if (gg) {
+				if (rev) {
+				    while (gaps_intr(gwk) && gwk->gps > bcr->left)
+					cds += (gwk++)->gln;
+				} else {
+				    while (gaps_intr(gwk) && gwk->gps < bcr->right)
+					cds += (gwk++)->gln;
 				}
-				eij += bcr->right - bcr->left;
-				cds += bcr->right - bcr->left;
 			    }
-			} else if (IsGap(c))	unps++;
-		    } else if (flag  > 0 && IsntGap(c))
-			nbr[mem]++;
+			    eij += bcr->right - bcr->left;
+			    cds += bcr->right - bcr->left;
+			}
+		    } else if (IsGap(c))	unps++;
 		}
 	    }
 	}

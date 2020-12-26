@@ -30,7 +30,6 @@
 
 #define	CigarM	0
 
-static	const	int	NCAND = 4;
 static	const	int	Newd = 8;
 static	const	int	expected_max_overlap = 1024;
 static	const	int	expected_overlap_ext = 16;
@@ -46,6 +45,7 @@ const	Seq*	b;
 const 	PwdB*	pwd;
 	Mfile*	mfd;
 	Vmf*	vmf;
+	SpJunc*	spjcs;
 const	INT	lowestlvl;
 const	int	term;
 const	VTYPE	slmt;
@@ -55,7 +55,7 @@ const	int	Nod;
 	VTYPE	backward[expected_max_overlap];
 public:
 	Aln2s1(const Seq** _seqs, const PwdB* _pwd);
-	~Aln2s1() {delete mfd;}
+	~Aln2s1() {delete mfd; delete spjcs;}
 	void	reset(const Seq** sqs) {
 	    delete mfd; mfd = 0;
 	    a = sqs[0];
@@ -110,7 +110,9 @@ Aln2s1::Aln2s1(const Seq* _seqs[], const PwdB* _pwd) :
 	mfd(0), vmf(0), lowestlvl(b->wllvl),
 	term((int) ((pwd->Vthr + pwd->BasicGOP) / pwd->BasicGEP)),
 	slmt(pwd->Vthr / 2), island(false), Nod(2 * pwd->Noll - 1)
-{}
+{
+	spjcs = new SpJunc(b, pwd);
+}
 
 void Aln2s1::initS_ng(RVP* hh[], const WINDOW& wdw, CHAR* hdir, const RANGE* cutrng)
 {
@@ -314,9 +316,8 @@ HorizonS:
 		    vclear(maxphl, Nod);
 		    for (int l = 0; l <= ncand; ++l) {
 			RVPDJ*	phl = hl + nx[l];
-			x = phl->val + sigJ +
-			    pwd->IntPen->Penalty(n - phl->jnc) +
-			    b->exin->sig53(phl->jnc, n, IE53);
+			if (n - phl->jnc < IntronPrm.llmt) continue;
+			x = phl->val + sigJ + spjcs->spjscr(phl->jnc, n);
 			from = hf[phl->dir];
 			if (x >= from->val) {
 			    from->val = x;
@@ -439,6 +440,7 @@ const	Seq*	b = seqs[1];
 const	Exinon*	exin = b->exin;
 const	SKL*	wsk = gsi->skl;
 	int	num = (wsk++)->n;
+	SpJunc*	spjcs = new SpJunc(b, pwd);
 	VTYPE	h = 0;
 	VTYPE	ha = 0;
 	VTYPE	hb = 0;
@@ -594,7 +596,7 @@ const	CHAR*	bs = b->at(n);
 		if (algmode.lsg && i > IntronPrm.minl) {
 		    sig5 = exin->sig53(n, n3, IE5);
 		    sig3 = exin->sig53(n, n3, IE3);
-		    xi = exin->sig53(n, n3, IE5P3) + pwd->IntPen->Penalty(i);
+		    xi = sig5 + spjcs->spjscr(n, n3);
 		    if (usespb) xi += api.match_score(m);
 		} else	xi = NEVSEL;
 		if (xi > pwd->GapPenalty(i) && xi > rbuf.iscr) {
@@ -670,6 +672,7 @@ const	CHAR*	bs = b->at(n);
 	    }
 	}
 	if (vlgar) vlgar->flush();
+	delete spjcs;
 	fst->val += pwd->BasicGOP * fst->gap + pwd->BasicGEP * fst->unp;;
 	return (h);
 }
@@ -867,9 +870,9 @@ HorizonF:
 		    vclear(maxphl, Nod);
 		    for (int l = 0; l <= ncand; ++l) {
 			RVDWUJ*	phl = hl + nx[l];
+			if (n - phl->jnc < IntronPrm.llmt) continue;
 			from = hf[phl->dir];
-			x = phl->val + sigJ + b->exin->sig53(phl->jnc, n, IE53) +
-			    pwd->IntPen->Penalty(n - phl->jnc);
+			x = phl->val + sigJ + spjcs->spjscr(phl->jnc, n);
 			if (x > from->val) {
 			    from->val = x;
 			    maxphl[phl->dir] = phl;
@@ -987,7 +990,7 @@ HorizonF:
 	    mx = hhb[0] + (r = mx->ulk);
 	}
 	cpos[c++] = r + mm;
-	cpos[c] = end_of_ulk;
+	cpos[c] = end_of_ulk + k;
 	wdwf.up = mx->upr;
 	wdwf.lw = mx->lwr;
 	wdwf.width = wdwf.up - wdwf.lw + 3;
@@ -1141,9 +1144,9 @@ HorizonF:
 		    vclear(maxphl, Nod);
 		    for (int l = 0; l <= ncand; ++l) {
 			RVDJ*	phl = hl + nx[l];
+			if (n - phl->jnc < IntronPrm.llmt) continue;
 			from = hf[phl->dir];
-			x = phl->val + b->exin->sig53(phl->jnc, n, IE53) +
-			    pwd->IntPen->Penalty(n - phl->jnc);
+			x = phl->val + spjcs->spjscr(phl->jnc, n);
 			if (x > *from) {
 			    *from = x;
 			    maxphl[phl->dir] = phl;
@@ -1702,8 +1705,8 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 			for (int l = 0; l < INTR; ++l) {
 			    RVDWJC*	phl = hl[k] + pnl[l];
 			    if (!phl->dir) break;
-			    x = sigJ + phl->val + pwd->IntPen->Penalty(n - phl->jnc)
-				+ b->exin->sig53(phl->jnc, n, IE53);
+			    if (n - phl->jnc < IntronPrm.llmt) continue;
+			    x = sigJ + phl->val + spjcs->spjscr(phl->jnc, n);
 			    if (x > from->val) {
 				y = x;
 				maxphl = phl;
@@ -1903,7 +1906,7 @@ VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)  /* recursive */
 	VTYPE	scr = hirschbergS_ng(cpos, wdw, wdwl, wdwr);
 	SKL	wskl = {cpos[0], 0};
 	int	c = 1;
-	for ( ; cpos[c] != end_of_ulk; ++c) {
+	for ( ; cpos[c] < end_of_ulk; ++c) {
 	    wskl.n = cpos[c];
 	    mfd->write((UPTR) &wskl);
 	}
@@ -1913,7 +1916,7 @@ VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)  /* recursive */
 	if (r < wdwl.lw) b->left = a->left + wdwl.lw;
 	if (r > wdwl.lw) a->left = b->left - wdwl.lw;
 	a->right = cpos[0];
-	b->right = cpos[--c];
+	b->right = cpos[c - 1];
 	lspS_ng(wdwl);
 	rest_range(seqs, rng, 2);
 	a->inex.exgr = aexg;
@@ -1927,6 +1930,11 @@ VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)  /* recursive */
 	if (r > wdwr.up) b->right = a->right + wdwr.up;
 	a->left = cpos[0];
 	b->left = cpos[1];
+	r = b->left - a->left;
+	if (r > wdwr.lw && cpos[c] > end_of_ulk) {
+	    mfd->write((UPTR) &wskl);
+	    a->left += (r - wdwr.lw);
+	}
 	lspS_ng(wdwr);
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = aexg;

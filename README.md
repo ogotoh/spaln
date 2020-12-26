@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.1
-#### Last updated: 2020-10-09
+#### Present Version 2.4.2
+#### Last updated: 2020-12-25
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -307,7 +307,11 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+1. Minor improvements in the DP-based spliced alignment engines.
+2. A few bugs related to the unidirectional Hirschberg algorithm have been fixed.
+3. A bug in the Boyer-Moore algorithm has been fixed. This is relevant to protein queries with -yX0 option, and when the search goes beyond a block boundary.
 
+## Changes in version 2.4.1
 1. The algorithm for delimiting a genic region has been modified to find remote terminal coding exon(s) separated by long (up to 99.6% quantile) intron(s) from the main body of the gene.
 2. The -yx0 option now tries to search for missing internal micro exons and terminal very short coding exons.
 3. Selenocysteine (denoted by U) is now regarded as the 21th amino acid which favorably matches an in-frame TGA termination codon (U in the Tron code) upon DNA vs amino acid sequence alignment.
@@ -362,11 +366,11 @@ Benchmarking spliced alignment programs including  Spaln2, an extended version o
 <a name="Ref4">[[4]](https://doi.org/10.1093/bioinformatics/16.3.190) Gotoh, O.
 Homology-based gene structure prediction: simplified matching algorithm using a translated codon (tron) and improved accuracy by allowing for long gaps. *Bioinformatics* **16** (3) 190-202 (2000)
 
-<a name="Ref4">[[5]](https://academic.oup.com/bioinformatics/article/22/10/1211/236993) Nagasaki, H., Arita, M., Nishizawa, T., Suwa, M., Gotoh, O.
+<a name="Ref5">[[5]](https://academic.oup.com/bioinformatics/article/22/10/1211/236993) Nagasaki, H., Arita, M., Nishizawa, T., Suwa, M., Gotoh, O.
 Automated classification of alternative splicing and transcriptional initiation and construction of a visual database of the classified patterns. *Bioinformatics* **22** (10) 1211-1216 (2006).
 
-[6] Gotoh, O.
-Cooperation of Spaln and Prrn5 for construction of gene-structure-aware multiple sequence alignment. *Methods in Molecular Biology*, in press.
+<a name="Ref6">[[6]](https://doi.org/10.1007/978-1-0716-1036-7_5) Gotoh, O.
+Cooperation of Spaln and Prrn5 for construction of gene-structure-aware multiple sequence alignment. In: Katoh K. (eds) Multiple Sequence Alignment. *Methods in Molecular Biology* **2231**, Humana, New York, NY. (2021).
 
 * * *
 

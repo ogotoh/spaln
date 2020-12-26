@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.1";
-static	const	int	date = 201009;
+static	const	char*	version = "2.4.2";
+static	const	int	date = 201222;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -267,8 +267,8 @@ const	char**	argbs = argv;
 		    if ((val = getarg(argc, argv, true)))
 			algmode.alg = atoi(val);
 		    else
-			algmode.alg ^= 1;
-		     break;
+			algmode.alg |= 1;
+		    break;
 		case 'f':
 		    if ((val = getarg(argc, argv))) catalog = val;
 		    break;
@@ -298,9 +298,9 @@ const	char**	argbs = argv;
 			    input_form = IM_ALTR; break;
 			case 'p': case 'P': case '3': 
 			    input_form = IM_PARA; break;
-			case ':': catalog = val + 1; break;
 			default:  input_form = IM_SNGL; break;
 		    }
+		    if ((val = strchr(val, ':'))) catalog = val + 1;
 		    break;
 		case 'I':
 		    if ((val = getarg(argc, argv, true)))
@@ -723,7 +723,7 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	}
 	Gsinfo	GsI[2];
 	dir = spalign2(sqs, pwd, GsI, ori);
-	if (dir != ERROR) {
+	if (dir != ERROR && (!algmode.thr || GsI->fstat.val >= pwd->Vthr)) {
 	    if (algmode.nsa == BED_FORM)
 		GsI->rscr = selfAlnScr(a, pwd->simmtx);
 #if M_THREAD
@@ -813,17 +813,6 @@ static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q)
 	    delete b->exin; b->exin = 0;	// suppress Boundary output
 	    if (dir < 0 || !gsinf->skl ||
 		(algmode.thr && gsinf->scr < bks->pwd->Vthr)) {
-		int	nid = 0, jln = 0;
-		for (int j = 0; j < b->CdsNo; ++j) {
-		    nid += b->jxt[j].nid;
-		    jln += b->jxt[j].jlen;
-		}
-		if (q) pthread_mutex_lock(&q->mutex);
-		prompt("< %6.1f %6.1f %s\t(%d %d) %s %d %d %d %d\n",
-		    (float) gsinf->scr, (float) b->jscr, b->sqname(), 
-		    b->SiteNo(b->left), b->SiteNo(b->right), 
-		    a->sqname(), a->len, jln, nid, b->CdsNo);
-		if (q) pthread_mutex_unlock(&q->mutex);
 		gsinf->scr = NEVSEL;
 		continue;
 	    }
