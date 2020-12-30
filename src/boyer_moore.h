@@ -42,8 +42,8 @@ public:
 	    if (size()) return (false);
 	    n -= ll;
 	    return ((step > 0)?
-		min3(idx[0], idx[1] - 1, idx[2] - 2) >= n:
-		max3(idx[0], idx[1] + 1, idx[2] + 2) <= n);
+		min3(idx[0], idx[1], idx[2]) >= n:
+		max3(idx[0], idx[1], idx[2]) <= n);
 	}
 	bool	finished() {
 	    return ((step > 0)?

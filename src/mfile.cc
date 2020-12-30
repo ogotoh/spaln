@@ -48,8 +48,8 @@ UPTR Mfile::flush()
 	    tmp = new char[recno * wwd];
 	    memcpy(tmp, ptr, recno * wwd);
 	}
-	delete[] ptr;
-	ptr = 0;
+//	delete[] ptr;
+//	ptr = 0;
 	return ((UPTR) tmp);
 }
 
@@ -69,6 +69,15 @@ void Mfile::write(const UPTR pi)
 	memcpy(cur, pi, wwd);
 	cur += wwd;
 	++recno;
+}
+
+void Mfile::reset(long n)
+{
+	if (!ptr || size_t(labs(n)) > recno)
+	    fatal("Mfile reset %ld > %ld error !\n", n, recno);
+	if (n < 0) recno += n;
+	else	recno = n;
+	cur = ptr + wwd * recno;
 }
 
 Mfile& Mfile::operator=(const Mfile& src)

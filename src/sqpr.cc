@@ -2097,7 +2097,7 @@ void PrintAln::prnt_aln(const int* lft, const int* right)
 		case LABEL_Name:
 		    fprintf(fd, "%-24s", (*sd->sname)[i]); break;
 		case LABEL_Numb:
-		    fprintf(fd, "%8d ", sd->SiteNo(*lft) % 100000000);
+		    fprintf(fd, "%8d ", sd->SiteNo(*lft, i) % 100000000);
 		    ++lft; break;
 		case LABEL_None:
 	    	default:	break;
@@ -2111,7 +2111,7 @@ void PrintAln::prnt_aln(const int* lft, const int* right)
 	    switch (rLblMode) {
 		case LABEL_None: putc('\n', fd); break;
 		case LABEL_Numb:
-		    fprintf(fd, "%c%5d\n", _LABL, sd->SiteNo(*right - 1)); 
+		    fprintf(fd, "%c%5d\n", _LABL, sd->SiteNo(*right - 1, i) % 100000000); 
 		    ++right; break;
 		case LABEL_Name:
 	    	default:

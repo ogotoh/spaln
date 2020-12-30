@@ -33,8 +33,9 @@ public:
 	Mfile(const Mfile& src);
 	~Mfile() {delete[] ptr;}
 	void	write(const UPTR pi);
-	void	undo(int n = 1) {cur -= n * wwd; recno -= n;}
+	void	undo() {cur -= wwd; --recno;}
 	UPTR	flush();
+	void	reset(long n = 0);
 	size_t	size() {return recno;}
 	Mfile& operator=(const Mfile& src);
 };

@@ -483,6 +483,11 @@ class SrchBlk {
 	Bhit2*	bh2;	// thread specific
 	Bhit4*	bh4;
 	SrchBlk*	master;
+	Wlp*	wlp;
+	int	eofb(int c) {
+	    delete wlp; wlp = 0;
+	    return (c);
+	}
 	void	initialize(Seq** sqs, const char* fn = "");
 	void	init2(const Seq* sd);
 	void	init4(const Seq* sd);

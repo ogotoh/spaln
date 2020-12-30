@@ -239,18 +239,25 @@ const	char*	vl = getarg(argc, argv, num, 3);
 
 static	const	int	byte[5] = {1, 3, 0, 1, 3};
 
-Wlp::Wlp(const Seq* seqs[], const PwdB* _pwd, INT level)
-	: a(seqs[0]), b(seqs[1]), pwd(_pwd), bpp(0)
+Wlp::Wlp(const Seq* seqs[], const PwdB* _pwd, INT level, bool mk)
+	: a(seqs[0]), b(seqs[1]), pwd(_pwd), bbt(byte[pwd->DvsP]), 
+	  jj(a->right - a->left), jj3(bbt * jj), mfd(0), 
+	  wlprm(setwlprm(level)), bpp(0), 
+	  awspan(wlprm->width - 1), bwspan(3 * wlprm->width - 1),
+	  header(0), position(0)
 {
-	bbt = byte[pwd->DvsP];
-	wlprm = setwlprm(level);
-	awspan = wlprm->width - 1;
-	bwspan = 3 * wlprm->width - 1;
+	if (jj <= (int) wlprm->width) return;
 	mfd = new Mfile(sizeof(JUXT));
+	if (!mk) return;
+	bpp = new Bitpat_wq(wlprm->elem, 1, false, 
+	    bitmask(wlprm->width), wlprm->bitpat);
+	position = foldseq();
+	header = lookup(position, jj);
 }
 
 INT* Wlp::lookup(INT* s, int kk)
 {
+	if (!s) return (0);
 	INT	m = wlprm->mask;
 	INT*	t = new INT[m];
 
@@ -269,7 +276,7 @@ INT* Wlp::lookup(INT* s, int kk)
 
 INT* Wlp::foldseq()
 {
-	INT	n = a->right - a->left - awspan;
+	INT	n = jj - awspan;
 	if (n <= 0) return (0);
 	INT*	kmer = new INT[n + 1];
 const	CHAR*	ps = a->at(a->left);
@@ -433,7 +440,7 @@ void Wlp::enter(JXTD* jxtd, int r, bool on_k)
 	mfd->write(&jbuf);
 }
 
-void Wlp::dmsnno(INT jj, INT* m, INT* t)
+void Wlp::dmsnno()
 {
 	int	intvl = -wlprm->width - 1;
 	int	tplwt = wlprm->tpl * wlprm->gain;
@@ -453,8 +460,8 @@ const	CHAR*	ts = b->at(b->left + awspan);
 	    INT	c = wlprm->ConvTab[*bs++];
 	    if (bpp->good(c)) {
 		INT	w = bpp->word(c);
-		INT	j = (bpp->flawless())? t[w]: 0;
-		for ( ; j; j = m[j]) {
+		INT	j = (bpp->flawless())? header[w]: 0;
+		for ( ; j; j = position[j]) {
 		    int	r = k - --j;
 		    int	q = (r + jj) % jj;
 		    JXTD*	wxtd = jxtd + q;
@@ -473,7 +480,7 @@ const	CHAR*	ts = b->at(b->left + awspan);
 		    } else if (j - wxtd->lastj == 1)
 			wxtd->score += wlprm->gain1;
 		    else	wxtd->score += wlprm->gain;
-		    if (!m[j]) {				// end bonus
+		    if (!position[j]) {				// end bonus
 			r = j + wlprm->width + wlprm->width - jj;
 			if (r > 0) wxtd->score += wlprm->gain * r;
 		    }
@@ -498,7 +505,7 @@ const	CHAR*	ts = b->at(b->left + awspan);
 	delete[] jxtd;
 }
 
-void Wlp::dmsnno31(INT jj3, INT* m, INT* t)
+void Wlp::dmsnno31()
 {
 	INT	jj = jj3 / 3;
 	int	intvl = -wlprm->width - 1;
@@ -522,8 +529,8 @@ const	CHAR*	ts = b->at(b->left + bwspan) - 1;
 	    INT c = wlprm->ConvTab[*bs++];
 	    if (bpp->good(c)) {
 		INT	w = bpp->word(c, p);
-		INT	j = bpp->flawless(p)? t[w]: 0;
-		for ( ; j; j = m[j]) {
+		INT	j = bpp->flawless(p)? header[w]: 0;
+		for ( ; j; j = position[j]) {
 		    int	r = k - --j * 3;
 		    int	q = (r + jj3) % jj3;
 		    JXTD*	wxtd = jxtd + q;
@@ -543,7 +550,7 @@ const	CHAR*	ts = b->at(b->left + bwspan) - 1;
 		    } else if (j - wxtd->lastj == 1)
 			wxtd->score += wlprm->gain1;
 		    else	wxtd->score += wlprm->gain;
-		    if (!m[j]) {				/* end bonus */
+		    if (!position[j]) {				/* end bonus */
 			r = j + wlprm->width + wlprm->width - jj;
 			if (r > 0) wxtd->score += wlprm->gain * r;
 		    }
@@ -568,7 +575,7 @@ const	CHAR*	ts = b->at(b->left + bwspan) - 1;
 	delete[] jxtd;
 }
 
-void Wlp::dmsnno(INT jj, LookupTabs* lut, INT lb, INT rb)
+void Wlp::dmsnno(LookupTabs* lut, INT lb, INT rb)
 {
 	int	intvl = -(wlprm->width + 1);
 	int	tplwt = wlprm->tpl * wlprm->gain;
@@ -903,32 +910,24 @@ nextchain:
 
 JUXT* Wlp::run_dmsnno(int& njxt, LookupTabs* lut, INT lb, INT rb)
 {
-	if (a->right - a->left <= (int) wlprm->width || 
-	    b->right - b->left <= (int) (bbt * wlprm->width)) {
+	if (!mfd || b->right - b->left <= (int) (bbt * wlprm->width)) {
 	    njxt = 0;
 	    return (0);
 	}
-	int	jj = a->right - a->left;
-	int	jj3 = bbt * jj;
 	if (rb > lb) {
 	    bpp = new Bitpat_wq(wlprm->elem, 1, false, 
 		bitmask(wlprm->width), wlprm->bitpat);
-	    dmsnno(jj, lut, lb, rb);
+	    dmsnno(lut, lb, rb);
 	} else {
-	    bpp = new Bitpat_wq(wlprm->elem, 1, false, 
-		bitmask(wlprm->width), wlprm->bitpat);
-	    INT*	bo = foldseq();
-	    INT*	t = lookup(bo, jj);
 	    if (bbt == 1) {
 		bpp->clear();
-		dmsnno(jj, bo, t);
+		dmsnno();
 	    } else {
 		delete bpp;
 		bpp = new Bitpat_wq(wlprm->elem, 3, false,
 		    bitmask(wlprm->width), wlprm->bitpat);
-		dmsnno31(jj3, bo, t);
+		dmsnno31();
 	    }
-	    delete[] t; delete[] bo;
 	}
 	JUXT*	jxt = 0;
 	njxt = mfd->size();
@@ -937,7 +936,6 @@ JUXT* Wlp::run_dmsnno(int& njxt, LookupTabs* lut, INT lb, INT rb)
 	    mfd->write(&jbuf);
 	    jxt = (JUXT*) mfd->flush();
 	}
-	delete mfd; mfd = 0;
 	if (lut && a->inex.sens) revcoord(jxt, njxt);
 	return (jxt);
 }
@@ -968,18 +966,26 @@ WLUNIT* Wlp::willip(JUXT** ptop, int& nwlu, JUXT* jxt)
 }
 
 Wilip::Wilip(const Seq* seqs[], const PwdB* pwd, INT level)
-	: top(0), nwlu(0), wlu(0)
+	: top(0), nwlu(0), wlu(0), int_wlp(true)
 {
-	Wlp	wln(seqs, pwd, level);
+	Wlp	wln(seqs, pwd, level, true);
 	JUXT*	jxt = wln.run_dmsnno(nwlu);
 	if (!jxt) return;
 	wlu = wln.willip(&top, nwlu, jxt);
 }
 
-Wilip::Wilip(Seq* seqs[], const PwdB* pwd, LookupTabs* lut, INT lb, INT rb)
-	: top(0), nwlu(0), wlu(0)
+Wilip::Wilip(const Seq* seqs[], Wlp* wln)
+	: top(0), nwlu(0), wlu(0), int_wlp(false)
 {
-	Wlp	wln((const Seq**) seqs, pwd, MaxWlpLevel);
+	JUXT*	jxt = wln->run_dmsnno(nwlu);
+	if (!jxt) return;
+	wlu = wln->willip(&top, nwlu, jxt);
+}
+
+Wilip::Wilip(Seq* seqs[], const PwdB* pwd, LookupTabs* lut, INT lb, INT rb)
+	: top(0), nwlu(0), wlu(0), int_wlp(true)
+{
+	Wlp	wln((const Seq**) seqs, pwd, MaxWlpLevel, false);
 	JUXT*	jxt = wln.run_dmsnno(nwlu, lut, lb, rb);
 	if (!jxt) return;
 	if (lut && seqs[0]->inex.sens) {

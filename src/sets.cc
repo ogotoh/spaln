@@ -110,4 +110,3 @@ Subset::~Subset()
 	delete[] group;
 	delete[] pool;
 }
-

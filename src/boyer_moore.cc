@@ -21,6 +21,22 @@
 
 #include "boyer_moore.h"
 
+static const char kpj[3][3] =
+	{{0, 1, 2}, {2, 0, 1}, {1, 2, 0}};
+
+static const char kmj[3][3] =
+	{{0, 2, 1}, {1, 0, 2}, {2, 1, 0}};
+
+inline int i_plus_k(int i, int k)
+{
+	return (i + kpj[i % 3][k]);
+}
+
+inline int i_minus_k(int i, int k)
+{
+	return (i - kmj[i % 3][k]);
+}
+
 void BoyerMoore::bmdelta1()
 {
 	vset(dlt1, plen, nalph);
@@ -101,8 +117,8 @@ int BoyerMoore::nexthit3(int l, int r)
 	if (r >= 0) r = max(r - ll, 0);
 	for (int k = 0; k < 3; ++k) {
 	    if (step > 0) {
-		int i = l >= 0? l + k: idx[k];
-		idx[k] = r = (r >= 0? r: tlen) + k;	// centinel
+		int i = l >= 0? i_plus_k(l, k): idx[k];
+		idx[k] = i_plus_k(r >= 0? r: tlen, k);	// centinel
 		for (i += step * pl_1; i < r; ) {
 		    int	j = pl_1;
 		    while (j >= 0 && (this->*this->eqsrc)(text[i], patt[j])) {
@@ -116,8 +132,8 @@ int BoyerMoore::nexthit3(int l, int r)
 		    i += step * max(dlt1[text[i]], dlt2[j]);
 		}
 	    } else {
-		int i = r >= 0? r - k: idx[k];
-		idx[k] = l = (l >= 0? l: 0) - k;		// centinel
+		int i = r >= 0? i_minus_k(r, k): idx[k];
+		idx[k] = i_minus_k(l >= 0? l: 0, k);	// centinel
 		for (i += step * pl_1; i >= l; ) {
 		    int	j = 0;
 		    while (j < plen && (this->*this->eqsrc)(text[i], patt[j])) {
@@ -180,15 +196,18 @@ BoyerMoore::BoyerMoore(const Seq* sd, const Seq* pd, int s) :
 	    vreverse(patt, plen);
 	    vreverse(dlt2, plen);
 	}
-	if (nfound > 1) {
-	    found = new int[nfound + 1];
-	    pq = new PrQueue<int>(found, nfound, 0, step < 0, true);
+	if (nfound == 1) {
+	    idx[0] = step > 0? 0: tlen;
+	    idx[1] = idx[2] = step > 0? tlen: 0;
+	    return;
 	}
-	idx[0] = step > 0? 0: tlen;
+	found = new int[nfound + 1];
+	pq = new PrQueue<int>(found, nfound, 0, step < 0, true);
 	if (step > 0) 
-	     for (int k = 1; k < 3; ++k) idx[k] = nfound == 3? k: tlen;
+	     for (int k = 0; k < 3; ++k) idx[k] = k;
 	else 
-	     for (int k = 1; k < 3; ++k) idx[k] = nfound == 3? tlen - k: 0;
+	     for (int k = 0; k < 3; ++k)
+		idx[k] = i_minus_k(tlen, k);
 }
 
 #if MAIN

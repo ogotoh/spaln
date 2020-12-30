@@ -2085,7 +2085,7 @@ bool SrchBlk::grngoverlap(GeneRng* a, GeneRng* b)
 
 SrchBlk::SrchBlk(Seq* sqs[], const char* fn, bool gdb) :
 	gnmdb(gdb), ConvTab(0), pbwc(0), pb2c(0),
-	SegLen(0), bh2(0), bh4(0), master(0), 
+	SegLen(0), bh2(0), bh4(0), master(0), wlp(0), 
 	pwd(0), dbf(dbs_dt[0]), rdbt(0), bpp(0), lut(0)
 {
 	if (is_gz(fn)) {
@@ -2358,9 +2358,16 @@ retry:
 	cursd->inex.intr = intr;
 	if (query->isprotein()) cursd->nuc2tron();
 	swap(*curgr, seqs[1]);		// temporally save
-	Wilip*	wl = (lut && wrkbp->rb < (wrkbp->lb + MaxBlock))?
-	    new Wilip(seqs, pwd, lut, wrkbp->lb - 1, wrkbp->rb):
-	    new Wilip((const Seq**) seqs, pwd, algmode.lvl);
+	Wilip*	wl = 0;
+	if (lut) {
+	    wl = (wrkbp->rb < (wrkbp->lb + MaxBlock))?
+		new Wilip(seqs, pwd, lut, wrkbp->lb - 1, wrkbp->rb):
+		new Wilip((const Seq**) seqs, pwd, algmode.lvl);
+	} else {
+	    if (!wlp) wlp = new Wlp((const Seq**) seqs, pwd, algmode.lvl);
+	    else	wlp->reset(seqs[1]);
+	    wl = new Wilip((const Seq**) seqs, wlp);
+	}
 	BPAIR	orgbp = *wrkbp;
 	swap(*curgr, seqs[1]);		// restore
 	WLUNIT*	wlu = wl->begin();
@@ -2963,6 +2970,7 @@ BLKTYPE	Qwords::next_mrglist()
 int SrchBlk::findblock(Seq** sqs)
 {
 	if (query->right - query->left - (wcp.Nshift + bpp[0]->width) < 1) return (ERROR);
+	wlp = 0;
 	init4(query);
 	int	nohit = 0;
 	int	sigpr = 0;
@@ -3055,8 +3063,8 @@ const		    CHAR*	ss = *ws;
 	  if ((bh4->sign[0] && bh4->sign[1]) || (bh4->sign[2] && bh4->sign[3]))
 		++sigpr;
 	  if ((++nmmc % maxmmc == 0 && totalsign) || (sigpr > MinSigpr)) {
-		if  ((c = TestOutput(0))) return (c);		// found
-		else if (++notry > MinSigpr) return (0);
+		if  ((c = TestOutput(0))) return (eofb(c));		// found
+		else if (++notry > MinSigpr) return (eofb(0));
 	  }
 	}	// end of mmc loop
 // significant pair was not found
@@ -3071,7 +3079,7 @@ const		    CHAR*	ss = *ws;
 	    }
 	}
 	if (c != ERROR) c = TestOutput(1);
-	return (c);
+	return (eofb(c));
 }
 
 INT SrchBlk::bestref(Seq* sqs[], KVpair<INT, int>* sh, int n)

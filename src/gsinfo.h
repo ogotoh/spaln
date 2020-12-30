@@ -129,9 +129,24 @@ readlst:
 	prompt("Insufficient SP boundary list: %d %d\n", i, lstnum);
 }
 
+class Cip_score {
+	Dhash<int, VTYPE>*	cip_hash;
+public:
+	Cip_score(const Seq* sd);
+	~Cip_score() {
+	    delete cip_hash;
+	}
+	VTYPE	cip_score(int c) const {
+	    if (!cip_hash) return (0);
+	    KVpair<int, VTYPE>* kv = cip_hash->find(c);
+	    return (kv? kv->val: 0);
+	}
+};
+
 class PfqItr {
 friend	struct	SigII;
 friend	struct	Iiinfo;
+friend	class	Cip_score;
 private:
 	int	pfqnum;
 	int	lstnum;
@@ -173,35 +188,35 @@ public:
 	    }
 	    return (*this);
 	}
-	bool operator==(int n) {	// exact match
+	bool operator==(int n) const {	// exact match
 	    return (wfq && (n == wfq->pos));
 	}
-	bool operator<(int n) {
+	bool operator<(int n) const {
 	    return (wfq && (wfq->pos < n * step));
 	}
-	bool operator<=(int n) {
+	bool operator<=(int n) const {
 	    return (wfq && (wfq->pos < ++n * step));
 	}
-	bool operator&&(int m) {	// codon match
+	bool operator&&(int m) const {	// codon match
 	    if (SpbFact == 0 || !wfq) return (false);
 	    if (step == 1) return (wfq->pos == m);
 	    m *= step;
 	    return ((m <= wfq->pos) && (wfq->pos < m + step));
 	}
-	bool eq(int m) {		// codon +-1 match
+	bool eq(int m) const {		// codon +-1 match
 	    if (SpbFact == 0 || !wfq) return (false);
 	    if (step == 1) return (wfq->pos == m);
 	    m = step * m - 1;
 	    return ((m <= wfq->pos) && (wfq->pos < m + step));
 	}
-	bool lt(int m) {
+	bool lt(int m) const {
 	    return (wfq && (wfq->pos + 1 < m * step));
 	}
-	bool le(int m) {
+	bool le(int m) const {
 	    return (wfq && (wfq->pos + 1 < ++m * step));
 	}
-	int size() {return pfqnum;}
-	bool end() {return (wfq >= tfq);}
+	int size() const {return pfqnum;}
+	bool end() const {return (wfq >= tfq);}
 	PfqItr& reset(int n = 0) {
 	    wfq = pfq; wst = lst; n *= step;
 	    while (wfq < tfq && wfq->pos < n) {
@@ -218,7 +233,7 @@ public:
 	VTYPE match_score(int n) { return (n == wfq->pos? SpbFact * wfq->num: 0); }
 #endif
 	PfqItr(const Seq* sd, int n = 0);
-	VTYPE match_score(PfqItr& bpi, bool all_phase = true) {
+	VTYPE match_score(PfqItr& bpi, bool all_phase = true) const {
 	    if (step != 1) {
 		if ((wfq->pos - bpi.wfq->pos) % step) return (0);
 		if (!all_phase && wfq->pos % step) return (0);

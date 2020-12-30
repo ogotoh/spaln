@@ -165,6 +165,11 @@ template <typename X> inline X min4(X x, X y, X z, X w)
 	return (min(x, z));
 }
 
+template <int n> inline	int modN(int q)
+{
+	return ((q < 0)? q + n: q % n);
+}
+
 // key-value pair used by Dhash
 
 template <class key_t, class val_t>
@@ -185,6 +190,7 @@ public:
 	~Dhash() {delete[] hash;}
 	KVpair<key_t, val_t>*	begin() {return hash;}
 	KVpair<key_t, val_t>*	end()	{return hz;}
+	INT	size() const {return (size1);}
 	KVpair<key_t, val_t>*	map(key_t ky, bool record = true);
 	KVpair<key_t, val_t>*	find(key_t ky) {
 	    return map(ky, false);
@@ -199,6 +205,10 @@ public:
 	    if (sh->val == un_def) sh->val = 0;
 	    sh->val += vl;
 	    return (sh);
+	}
+	INT	pos(key_t ky) {
+	    KVpair<key_t, val_t>*	sh = map(ky);
+	    return (sh - hash);
 	}
 	int	count() const;
 	KVpair<key_t, val_t>*	press(int* n, val_t* sum = 0);
@@ -216,6 +226,9 @@ public:
 	    KVpair<key_t, val_t>* tmp = press(n);
 	    hash = 0;
 	    return (tmp);
+	}
+	KVpair<key_t, val_t>&	operator[](INT pos) {
+	    return (hash[pos]);
 	}
 	val_t	undef() {return (un_def);}
 };
@@ -331,6 +344,56 @@ public:
 	    return (val);
 	}
 	X	oldest() const {return queue[qp];}
+};
+
+// push-pull queue
+
+template <typename X>
+class Queue2 {
+	int	qsize;
+	int	qs;	// start
+	int	qe;	// end
+	X*	queue;
+public:
+	void	clear(X iv = 0) {
+	    qs = qe = 0;
+	    vset(queue, iv, qsize);
+	}
+	Queue2(int sz, X iv = 0) : qsize(sz) {
+	    queue = new X[sz];
+	    clear(iv);
+	}
+	Queue2(Queue2& q) {
+	    qsize = q.qsize;
+	    qs = q.qs;
+	    qe = q.qe;
+	    queue = new X[qsize];
+	    vcopy(queue, q.queue, qsize);
+	}
+	~Queue2() {delete[] queue;}
+	X	push(X val) {
+	    swap(val, queue[qe]);
+	    if (++qe == qsize) qe = 0;
+	    if (qe != qs) val = queue[qs];
+	    else if (++qs == qsize) qs = 0;
+	    return (val);
+	}
+	X	pull() {
+	    X	val = queue[qs];
+	    if (qs != qe && ++qs == qsize) qs = 0;
+	    return (val);
+	}
+	X	head() const {return (queue[qs]);}
+	X	tail() const {return (queue[qe]);}
+	X&	operator[](int i) {return (queue[i]);}
+	int	remain() const {
+	    int n = qe - qs;
+	    if (n < 0) n += qsize;
+	    return (n);
+	}
+	int	begin_i() const {return (qs);}
+	int	end_i() const {return (qe);}
+	int	next_i(int i) const {return ((++i == qsize)? 0: i);}
 };
 
 // priority queue simple version without heap

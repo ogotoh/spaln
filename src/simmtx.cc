@@ -42,10 +42,10 @@ const	char*	mdm_file[max_simmtxes] = {0, 0, 0};
 static	const	char*	Badpam = "Illegal pam = %d !\n";
 static	const	char*	strscale = "scale";
 
-//		   u,      v,   u0, u1, v0, tgapf, thr, sclase, maxsp, gamma, k1, ls, sh, mtx_no
-ALPRM	alprm = {FQUERY, FQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 0};
+//		   u,      v,   u0, u1, v0, tgapf, thr, sclase, maxsp, gamma, k1, ls, sh, ubh, mtx_no
+ALPRM	alprm = {FQUERY, FQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 2, 0};
 //		   x,   y,      z,   o, m, bti, spb, Z, sss, jneibr termk1
-ALPRM2	alprm2 = {30., FQUERY, FQUERY, 30., 8., 8., 20., 0., -1., 10, 45};
+ALPRM2	alprm2 = {30., FQUERY, FQUERY, 30., 9., 8., 20., 0., -1., 10, 45};
 //		scnd, hydr, hpmt, hpwing, no_angle
 ALPRM3	alprm3 = {0., 0., 0., 3, 0};
 
@@ -691,6 +691,7 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 		if (alprm2.sss >= 1.) alprm2.sss /= 100.;
 		break;
 	    case 'T': IntronPrm.tlmt = atoi(vl); break;	// 
+	    case 'U': alprm.ubh = atoi(vl); break;	// min vects for uni-dir Hirschberg
 	    case 'V': alprm.maxsp = atof(vl); break;	// max traceback volume
 	    case 'W': alprm2.w = atof(vl); break;	// match factor in very short alignment
 	    case 'X': algmode.crs = vl? atoi(vl): 2;

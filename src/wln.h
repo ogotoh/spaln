@@ -163,15 +163,19 @@ struct WLUNIT {
 	VTYPE	scr;
 };
 
+class Wlp;
+
 class Wilip {
 	JUXT*	top;
 	int	nwlu;
 	WLUNIT*	wlu;
+	bool	int_wlp;
 public:
 	Wilip(const Seq* seqs[], const PwdB* pwd, INT level);
+	Wilip(const Seq* seqs[], Wlp* wln);
 	Wilip(Seq* seqs[], const PwdB* pwd, LookupTabs* lut, INT lb, INT rb);
 	Wilip(mSeq* seqs[], const PwdB* pwd, INT level);
-	~Wilip() {delete[] top; delete[] wlu;}
+	~Wilip() {delete[] top; if (int_wlp) delete[] wlu;}
 	int	size() {return nwlu;}
 	WLUNIT*	begin() {return wlu;}
 	void	shift_y(int bias, int rbias);
@@ -240,31 +244,39 @@ struct JXTD {
 class Wlp {
 const 	Seq*	a;
 const 	Seq*	b;
-	int	bbt;
-	Mfile*	mfd;
 const 	PwdB*	pwd;
-	WLPRM*	wlprm;
+const	int	bbt;
+const	int	jj;
+const	int	jj3;
+	Mfile*	mfd;
+const	WLPRM*	wlprm;
 	Bitpat_wq*	bpp;
-	int	awspan;	
-	int	bwspan;
+const	int	awspan;	
+const	int	bwspan;
+	INT*	header;
+	INT*	position;
 public:
-	Wlp() : a(0), b(0), bbt(0), mfd(0), pwd(0), wlprm(0), bpp(0) {}
-	Wlp(const Seq* seqs[], const PwdB* _pwd, INT level);
-	~Wlp() {delete bpp; delete mfd;}
+	Wlp() : a(0), b(0), pwd(0), bbt(0), jj(0), jj3(0), mfd(0), 
+		wlprm(0), bpp(0), awspan(0), bwspan(0), 
+		header(0), position(0) {}
+	Wlp(const Seq* seqs[], const PwdB* _pwd, INT level, bool mk = true);
+	~Wlp() {delete bpp; delete mfd; delete[] header; delete[] position;}
 	INT*	lookup(INT* s, int kk);
 	INT*	foldseq();
+	void	reset(const Seq* g) {b = g; if (mfd) mfd->reset();}
 	VTYPE	eval(JUXT* jxt);
 	JUXT*	reeval(JUXT* jxt, int& num);
 	void	enter(JXTD* jxtd, int r, bool on_k = false);
-	void	dmsnno(INT jj, INT* m, INT* t);
-	void	dmsnno31(INT jj3, INT* m, INT* t);
-	void	dmsnno(INT jj, LookupTabs* lut, INT lb, INT rb);
+	void	dmsnno();
+	void	dmsnno31();
+	void	dmsnno(LookupTabs* lut, INT lb, INT rb);
 	void	revcoord(JUXT* jxt, const int& n);
 	VTYPE	LinkHspScr(HSP* mcl, HSP* ncl);
 	HSP*	mkhsps(const JUXT* jxt, int& n);
 	WLUNIT* jxtcore(int& num, JUXT** ptop);
 	JUXT*	run_dmsnno(int& njxt, LookupTabs* lut = 0, INT lb = 0, INT rb = 0);
 	WLUNIT* willip(JUXT** ptop, int& nwlu, JUXT* jxt);
+friend	class	Wilip;
 };
 
 struct Wlprms {

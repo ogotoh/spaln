@@ -354,7 +354,7 @@ void Seq::refresh(const int& num, const int& length)
 {
 	if (vrtl) {
 	    sid = vrtl; vrtl = 0;
-	    seq_ = end_ = 0; cmps = 0; nbr = 0;
+	    seq_ = end_ = 0; cmps = 0; lens = 0; nbr = 0;
 	    sname = 0; spath = 0; msaname = 0; descr = 0;
 #if USE_WEIGHT
 	    if (inex.vtwt)
@@ -369,6 +369,7 @@ void Seq::refresh(const int& num, const int& length)
 	    delete[] pairwt; pairwt = 0;
 #endif
 	    if (num != many) {
+		delete[] lens; lens = 0;
 		delete[] nbr; nbr = 0;
 	    }
 	    if (!num) {
@@ -388,6 +389,8 @@ void Seq::refresh(const int& num, const int& length)
 	inex = def_inex;
 	if (num) {
 	    seqalloc(num, length);
+	    if (!lens) lens = new int[num];
+	    vclear(lens, num);
 	    if (!nbr) nbr = new int[num];
 	    vclear(nbr, num);
 	    if (sname)	sname->reset(num);
@@ -513,8 +516,8 @@ void Seq::initialize()
 	seq_ = end_ = 0; area_ = 0;
 	anti_ = 0; len = left = right = base_ = 0;
 	CdsNo = tlen = wllvl = 0;
-	nbr = 0; code = 0; spath = 0; msaname = 0; sname = 0; descr = 0;
-	cmps = 0; jxt = 0; exons = 0; exin = 0; sigII = 0; 
+	lens = 0; nbr = 0; code = 0; spath = 0; msaname = 0; sname = 0; 
+	descr = 0; cmps = 0; jxt = 0; exons = 0; exin = 0; sigII = 0; 
 	inex = def_inex;
 	mnhash = 0;
 #if USE_WEIGHT
@@ -526,8 +529,10 @@ Seq::Seq(const int& num, const int& length)
 {
 	initialize();
 	if ((many = num)) {
-	    nbr = new int[many];
 	    byte = many = num;
+	    lens = new int[many];
+	    vclear(lens, many);
+	    nbr = new int[many];
 	    vclear(nbr, many);
 	    sname = new Strlist(num);
 	}
@@ -906,6 +911,7 @@ Seq* Seq::postseq(const CHAR* last)
 	if (many && len) {
 	    fillpad();
 	    test_gap_amb();
+	    if (many == 1 && !lens[0]) lens[0] = len;
 	} else {
 	    inex.dels = inex.ambs = 0;
 	}
@@ -968,6 +974,8 @@ void Seq::fillnbr(Seq* dest) const
 const	CHAR*	ss = at(0);
 const	CHAR*	tt = at(left);
 
+	if (!dest->lens) dest->lens = new int[many];
+	vcopy(dest->lens, lens, many);
 	if (!dest->nbr) dest->nbr = new int[many];
 	for (int i = 0; i < many; ++i) {
 	    dest->nbr[i] = nbr[i];
@@ -978,6 +986,8 @@ const	CHAR*	tt = at(left);
 
 void Seq::copynbr(Seq* dest) const
 {
+	if (!dest->lens) dest->lens = new int[many];
+	vcopy(dest->lens, lens, many);
 	if (!dest->nbr) dest->nbr = new int[many];
 	vcopy(dest->nbr, nbr, many);
 }
@@ -1111,8 +1121,10 @@ Seq* Seq::extseq(Seq* dest, int* which, int snl, FTYPE nfact)
 	if (msaname) dest->msaname = strrealloc(dest->msaname, msaname);
 	if (snl & CPY_NBR) {
 	    int*	wk = which;
-	    for (int i = 0; *wk >= 0; ++i, ++wk)
+	    for (int i = 0; *wk >= 0; ++i, ++wk) {
+		dest->lens[i] = lens[*wk];
 		dest->nbr[i] = nbr[*wk];
+	    }
 	}
 	if (snl & CPY_LBL) {
 	    int*	wk = which;
@@ -1783,6 +1795,28 @@ FTYPE* Seq::composition()
 #endif
 	while (ss < tt) cmps[*ss++]++;
 	return (cmps);
+}
+
+FTYPE* Seq::composition(FTYPE* cmp) const
+{
+	if (!cmp) return (0);
+	if (cmps && inex.cmps)
+	    return (vcopy(cmp, cmps, code->max_code));
+	CHAR*	ss = at(left);
+	CHAR*	tt = at(right);
+	vclear(cmp, code->max_code);
+#if USE_WEIGHT
+	if (weight) {
+	    while (ss < tt) {
+		FTYPE*	ww = weight;
+		FTYPE*	wt = weight + many;
+		while (ww < wt) cmp[*ss++] += *ww++;
+	    }
+	    return (cmp);
+	}
+#endif
+	while (ss < tt) cmp[*ss++]++;
+	return (cmp);
 }
 
 int Seq::countgap(int mem, int from, int to) const

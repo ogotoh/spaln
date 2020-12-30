@@ -71,59 +71,31 @@ static	FTYPE	stdfS = 0.;
 
 inline	VTYPE	GapPenalty(int k) {return VTYPE(alprm.u * k + alprm.v);}
 
-SpJunc::SpJunc(const Seq* sd) : b(sd)
-{
-	nent = (sd->right - sd->left) / FoldSpjunc;
-	nent = (nent / 6) * 6 + 5;
-	max_nent = FoldStore * nent;
-
-	hashent = new SPJ*[nent + 1];
-	spjunc = new SPJ[max_nent + 1];
-	juncseq = new CHAR[2 * max_nent + 2];
-
-	vclear(hashent, nent + 1);
-	vclear(spjunc, max_nent + 1);
-	pyrim[0] = pyrim[1] = PHE;	// TT <- YY
-	spp = spjunc;
-	jsp = 0;
+VTYPE SpJunc::spjscr(int n5, int n3) {
+	return (pwd->IntPen->Penalty(n3 - n5) + 
+		b->exin->sig53(n5, n3, IE53));
 }
 
-SpJunc::~SpJunc()
+const CHAR* SpJunc::spjseq(int n5, int n3)
 {
-	delete[] hashent;
-	delete[] spjunc;
-	delete[] juncseq;
-}
-
-CHAR* SpJunc::spjseq(int n5, int n3)
-{
-	int	key = (n5 + n3) % nent + 1;
-	SPJ**	htop = hashent + key;
-	SPJ*	find = *htop;
+static	const	CHAR	pyrim[2] = {PHE, PHE};
 const	CHAR*	b5 = b->at(n5 - 2);
-const	CHAR*	b3 = b->at(n3);
-
-	for ( ; find > spjunc; find = spjunc + find->dlnk)
-	    if (find->n5 == n5 && find->n3 == n3)
-		return(juncseq + find->junc);
-
-	if (spp - spjunc == max_nent) {
-	    spp = spjunc;
-	    jsp = 0;
+const	CHAR*	b3 = n3? b->at(n3): pyrim;
+	INT	w = 256;
+	int	c = ncredctab[aa2nuc[b5[0]]];
+	if (c < 4) {
+	    w = c;
+	    if ((c = ncredctab[aa2nuc[b5[1]]]) < 4) {
+		w = 4 * w + c;
+		if ((c = ncredctab[aa2nuc[b3[0]]]) < 4) {
+		    w = 4 * w + c;
+		    if ((c = ncredctab[aa2nuc[b3[1]]]) < 4) {
+			w = 4 * w + c;
+		    } else w = 256;
+		} else w = 256;
+	    } else w = 256;
 	}
-
-	find = ++spp;		// cut the previous link
-	if (find->ulnk) hashent[find->ulnk] = 0;
-	find->n5 = n5;
-	find->n3 = n3;
-	spliceTron(spliced, b5, n3? b3: pyrim, 1);
-	memcpy(juncseq + jsp, spliced, 2);
-	find->junc = jsp;
-	jsp += 2;
-	find->dlnk = *htop? *htop - spjunc: 0;	// old 1st link
-	find->ulnk = key;	// put the new record
-	*htop = find;		// at the top of list
-	return (juncseq + find->junc);
+	return (spj_tron_tab[w]);
 }
 
 inline	bool	Exinon::within(const Seq* sd) const
@@ -634,4 +606,3 @@ ild_model:
 	INT	q99 = (INT) frechet_quantile(p, mu, th, ki);
 	return (max(observed, q99));
 }
-

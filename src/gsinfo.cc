@@ -61,6 +61,22 @@ PfqItr::PfqItr(SigII& sgi, int n) :
 }
 #endif
 
+Cip_score::Cip_score(const Seq* sd) : cip_hash(0)
+{
+	PfqItr	api(sd, sd->left);
+	if (api.size()) {
+	    cip_hash = new Dhash<int, VTYPE>(api.pfqnum);
+	    for ( ; !api.end(); ++api) {
+#if USE_WEIGHT
+		VTYPE	val = SpbFact * api.wfq->dns;
+#else
+		VTYPE	val = SpbFact * api.wfq->num;
+#endif
+		cip_hash->assign(api.wfq->pos, val);
+	    }
+	}
+}
+
 Iiinfo::Iiinfo(const Seq* seqs[], int m, int n, bool save) :
 	a(seqs[0]), b(seqs[1]), 
 	sgi(0), cpi(0), agap(0), bgap(0), amany(seqs[0]->many)
