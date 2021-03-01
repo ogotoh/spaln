@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.2
-#### Last updated: 2020-12-25
+#### Present Version 2.4.3
+#### Last updated: 2021-03-01
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -307,6 +307,11 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+1. Small improvement in memory usage.
+2. A few bugs related to the unidirectional Hirschberg algorithm have been fixed.
+3. Illegal memory access in generating splice-junction sequence has been fixed.
+
+## Changes in version 2.4.2
 1. Minor improvements in the DP-based spliced alignment engines.
 2. A few bugs related to the unidirectional Hirschberg algorithm have been fixed.
 3. A bug in the Boyer-Moore algorithm has been fixed. This is relevant to protein queries with -yX0 option, and when the search goes beyond a block boundary.
@@ -374,4 +379,4 @@ Cooperation of Spaln and Prrn5 for construction of gene-structure-aware multiple
 
 * * *
 
-Copyright (c) 1997-2020 Osamu Gotoh (o.gotoh@aist.go.jp) All Rights Reserved.
+Copyright (c) 1997-2021 Osamu Gotoh (o.gotoh@aist.go.jp) All Rights Reserved.

@@ -22,9 +22,9 @@
 #include "cmn.h"
 #include "vmf.h"
 
-long	MaxVmfSpace = DefMaxVMF;
+int	MaxVmfSpace = DefMaxVMF;
 
-void setVmfSpace(long spc)
+void setVmfSpace(int spc)
 {
 	MaxVmfSpace = spc;
 }
@@ -44,7 +44,7 @@ VMFBLK* Vmf::newblk()
 
 Vmf::Vmf()
 {
-	idx = 0L;
+	idx = 0;
 	blk = 0;
 	hed = newblk();
 }
@@ -63,20 +63,22 @@ Vmf::~Vmf()
 	freeblk(hed);
 }
 
-long Vmf::writevmf(SKLP* rec)
+int Vmf::writevmf(SKLP* rec)
 {
+	if (idx == INT_MAX)
+	    fatal("Too many Vmf records !");
 	if (cur == brk) newblk();
 	movmem(rec, cur, sizeof(SKLP));
 	cur++;
 	return(idx++);
 }
 
-long Vmf::vmfseek(long recno)
+int Vmf::vmfseek(int recno)
 {
-	long	rn = 0;
+	int	rn = 0;
 
-	if (recno < 0L) recno += idx;
-	if (0L > recno || recno > idx) {
+	if (recno < 0) recno += idx;
+	if (0 > recno || recno > idx) {
 	    prompt("%ld > %ld: Vmf out of range !\n", recno, idx);
 	    return (ERROR);
 	}
@@ -87,7 +89,7 @@ long Vmf::vmfseek(long recno)
 	return(recno);
 }
 
-int Vmf::readvmf(SKLP* rec, long recno)
+int Vmf::readvmf(SKLP* rec, int recno)
 {
 	if (vmfseek(recno) == ERROR) return(ERROR);
 	movmem(cur, rec, sizeof(SKLP));
@@ -102,7 +104,7 @@ SKL* Vmf::vmferror(Mfile& mfd)
 	return (0);
 }
 
-SKL* Vmf::traceback(long pp)
+SKL* Vmf::traceback(int pp)
 {
 	SKLP	sv;
 	Mfile	mfd(sizeof(SKL));

@@ -92,12 +92,12 @@ struct BOUND {int la, lb, ua, ub;};
 
 struct RVP {
 	VTYPE	val;
-	long	ptr;
+	int	ptr;
 };
 
 struct RVPD {
 	VTYPE	val;
-	long	ptr;
+	int	ptr;
 	int	dir;
 };
 
@@ -117,42 +117,48 @@ struct RVDJ {
 
 struct RVPDJ {
 	VTYPE	val;
-	long	ptr;
+	int	ptr;
 	int	dir;
 	int	jnc;
 	void reseth();
 };
 
-struct RVWU {
-	VTYPE	val;
+struct Rvpwml {
+	VTYPE	val;	// score
+	bool	psp;	// post splicing
 	int	upr;
 	int	lwr;
+	int	ml;
 	int	ulk;
 };
 
-struct RVWUJ {
-	VTYPE	val;
+struct Rvdwml {
+	VTYPE	val;	// score
+	int	dir;
 	int	upr;
 	int	lwr;
+	int	ml;
+	int	ulk;
+};
+
+struct Rvdwmlj {
+	VTYPE	val;	// score
+	int	dir;
+	int	upr;
+	int	lwr;
+	int	ml;
 	int	ulk;
 	int	jnc;
 };
 
-struct RVDWU {
-	VTYPE	val;
-	int	dir;
+struct Rvwmrmn {	// used in Local mode
+	VTYPE	val;	// score
 	int	upr;
 	int	lwr;
-	int	ulk;
-};
-
-struct RVDWUJ {
-	VTYPE	val;
-	int	dir;
-	int	upr;
-	int	lwr;
-	int	ulk;
-	int	jnc;
+	int	ml;	// left end m-coor
+	int	ulk;	// link
+	int	mr;	// right end m-coord
+	int	nr;	// right end n-coord
 };
 
 struct COLONY {
@@ -177,30 +183,17 @@ struct RVDWC {
 	COLONY* clny;
 };
 
-struct RVDWJC {
-	VTYPE	val;
-	int	dir;
-	int	jnc;
-	int	upr;
-	int	lwr;
-	int	mlb;
-	int	nlb;
-	COLONY* clny;
-};
-
-static	const	RVP	black_vp = {NEVSEL, 0L};
-static	const	RVP	white_vp = {0, 0L};
-static	const	RVPD	black_vpd  = {NEVSEL, 0L, 0};
+static	const	RVP	black_vp = {NEVSEL, 0};
+static	const	RVP	white_vp = {0, 0};
+static	const	RVPD	black_vpd  = {NEVSEL, 0, 0};
 static	const	RVDWL	black_vdwl = {NEVSEL, 0, INT_MIN, INT_MAX, 0};
 static	const	RVDWC	black_vdwc = {NEVSEL, 0, INT_MIN, INT_MAX, 0, 0};
 static	const	RVDWC	white_vdwc = {0, 0, INT_MAX, INT_MIN, 0, 0, 0};
 static	const	RVDJ	black_vdj   = {NEVSEL, 0, 0};
-static	const	RVPDJ	black_vpdj = {NEVSEL, 0L, 0, 0};
-static	const	RVWU	black_vwu  = {NEVSEL, INT_MIN, INT_MAX, end_of_ulk};
-static	const	RVWUJ	black_vwuj = {NEVSEL, INT_MIN, INT_MAX, end_of_ulk, 0};
-static	const	RVDWU	black_vdwu = {NEVSEL, 0, INT_MIN, INT_MAX, end_of_ulk};
-static	const	RVDWUJ	black_vdwuj = {NEVSEL, 0, INT_MIN, INT_MAX, end_of_ulk, 0};
-static	const	RVDWJC	black_vdwjc = {NEVSEL, 0, 0, INT_MIN, INT_MAX, 0, 0, 0};
+static	const	RVPDJ	black_vpdj = {NEVSEL, 0, 0, 0};
+
+static	const	Rvdwmlj	black_vdwmlj = 
+	{NEVSEL, 0, INT_MIN, INT_MAX, 0, end_of_ulk, 0};
 
 inline void RVPDJ::reseth() {*this = black_vpdj;}
 

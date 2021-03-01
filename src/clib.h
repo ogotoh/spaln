@@ -73,6 +73,7 @@ static	const	int	DefStackDepth = 128;
 static	const	int	defsunit = 128;
 static	const	int	defpunit = 16;
 static	const	INT	SecondHS = 8;
+static	const	INT	min_size = 31;	// > SecondHS
 static	const	float	DefHashFact = 1.2;
 static	const	double	epsilon = 1e-6;
 static	const	int	HashovLS = 12;
@@ -234,17 +235,18 @@ public:
 };
 
 template <class key_t, class val_t>
-Dhash<key_t, val_t>::Dhash(int n, val_t ud, float hf) : un_def(ud)
+Dhash<key_t, val_t>::Dhash(int n, val_t ud, float hf) 
+	: size2(SecondHS), un_def(ud)
 {
 	if (n == 0) {
-	    size1 = size2 = 0;
+	    size1 = 0;
 	    hash = hz = 0;
 	} else {
-	    size1 = supprime(int(hf * n));
+	    n = int(hf * n);
+	    size1 = (n < int(min_size))? min_size: supprime(n);
 	    hash = new KVpair<key_t, val_t>[size1];
 	    hz = hash + size1;
 	    clear();
-	    for (size2 = SecondHS; size2 > size1; size2 /= 2) ;
 	}
 }
 

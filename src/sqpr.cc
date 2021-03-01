@@ -259,7 +259,7 @@ const 	CHAR*	bs;
 	    a->sqname(), a->len, a->SiteNz(a->left), a->SiteNz(a->right), 
 	    b->sqname(), b->len, b->SiteNz(b->left), b->SiteNz(b->right), diag);
 	for (int i = 0; i < diag; ++i)
-	    fprintf(fd, "%ld,", xyl[i].p);
+	    fprintf(fd, "%d,", xyl[i].p);
 	putc('\t', fd);
 	for (int i = 0; i < diag; ++i)
 	    fprintf(fd, "%d,", xyl[i].m);

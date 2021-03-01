@@ -122,8 +122,8 @@ inline	int	ncomb(int n) {
 struct	RANGE	{int left, right;};
 struct	ORF	{int pos, len, frm;};
 struct	SKL	{int m, n;};
-struct	SKLP	{int m, n; long p;};
-struct	VSKLP	{VTYPE val; int m, n; long p;};
+struct	SKLP	{int m, n, p;};
+struct	VSKLP	{VTYPE val; int m, n, p;};
 struct	WINDOW	{int lw, up, width;};
 struct 	FSTAT	{FTYPE mch, mmc, gap, unp, val;};
 struct	GAPS	{int gps, gln;};

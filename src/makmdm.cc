@@ -60,7 +60,6 @@ static	double	normlz(double h[][AAS], double fact);
 static	void	makmdm(FILE* fs, FILE* fd, double a[20][20], double comp[20]);
 static	void	mkmdmpwr(FILE* fd, double a[20][20]);
 static	void	exp_qdt(double a[20][20], double comp[20], double dt, int m);
-extern	int	main(int argc, char** argv);
 
 static void usage()
 {
@@ -991,9 +990,7 @@ static void mkmdmpwr(FILE* fd, double a[20][20])
 	}
 }
 
-#define fopentab(path, fname, mode) fopenpbe(path, fname, 0, mode, 1)
-
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
 	int	vt = 0;
 	double	a[20][20];
@@ -1040,18 +1037,18 @@ static	struct wmode wmd = {1, 1, 0, 0};
 	FILE*	fs = 0;
 	FILE*	fd = 0;
 	if (wmd.cmp) {
-	    fd = fopentab(fn, mdm_cmp, "wb");
+	    fd = fopenpbe(fn, mdm_cmp, 0, "wb", 1);
 	    fwrite(comp, sizeof(double), 20, fd);
 	    fclose(fd);
 	    fd = 0;
 	}
-	if (wmd.tab) fs = fopentab(fn, mdm_tab, "wb");
-	if (wmd.lud) fd = fopentab(fn, mdmld_tab, "wb");
+	if (wmd.tab) fs = fopenpbe(fn, mdm_tab, 0, "wb", 1);
+	if (wmd.lud) fd = fopenpbe(fn, mdmld_tab, 0, "wb", 1);
 	makmdm(fs, fd, a, comp);
 	if (fs) fclose(fs);
 	if (fd) fclose(fd);
 	if (wmd.pwr) {
-	    fd = fopentab(fn, mdmpwr_tab, "wb");
+	    fd = fopenpbe(fn, mdmpwr_tab, 0, "wb", 1);
 	    mkmdmpwr(fd, b);
 	    fclose(fd);
 	}

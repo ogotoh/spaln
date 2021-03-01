@@ -1,7 +1,8 @@
 /*****************************************************************************
 *
 *	Alignment of protein vs. nucleotide sequences.
-*	5' and 3' splice site signals and coding potential are considered.
+*	5' and 3' splice site signals, intron-length distribution,
+*	and coding potential are considered.
 *	Assumes there is no internal gap in the reference protein sequence.
 *
 *	Implement unidirectional Hirschberg linear-space algorithm
@@ -24,7 +25,6 @@
 *****************************************************************************/
 
 #define	DEBUG	1
-#define	TERMGOP	0
 
 #include "aln.h"
 #include "vmf.h"
@@ -51,14 +51,13 @@ const	PwdB*	pwd;
 	Mfile*	mfd;
 	Vmf*	vmf;
 	SpJunc*	spjcs;
-	VTYPE	pinthr;
+	Cip_score*	cip;
 	WLPRM*	wlprm;
-	INT	lowestlvl;
-	int	term;
-	VTYPE	slmt;
+const	INT	lowestlvl;
+const	int	end_margin;
+const	VTYPE	slmt;
 	bool	island;
 	int	ss[n_nearest_ss];
-	Cip_score*	cip;
 const	int	Nod;
 	VTYPE	backward[expected_max_overlap];
 public:
@@ -66,24 +65,24 @@ public:
 	~Aln2h1() {delete mfd; delete spjcs; delete cip;}
 	void	initH_ng(RVPD* hf[], const WINDOW& wdw, const RANGE* cutrng = 0);
 	RVPD*	lastH_ng(RVPD* hhb[], const WINDOW& wdw, const RANGE* cutrng = 0);
-	VTYPE	forwardH_ng(long pp[], const WINDOW& wdw, 
+	VTYPE	forwardH_ng(int pp[], const WINDOW& wdw, 
 		bool spj = true, const RANGE* cutrng = 0);
 	VTYPE	shortcutH_ng(int ovr, BOUND& lub);
-	void	hinitH_ng(RVDWU* hhf[], const WINDOW& wdw);
-	RVDWU&	hlastH_ng(RVDWU* hhf[], const WINDOW& wdw);
+	void	hinitH_ng(Rvdwml* hhf[], const WINDOW& wdw);
+	Rvdwml*	hlastH_ng(Rvdwml* hhf[], const WINDOW& wdw);
 	VTYPE	hirschbergH_ng(int cpos[], 
 		const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb);
 	void	pfinitH_ng(RVPD* hh[], const WINDOW& wdw);
 	void	pbinitH_ng(RVPD* hh[], const WINDOW& wdw);
-	VTYPE	back2ward5endH_ng(long* ptr, const WINDOW& wdw);
-	VTYPE	for2ward3endH_ng(long* ptr, const WINDOW& wdw);
+	VTYPE	back2ward5endH_ng(int* ptr, const WINDOW& wdw);
+	VTYPE	for2ward3endH_ng(int* ptr, const WINDOW& wdw);
 	VTYPE	openendH_ng(int cmode);
 	bool	indelfreespjH(int agap, VTYPE& scr);
 	bool	isEIJ(int phs) {return (phs > -2);}
 	VTYPE	diagonalH_ng();
 	VTYPE	backforth(int n, BOUND& lub);
-	VTYPE	trcbkalignH_ng(const WINDOW& wdw, 
-		bool spj = true, const RANGE* cutrng = 0);
+	VTYPE	trcbkalignH_ng(const WINDOW& wdw, bool spj = true, 
+		const RANGE* cutrng = 0);
 	VTYPE	lspH_ng(const WINDOW& wdw);
 	int	nearest5ss(int from, BOUND& bab);
 	int	nearest3ss(int from, BOUND& bab);
@@ -110,10 +109,9 @@ static	void	addsigEjxt(JUXT* jxt, int num, const Seq* b);
 Aln2h1::Aln2h1(const Seq* _seqs[], const PwdB* _pwd) :
 	seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd), 
 	mfd(0), vmf(0), wlprm(0), lowestlvl(b->wllvl),
-	term((int) (pwd->Vthr / pwd->BasicGEP)),
+	end_margin((int) (pwd->Vthr / pwd->BasicGEP)),
 	slmt(pwd->Vthr / 2), island(false), Nod(2 * pwd->Noll - 1)
 {
-	pinthr = pwd->GapPenalty(1);
 	spjcs = new SpJunc(b, pwd);
 	cip = new Cip_score(a);
 }
@@ -169,7 +167,7 @@ const	EXIN*	bb = b->exin->score(n);
 	if (wdw.lw > rr) rr = wdw.lw;
 	for (int i = 1; --r >= rr; ++i) {
 	    --h; --g;
-	    if (b->inex.exgl == 3) {	// no terminal gap penalty
+	    if (b->inex.exgl) {		// no terminal gap penalty
 		h->val = 0;
 		h->dir = DEAD;
 		h->ptr = vmf? vmf->add(a->left + i / 3, b->left + i % 3, 0): 0;
@@ -202,8 +200,8 @@ RVPD* Aln2h1::lastH_ng(RVPD* hh[], const WINDOW& wdw, const RANGE* cutrng)
 	else	rf = rw;
 	RVPD*	h = hh[0] + rw - cutlen;
 	RVPD*	h9 = hh[0] + b->right - m3 - cutlen;
-	RVPD*	f = h9;
-	VTYPE	mx = h9->val;
+	RVPD*	mx = h9;
+	VTYPE	mxv = h9->val;
 const	EXIN*	bb = b->exin->score(rw + m3);
 
 	for (int p = 0; p < 3; ++p) glen[p] = 0;
@@ -227,19 +225,19 @@ const	EXIN*	bb = b->exin->score(rw + m3);
 		}
 		VTYPE	x = h->val;
 		if ((algmode.lcl & 16) && bb->sig5 > 0) x += bb->sig5;
-		if (x > mx && x >= y) {
-		    f = h;
-		    mx = x;
-		} else if (y > mx) {	// termination codon
-		    f = h;
+		if (x > mxv && x >= y) {
+		    mx = h;
+		    mxv = x;
+		} else if (y > mxv) {	// termination codon
 		    *h = h[-3];
-		    f->ptr = vmf->add(a->right, rf + m3 - 3, h->ptr);
-		    mx = y;
-		    h->dir = DEAD;
+		    mx = h;
+		    mx->ptr = vmf->add(a->right, rf + m3 - 3, h->ptr);
+		    mxv = y;
+		    mx->dir = DEAD;
 		}
 	    }
 	}
-	f->val = mx;
+	mx->val = mxv;
 	if (b->inex.exgr) {
 	    rw = std::min(wdw.up, b->right - 3 * a->left) - cutlen;
 	    VTYPE	g[3] = {NEVSEL, NEVSEL, NEVSEL};
@@ -250,22 +248,22 @@ const	EXIN*	bb = b->exin->score(rw + m3);
 		if (x > g[p]) g[p] = x;
 		if (!(b->inex.exgr & 2)) g[p] += pwd->BasicGEP;
 		if (h->val > g[p]) g[p] = NEVSEL;
-		else if (g[p] > f->val) {f = h; f->val = g[p];}
+		else if (g[p] > mx->val) {mx = h; mx->val = g[p];}
 		if (++p == 3) p = 0;
 	    }
 	}
-	int p = f - h9;
+	int p = mx - h9;
 	rf = a->right;		// m9
 	rw = b->right;		// n9
 	if (p > 0) {
 	    rf -= (p + 2) / 3;
 	    if (p %= 3) rw -= (3 - p); 
 	} else if (p < 0) rw += p;
-	if (vmf) f->ptr = vmf->add(rf, rw, f->ptr);
-	return (f);
+	if (vmf) mx->ptr = vmf->add(rf, rw, mx->ptr);
+	return (mx);
 }
 
-VTYPE Aln2h1::forwardH_ng(long* pp, const WINDOW& wdw, 
+VTYPE Aln2h1::forwardH_ng(int* pp, const WINDOW& wdw, 
 	bool spj, const RANGE* cutrng)
 {
 const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
@@ -276,7 +274,7 @@ const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	RVPDJ	hl[3][NCAND + 1];	// [phase][candidates]
 	int	nx[3][NCAND + 1];	// [phase][candidates]
 	RVPDJ*	maxphl[NOD];
-	VSKLP   maxh = {NEVSEL, a->left, b->left, 0L};
+	VSKLP   maxh = {NEVSEL, a->left, b->left, 0};
 	int     Local = algmode.lcl & 16;
 	int     LocalL = Local && a->inex.exgl && b->inex.exgl;
 	int     LocalR = Local && a->inex.exgr && b->inex.exgr;
@@ -530,8 +528,7 @@ Donor:
 			    phl->val = x;
 			    phl->jnc = nb;
 			    phl->dir = k;
-			    phl->ptr = (vmf && crossspj && isntdiag(from))?
-				vmf->add(m - 1, n - 3, from->ptr): from->ptr;
+			    phl->ptr = from->ptr;
 			} else --nc;
 		    }
 		    if (bb->phs5 - phs == 3) {	//	GTGT..
@@ -575,10 +572,10 @@ Donor:
 	    }	// end of n-loop
 	}	// end of m-loop
 
-	RVPD*	mx = lastH_ng(hh, wdw, cutrng);
-	if (maxh.val > mx->val) {
+	if (LocalR) {
 	    if (pp) *pp = vmf->add(maxh.m, maxh.n, maxh.p);
 	} else {
+	    RVPD*	mx = lastH_ng(hh, wdw, cutrng);
 	    maxh.val = mx->val;
 	    if (pp) *pp = mx->ptr;
 	}
@@ -900,7 +897,7 @@ const		    CHAR*	cm = 0;
 *
 ********************************************************/
 
-void Aln2h1::hinitH_ng(RVDWU* hhg[], const WINDOW& wdw)
+void Aln2h1::hinitH_ng(Rvdwml* hhg[], const WINDOW& wdw)
 {
 	int	n = b->left;
 	int	r = b->left - 3 * a->left;
@@ -909,10 +906,11 @@ void Aln2h1::hinitH_ng(RVDWU* hhg[], const WINDOW& wdw)
 	int	dir = a->inex.exgl? DEAD: DIAG;
 const	EXIN*	bb = b->exin->score(n);
 
-	RVDWU*	h = hhg[0] + r;
+	Rvdwml*	h = hhg[0] + r;
 	h->val = (a->inex.exgl && bb[1].sigS > 0)? bb[1].sigS: 0;
 	h->dir = dir;
-	h->lwr = h->upr = r0;
+	h->lwr = h->upr = h->ulk = r0;
+	h->ml = a->left;
 	if (a->inex.exgl) {
 	    if (wdw.up < rr) rr = wdw.up;
 	    int	jnc = n;
@@ -921,16 +919,12 @@ const	EXIN*	bb = b->exin->score(n);
 		if (i < 3) {
  		    h->val = (bb[1].sigS > 0)? bb[1].sigS: 0;
 		    h->dir = dir;
-		    h->lwr = r0;
+		    h->lwr = h->ulk = r;
 		} else {
 		    *h = h[-3];
 		    int	d = n - jnc;
-#if TERMGOP
-		    if (d == 3) h->val += pwd->BasicGOP;
-#else
-		    if (d == 3 && !a->inex.exgl) h->val += pwd->BasicGOP;
-#endif
-		    h->val += pwd->GapExtPen3(d);
+		    if (d == 3 && !(a->inex.exgl & 1)) h->val += pwd->BasicGOP;
+		    if (!(a->inex.exgl & 2)) h->val += pwd->GapExtPen3(d);
 	    	    h->val += bb[-2].sigE;
 		    h->dir = HORI;
 		    VTYPE	x = h[-1].val + pwd->GapW1;
@@ -944,7 +938,7 @@ const	EXIN*	bb = b->exin->score(n);
 		    h->val = x;
 		    h->dir = DEAD;
 		    jnc = n;
-		    h->lwr = r;
+		    h->lwr = h->ulk = r;
 		}
 	    }
 	}
@@ -953,32 +947,34 @@ const	EXIN*	bb = b->exin->score(n);
 	rr = b->left - 3 * a->right;
 	if (wdw.lw > rr) rr = wdw.lw;
 	h = hhg[0] + r;
-	RVDWU*	g = hhg[1] + r;
+	Rvdwml*	g = hhg[1] + r;
 	for (int i = 1; --r >= rr; ++i) {
 	    --h; --g;
-	    if (b->inex.exgl) {
+	    if (b->inex.exgl) {		// no terminal gap penalty
 		h->val = 0;
 		h->dir = DEAD;
-		h->upr = h->lwr = r;
+		h->upr = h->lwr = h->ulk = r;
+	    } else if (i <= 3) {
+		*h = h[i];
+		if (!(b->inex.exgl & 2)) h->val += pwd->BasicGEP;
+		if (!(b->inex.exgl & 1)) h->val += pwd->BasicGOP;
+		if (i < 3) h->val += pwd->ExtraGOP;
+		h->dir = VERT;
+		*g = *h;
+		h->lwr = g->lwr = h->ulk = r;
 	    } else {
-		if (i <= 3) {
-		    *h = h[i];
-		    h->val += pwd->GapPenalty(i);
-		    if (i < 3) h->val += pwd->ExtraGOP;
-		    h->dir = VERT;
-		    *g = *h;
-		} else {
-		    *h = h[3];
-		    *g = g[3];
+		*h = h[3];
+		*g = g[3];
+		if (!(b->inex.exgl & 2)) {
 		    h->val += pwd->GapExtPen3(i);
 		    g->val += pwd->BasicGEP;
 		}
-		h->lwr = g->lwr = r;
+		h->lwr = g->lwr = h->ulk = r;
 	    }
 	}
 }
 
-RVDWU& Aln2h1::hlastH_ng(RVDWU* hhg[], const WINDOW& wdw)
+Rvdwml* Aln2h1::hlastH_ng(Rvdwml* hhg[], const WINDOW& wdw)
 {
 	int	glen[3];
 	int	m3 = 3 * a->right;
@@ -986,10 +982,10 @@ RVDWU& Aln2h1::hlastH_ng(RVDWU* hhg[], const WINDOW& wdw)
 	int	rf = b->left - m3;
 	if (rf > rw) rw = rf;
 	else	rf = rw;
-	RVDWU*	h = hhg[0] + rw;
-	RVDWU*	h9 = hhg[0] + b->right - m3;
-	RVDWU*	f = h9;
-	VTYPE	mx = h9->val;
+	Rvdwml*	h = hhg[0] + rw;
+	Rvdwml*	h9 = hhg[0] + b->right - m3;
+	Rvdwml*	mx = h9;
+	VTYPE	mxv = mx->val;
 const	EXIN*	bb = b->exin->score(rw + m3);
 
 	vclear(glen, 3);
@@ -999,11 +995,10 @@ const	EXIN*	bb = b->exin->score(rw + m3);
 		VTYPE	y = NEVSEL;
 		glen[p] += 3;
 		if (rf - rw >= 3 && h[-3].dir != DEAD) {
-		    VTYPE	x = h[-3].val + bb[-2].sigE 
-			+ pwd->GapExtPen3(glen[p]);
-#if TERMGOP
-		    if (glen[p] == 3) x += pwd->BasicGOP;
-#endif
+		    VTYPE	x = h[-3].val + bb[-2].sigE;
+		    if (!(a->inex.exgr & 2)) x += pwd->GapExtPen3(glen[p]);
+		    if (glen[p] == 3 && !(a->inex.exgr & 1))
+			x += pwd->BasicGOP;
 		    if ((algmode.lcl & 2) && bb[-2].sigT > 0 && !(h->dir & SPIN))
 			y = h[-3].val + bb[-2].sigT;
 		    if (x > h->val) {
@@ -1015,55 +1010,72 @@ const	EXIN*	bb = b->exin->score(rw + m3);
 		}
 		VTYPE	x = h->val;
 		if ((algmode.lcl & 16) && bb->sig5 > 0) x += bb->sig5;
-		if (x > mx && x >= y) {
-		    f = h;
-		    mx = x;
-		} else if (y > mx) {	// termination codon
-		    f = h;
+		if (x > mxv && x >= y) {
+		    mx = h;
+		    mxv = x;
+		} else if (y > mxv) {	// termination codon
+		    mx = h;
+		    mxv = y;
 		    *h = h[-3];
-		    h->upr += 3;
-		    mx = y;
-		    h->dir = DEAD;
+		    mx->upr = std::max(rf, h->upr);
+		    mx->dir = DEAD;
 		}
 	    }
 	}
-	f->val = mx;
 	if (b->inex.exgr) {
 	    rw = std::min(wdw.up, b->right - 3 * a->left);
 	    for (h = hhg[0] + rw; h > h9; --h, --rw) {
 		VTYPE	x = h->val + (rw % 3? pwd->ExtraGOP: 0);
-		if (f->val < x) {f = h; f->val = x;}
+		if (x > mxv) {mx = h; mxv = x;}
 	    }
 	}
-	return (*f);
+	mx->val = mxv;
+	return (mx);
 }
 
 VTYPE Aln2h1::hirschbergH_ng(int cpos[], 
 	const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb)
 {
 const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
-	RVDWU*	hhg[NOL + 1];
-	RVDWU*	hhb[NOL];
-	RVDWU*	hb[NOL];		// hhb[k] + r
-	RVDWU*	hf[NOD];		// horizontal
-	RVDWU	e1[2 * NQUE];
-	RVDWU*	e2 = e1 + NQUE;
-	RVDWUJ	hl[3][NCAND + 1];	// [phase][candidates]
+	Rvdwml*	hhg[NOL + 1];
+	Rvdwml*	hf[NOD];		// horizontal
+	Rvdwml	e1[2 * NQUE];
+	Rvdwml*	e2 = e1 + NQUE;
+	Rvdwmlj	hl[3][NCAND + 1];	// [phase][candidates]
 	int	nx[3][NCAND + 1];	// [phase][candidates]
-	RVDWUJ*	maxphl[NOD];
-	RVDWU	maxh = black_vdwu;
+	Rvdwmlj*	maxphl[NOD];
+	int*	center_lwr[NOL];
+	int*	center_upr[NOL];
+	int*	center_lnk[NOL];
+	int*	center_end[NOL];
+	Rvwmrmn	maxh = {NEVSEL, 0, 0, 0, 0};
 	int	Local = algmode.lcl & 16;
-	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
-	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+	int     LocalL = Local && a->inex.exgl && b->inex.exgl;
+	int     LocalR = Local && a->inex.exgr && b->inex.exgr;
 
 	size_t	bufsiz = pwd->Noll * wdw.width;
-	RVDWU*	wbuf = new RVDWU[bufsiz + bufsiz];
-	vset(wbuf, black_vdwu, bufsiz);
-	vclear(hb, NOL);
-	RVDWU*	blackvdwuj = wbuf + bufsiz - 1;	// assume to be const
-	hhg[0] = wbuf - wdw.lw + 3;	 
-	for (int k = 1; k < pwd->Noll; ++k) hhg[k] = hhg[k-1] + wdw.width;
-	for (int k = 0; k < pwd->Noll; ++k) hhb[k] = hhg[k] + bufsiz;
+	Rvdwml*	wbuf = new Rvdwml[bufsiz];
+	int	r = b->left - 3 * a->right;
+	Rvdwml	black_vdwml = {NEVSEL, 0, r, r, 0, end_of_ulk};
+	vset(wbuf, black_vdwml, bufsiz);
+	Rvdwml*	blackvdwuj = wbuf + bufsiz - 1;	// assume to be const
+	hhg[0] = wbuf - wdw.lw + 3;
+	int*	ibuf = new int[4 * bufsiz];
+	center_lwr[0] = ibuf - wdw.lw + 3;
+	center_upr[0] = center_lwr[0] + bufsiz;
+	center_end[0] = center_upr[0] + bufsiz;
+	center_lnk[0] = center_end[0] + bufsiz;
+	for (int k = 1; k < pwd->Noll; ++k) {
+	    hhg[k] = hhg[k-1] + wdw.width;
+	    center_lwr[k] = center_lwr[k - 1] + wdw.width;
+	    center_upr[k] = center_upr[k - 1] + wdw.width;
+	    center_end[k] = center_end[k - 1] + wdw.width;
+	    center_lnk[k] = center_lnk[k - 1] + wdw.width;
+	}
+	vset(ibuf, a->inex.exgl? r: INT_MAX, bufsiz);
+	vset(ibuf, r, 2 * bufsiz);
+	vset(ibuf + 3 * bufsiz, end_of_ulk, bufsiz);
+
 	hinitH_ng(hhg, wdw);
 
 	int	m = a->left;
@@ -1074,14 +1086,13 @@ const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	int	n2 = 3 * m + wdw.up;
 const	CHAR*	as = a->at(m);
 	for ( ; ++m <= a->right; ++as) {
-	    VTYPE	x, y;
 	    bool	internal = (!a->inex.exgr || m < a->right);
 	    n1 += 3; n2 += 3;
-	    int		n0 = std::max(n1, b->left);
-	    int		n9 = std::min(n2, b->right);
-	    int		n = n0;
-	    int		r = n - 3 * m;
-	    vset(e1, black_vdwu, 2 * NQUE);
+	    int	n0 = std::max(n1, b->left);
+	    int	n9 = std::min(n2, b->right);
+	    int	n = n0;
+	    r = n - 3 * m;
+	    vset(e1, black_vdwml, 2 * NQUE);
 	    if (!b->inex.exgl && m == a->left) {
 		e1[2] = e2[2] = hhg[0][r];
 		e1[2].val += pwd->GapW3;
@@ -1090,17 +1101,11 @@ const	CHAR*	as = a->at(m);
 const	    CHAR*	bs = b->at(n - 1);
 const	    EXIN*	bb = b->exin->score(n);
 	    int		k = 0;
-	    RVDWU*&	h = hf[0] = hhg[k++] + r;
-	    RVDWU*&	g = hf[2] = hhg[k++] + r;
-	    RVDWU*&	g2 = hf[4] = dagp? hhg[k++] + r: blackvdwuj;
+	    Rvdwml*&	h = hf[0] = hhg[k++] + r;
+	    Rvdwml*&	g = hf[2] = hhg[k++] + r;
+	    Rvdwml*&	g2 = hf[4] = dagp? hhg[k++] + r: blackvdwuj;
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
-	    if (m == mm) {
-		for (int k = 0; k < pwd->Noll; ++k) {
-		    hb[k] = hhb[k] + r;
-		    hf[2 * k]->ulk = r;
-		}
-	    }
-	    vset((RVDWUJ*) &hl, black_vdwuj, 3 * (NCAND + 1));
+	    vset((Rvdwmlj*) &hl, black_vdwmlj, 3 * (NCAND + 1));
 	    for (int p = 0; p < 3; ++p)
 		for (int l = 0; l <= NCAND; ++l)
 		    nx[p][l] = l;
@@ -1113,21 +1118,29 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #endif
 	    int	q = 0;
 	    for ( ; ++n <= n9; ++bs) {
-		++bb; ++r; ++h; ++g; if (dagp) ++g2;
-		RVDWU*&	eq1 = hf[1] = e1 + q;
-		RVDWU*&	eq2 = hf[3] = dagp? e2 + q: 0;
-		RVDWU	hq = *h;
+		++bb; ++r;
+		for (int k = 0; k < pwd->Noll; ++k) {
+		    int	kk = k + k;
+		    ++hf[kk];
+		    if (m == mm) {
+			center_end[k][r] = hf[kk]->ulk;
+			hf[kk]->ulk = k? end_of_ulk: r;
+		    }
+		}
+		Rvdwml*&	eq1 = hf[1] = e1 + q;
+		Rvdwml*&	eq2 = hf[3] = dagp? e2 + q: 0;
+		Rvdwml	hq = *h;
+		VTYPE	x, y;
 
 //	diagonal match
 		VTYPE	sigE = bb[-2].sigE;
-		RVDWU*	from = h;
-		RVDWU*	mx = h;
+		Rvdwml*	from = h;
+		Rvdwml*	mx = h;
 		if (m == a->left) goto HorizonF;
 		if (n > b->left + 2) {
 		    h->val += qprof[*bs] + sigE;
 		    h->dir = (from->dir & DIAG)? DIAG: NEWD;
-		    if (m <= mm) h->ulk = r;
-		} else	*h = black_vdwu;
+		} else	*h = black_vdwml;
 
 //	vertical gap extention
 		y = g[3].val + pwd->BasicGEP;
@@ -1232,7 +1245,7 @@ AccFwd:
 		    int*	pnx = nx[phs + 1];
 		    vclear(maxphl, Nod);
 		    for (int l = 0; l <= ncand[phs + 1]; ++l) {
-			RVDWUJ*	phl = hl[phs + 1] + pnx[l];
+			Rvdwmlj*	phl = hl[phs + 1] + pnx[l];
 			if (nb - phl->jnc < IntronPrm.minl) continue;
 			x = phl->val + sigJ + spjcs->spjscr(phl->jnc, nb);
 const			CHAR*	cs = spjcs->spjseq(phl->jnc, nb);
@@ -1247,14 +1260,15 @@ const			CHAR*	cs = spjcs->spjseq(phl->jnc, nb);
 			}
 		    }
 		    for (int k = 0; k < Nod; ++k) {
-			RVDWUJ*	phl = maxphl[k];
+			Rvdwmlj*	phl = maxphl[k];
 			if (!phl) continue;
 			from = hf[k];
 			from->dir = phl->dir | SPJCI;
 			from->upr = std::max(phl->upr, r);
 			from->lwr = std::min(phl->lwr, r);
-			if (m >= mm) from->ulk = phl->ulk;
-			if (ge(from->val, mx->val)) mx = from;
+			from->ml = phl->ml;
+			from->ulk = (m == mm)? r: phl->ulk;
+			if (from->val >= mx->val) mx = from;
 		    }
 		    if (bb->phs3 - phs == 3) {	// AGAG
 			phs = 1;
@@ -1265,24 +1279,34 @@ const			CHAR*	cs = spjcs->spjseq(phl->jnc, nb);
 //	Find optimal path
 		y = h->val;
 		if (h == mx) {	// diagonal
-		    if (LocalR && y > maxh.val)
-			maxh = *h;
+		    if (LocalR && y > maxh.val) {
+			maxh.val = h->val;
+			maxh.upr = h->upr;
+			maxh.lwr = h->lwr;
+			maxh.ml = h->ml;
+			maxh.ulk = h->ulk;
+			maxh.mr = m;
+			maxh.nr = n;
+		    }
 		} else {	// non-diagonal
 		    *h = *mx;
 		    if (h->upr < r) h->upr = r;
 		    if (h->lwr > r) h->lwr = r;
 		}
-		if (LocalL && h->val <= 0)
+		if (LocalL && h->val <= 0) {
 		    h->val = h->dir = 0;
+		    h->ml = m;
+		    h->ulk = h->upr = h->lwr = r;
+		}
 
 //	intron 5' boundary
 
+		int	hd = dir2nod[mx->dir & 15];
 		if (internal && isEIJ(bb->phs5)) {
 		    int		phs = (bb->phs5 == 2)? -1: bb->phs5;
 Donor:
 		    int	nb = n - phs;
 		    VTYPE	sigJ = b->exin->sig53(nb, 0, IE5);
-		    int		hd = dir2nod[mx->dir & 15];
 		    for (int k = (hd == 0 || phs == 1)? 0: 1; k < Nod; ++k) {
 			bool	crossspj = phs == 1 && k == 0;
 			from = crossspj? &hq: hf[k];
@@ -1294,7 +1318,7 @@ Donor:
 			    if (from->val <= y) continue;	// prune
 			}
 			x = from->val + sigJ;
-			RVDWUJ*	phl = hl[phs + 1];
+			Rvdwmlj*	phl = hl[phs + 1];
 			int*	pnx = nx[phs + 1];
 			int&	nc = ncand[phs + 1];
 			int	l = nc < NCAND? ++nc: NCAND;
@@ -1311,8 +1335,8 @@ Donor:
 			    phl->dir = k;
 			    phl->upr = from->upr;
 			    phl->lwr = from->lwr;
-			    if (m > mm) phl->ulk = from->ulk;
-			    else if (m == mm) phl->ulk = r;
+			    phl->ml = from->ml;
+			    phl->ulk = (m == mm)? r: from->ulk;
 			} else --nc;
 		    }
 		    if (bb->phs5 - phs == 3) {	//	GTGT..
@@ -1337,48 +1361,80 @@ Donor:
 	}
 #endif
 
-// save variables at the center
+// center low
 		if (m == mm) {
+		    int	vk = isvert(mx)? hd / 2: 0;
 		    for (int k = 0; k < pwd->Noll; ++k) {
-			*++hb[k] = *hf[2 * k];
-			if (hb[k]->dir & SPJC) hf[2 * k]->ulk = r;
-		    }
-		    for (int k = 0, j = 0; k < pwd->Noll; ++k, j += wdw.width) {
-			hf[2 * k]->upr = hf[2 * k]->lwr = r;
-			hf[2 * k]->ulk = r + j;
+			int	kk = k + k;
+		        if (hf[kk]->lwr < center_lwr[k][r])
+			    center_lwr[k][r] = hf[kk]->lwr;
+		        center_upr[k][r] = hf[kk]->upr;
+			hf[kk]->upr = r;
+			if (!(hd % 2)) hf[kk]->lwr = r;
+			if (k) hf[kk]->ulk = r + k * wdw.width;
+			else {
+			    center_lnk[0][r] = hf[0]->ulk;
+			    hf[0]->ulk = r + vk * wdw.width;
+			}
 		    }
 		}	// was center
 	    }	// end of n-loop
 	}	// end of m-loop
 
-	if (!LocalR) maxh = hlastH_ng(hhg, wdw);
-	wdwb.up = maxh.upr;
-	wdwb.lw = maxh.lwr;
-	wdwb.width = wdwb.up - wdwb.lw + 7;
-	int	r = maxh.ulk;
-	int	k = (r - wdw.lw) / wdw.width;
-	if (k)	r -= k * wdw.width;
-	RVDWU*	mx = hhb[k] + r;
-	b->inex.exgr = k? 1: 0;
-	k = k || isvert(mx);
-	b->inex.exgl = k? 1: 0;
-	if (k) mx->ulk = end_of_ulk;
+	if (LocalR) {
+	    a->left = maxh.ml;
+	    a->right = maxh.mr;
+	    b->right = maxh.nr;
+	    wdwb.up = maxh.upr;
+	    wdwb.lw = maxh.lwr;
+	    wdwb.width = wdwb.up - wdwb.lw + 7;
+	    if (center_end[0][maxh.ulk] == end_of_ulk) {
+		b->left = maxh.ulk + 3 * maxh.ml;
+		b->inex.exgl = 0;
+		cpos[0] = end_of_ulk;		// don't cross center
+		return (maxh.val);
+	    }
+	} else {	// global or semi-global
+	    Rvdwml*	mx = hlastH_ng(hhg, wdw);
+	    maxh.val = mx->val;
+	    maxh.ulk = mx->ulk;
+	    wdwb.up = mx->upr;
+	    wdwb.lw = mx->lwr;
+	    wdwb.width = wdwb.up - wdwb.lw + 7;
+	    int	rr = b->right - 3 * a->right;
+	    int	r = mx - hhg[0];
+	    if (a->inex.exgr && rr < r) a->right = (b->right - r) / 3;
+	    if (b->inex.exgr && rr > r) b->right = 3 * a->right + r;
+	}
+	int	d = 0;
+	int	rr = maxh.ulk;
+	while (rr > wdw.up) {
+	    rr -= wdw.width;
+	    ++d;
+	}
+	r = center_lnk[d][rr];
 	int	c = 0;
-	if (b->exin->data[r + mm3].phs3 % 3 == 2) {
-	    --mm; mm3 -= 3;
-	}
 	cpos[c++] = mm;
-	while (mx->ulk != end_of_ulk && mx->ulk != r) {
-	    cpos[c++] = r + mm3;
-	    mx = hhb[0] + (r = mx->ulk);
+	while (r < end_of_ulk && r != rr) {
+	    cpos[c++] = rr + mm3;
+	    r = center_lnk[0][rr = r];
 	}
-	cpos[c++] = r + mm3;
-	cpos[c] = end_of_ulk + k;
-	wdwf.up = mx->upr;
-	wdwf.lw = std::min(mx->lwr, r);
+	cpos[c++] = rr + mm3;
+	cpos[c] = end_of_ulk;
+	wdwf.up = center_upr[d][rr];
+	wdwf.lw = center_lwr[0][rr];
 	wdwf.width = wdwf.up - wdwf.lw + 7;
+	r = center_end[d][rr];
+	if (LocalL) b->left = r + 3 * maxh.ml;
+	else {
+	    rr = b->left - 3 * a->left;
+	    if (a->inex.exgl && rr > r) a->left = (b->left - r) / 3;
+	    if (b->inex.exgl && rr < r) b->left = 3 * a->left + r;
+	}
+	b->inex.exgl = (d > 0)? 1: 0;
 
 	delete[] wbuf;
+	delete[] ibuf;
 	return (maxh.val);
 }
 
@@ -1391,7 +1447,7 @@ void Aln2h1::pfinitH_ng(RVPD* hh[], const WINDOW& wdw)
 	RVPD*	g = hh[1] + r;
 	h->val = 0;
 	h->dir = DIAG;
-	h->ptr = vmf->add(a->left, b->left, 0L);
+	h->ptr = vmf->add(a->left, b->left, 0);
 
 	r = b->left - 3 * a->left;
 	rr = b->left - 3 * a->right;
@@ -1422,7 +1478,7 @@ void Aln2h1::pbinitH_ng(RVPD* hh[], const WINDOW& wdw)
 	RVPD*	g = hh[1] + r;
 	h->val = 0;
 	h->dir = DIAG;
-	h->ptr = vmf->add(a->right, b->right, 0L);
+	h->ptr = vmf->add(a->right, b->right, 0);
 
 	r = b->right - 3 * a->right;
 	rr = b->right - 3 * a->left;
@@ -1446,12 +1502,12 @@ void Aln2h1::pbinitH_ng(RVPD* hh[], const WINDOW& wdw)
 
 // intron-less backward extension
 
-VTYPE Aln2h1::back2ward5endH_ng(long *ptr, const WINDOW& wdw)
+VTYPE Aln2h1::back2ward5endH_ng(int *ptr, const WINDOW& wdw)
 {
 	int	nr[3];
 	RVPD*	hh[2];
 	RVPD	e1[NQUE];
-	VSKLP	maxh = {NEVSEL, 0, 0, 0L};	// start point of traceback
+	VSKLP	maxh = {NEVSEL, 0, 0, 0};	// start point of traceback
 	VTYPE	maxval = NEVSEL;	// for x-drop off
 	VTYPE	maxscr = NEVSEL;	// overall
 
@@ -1461,7 +1517,7 @@ VTYPE Aln2h1::back2ward5endH_ng(long *ptr, const WINDOW& wdw)
 	RVPD*	blackvpd = jbuf + bufsiz - 1;
 	hh[0] = jbuf - wdw.lw + 3;
 	hh[1] = hh[0] + wdw.width;
-	vmf->add(0, 0, 0L);		// Skip 0-th record
+	vmf->add(0, 0, 0);		// Skip 0-th record
 	pbinitH_ng(hh, wdw);
 
 	int	m = a->right;
@@ -1632,12 +1688,12 @@ HorizonB:
 
 // intron-less forward extension
 
-VTYPE Aln2h1::for2ward3endH_ng(long *ptr, const WINDOW& wdw)
+VTYPE Aln2h1::for2ward3endH_ng(int *ptr, const WINDOW& wdw)
 {
 	int	nr[3];
 	RVPD*	hh[2];
 	RVPD	e1[NQUE];
-	VSKLP	maxh = {NEVSEL, 0, 0, 0L};	// start point of traceback
+	VSKLP	maxh = {NEVSEL, 0, 0, 0};	// start point of traceback
 	VTYPE	maxval = NEVSEL;	// for x-drop off
 	VTYPE	maxscr = NEVSEL;	// overall
 
@@ -1647,7 +1703,7 @@ VTYPE Aln2h1::for2ward3endH_ng(long *ptr, const WINDOW& wdw)
 	RVPD*	blackvpd = jbuf + bufsiz - 1;
 	hh[0] = jbuf - wdw.lw + 3;
 	hh[1] = hh[0] + wdw.width;
-	vmf->add(0, 0, 0L);		// Skip 0-th record
+	vmf->add(0, 0, 0);		// Skip 0-th record
 	pfinitH_ng(hh, wdw);
 
 	int	m = a->left;
@@ -1867,7 +1923,7 @@ const	EXIN*	bb = b->exin->score(b->left + 1);
 
 VTYPE Aln2h1::trcbkalignH_ng(const WINDOW& wdw, bool spj, const RANGE* mc)
 {
-	long	ptr;
+	int	ptr;
 
 	vmf = new Vmf();
 	VTYPE	scr = forwardH_ng(&ptr, wdw, spj, mc);
@@ -1911,51 +1967,42 @@ VTYPE Aln2h1::lspH_ng(const WINDOW& wdw)
 	}
 	if (wdw.up == wdw.lw) return(diagonalH_ng());
 	float	cvol = wdw.lw - b->left + 3 * a->right;
-	cvol =  (float) m * n - cvol * cvol / 3;
+	cvol = (float) m * n - cvol * cvol / 3;
 	if (cvol < MaxVmfSpace || m == 1 || 3 * m + 3 >= n)
 	    return (trcbkalignH_ng(wdw));
 
-	WINDOW	wdwl;
-	WINDOW	wdwr;
 	RANGE	rng[2];			// reserve
-	int	cpos[12];
-
 	save_range(seqs, rng, 2);
-	VTYPE	scr = hirschbergH_ng(cpos, wdw, wdwl, wdwr);
+	int	cpos[8];
+	WINDOW	wdwf, wdwb;
+	VTYPE	scr = hirschbergH_ng(cpos, wdw, wdwf, wdwb);
 	SKL	wskl = {cpos[0], 0};
-	int	c = 1;
-	for ( ; cpos[c] < end_of_ulk; ++c) {
-	    wskl.n = cpos[c];
-	    mfd->write((UPTR) &wskl);
+	int	c = 0;
+	if (cpos[c] < end_of_ulk) {	// cross center
+	    while (cpos[++c] < end_of_ulk) {
+		wskl.n = cpos[c];
+		mfd->write((UPTR) &wskl);
+	    }
+	    int	aright = a->right;	// reserve
+	    int	bright = b->right;
+	    INT	bexg = b->inex.exgl;
+	    b->inex.exgl = bexgl;
+	    a->inex.exgr = b->inex.exgr = 0;
+	    a->right = cpos[0];
+	    b->right = cpos[c - 1];
+	    lspH_ng(wdwf);	// first half
+	    a->left = cpos[0];
+	    b->left = cpos[1];
+	    a->right = aright;		// recover
+	    b->right = bright;
+	    a->inex.exgl = 0;
+	    b->inex.exgl = bexg;
+	    a->inex.exgr = aexgr;
+	    b->inex.exgr = bexgr;
 	}
-	a->inex.exgr = 0;
-	INT	bexg = b->inex.exgl;	// temporary
-	b->inex.exgl = bexgl;
-	int	r = b->left - 3 * a->left;
-	if (r < wdwl.lw && bexgl) b->left = 3 * a->left + wdwl.lw;
-	if (r > wdwl.lw && aexgl) a->left = (b->left - wdwl.lw) / 3;
-	a->right = cpos[0];
-	b->right = cpos[c - 1];
-	lspH_ng(wdwl);
-	rest_range(seqs, rng, 2);
-	a->inex.exgl = 0;
-	a->inex.exgr = aexgr;
-	b->inex.exgr = bexgr;
-	b->inex.exgl = bexg;
-	r = b->right - 3 * a->right;
-	if (r > wdwr.up && bexgr) b->right = 3 * a->right + wdwr.up;
-	if (r < wdwr.up && aexgr) a->right = (b->right - wdwr.up) / 3;
-	a->left = cpos[0];
-	b->left = cpos[1];
-	r = b->left - 3 * a->left;
-	if (r > wdwr.lw && cpos[c] > end_of_ulk) {
-	    mfd->write((UPTR) &wskl);
-	    a->left += (r - wdwr.lw) / 3;
-	}
-	lspH_ng(wdwr);
-	rest_range(seqs, rng, 2);
+	lspH_ng(wdwb);
 	a->inex.exgl = aexgl;
-	b->inex.exgl = bexgl;
+	rest_range(seqs, rng, 2);
 	return scr;
 }
 
@@ -1993,7 +2040,7 @@ VTYPE Aln2h1::openendH_ng(int cmode)
 {
 //printf("%s\t%s\n", (*a->sname)[0], (*b->sname)[0]);
 	vmf = new Vmf();
-	long	ptr;
+	int	ptr;
 	WINDOW	wdw;
 	stripe31(seqs, &wdw, alprm.sh);
 	VTYPE	scr = (cmode == 1)?
@@ -2778,13 +2825,13 @@ VTYPE Aln2h1::interpolateH(INT level, int agap, int bgap, int cmode,
 		kscore = lspH_ng(wdw);			// DP
 	    } else if (cmode == 1) {
 		if (wjxt) {				// near 5' end
-		    int	bl = wjxt->jy + term;
+		    int	bl = wjxt->jy + end_margin;
 		    if (bl > b->left) b->left = bl;
 		}
 		kscore = openendH_ng(cmode);		// drop off
 	    } else if (cmode == 2) {
 		if (wjxt) {				// near 3' end
-		    int	br = bgap - wjxt->jy - term;
+		    int	br = bgap - wjxt->jy - end_margin;
 		    if (br > b->left && br < b->right) b->right = br;
 		}
 		kscore = openendH_ng(cmode);		// drop off
@@ -2911,7 +2958,7 @@ const		CHAR*	bs = b->at(jxt->jy - 2);
 SKL* Aln2h1::globalH_ng(VTYPE* scr, const WINDOW& wdw)
 {
 	mfd = new Mfile(sizeof(SKL));
-	SKL	wsk;
+	SKL	wsk = {0, 0};
 	mfd->write((UPTR) &wsk);	// dummy call
 	if (algmode.qck) {
 	    BOUND bab = {a->left, b->left, a->right, b->right};

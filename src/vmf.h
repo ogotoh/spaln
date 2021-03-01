@@ -23,10 +23,10 @@
 #define _VMF_H_
 
 static	const	int	VMFBLKSIZE = 7680;
-static	const	long	DefMaxVMF = 16 * 1024 * 1024;
+static	const	int	DefMaxVMF = 16 * 1024 * 1024;
 
-extern	long	MaxVmfSpace;
-extern	void	setVmfSpace(long spc);
+extern	int	MaxVmfSpace;
+extern	void	setVmfSpace(int spc);
 
 struct VMFBLK {
 	SKLP*	ptr;
@@ -38,21 +38,21 @@ class Vmf {
 	SKLP*	brk;
 	VMFBLK* hed;
 	VMFBLK*	blk;
-	long    idx;
+	int    idx;
 	VMFBLK*	newblk();
 	void	freeblk(VMFBLK* blk);
 public:
 	Vmf();
 	~Vmf();
-	long	add(int m, int n, long p) {
+	int	add(int m, int n, int p) {
 		SKLP	tmp = {m, n, p};
 		return (writevmf(&tmp));
 	}
-	long	writevmf(SKLP* rec);
-	long	vmfseek(long recno);
-	long	size() const {return (idx);}
-	int	readvmf(SKLP* rec, long recno);
-	SKL*	traceback(long pp);
+	int	writevmf(SKLP* rec);
+	int	vmfseek(int recno);
+	int	size() const {return (idx);}
+	int	readvmf(SKLP* rec, int recno);
+	SKL*	traceback(int pp);
 	SKL*	vmferror(Mfile& mfd);
 };
 #endif

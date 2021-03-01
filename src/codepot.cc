@@ -78,24 +78,27 @@ VTYPE SpJunc::spjscr(int n5, int n3) {
 
 const CHAR* SpJunc::spjseq(int n5, int n3)
 {
+	if (n5 == b->left || n3 == b->right) return (spj_tron_tab[256]);
 static	const	CHAR	pyrim[2] = {PHE, PHE};
 const	CHAR*	b5 = b->at(n5 - 2);
 const	CHAR*	b3 = n3? b->at(n3): pyrim;
-	INT	w = 256;
+	int	amb = 0;
 	int	c = ncredctab[aa2nuc[b5[0]]];
-	if (c < 4) {
-	    w = c;
-	    if ((c = ncredctab[aa2nuc[b5[1]]]) < 4) {
+	if (c >= 4) {amb = 1; c = 0;}
+	INT	w = c;
+	if ((c = ncredctab[aa2nuc[b5[1]]]) < 4) {
+	    w = 4 * w + c;
+	    if ((c = ncredctab[aa2nuc[b3[0]]]) < 4) {
 		w = 4 * w + c;
-		if ((c = ncredctab[aa2nuc[b3[0]]]) < 4) {
+		if ((c = ncredctab[aa2nuc[b3[1]]]) < 4)
 		    w = 4 * w + c;
-		    if ((c = ncredctab[aa2nuc[b3[1]]]) < 4) {
-			w = 4 * w + c;
-		    } else w = 256;
-		} else w = 256;
+		else if (amb) w = 256;
+		else amb = 2;
 	    } else w = 256;
-	}
-	return (spj_tron_tab[w]);
+	} else w = 256;
+	if (amb == 0 || w == 256) return (spj_tron_tab[w]);
+	if (amb == 1) return (spj_amb_tron_tab[w]);
+	return (spj_tron_amb_tab[w]);
 }
 
 inline	bool	Exinon::within(const Seq* sd) const
