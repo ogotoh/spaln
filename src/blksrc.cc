@@ -111,6 +111,9 @@ const	char*	val = ps + 1;
 	    case 'Q':	// Maximum gene length
 		if (*val) ild_up_quantile = atof(val);
 		break;
+	    case 'S':	// activate salvage mode
+		algmode.slv = 1;
+		break;
 	    case 'W':	// Write block information to the file
 		WriteFile = val;
 		break;

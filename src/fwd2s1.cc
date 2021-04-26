@@ -233,10 +233,11 @@ const	bool	align = mode & 2;
 	int	n2 = m + wdw.up;
 const	CHAR*	as = a->at(m);
 	for ( ; ++m <= a->right; ++as) {
-	    bool	internal = spj && (!a->inex.exgr || m < a->right);
+const	    bool	internal = spj && (!a->inex.exgr || m < a->right);
+const	    VTYPE	sigB = cip->cip_score(m);
 	    ++n1; ++n2;
 	    int	n = std::max(n1, b->left);
-	    int	n9 = std::min(n2, b->right);
+const	    int	n9 = std::min(n2, b->right);
 const	    CHAR*	bs = b->at(n);
 	    int	r = n - m;
 	    int k = 0;
@@ -308,12 +309,11 @@ HorizonS:
 
 /*	intron 3' boundary, assume no overlapping signals	*/
 		if (internal && b->exin->isAccpt(n)) {
-		    VTYPE	sigJ = cip->cip_score(m);
 		    vclear(maxphl, Nod);
 		    for (int l = 0; l <= ncand; ++l) {
 			RVPDJ*	phl = hl + nx[l];
 			if (n - phl->jnc < IntronPrm.llmt) continue;
-			x = phl->val + sigJ + spjcs->spjscr(phl->jnc, n);
+			x = phl->val + sigB + spjcs->spjscr(phl->jnc, n);
 			from = hf[phl->dir];
 			if (x >= from->val) {
 			    from->val = x;
@@ -341,9 +341,8 @@ HorizonS:
 		if (h != mx) {		// non-diagonal
 		    *h = *mx;
 		    while (mx != hf[++hd]) ;
-		    if (hd % 2 && !(*dir & SPJC)) *dir = dir[-1] & SPJC;
-		    else	*dir &= ~15;
-		    *dir += hd;
+		    *dir = hd + (*dir & ~15);
+		    if (hd & 1) *dir |= (dir[-1] & SPIN);
 		} else if (Local && h->val > diag) {
 		    if (LocalL && diag == 0 && !(*dir & SPJC))
 			h->ptr = vmf? vmf->add(m - 1, n - 1, 0): 0;
@@ -363,10 +362,8 @@ HorizonS:
 		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 		    for (int k = hd == 0? 0: 1; k < Nod; ++k) {
 			from = hf[k];
-			if (k == hd) {			// disallow orphan exon
-			    int	vert = k == 2 || k == 4;
-			    if (dir[vert] & SPIN) continue;
-			} else if (hd >= 0) {
+			if (*dir & SPIN) continue;	// disallow orphan exon
+			if (k != hd) {
 			    y = mx->val;
 			    if (hd == 0 || (k - hd) % 2) y += pwd->GOP[k / 2];
 			    if (from->val <= y) continue;	// prune
@@ -798,9 +795,10 @@ const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	int	n2 = m + wdw.up;
 const	CHAR*	as = a->at(m);
 	for ( ; ++m <= a->right; ++as) {
+const	    VTYPE	sigB = cip->cip_score(m);
 	    ++n1; ++n2;
 	    int	n = std::max(n1, b->left);
-	    int	n9 = std::min(n2, b->right);
+const	    int	n9 = std::min(n2, b->right);
 const	    CHAR*	bs = b->at(n);
 	    int	r = n - m;
 	    Rvpwml*&	h = hf[0] = hhg[0] + r;
@@ -877,13 +875,12 @@ HorizonF:
 
 /*	intron 3' boundary	*/
 		if (b->exin->isAccpt(n)) {
-		    VTYPE	sigJ = cip->cip_score(m);
 		    vclear(maxphl, Nod);
 		    for (int l = 0; l <= ncand; ++l) {
 			Rvdwmlj*	phl = hl + nx[l];
 			if (n - phl->jnc < IntronPrm.llmt) continue;
 			from = hf[phl->dir];
-			x = phl->val + sigJ + spjcs->spjscr(phl->jnc, n);
+			x = phl->val + sigB + spjcs->spjscr(phl->jnc, n);
 			if (x > from->val) {
 			    from->val = x;
 			    maxphl[phl->dir] = phl;
@@ -933,7 +930,7 @@ HorizonF:
 		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 		    for (int k = mx == h? 0: 1; k < Nod; ++k) {
 			from = hf[k];
-			if (from->psp) continue;
+			if (from->psp) continue;        // disallow orphan exon
 			if (k != hd) {
 			    y = mx->val;
 			    if (hd == 0 || (k - hd) % 2) y += pwd->GOP[k / 2];
@@ -958,7 +955,7 @@ HorizonF:
 			} else --ncand;
 		    }
 		}
-		for (int k = 0; k < Nod; k+= 2) hf[k]->psp = false;
+		for (int k = 0; k < Nod; k += 2) hf[k]->psp = false;
 
 #if DEBUG
 		if (OutPrm.debug) {
@@ -979,6 +976,7 @@ HorizonF:
 
 // save variables at the center
 		if (m == mm) {
+const		    int	vk = (hd == 2 || hd == 4)? hd / 2: 0;
 		    for (int k = 0; k < pwd->Noll; ++k) {
 			int	kk = k + k;
 		        if (hf[kk]->lwr < center_lwr[k][r])
@@ -988,9 +986,8 @@ HorizonF:
 			if (!(hd % 2)) hf[kk]->lwr = r;
 			if (k) hf[kk]->ulk = r + k * wdw.width;
 			else {
-			    hf[0]->ulk = r;
-			    if (hd == 2 || hd == 4)	// vertical
-				hf[0]->ulk += hd * wdw.width / 2;
+			    center_lnk[0][r] = hf[0]->ulk;
+			    hf[0]->ulk = r + vk * wdw.width;
 			}
 		    }
 		}	// was center
@@ -1043,7 +1040,7 @@ HorizonF:
 	wdwf.width = wdwf.up - wdwf.lw + 3;
 	r = center_end[d][rr];
 	if (LocalL) b->left = r + maxh.ml;
-	else {
+	else if (a->inex.exgl || b->inex.exgl) {
 	    rr = b->left - a->left;
 	    if (a->inex.exgl && rr > r) a->left = b->left - r;
 	    if (b->inex.exgl && rr < r) b->left = a->left + r;
@@ -1146,6 +1143,8 @@ const	CHAR*	as = a->at(m);
 	    int	n9 = std::min(n2, b->right);
 const	    CHAR*	bs = b->at(n);
 	    int	r = n - m;
+	    bool	psp[NOD];	// post splicing
+	    vset(psp, false, NOD);
 	    VTYPE*&	h = hf[0] = hh[0] + r;
 	    VTYPE*&	g = hf[2] = hh[1] + r;
 	    VTYPE*&	g2 = hf[4] = dagp? hh[2] + r: blackv;
@@ -1211,7 +1210,10 @@ HorizonF:
 			RVDJ*	phl = maxphl[k];
 			if (!phl) continue;
 			from = hf[k];
-			if (*from > *mx) mx = from;
+			if (*from > *mx) {
+			    mx = from;
+			    psp[k] = true;
+			}
 		    }
 		}
 
@@ -1228,6 +1230,7 @@ HorizonF:
 		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 		    for (int k = hd == 0? 0: 1; k < Nod; ++k) {
 			from = hf[k];
+			if (psp[k]) continue;
 			if (k != hd) {
 			    y = *mx;
 			    if (hd == 0 || (k - hd) % 2) y += pwd->GOP[k / 2];
@@ -1249,6 +1252,7 @@ HorizonF:
 			} else --ncand;
 		    }
 		}
+		for (int k = 0; k < Nod; k += 2) psp[k] = false;
 
 #if DEBUG
 		if (OutPrm.debug) {

@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.3
-#### Last updated: 2021-03-01
+#### Present Version 2.4.4
+#### Last updated: 2021-04-26
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -256,6 +256,7 @@ or more comment lines starting with ';C', such as
       *N* = 1: set parameter values for cross-species comparison. The default value for *N* is 0 or 1 for DNA or protein query, respectively.
      * -yY *N*:	Relative contribution of length-dependent part of intron penalty (8)
      * -yZ *N*:	Relative contribution of oligomer composition within an intron (0)
+     * -XS: Activete salvage mode. Considerably slow.
 
 5. **Sortgrcd**
   * **Sortgrcd** is used to recover the output of **spaln** with -O12 option, to apply some filtering, and also to rearrange the output of multiple **spaln** runs.
@@ -307,6 +308,10 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+1. Fix a bug in preventing orphan exons in DP for DNA query.
+2. Revival of the salvage mode with -XS option (examine all positively scored blocks).
+
+## Changes in version 2.4.3
 1. Small improvement in memory usage.
 2. A few bugs related to the unidirectional Hirschberg algorithm have been fixed.
 3. Illegal memory access in generating splice-junction sequence has been fixed.
