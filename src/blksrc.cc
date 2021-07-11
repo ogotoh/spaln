@@ -40,7 +40,8 @@ static	const	char	writeerrmssg[] = "Fail to write to %s !\n";
 
 //		  elem tuple bitpat2 tabsize bitpat shift blklen maxgene nbitpat afact
 static	BlkWcPrm	wcp = {0, 0, 1, 0, 1, 0, 0, 0, 0, 0};
-static	BlkWcPrm	wcp_af = {18, 5, 0, 3200000, 0, 5, 4096, 0, 4, 10};
+static	BlkWcPrm	wcp_af = {20, 5, 0, 3200000, 0, 5, 4096, 0, 1, 10};
+static	BlkWcPrm	wcp_ax = {18, 5, 0, 1889568, 0, 5, 4096, 0, 4, 10};
 static	BlkWcPrm	wcp_cf = {4, 8, 0, 65536, 0, 8, 4096, 0, 1, 10};
 static	BlkWcPrm	wcp_cx = {4, 8, 3255, 65536, 7573, 8, 4096, 0, 5, 10};
 
@@ -587,7 +588,7 @@ static  const char* wfmt =
 static void setupbitpat(int molc, size_t gnmsz)
 {
 	if (molc == PROTEIN || molc == TRON) {
-	    BlkWcPrm&	wcp_t = wcp_af;
+	    BlkWcPrm&	wcp_t = algmode.crs == 2? wcp_ax: wcp_af;
 	    if (wcp.Nalpha == 0) wcp.Nalpha = wcp_t.Nalpha;
 	    if (wcp.Ktuple == 0 && !gnmsz) wcp.Ktuple = wcp_t.Ktuple;
 	    if (wcp.Bitpat2 == 1) wcp.Bitpat2 = wcp_t.Bitpat2;
@@ -596,7 +597,7 @@ static void setupbitpat(int molc, size_t gnmsz)
 	    if (wcp.Nbitpat == 0) wcp.Nbitpat = wcp_t.Nbitpat;
 	    if (wcp.afact == 0) wcp.afact = wcp_t.afact;
 	} else {
-	    BlkWcPrm&	wcp_t = algmode.crs? wcp_cx: wcp_cf;
+	    BlkWcPrm&	wcp_t = algmode.crs == 2? wcp_cx: wcp_cf;
 	    if (wcp.Nalpha == 0) wcp.Nalpha = wcp_t.Nalpha;
 	    if (wcp.Ktuple == 0 && !gnmsz) wcp.Ktuple = wcp_t.Ktuple;
 	    if (wcp.Bitpat2 == 1) wcp.Bitpat2 = wcp_t.Bitpat2;

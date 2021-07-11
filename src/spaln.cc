@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.4";
-static	const	int	date = 210426;
+static	const	char*	version = "2.4.5";
+static	const	int	date = 210710;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -166,6 +166,7 @@ static void usage(const char* messg)
 	fputs("\nin the following, # = integer or real number; $ = string; default in ()\n\n", stderr);
 	fputs("W_Options:\n", stderr);
 	fputs("\t-E\tGenerate local lookup table for each block\n", stderr);
+	fputs("\t-yX\tFormat for remote homology seach\n", stderr);
 	fputs("\t-XC#\tnumber of bit patterns < 6 (1)\n", stderr);
 	fputs("\t-XG#\tMaximum expected gene size (inferred from genome|db size)\n", stderr);
 	fputs("\t-Xk#\tWord size (inferred from genome|db size)\n", stderr);

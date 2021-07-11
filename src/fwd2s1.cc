@@ -62,6 +62,8 @@ public:
 	    delete mfd; mfd = 0;
 	    a = sqs[0];
 	    b = sqs[1];
+	    delete spjcs;
+	    spjcs = new SpJunc(b, pwd);
 	}
 	void	initS_ng(RVP* hh[], const WINDOW& wdw, CHAR* hdir, const RANGE* cutrng = 0);
 	RVP*	lastS_ng(RVP* hh[], const WINDOW& wdw, const RANGE* cutrng = 0);

@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.4
-#### Last updated: 2021-04-26
+#### Present Version 2.4.5
+#### Last updated: 2021-07-10
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -111,6 +111,7 @@ not specified, *MAX_GENE* is also estimated from the genome size.
    * -g: The outputs are gzipped.
    * -t*N*: Number of threads. (1)
    * -E: Generate local lookup table.
+   * -yX:    Format for remote queries (more sensitive but less economic than default)
    * -XA*N*: Alphabet size of the reduced amino acids: 6 < *N* <= 20 (20)
    * -XB*S*: Bit patterns of the spaced seeds concatenated with commas. The pattern should be asymmetric  when the number of patterns > 2.
    * -XC*N*: Number of seed patterns: 0 <= *N* <= 5 (0: contiguous seed)
@@ -148,7 +149,7 @@ the query without prior expansion.
        * No argument: Multiple loci up to the maximum number specified by the program (4 in the present implementation)
        * *N*=1: Re-search the *query* region not aligned in the first trial. May be useful to detect chimera or fragmented genomic region
        * *N*\>1: Output multiple loci maximally up to *N*
-       * *M*: Maximal number of candidate loci to be subjected to spliced alignment (4). If *M* $<$ *N*, *M* is reset to *N*.
+       * *M*: Maximal number of candidate loci to be subjected to spliced alignment (4). If *M* < *N*, *M* is reset to *N*.
      * -O *N*[,N<sub>2</sub>,N<sub>3</sub>...]: Select output format for genome vs cDNA or aa (4)  
       It is possible to output multiple files with extensions of .O*N* at a run by multiply applying this option. 
       Or by concatenating the format numbers with commas or colons, ex. -O0,1,4. See also -o option.
@@ -308,6 +309,11 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.5
+1. Fix a serious bug for DNA query with -S3 option.
+2. Back to the original default settings in the formatting mode. Use -yX option to format genomic sequence for more sensitive yet expensive block search than the standard setting.
+
+## Changes in version 2.4.4
 1. Fix a bug in preventing orphan exons in DP for DNA query.
 2. Revival of the salvage mode with -XS option (examine all positively scored blocks).
 
