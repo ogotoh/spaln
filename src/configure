@@ -7,6 +7,12 @@
 #    (setenv exec_prefix $HOME; setenv CXX g++; setenv CFLAGS "-O3"; ./configure)
 #	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 
+#for debug uncomment following 4 lines
+#exec 5> debug_output.txt
+#BASH_XTRACEFD="5"
+#PS4='$LINENO: '
+#set -x
+
 VER=`sed -n -e '/VERSION "/s/.*"\(.*\)".*/\1/p' < iolib.src`
 AR=${AR-"ar rc"}
 RANLIB=${RANLIB-"ranlib"}
