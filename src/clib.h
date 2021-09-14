@@ -352,50 +352,49 @@ public:
 
 template <typename X>
 class Queue2 {
-	int	qsize;
+const	int	qsize;	// size of queue
+	int	ne;	// present no in queue
 	int	qs;	// start
 	int	qe;	// end
+	int	ns;	// scanned no
 	X*	queue;
 public:
 	void	clear(X iv = 0) {
-	    qs = qe = 0;
+	    ne = qs = qe = ns = 0;
 	    vset(queue, iv, qsize);
 	}
 	Queue2(int sz, X iv = 0) : qsize(sz) {
 	    queue = new X[sz];
 	    clear(iv);
 	}
-	Queue2(Queue2& q) {
-	    qsize = q.qsize;
+	Queue2(Queue2& q) : qsize(q.qsize) {
+	    ne = q.ne;
 	    qs = q.qs;
 	    qe = q.qe;
+	    ns = q.ns;
 	    queue = new X[qsize];
 	    vcopy(queue, q.queue, qsize);
 	}
 	~Queue2() {delete[] queue;}
-	X	push(X val) {
-	    swap(val, queue[qe]);
+	void	push(X val) {
+	    queue[qe] = val;
 	    if (++qe == qsize) qe = 0;
-	    if (qe != qs) val = queue[qs];
+	    if (ne < qsize) ++ne;
 	    else if (++qs == qsize) qs = 0;
-	    return (val);
 	}
 	X	pull() {
 	    X	val = queue[qs];
-	    if (qs != qe && ++qs == qsize) qs = 0;
+	    if (++qs == qsize) qs = 0;
+	    if (ne > 0) --ne;
 	    return (val);
 	}
 	X	head() const {return (queue[qs]);}
 	X	tail() const {return (queue[qe]);}
 	X&	operator[](int i) {return (queue[i]);}
-	int	remain() const {
-	    int n = qe - qs;
-	    if (n < 0) n += qsize;
-	    return (n);
-	}
-	int	begin_i() const {return (qs);}
-	int	end_i() const {return (qe);}
-	int	next_i(int i) const {return ((++i == qsize)? 0: i);}
+	int	remain() const {return (ne);}
+	int	begin_i() {ns = 0; return (qs);}
+	bool	isnt_end() const {return (ns < ne);}
+	int	next_i() {return ((qs + ++ns) % qsize);}
 };
 
 // priority queue simple version without heap

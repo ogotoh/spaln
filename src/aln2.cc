@@ -116,7 +116,7 @@ PwdB::PwdB(const Seq** seqs, const ALPRM* alp) :
 	int	step = (DvsP == 3)? 1: 3;
 	codonk1 = alp->ls == 3? step * alp->k1: LARGEN;
 	if (!seqs[0]->inex.intr && !seqs[1]->inex.intr) return;	// without splice
-	if (DvsP || alprm2.sss > 0.) eijpat = new EijPat(DvsP);	// boundary signal
+	eijpat = new EijPat(DvsP);	// boundary signal
 	if (DvsP || algmode.mns == 0) codepot = new CodePot();	// coding potential
 	if (!DvsP) {	// C vs G
 	    int	zZ = (alprm2.z > 0) + 2 * (alprm2.Z > 0);

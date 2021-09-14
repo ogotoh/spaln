@@ -41,11 +41,15 @@ static	const	float	def_alprm2z = 2.;
 static	const	int	end_of_ulk = INT_MAX - 2;
 static	const	int	dir2nod[16] = 
 	{-1, -1, 0, 0, 2, 2, 2, 4, 1, 1, 1, 3, 2, 1, -1, -1};
-static	const	float	defSss[2] = {0.3, 0.50};
+static	const	float	defSss[3] = {0.3, 0.50, 0.7};
 static	const	int	N_Out_Modes = 16;
 static	const	int	NCAND = 4;
 static	const	int	nextp[3] = {1, 2, 0};
 static	const	int	prevp[3] = {2, 0, 1};
+static	const	CHAR	psp_bit[5] = {4, 1, 8, 2, 16};
+static	const	CHAR	e1_psp = 1;
+static	const	CHAR	e2_psp = 2;
+static	const	CHAR	e_psp = e1_psp + e2_psp;
 
 enum TraceBackDir {
 	DEAD, RSRV, DIAG, NEWD, VERT, SLA1, SLA2, VERL, 
@@ -123,9 +127,8 @@ struct RVPDJ {
 	void reseth();
 };
 
-struct Rvpwml {
+struct Rvwml {
 	VTYPE	val;	// score
-	bool	psp;	// post splicing
 	int	upr;
 	int	lwr;
 	int	ml;
@@ -191,7 +194,10 @@ static	const	RVDWC	black_vdwc = {NEVSEL, 0, INT_MIN, INT_MAX, 0, 0};
 static	const	RVDWC	white_vdwc = {0, 0, INT_MAX, INT_MIN, 0, 0, 0};
 static	const	RVDJ	black_vdj   = {NEVSEL, 0, 0};
 static	const	RVPDJ	black_vpdj = {NEVSEL, 0, 0, 0};
-
+static const Rvwml black_vpwml = 
+	{NEVSEL, INT_MIN, INT_MAX, 0, end_of_ulk};
+static	const	Rvdwml	black_vdwml = 
+	{NEVSEL, 0, INT_MIN, INT_MAX, 0, end_of_ulk};
 static	const	Rvdwmlj	black_vdwmlj = 
 	{NEVSEL, 0, INT_MIN, INT_MAX, 0, end_of_ulk, 0};
 
@@ -329,8 +335,6 @@ extern	int	prePwd(const Seq** seqs, bool use_mdm = false);
 extern	void	stripe(const Seq* seqs[], WINDOW* wdw, int sh);
 extern	void	stripe31(const Seq* seqs[], WINDOW* wdw, int shld);
 extern	Seq*	synthseq(Seq* c, const Seq* a, const Seq* b, const SKL* skl);
-extern	void	Intron53(Seq* sd, const PwdB* pwd, bool both_ori);
-extern	void	Intron53N(Seq* sd, VTYPE f, const PwdB* pwd, bool both_ori);
 
 extern	VTYPE	HomScoreB_ng(const Seq* seqs[], const PwdB* pwd);
 extern	VTYPE	HomScoreH_ng(const Seq* seqs[], const PwdB* pwd);

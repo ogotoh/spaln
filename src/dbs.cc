@@ -801,7 +801,7 @@ Seq* Seq::getdbseq(DbsDt* dbf, const char* code, int c, bool readin)
 
 	if (!dbf) dbf = defdbf;
 	if (!dbf) return (0);
-	if (vrtl) refresh();
+	refresh();
 	DbsRec*	record = (0 <= c && c < int(dbf->numidx))? dbf->dbsrec(c): 0;
 	if (!record) {
 	    if (!code) return (0);

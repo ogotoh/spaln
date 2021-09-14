@@ -47,7 +47,7 @@ const	char*	simfile;
 	VTYPE*	simunp;
 	Simmtx(ComPmt ab, DefPrm* dp);
 	Simmtx(ComPmt ab, const char* fname, DefPrm* dp);
-	~Simmtx() {delete *mtx; delete mtx;}
+	~Simmtx() {delete[] *mtx; delete[] mtx;}
 	int	simgrade(int aa, int bb) const;
 	float	Nrmlf() const {return nrmlf;}
 	float	AvTrc() const {return avtrc;}

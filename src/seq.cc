@@ -26,15 +26,16 @@ DefSetup	def_setup = {UNKNOWN, 0, IM_NONE};
 RANGE	fullrng = {0, INT_MAX};
 int	noseq = 0;
 
-/*		   -  -  A C M G R S  V T W Y  H K  D  B  N 	*/
+/*		     -   - A C M G R S  V T W Y  H K  D  B  N 	*/
 CHAR ncredctab[]  = {15,15,0,1,4,2,5,6,10,3,7,8,10,9,12,13,14};
+CHAR nucl2rnucl[] = { 5, 5,0,1,4,2,4,4, 4,3,4,4, 4,4, 4, 4, 4};
 CHAR ncelements[] = { 0, 0,0,1,2,2,0,2, 0,3,3,3, 1,1, 2, 3, 0};
 CHAR nccmpctab[]  = { 0, 1,2,3,6,4,6,6, 6,5,6,6, 6,6, 6, 6, 6};
 /*	 _ _ X A R N D C Q E  G  H  I  L  K  M  F  P  S  T  W  Y  V B Z	*/
 CHAR aacmpctab[]  = 
 	{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,5,8};
 CHAR aaredctab[] = 
-	{20,20,20,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,2,5};
+     {21,21,20,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,2,5};
 /*	{_,_,X,C,G,A,A,G,A,A,G,A,T,T,A,T,T,C,C,C,G,A,T,G,G,A};*/
 CHAR tnredctab[] = 
 	{4,4,4,1,2,0,0,2,0,0,2,0,3,3,0,3,3,1,1,1,2,0,3,2,2,0};
@@ -153,7 +154,8 @@ SeqServer::SeqServer(int ac, const char** av, InputMode infm,
 	: argc(ac), argc0(ac), argv(av), argv0(av), 
 	  cfrom(0), cto(0), input_form(infm)
 {
-	molc[0] = mq; molc[1] = mt;
+	molc[0] = mq;
+	molc[1] = mt == TRON? DNA: mt;
 	input_ns = (infm == IM_SNGL)? 1: 2;
 	if (algmode.blk) {
 	    target_dbf = dbs_dt[0];
@@ -352,17 +354,16 @@ size_t SeqServer::total_seq_len(Seq* sd, int* many)
 
 void Seq::refresh(const int& num, const int& length)
 {
-	if (vrtl) {
-	    sid = vrtl; vrtl = 0;
+	if (!num && !seq_) return;
+	if (!is_eldest()) {
+	    sid = vrtl;
 	    seq_ = end_ = 0; cmps = 0; lens = 0; nbr = 0;
-	    sname = 0; spath = 0; msaname = 0; descr = 0;
+	    sname = 0; spath = 0; exons = 0; msaname = 0; descr = 0;
 #if USE_WEIGHT
-	    if (inex.vtwt)
-		delete[] weight;
+	    if (inex.vtwt) delete[] weight;
 	    weight = pairwt = 0;
 #endif
 	} else {
-	    delete exin;
 	    delete sigII;
 #if USE_WEIGHT
 	    delete[] weight; weight = 0;
@@ -383,9 +384,9 @@ void Seq::refresh(const int& num, const int& length)
 	    }
 	}
 	delete[] jxt; jxt = 0;
-	exin = 0; sigII = 0; 
+	delete exin; exin = 0; sigII = 0; 
 	left = right = base_ = 0;
-	jscr = 0; anti_ = 0;
+	jscr = 0;  vrtl = 0; anti_ = 0;
 	inex = def_inex;
 	if (num) {
 	    seqalloc(num, length);
@@ -407,9 +408,9 @@ Seq* Seq::aliaseq(Seq* dest, bool this_is_alias)
 	if (!dest)	dest = new Seq(0);
 	else	dest->refresh();
 	int	destid = dest->sid;
-//	*dest = *this;
 	memcpy(dest, this, sizeof(Seq));
 	dest->jxt = 0;
+	if (is_eldest()) --vrtl;
 	if (this_is_alias) {
 	    vrtl = sid;
 #if USE_WEIGHT
@@ -437,15 +438,50 @@ void initseq(Seq** seqs, int n)
 	for ( ; n--; ++seqs) *seqs = new Seq();
 }
 
+// set eldest to the last member of aliases
+
+void rectiseq(Seq** seqs, Seq** cur)
+{
+	for ( ; cur > seqs; --cur) {
+	    if ((*cur)->is_eldest()) continue;
+	    int	old_sid = (*cur)->sid;
+	    Seq**	wrk = cur;
+	    while (--wrk >= seqs) {
+		if ((*wrk)->sid == old_sid && (*wrk)->is_eldest()) {
+		    (*cur)->sid = (*cur)->vrtl;
+		    (*cur)->vrtl = (*wrk)->vrtl;
+		    (*wrk)->vrtl = (*wrk)->sid;
+		    if ((*wrk)->lens != (*cur)->lens)
+			(*cur)->vrtl = (*cur)->sid;
+		    break;
+		}
+	    }
+	    while (--wrk >= seqs) {
+		if ((*wrk)->sid == old_sid)
+		    (*wrk)->sid = (*cur)->sid;
+	    }
+	}
+}
+
 void clearseq(Seq** seqs, int n)
 {
+	rectiseq(seqs, seqs + n - 1);
 	for ( ; n--; ++seqs) delete *seqs;
 }
 
-void cleanseq(Seq** seqs, int n)
+void cleanseq(Seq** seqs, int n, int num)
 {
-	for ( ; n--; ++seqs)
-	    (*seqs)->refresh();
+	rectiseq(seqs, seqs + n - 1);
+	for ( ; n--; ++seqs) (*seqs)->refresh(num);
+}
+
+void reportseq(Seq** sqs, int n)
+{
+	for (int i = 0; i < n; ++i) {
+	    Seq*&	sd = sqs[i];
+	    printf("%d\t%d\t%d\t%d\t%d\t%d\t%p\t%p\n", i + 1,
+	    sd->sid, sd->vrtl, sd->len, sd->area_, sd->did, sd->seq_, sd->lens);
+	}
 }
 
 void Seq::fillpad()

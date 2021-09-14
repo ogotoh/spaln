@@ -60,16 +60,22 @@ struct EijPat;
 enum INTENDS {IE5, IE3, IE53, IE35, IE5P3};
 
 class Exinon {
+	Seq*	sd;
+const	PwdB*	pwd;
+const	bool&	both_ori;
 	int	size;
 	int	bias;
-	INT53*	int53;
-	STYPE**	sig53tab;
+	INT53*	int53 = 0;
+	STYPE**	sig53tab = 0;
 	bool	statictab;
-	ExinPot* exinpot;
+	ExinPot* exinpot = 0;
 public:
-	double	fact;
-	EXIN*	data;
-	Exinon(const Seq* sd, FTYPE f, const PwdB* pwd);
+	FTYPE	fact;
+	FTYPE	fS;
+	STYPE	at_sig5 = 0;
+	STYPE	gc_sig5 = 0;
+	EXIN*	data = 0;
+	Exinon(Seq* sd_, const PwdB* pwd_, bool bo);
 	~Exinon();
 	STYPE	sig53(int m, int n, INTENDS c) const;
 	STYPE	sigST(int n, bool init) const {
@@ -84,14 +90,13 @@ public:
 	    (int53[d].cano5 == 1 && int53[a].cano3) ||
 	    (int53[d].cano5 && int53[a].cano3 == 1))?
 		int53[d].cano5 + int53[a].cano3: 0;}
-	bool	within(const Seq* sd) const;
 	int	lplay(int n) const {return (n - bias);}
 	int	rplay(int n) const {return (bias + size - n);}
-	void	clear() {vset(data + bias, ZeroExin, size + 1);}
 	EXIN*	begin() const {return (data + bias);}
 	EXIN*	end()	const {return (data + bias + size - 1);}
-friend	void Intron53(Seq* sd, const PwdB* pwd, bool both_ori);
-friend	void Intron53N(Seq* sd, FTYPE ff, const PwdB* pwd, bool both_ori);
+	void	intron53();
+	void	intron53N();
+	void	resize();
 };
 
 static const CHAR spj_tron_tab[257][2] = {
@@ -172,7 +177,7 @@ const	CHAR*	spjseq(int n5, int n3);
 struct INTRONPEN {
 	float	ip, fact, mean;
 	int	llmt, mu, rlmt, elmt, tlmt, minl, maxl, mode;
-	STYPE*	array, *table;
+	STYPE*	array, *table, sip;
 	float	a1, m1, t1, k1, m2, t2, k2, a2, m3, t3, k3;
 };
 

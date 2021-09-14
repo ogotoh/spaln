@@ -57,11 +57,10 @@ const	char*	DefBitPat[MaxBitPat] = {
 "101011001001011101101111,1001100001100111101111011",
 };
 ReducWord::ReducWord(const Seq* sd, INT elms, const char* ap) : 
-	master(true), Nalpha(elms), g2r(0)
+	molc(sd->inex.molc), master(true), 
+	ConvTabSize(sd->code->max_code),
+	Nalpha(elms)
 {
-	molc = sd->inex.molc;
-
-	ConvTabSize = sd->code->max_code;
 	if (!sd->isdrna()) {
 	    ++ConvTabSize;
 	    int	aaPat = 20 - 6 + SEB6;			// 20 letters
@@ -88,9 +87,18 @@ ReducWord::ReducWord(const Seq* sd, INT elms, const char* ap) :
 	    aConvTab['U' - 'A'] = iConvTab[sd->code->max_code] = --Nalpha;
 	a2r = sd->isprotein()? aConvTab: ntconv;
 	if (sd->istron()) {
-            g2r = new CHAR[64];
-            for (int g = 0; g < 64; ++g)
-                g2r[g] = aConvTab[acodon[gencode[g]] - 'A'];
+            g2r = new CHAR[130];
+	    g2r_c = g2r + 65;
+            for (int g = 0, f = 0; f < 4; ++f) {
+		for (int s = 0; s < 4; ++s) {
+		    for (int t = 0; t < 4; ++t, ++g) {
+	                g2r[g] = aConvTab[acodon[gencode[g]] - 'A'];
+const			int	c = 63 - (f + 4 * s + 16 * t);
+			g2r_c[g] = aConvTab[acodon[gencode[c]] - 'A'];
+		    }
+		}
+	    }
+	    g2r[64] = g2r[129] = g2r[48];	// amb = term
         }
 }
 
@@ -115,9 +123,11 @@ Bitpat::Bitpat(INT npat, const char* spat) : master(true)
 		if (x & 1) ++weight;
 		++width;
 	    }
-	    if (width == weight) exam = 0;	// continuouse seed
-	    else {				// discontinuouse seed
-		exam = new int[2 * weight];
+	    exam = new int[2 * weight];
+	    if (width == weight) {	// continuouse seed
+		for (int w = 0; w < weight; ++w)
+		    exam[w] = exam[w + weight] = w;
+	    } else {			// discontinuouse seed
 		INT	x = 1;
 		int	wt = 0;
 		for (int w = 0; w < width; ++w, x <<= 1)
@@ -132,33 +142,30 @@ Bitpat::Bitpat(INT npat, const char* spat) : master(true)
 
 void Bitpat_wq::clear()
 {
-	if (exam) vset(queue, BAD_RES, qsize);
+	if (spaced()) vset(queue, BAD_RES, qsize);
 	else	vclear(queue, qsize);
 	vset(fstat, msb, nframe);
 	vclear(qp, noq);
 }
 
 Bitpat_wq::Bitpat_wq(INT elms, int nf, bool rvs, INT npat, const char* spat)
-	: Bitpat(npat, spat), nalpha(elms), nframe(nf), reverse(rvs)
+	: Bitpat(npat, spat), nalpha(elms), msb(1 << (weight - 1)),
+	  nframe(nf), reverse(rvs),
+	  noq(spaced()? nframe: (nframe > 1? 2: 1)),
+	  qsize(noq * width),
+	  TabSize(ipower(nalpha, weight))
 {
-	if (exam) {		// discontinuouse seed
-	    noq = nframe;
-	} else {		// continuouse seed
-	    noq = nframe > 1? 2: 1; 
-	}
-	msb = 1 << (weight - 1);
-	qsize = noq * width;
 	queue = new INT[qsize];
 	fstat = new INT[nframe];
 	qp = new CHAR[noq];
 	clear();
-	TabSize = ipower(nalpha, weight);
 }
 
 Bitpat_wq::Bitpat_wq(const Bitpat_wq& src)
-	: Bitpat(src)
+	: Bitpat(src), nalpha(src.nalpha), msb(src.msb),
+	  nframe(src.nframe), reverse(src.reverse),
+	  noq(src.noq), qsize(src.qsize), TabSize(src.TabSize)
 {
-	*this = src;
 	queue = new INT[qsize];
 	fstat = new INT[nframe];
 	qp = new CHAR[noq];
@@ -167,23 +174,23 @@ Bitpat_wq::Bitpat_wq(const Bitpat_wq& src)
 	
 void Bitpat_wq::flaw(int f)
 {
-	if (!exam) {
-	    queue[f] = 0;
-	    fstat[f] = msb;
-	} else {
+	if (spaced()) {
 	    queue[qp[f] + f * width] = BAD_RES;
 	    if (++qp[f] == width) qp[f] = 0;
+	} else {
+	    queue[f] = 0;
+	    fstat[f] = msb;
 	}
 }
 
 INT Bitpat_wq::word(INT c, int f)
 {
-	if (!exam) {
+	if (!spaced()) {
 	    fstat[f] >>= 1;
 	    queue[f] = (queue[f] * nalpha + c) % TabSize;
 	    return (fstat[f]? BadWord: queue[f]);
 	}
-	int	offset = f * width;
+const	int	offset = f * width;
 	queue[qp[f] + offset] = c;
 	if (++qp[f] == width) qp[f] = 0;
 	int*	exm = reverse? exam + weight: exam;
@@ -218,12 +225,10 @@ INT bpcompress(const char* sp, INT* w)
 WordTab::WordTab(const Seq* sd, INT tpl, INT nsft, INT elms, const char* ap,
 	INT bp, INT bp2, INT nbt, INT np, INT afact, INT minorf)
 	: ReducWord(sd, elms, ap), Nbitpat(nbt), kmer(tpl),
-	BitPat(bp), BitPat2(bp2), Nshift(nsft), npos(np), toomany(afact), p(0),
-	heads(0), wposs(0), ss(ss6[0]), word_at_0s(0), head(0), wpos(0),
-	w_qp(0), wq_size(minorf), w_queue(0)
+	  BitPat(bp), BitPat2(bp2), Nshift(nsft), npos(np), 
+	  wq_size(minorf), nfrm(sd->istron()? 6: 1), toomany(afact)
 {
 	bpp = new Bitpat_wq*[Nbitpat];
-	nfrm = sd->istron()? 6: 1;
 	word_at_0s = new INT[2 * Nbitpat];
 	INT	possize = npos;
 	if (nfrm == 6) {
@@ -236,7 +241,7 @@ WordTab::WordTab(const Seq* sd, INT tpl, INT nsft, INT elms, const char* ap,
 		for (INT k = 1; k < Nbitpat; ++k)
 		    w_queue[k] = w_queue[k - 1] + 2 * wq_size;
 	    }
-	} else	ss = wq_size = 0;
+	} else	wq_size = ss = 0;
 	toomany /= Nshift;
 	if (Nbitpat == 1) bpp[0] = new Bitpat_wq(Nalpha, nfrm, 0, BitPat);
 	else {
@@ -265,9 +270,8 @@ WordTab::WordTab(const Seq* sd, INT tpl, INT nsft, INT elms, const char* ap,
 WordTab::WordTab(const WordTab& src)
 	: ReducWord(src), Nbitpat(src.Nbitpat), kmer(src.kmer), 
 	  BitPat(src.BitPat), BitPat2(src.BitPat2), Nshift(src.Nshift), 
-	  npos(src.npos), toomany(src.toomany), p(0), nfrm(src.nfrm), 
-	  heads(0), wposs(0), ss(ss6[0]), word_at_0s(0), head(0), wpos(0),
-	  w_qp(0), wq_size(src.wq_size), w_queue(0)
+	  npos(src.npos), wq_size(src.wq_size), nfrm(src.nfrm),
+	  toomany(src.toomany)
 {
 	bpp = new Bitpat_wq*[Nbitpat];
 	word_at_0s = new INT[2 * Nbitpat];
@@ -362,13 +366,12 @@ void WordTab::c2w(INT uc, int i)	// letter to word
 
 void WordTab::c2w6(INT uc, int i)	// letter to word
 {
-	cc[p] = cc[p + 3] = 0;	// initialize codon
-	if (uc == 4) {		// ambiguous
+	cc[p] = 0;		// initialize codon
+	if (uc == 4) {			// ambiguous
 	    vset(xx, 4U, 3);
 	} else {
 	    for (int q = 0; q < 3; ++q) {
 		cc[q] = ((cc[q] << 2) + uc) & 63;
-		cc[q + 3] = (((3 - uc) << 4) + (cc[q + 3] >> 2)) & 63;
 		xx[p] >>= 1;
 	    }
 	}
@@ -379,10 +382,12 @@ void WordTab::c2w6(INT uc, int i)	// letter to word
 	    if (++w_qp == wq_size) w_qp = 0;
 	    i -= wq_size;
 	}
-	for (int q = p; q < 6; q += 3, wqp += wq_size, wq_base += wq_size) {
+const	CHAR*	g2r_w = g2r;
+	for (int q = p; q < 6; q += 3, 
+	    wqp += wq_size, wq_base += wq_size, g2r_w = g2r_c) {
 	    SHORT&	sss = ss6[q];
 	    int	orf_len = 3 * sss;
-	    if (!xx[p]) uc = g2r[cc[q]];
+	    if (!xx[p]) uc = g2r_w[cc[p]];
 	    if (!xx[p] && bpp[0]->good(uc)) ++sss;
 	    else	sss = 0;
 	    for (INT k = 0; k < Nbitpat; ++k) {
@@ -434,7 +439,7 @@ void WordTab::reset(int mode)
 	if (mode & 1) {
 	    vclear(ss6, 6);
 	    if (nfrm == 6) {
-		vclear(cc, 6);
+		vclear(cc, 3);
 		vset(xx, 4U, 3);
 	    }
 	    for (INT k = 0; k < Nbitpat; ++k)

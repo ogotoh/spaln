@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <vector>
 #include "bitpat.h"
+#include "wln.h"
 
 #define	TESTRAN	0
 
@@ -222,13 +223,12 @@ const	bool	isaa;
 const	bool	istron;
 const	bool	mkblk;
 	Chash*	ch;
-	MakeLookupTabs*	lut;
 public:
 	void	c2w(INT uc, INT* tcc = 0);
 	void	c2w6(INT uc, INT* tcc = 0);
 	void	c2w6_pp(int n);
 	Block(const Seq* sq, INT blklen, bool mk_blk = true);
-	~Block() {delete ch; delete lut;}
+	~Block() {delete ch;}
 #if M_THREAD
 protected:
 	int	cps;	// chromosomal position
@@ -248,7 +248,7 @@ public:
 	char*	end() const {return (tsq);}
 	void	end(char* t) {tsq = t;}
 	void	restore() {tsq = esq;}
-	Block(Block& src, char* s, MakeLookupTabs* mlt = 0);
+	Block(Block& src, char* s);
 friend	class	MakeBlk;
 friend	void*	worker(void* arg);
 #endif	// M_THREAD
@@ -474,20 +474,15 @@ class SrchBlk {
 	int	DeltaPhase2;
 	SHORT	ptpl;
 	INT	maxmmc;
-	CHAR*	ConvTab;
-	ContBlk*	pbwc;
-	Block2Chr*	pb2c;
-	INT*	SegLen;
+	CHAR*	ConvTab = 0;
+	ContBlk*	pbwc = 0;
+	Block2Chr*	pb2c = 0;
+	INT*	SegLen = 0;
 	INT	MinGeneLen;
 	int	min_agap;	// codons
-	Bhit2*	bh2;	// thread specific
-	Bhit4*	bh4;
-	SrchBlk*	master;
-	Wlp*	wlp;
-	int	eofb(int c) {
-	    delete wlp; wlp = 0;
-	    return (c);
-	}
+	Bhit2*	bh2 = 0;	// thread specific
+	Bhit4*	bh4 = 0;
+	SrchBlk*	master = 0;
 	void	initialize(Seq** sqs, const char* fn = "");
 	void	init2(const Seq* sd);
 	void	init4(const Seq* sd);
@@ -505,17 +500,16 @@ class SrchBlk {
 		dbf->recidx[m].seqlen);
 	}
 #if TESTRAN
-	Testran*	tstrn;
+	Testran*	tstrn = 0;
 #endif
 public:
-	PwdB*	pwd;
+	PwdB*	pwd = 0;
 	int	bbt;
 	INT	nseg;
 	int	NoWorkSeq;
 	DbsDt*	dbf;
-	Randbs*	rdbt;
-	Bitpat** bpp;
-	LookupTabs*	lut;
+	Randbs*	rdbt = 0;
+	Bitpat** bpp = 0;
 	void	reset(DbsDt* df) {
 		dbf = df;
 #if TESTRAN
@@ -528,14 +522,14 @@ public:
 	    gener = seqs + 1 + NoWorkSeq;
 	    lstgr = gener + OutPrm.MaxOut2;
 	}
-	Seq**	get_gener() {return gener;}
+	Seq**	get_gener() const {return gener;}
 	SrchBlk(Seq* sqs[], const char* fn, bool gdb = false);
 	SrchBlk(Seq* sqs[], MakeBlk* mb, bool gdb = false);
 	SrchBlk(SrchBlk* sbk, DbsDt* df);
 	~SrchBlk();
 	void	setSegLen();
-	int	MinQuery();
-	int	MaxGene();
+	int	MinQuery() const;
+	int	MaxGene() const;
 template <typename file_t>
 	int	read_blk_dt(file_t fd);
 template <typename file_t>
@@ -544,7 +538,7 @@ template <typename file_t>
 	int	findblock(Seq** sqs);
 	int	findh(Seq** sqs);
 	int	finds(Seq** sqs);
-	bool	grngoverlap(GeneRng* a, GeneRng* b);
+	bool	grngoverlap(const GeneRng* a, const GeneRng* b);
 	bool	incompatible(Seq* a) {return (DRNA ^ a->isdrna());}
 };
 

@@ -841,7 +841,8 @@ static	const	char	tmp_intends[] = "  .  ";
 static	const	char	fmt[] = "%s\t%s\t%7.2f\t%7d\t%7d\t%7d\t%7d\t%7d\t%7d\t"
 			"%7d\t%7.1f\t%7d\t%7.1f\t%7.2f\t%7.2f %2d %d %2d %d %s\n";
 static	const	char	tfmt[] = "@ %s %c ( %d %d ) %s [%d:%d] ( %d %d ) S: %.1f =: %.1f C: %.1f "
-			"T#: %d T-: %d B#: %d B-: %d X: %d Nexn: %d\n";
+//			"T#: %d T-: %d B#: %d B-: %d X: %d Nexn: %d\n";
+			"T#: %d T-: %d B#: %d B-: %d X: %d Nexn: %d HC: %4.1f\n";
 static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 
 	char	intends[8];
@@ -975,11 +976,15 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		fatal(efmt, qrext, gr.Nrecord);
 #endif
 	} else {
+	    int	n = 0;
+	    for (int j = 0; j < gene->CdsNo; ++j)
+		n += gene->jxt[j].jlen;
+	    float hc = 100. * n / (qry->right - qry->left);
 	    fprintf(fd, tfmt, (*gene->sname)[0], gr.Csense? '-': '+', 
 	    gr.Gstart, gr.Gend,
 	    (*qry->sname)[0], qry->many, qry->len, gr.Rstart, gr.Rend,
 	    gr.Gscore, gr.Pmatch, gr.Pcover, 
-	    gr.mmc, gr.unp, gr.bmmc, gr.bunp, gr.ng, gr.nexn);
+	    gr.mmc, gr.unp, gr.bmmc, gr.bunp, gr.ng, gr.nexn, hc);
 	}
 	gr.Nrecord += gr.nexn;
 }

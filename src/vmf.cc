@@ -75,13 +75,12 @@ int Vmf::writevmf(SKLP* rec)
 
 int Vmf::vmfseek(int recno)
 {
-	int	rn = 0;
-
 	if (recno < 0) recno += idx;
 	if (0 > recno || recno > idx) {
 	    prompt("%ld > %ld: Vmf out of range !\n", recno, idx);
 	    return (ERROR);
 	}
+	int	rn = 0;
 	for (blk = hed; blk; blk = blk->nxt)
 	    if ((rn += VMFBLKSIZE) > recno) break;
 	cur = blk->ptr + (recno - rn + VMFBLKSIZE);
@@ -95,6 +94,24 @@ int Vmf::readvmf(SKLP* rec, int recno)
 	movmem(cur, rec, sizeof(SKLP));
 	cur++;
 	return((int) sizeof(SKLP));
+}
+
+SKLP& Vmf::operator[](int recno)
+{
+	if (recno < 0) recno += idx;
+	if (0 > recno || recno > idx) {
+	    prompt("%ld > %ld: Vmf out of range !\n", recno, idx);
+	    return (cur[0]);
+	}
+	int	rn = 0;
+	VMFBLK*	bk = hed;
+	for ( ; bk; bk = bk->nxt)
+	    if ((rn += VMFBLKSIZE) > recno) break;
+	if (!bk) {
+	    prompt("%ld > %ld: Vmf out of range !\n", recno, idx);
+	    return (cur[0]);
+	}
+	return (bk->ptr[recno - rn + VMFBLKSIZE]);
 }
 
 SKL* Vmf::vmferror(Mfile& mfd) 
@@ -112,7 +129,7 @@ SKL* Vmf::traceback(int pp)
 	if (readvmf(&sv, pp) == ERROR) return (vmferror(mfd));
 	mfd.write(&sv);
 	while (sv.p) {
-	    if (readvmf(&sv, sv.p) == ERROR) return (vmferror(mfd));;
+	    if (readvmf(&sv, sv.p) == ERROR) return (vmferror(mfd));
 	    mfd.write(&sv);
 	}
 	int	n = mfd.size();

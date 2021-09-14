@@ -688,7 +688,7 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	    case 'M': IntronPrm.maxl = int(ktof(vl)); break;	// maximum expected length of intron
 //	    case 'N': alprm2.nrmlipot = 1; break;	// normalize intron potential
 	    case 'S': alprm2.sss = *vl? atof(vl): 100.; 
-		if (alprm2.sss >= 1.) alprm2.sss /= 100.;
+		if (alprm2.sss > 1.) alprm2.sss /= 100.;
 		break;
 	    case 'T': IntronPrm.tlmt = atoi(vl); break;	// 
 	    case 'U': alprm.ubh = atoi(vl); break;	// min vects for uni-dir Hirschberg

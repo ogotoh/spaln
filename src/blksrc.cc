@@ -21,7 +21,6 @@
 
 #include "aln.h"
 #include "utilseq.h"
-#include "wln.h"
 #include "blksrc.h"
 
 bool	ignoreamb = false;
@@ -113,8 +112,7 @@ const	char*	val = ps + 1;
 		if (*val) ild_up_quantile = atof(val);
 		break;
 	    case 'S':	// activate salvage mode
-		algmode.slv = 1;
-		break;
+		algmode.slv = 1; break;
 	    case 'W':	// Write block information to the file
 		WriteFile = val;
 		break;
@@ -333,7 +331,7 @@ Block::Block(const Seq* sq, INT blklen, bool mk_blk)
 	: WordTab(sq, wcp.Ktuple, wcp.Nshift, wcp.Nalpha, ConvPat, 
 	  wcp.BitPat, wcp.Bitpat2, wcp.Nbitpat, 0, wcp.afact, MinOrf),
 	  sd(sq), isaa(sd->isprotein()), istron(sd->istron()),
-	  mkblk(mk_blk), ch(0), lut(0)
+	  mkblk(mk_blk), ch(0)
 #if M_THREAD
 	  , cps(0), prelude(0), margin(0), seq(0), tsq(0), bid(0)
 #endif
@@ -344,13 +342,6 @@ Block::Block(const Seq* sq, INT blklen, bool mk_blk)
 	if (thread_num < 1 && mkblk) 
 	    ch = new Chash(int(hfact * wcp.blklen));
 	margin = prelude;
- 	if (algmode.alg) {
-// use lookup table
-	    WLPRM*	wlp = selectwlprm(wcp.blklen, istron? 1: 0);
-	    lut = new MakeLookupTabs(sd, WriteFile, wcp.blklen, 
-		wlp, wcp.afact, MinOrf);
-	    if (lut->prelude > prelude) margin = lut->prelude;
-	}
 	margin += MinOrf;
 }
 
@@ -1030,8 +1021,6 @@ void MakeBlk::scan_genome(file_t fd, INT* tc)
 {
 	int	c = 0;
 	bool	mdbs = tc && mkdbs;
-	bool	mlut = tc && lut;
-	int	i = mlut? -lut->prelude: 0;
 	int	posinblk = 0;
 	int	rest = 0;
 	while ((c = fgetc(fd)) != EOF) {
@@ -1046,14 +1035,6 @@ void MakeBlk::scan_genome(file_t fd, INT* tc)
 			posinblk = prelude + MinOrf;
 		    }
 		    ++chrbuf.spos;
-		}
-		if (mlut) {
-		    if (istron)	lut->c2w6(uc, i);
-		    else	lut->c2w(uc, i);
-		    if (++i == int(wcp.blklen + MinOrf)) {
-			lut->store();
-			i = MinOrf;
-		    }
 		}
 		if (mdbs) mkdbs->putseq(encode(c));
 	    } else switch (c) {
@@ -1073,17 +1054,6 @@ void MakeBlk::scan_genome(file_t fd, INT* tc)
 			if (pchrid) *pchrid++ = chrbuf;
 			else	++cntblk.ChrNo;
 			posinblk = 0;
-		    }
-		    if (mlut && (i + lut->prelude) > 0) {
-			if (MinOrf) {
-			    lut->c2w6_pp(i, MinOrf - rest);
-			    if (rest > 0) {
-				lut->store();
-				lut->c2w6_pp(MinOrf, rest);
-			    }
-			}
-			lut->store();
-			i = -lut->prelude;
 		    }
 		    if (mdbs) {
 			c = mkdbs->write_recrd(fd);
@@ -1112,17 +1082,6 @@ void MakeBlk::scan_genome(file_t fd, INT* tc)
 		}
 	    }
 	    store_blk(tc);
-	}
-	if (mlut && (i + lut->prelude) > 0) {
-	    if (MinOrf) {
-		rest = max(i - int(wcp.blklen), 0);
-		lut->c2w6_pp(i, MinOrf - rest);
-		if (rest > 0) {
-		    lut->store();
-		    lut->c2w6_pp(MinOrf, rest);
-		}
-	    }
-	    lut->store();
 	}
 	if (mdbs) {
 	    mkdbs->write_recrd(fd, EOF);
@@ -1393,15 +1352,14 @@ Block* BlkQueue::dequeue()
 	return (blk);
 }
 
-Block::Block(Block& src, char* s, MakeLookupTabs* mlt)
+Block::Block(Block& src, char* s)
 	: WordTab(src), sd(src.sd), 
 	  isaa(src.isaa), istron(src.istron), 
-	  mkblk(src.mkblk), ch(0), lut(0), cps(0), 
+	  mkblk(src.mkblk), ch(0), cps(0), 
 	  prelude(src.prelude), margin(src.margin), seq(s), 
 	  esq(s + wcp.blklen + margin), tsq(esq), bid(0)
 {
 	if (mkblk) ch = new Chash(int(hfact * wcp.blklen));
-	if (mlt) lut = new MakeLookupTabs(*mlt);
 }
 
 void* worker(void* arg)
@@ -1417,20 +1375,14 @@ void* worker(void* arg)
 	    }
 const	    char*	ps = blk->begin();
 const	    char*	ts = blk->end();
-	    MakeLookupTabs*	mlut = (targ->tc && blk->lut)? blk->lut: 0;
-	    if (mlut) mlut->reset();
 	    int	n = 0;
-	    int	i = mlut? -mlut->prelude: 0;
+	    int	i = 0;
 	    for ( ; ps < ts; ++ps, ++i, ++n) {
 		INT uc = blk->a2r[toupper(*ps) - 'A'];
 		if (blk->mkblk) {
 		    INT* tcc = (n < int(wcp.blklen))? targ->tc: 0;
 		    if (blk->istron) blk->c2w6(uc, tcc);
 		    else	blk->c2w(uc, tcc);
-		}
-		if (mlut && i < int(wcp.blklen + MinOrf)) {
-		    if (blk->istron) mlut->c2w6(uc, i);
-		    else	mlut->c2w(uc, i);
 		}
 	    }
 	    targ->next_q->enqueue(blk);
@@ -1458,16 +1410,6 @@ void MakeBlk::harvest(Block* blk, bool first)
 		}
 	    }
 	    store_blk(first, blk);
-	}
-	if (blk->lut && first) {
-	    if (tail) {
-		blk->lut->c2w6_pp(n - blk->lut->prelude, MinOrf - rest);
-		if (rest) {
-		    blk->lut->store();
-		    blk->lut->c2w6_pp(MinOrf, rest);
-		}
-	    }
-	    blk->lut->store();
 	}
 	if (tail) blk->restore();
 }
@@ -1576,7 +1518,7 @@ bq[n]->qid = n;
 	vclear(tcbuf, wcp.TabSize * thread_num);
 	char*	wseq = seqbuf - s_size;
 	for (int b = 0; b < c_qsize; ++b)
-	    blks[b] = new Block(*this, wseq += s_size, lut);
+	    blks[b] = new Block(*this, wseq += s_size);
 	INT*	tc = tcbuf;
 	for (int n = 0; n < thread_num; ++n, tc += wcp.TabSize) {
 	    targs[n].tid = thread_num - 1 - n;
@@ -1886,16 +1828,6 @@ const	char*	path = getenv(ALN_DBS);
 	if (!strcmp(dot, BKN_EXT)) strcpy(dot, LUN_EXT);
 	else if (!strcmp(dot, BKP_EXT)) strcpy(dot, LUP_EXT);
 	else exit(0);
-	LookupTabs*	lut = new LookupTabs(str, 1);
-#if USE_ZLIB
-	if (lut->error()) {
-	    delete lut;
-	    strcat(str, gz_ext);
-	    lut = new LookupTabs(str, 1);
-	}
-#endif
-	if (!lut->error()) lut->reportinfo();
-	delete lut;
 	exit (0);
 }
 
@@ -1985,15 +1917,15 @@ Seq* SrchBlk::setgnmrng(const BPAIR* wrkbp)
 	char	str[LINE_MAX];
 	sprintf(str, "Dbs%d %d %d", wrkbp->chr, x + 1, y);
 	Seq*	sd = (*curgr)->getdbseq(dbf, str, wrkbp->chr);
-	if (wrkbp->rvs && !lut) sd->comrev();
+	if (wrkbp->rvs) sd->comrev();
 	return (sd);
 }
 
-int SrchBlk::MinQuery() {
+int SrchBlk::MinQuery() const {
 	return wcp.Ktuple * (pwd->DvsP? 3: 5) + wcp.Nshift;
 }
 
-int SrchBlk::MaxGene() {
+int SrchBlk::MaxGene() const {
 	return wcp.MaxGene;
 }
 
@@ -2058,15 +1990,15 @@ int genemergin(int apos, int mingap, Seq* sd, bool rend)
 	return (IntronPrm.maxl + play);
 }
 
-bool SrchBlk::grngoverlap(GeneRng* a, GeneRng* b)
+bool SrchBlk::grngoverlap(const GeneRng* a, const GeneRng* b)
 {
 	int	al = 0;
 	int	bl = 0;
 	int	ol = 0;
-	JUXT*	aj = a->jxt;
-	JUXT*	bj = b->jxt;
-	JUXT*	at = aj + a->num;
-	JUXT*	bt = bj + b->num;
+const 	JUXT*	aj = a->jxt;
+const 	JUXT*	bj = b->jxt;
+const 	JUXT*	at = aj + a->num;
+const 	JUXT*	bt = bj + b->num;
 	int	az = aj->jy + aj->jlen * bbt;
 	int	bz = bj->jy + bj->jlen * bbt;
 
@@ -2088,9 +2020,7 @@ bool SrchBlk::grngoverlap(GeneRng* a, GeneRng* b)
 }
 
 SrchBlk::SrchBlk(Seq* sqs[], const char* fn, bool gdb) :
-	gnmdb(gdb), ConvTab(0), pbwc(0), pb2c(0),
-	SegLen(0), bh2(0), bh4(0), master(0), wlp(0), 
-	pwd(0), dbf(dbs_dt[0]), rdbt(0), bpp(0), lut(0)
+	gnmdb(gdb), dbf(dbs_dt[0])
 {
 	if (is_gz(fn)) {
 #if USE_ZLIB
@@ -2106,34 +2036,16 @@ SrchBlk::SrchBlk(Seq* sqs[], const char* fn, bool gdb) :
 	    ReadBlkInfo(fd, fn);
 	}
 	initialize(sqs, fn);
-	if (algmode.alg) {
-	    char	str[LINE_MAX];
-	    strcpy(str, fn);
-	    char*	dot = strrchr(str, '.');
-	    if (is_gz(fn)) {
-		*dot = '\0';
-		dot = strrchr(str, '.');
-	    }
-	    if (dot) *dot = '\0';
-	    strcat(str, pwd->DvsP? LUP_EXT: LUN_EXT);
-	    lut = new LookupTabs(str, algmode.alg == 1? MaxBlock: 0);
-	    if (lut->error()) {
-		delete lut;
-		lut = 0;
-	    } else
-		selectwlprm(wcp.blklen, pwd->DvsP);
-	}
 }
 
 SrchBlk::SrchBlk(Seq* sqs[], MakeBlk* mb, bool gdb) :
-	gnmdb(gdb), SegLen(0), bh2(0), bh4(0), master(0), 
-	pwd(0), rdbt(0), bpp(0), lut(0)
+	gnmdb(gdb), dbf(mb->wdbf)
 {
 	pbwc = new ContBlk;
 	pb2c = new Block2Chr;
 	*pbwc = mb->cntblk;
 	*pb2c = mb->b2c;
-	dbf = mb->wdbf; mb->wdbf = 0;
+	mb->wdbf = 0;
 	if (dbf->curdb->defmolc != PROTEIN) dbf->curdb->defmolc = DNA;
 	ConvTab = mb->iConvTab;
 	mb->iConvTab = 0;
@@ -2148,7 +2060,6 @@ SrchBlk::SrchBlk(SrchBlk* sbk, DbsDt* df)
 	if (sbk->bh2) bh2 = new Bhit2(sbk->nseg);
 	if (sbk->bh4) bh4 = new Bhit4(sbk->nseg);
 	reset(df);
-	if (algmode.alg == 1) lut = new LookupTabs(*sbk->lut);
 }
 
 SrchBlk::~SrchBlk()
@@ -2172,7 +2083,6 @@ SrchBlk::~SrchBlk()
 	    for (int k = 0; k < kk; ++k) delete bpp[k];
 	    delete[] bpp;
 	}
-	delete lut;
 }
 
 void SrchBlk::initialize(Seq* sqs[], const char* fn)
@@ -2341,13 +2251,12 @@ bool extend_gene_rng(Seq* sqs[], const PwdB* pwd, DbsDt* dbf)
 	return (extended);
 }
 
-
 int SrchBlk::FindHsp(BPAIR* wrkbp)
 {
-	INT	intr = (*gener)->inex.intr;
-	int	sr = chrsize(wrkbp->chr);
+const	INT	intr = (*gener)->inex.intr;
+const	int	sr = chrsize(wrkbp->chr);
 const	bool	rvs = wrkbp->rvs;
-	if (rvs && lut)	query->comrev();
+const	float	log_2[4] = {0.f, 1.0f, 1.585f, 2.0f};
 
 	wrkbp->jscr = 0;
 	Seq*	cursd = 0;
@@ -2355,6 +2264,9 @@ const	bool	rvs = wrkbp->rvs;
 	query->saverange(&qrng);
 	INT	retry_no = 0;
 	RANGE	prv = {query->right, query->left};
+	Wilip*	wilip = 0;
+	BPAIR	orgbp = *wrkbp;
+const	int	qlen = query->right - query->left;
 
 retry:
 	cursd = setgnmrng(wrkbp);
@@ -2362,22 +2274,13 @@ retry:
 	cursd->inex.intr = intr;
 	if (query->isprotein()) cursd->nuc2tron();
 	swap(*curgr, seqs[1]);		// temporally save
-	Wilip*	wl = 0;
-	if (lut) {
-	    wl = (wrkbp->rb < (wrkbp->lb + MaxBlock))?
-		new Wilip(seqs, pwd, lut, wrkbp->lb - 1, wrkbp->rb):
-		new Wilip((const Seq**) seqs, pwd, algmode.lvl);
-	} else {
-	    if (!wlp) wlp = new Wlp((const Seq**) seqs, pwd, algmode.lvl);
-	    else	wlp->reset(seqs[1]);
-	    wl = new Wilip((const Seq**) seqs, wlp);
-	}
-	BPAIR	orgbp = *wrkbp;
+	delete wilip;
+	wilip = new Wilip((const Seq**) seqs, pwd, algmode.lvl);
+	WLUNIT*	wlu = wilip->begin();
 	swap(*curgr, seqs[1]);		// restore
-	WLUNIT*	wlu = wl->begin();
-	if (!wlu) {delete wl; return (2);}
+	if (!wlu) {delete wilip; return (2);}
 	cursd->saverange(&grng);
-	int	n = min((int) OutPrm.MaxOut2, wl->size());
+	int	n = min((int) OutPrm.MaxOut2, wilip->size());
 	JUXT	lend = {query->right, 0};
 	JUXT	rend = {query->left, 0};
 	int	nbetter = 0;
@@ -2385,7 +2288,12 @@ retry:
 	VTYPE	lcritjscr = critjscr;
 	for ( ; n--; ++wlu) {
 	    if (wlu->num > 1) ++multi;
-	    if ((wlu->scr += (wlu->num - 1) * IntronPrm.ip) >= lcritjscr) {
+	    if (wlu->tlen > qlen) {
+		float	x = wlu->scr;
+		wlu->scr = int(x * qlen / wlu->tlen);
+	    }
+	    wlu->scr += IntronPrm.sip * log_2[std::min(wlu->num - 1, 3)] ;
+	    if (wlu->scr >= lcritjscr) {
 		++nbetter;
 		lcritjscr = wlu->scr - vthr;
 		JUXT*	wjxt = wlu->jxt;
@@ -2397,7 +2305,7 @@ retry:
 		    rend.jy = wjxt->jy + bbt * wjxt->jlen;
 		}
 	    } else {
-		for (WLUNIT* wwl = wl->begin(); wwl < wlu; ++wwl) {
+		for (WLUNIT* wwl = wilip->begin(); wwl < wlu; ++wwl) {
 		    if (wwl->llmt <= wlu->ulmt && wwl->llmt > wlu->llmt)
 			wwl->llmt = wlu->llmt;
 		    if (wwl->ulmt >= wlu->llmt && wwl->ulmt < wlu->ulmt)
@@ -2405,12 +2313,10 @@ retry:
 		}
 	    }
 	}
-	if (!nbetter) {delete wl; return (multi? 2: 0);}
+	if (!nbetter) {delete wilip; return (multi? 2: 0);}
 
-	int	lrextend = 0;			// try extended blocks
 	if (lend.jx && lend.jx < prv.left) {
 	    prv.left = lend.jx;
-	    if (lend.jx > min_agap) lrextend = 1;
 	    if (rvs) {
 		if (lend.jx <= min_agap)
 		    wrkbp->rb = wrkbp->db;
@@ -2436,7 +2342,6 @@ retry:
 	if (query->right > rend.jx && rend.jx > prv.right) {
 	    prv.right = rend.jx;
 	    int	dlt = query->right - rend.jx;
-	    if (dlt > min_agap) lrextend += 2;
 	    if (rvs) {
 		if (dlt == 1 && wrkbp->lb > wrkbp->ub)
 		    --wrkbp->lb;
@@ -2463,8 +2368,8 @@ retry:
 		wrkbp->db = min(wrkbp->rb + ExtBlock, wrkbp->zr);
 	    }
 	}
-	if (lrextend && retry_no++ < NoRetry) {
-	    delete wl;
+	if (retry_no++ < NoRetry && 
+		(wrkbp->lb != orgbp.lb || wrkbp->rb != orgbp.rb)) {
 	    orgbp = *wrkbp;
 	    goto retry;
 	}
@@ -2473,7 +2378,7 @@ retry:
 	int	ubias = wrkbp->rb - orgbp.rb;
 	if (lbias || ubias) {
 	    cursd = setgnmrng(wrkbp);
-	    if (!cursd) return (0);
+	    if (!cursd) {delete wilip; return (0);}
 	    if (rvs) swap(lbias, ubias);
 	    cursd->inex.intr = intr;
 	    if (query->isprotein()) cursd->nuc2tron();
@@ -2482,10 +2387,11 @@ retry:
 		    (wcp.blklen - cursd->len % wcp.blklen): 0;
 		lbias = lbias * wcp.blklen - partial_block_len;
 	    }
-	    wl->shift_y(lbias, cursd->len);
+	    wilip->shift_y(lbias, cursd->len);
 	}
 	cursd->saverange(&grng);
-	wlu = wl->begin();
+	wilip->sort_on_scr();	// re-sort on score
+	wlu = wilip->begin();
 	wrkbp->jscr = wlu->scr;
 	Seq**	wrkgr;
 	for ( ; wlu->num; ++wlu) {
@@ -2493,7 +2399,7 @@ retry:
 	    JUXT*	wjxt = wlu->jxt;
 	    if (wrkbp - bh4->bpair >= (int) OutPrm.MaxOut && wlu->scr < critjscr)
 		break;
-	    if (wlu > wl->begin()) {
+	    if (wlu > wilip->begin()) {
 		if (cursd != *curgr) cursd->aliaseq(*curgr);
 		(*curgr)->restrange(&grng);
 	    }
@@ -2501,11 +2407,6 @@ retry:
 	    (*curgr)->CdsNo = 0;
 	    (*curgr)->left = wlu->llmt;
 	    if (wlu->ulmt < (*curgr)->right) (*curgr)->right = wlu->ulmt;
-	    int	y = query->right - query->left;
-	    if (wlu->tlen > y) {
-		double	x = (*curgr)->jscr;
-		(*curgr)->jscr = int(x * y / wlu->tlen);
-	    }
 	    int	cl = (*curgr)->SiteNo(wjxt->jy);
 	    wjxt += wlu->num - 1;
 	    int	cr = (*curgr)->SiteNo(wjxt->jy + wjxt->jlen);
@@ -2513,7 +2414,7 @@ retry:
 	    int	tl = 0;
 	    int	tr = sr;
 	    for (wrkgr = curgr; --wrkgr >= gener; ) {	// find nearest
-		if (!strcmp((*(*wrkgr)->sname)[0], (*(*curgr)->sname)[0]) &&
+		if (((*wrkgr)->did == (*curgr)->did) &&
 		    (*wrkgr)->inex.sens == (*curgr)->inex.sens) {
 		    wjxt = (*wrkgr)->jxt;
 		    int	wl = (*wrkgr)->SiteNo(wjxt->jy);
@@ -2527,27 +2428,27 @@ retry:
 	    }
 	    if (wrkgr >= gener) continue;		// overlap
 	    for (wrkgr = curgr; --wrkgr >= gener; ) {	// sort on score
-		if (wrkgr[1]->jscr > (*wrkgr)->jscr) {
+		if (wrkgr[1]->jscr > (*wrkgr)->jscr)
 		    swap(wrkgr[0], wrkgr[1]);
-		    if (wrkgr[0]->vrtl && wrkgr[0]->sid == wrkgr[1]->sid) {
-			swap(wrkgr[0]->vrtl, wrkgr[1]->vrtl);
-		    }
-		}
 		else break;
 	    }
 	    if (++wrkgr >= lstgr) break;	// no more locus
+	    for ( ; curgr > gener; --curgr) {	// prune low-jscr loci
+		if ((*curgr)->jscr >= lcritjscr) break;
+		(*curgr)->refresh(1);
+	    }
 	    if (curgr - gener >= OutPrm.MaxOut - 1) {
 		critjscr = gener[OutPrm.MaxOut - 1]->jscr - vthr;
 		if (critjscr < 0) critjscr = 0;
 	    }
-	    if (curgr < lstgr && (*curgr)->jscr >= critjscr) ++curgr;
+	    if (curgr < lstgr) ++curgr;
 	    delete[] (*wrkgr)->jxt;
 	    (*wrkgr)->jxt = new JUXT[wlu->num + 1];
 	    vcopy((*wrkgr)->jxt, wlu->jxt, wlu->num + 1);
 	    (*wrkgr)->CdsNo = wlu->num;
+	    if (curgr == lstgr) (*curgr)->refresh(1);
 	}
-	delete wl;
-	if (curgr == lstgr) (*curgr)->refresh();
+	delete wilip;
 	return (1);
 }
 
@@ -2694,6 +2595,7 @@ static	const	char	ofmt2[] =
 	    }
 	}
 	if (phase1) {			// phase1 passed
+	    rectiseq(gener, curgr);
 	    if (ReportAln) return (curgr - gener);
 	} else if (force < 2) return (0);	// next reccurence
 	else if (ReportAln && query->isprotein() && algmode.slv) {	// examine all positive blocks
@@ -2974,7 +2876,6 @@ BLKTYPE	Qwords::next_mrglist()
 int SrchBlk::findblock(Seq** sqs)
 {
 	if (query->right - query->left - (wcp.Nshift + bpp[0]->width) < 1) return (ERROR);
-	wlp = 0;
 	init4(query);
 	int	nohit = 0;
 	int	sigpr = 0;
@@ -3067,8 +2968,8 @@ const		    CHAR*	ss = *ws;
 	  if ((bh4->sign[0] && bh4->sign[1]) || (bh4->sign[2] && bh4->sign[3]))
 		++sigpr;
 	  if ((++nmmc % maxmmc == 0 && totalsign) || (sigpr > MinSigpr)) {
-		if  ((c = TestOutput(0))) return (eofb(c));		// found
-		else if (++notry > MinSigpr) return (eofb(0));
+		if  ((c = TestOutput(0))) return (c);		// found
+		else if (++notry > MinSigpr) return (0);
 	  }
 	}	// end of mmc loop
 // significant pair was not found
@@ -3083,7 +2984,7 @@ const		    CHAR*	ss = *ws;
 	    }
 	}
 	if (c != ERROR) c = TestOutput(1);
-	return (eofb(c));
+	return (c);
 }
 
 INT SrchBlk::bestref(Seq* sqs[], KVpair<INT, int>* sh, int n)

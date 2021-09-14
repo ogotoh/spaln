@@ -61,7 +61,7 @@ PfqItr::PfqItr(SigII& sgi, int n) :
 }
 #endif
 
-Cip_score::Cip_score(const Seq* sd) : cip_hash(0)
+Cip_score::Cip_score(const Seq* sd)
 {
 	PfqItr	api(sd, sd->left);
 	if (api.size()) {
@@ -78,12 +78,10 @@ Cip_score::Cip_score(const Seq* sd) : cip_hash(0)
 }
 
 Iiinfo::Iiinfo(const Seq* seqs[], int m, int n, bool save) :
-	a(seqs[0]), b(seqs[1]), 
-	sgi(0), cpi(0), agap(0), bgap(0), amany(seqs[0]->many)
+	a(seqs[0]), b(seqs[1]), amany(a->many), step(a->isprotein()? 3: 1)
 {
 	api = new PfqItr(a, m);
 	bpi = new PfqItr(b, n);
-	step = a->isprotein()? 3: 1;
 	int	igap = m - n;
 	if (igap > 0)	bgap =  igap * step;
 	else		agap = -igap * step;
@@ -103,17 +101,13 @@ SigII::~SigII()
 	delete[] lone;
 }
 
-SigII::SigII(const Seq* sd) : 
-	pfqnum(0), lstnum(0), 
-	pfq(0), lst(0), eijtab(0), lone(0)
+SigII::SigII(const Seq* sd)
 {
 	if (sd) step = sd->isprotein()? 3: 1;
-	else	step = 0;
 }
 
 SigII::SigII(int p, int l, int s) : 
-	pfqnum(p), lstnum(l), step(s),
-	eijtab(0), lone(0)
+	pfqnum(p), lstnum(l), step(s)
 {
 	pfq = p? new PFQ[p + 1]: 0;
 	lst = l? new int[l]: 0;
@@ -123,8 +117,7 @@ SigII::SigII(int p, int l, int s) :
 }
 
 SigII::SigII(const int* poss, int nn, int s) : 
-	pfqnum(nn), lstnum(0), step(s),
-	lst(0), eijtab(0), lone(0)
+	pfqnum(nn), step(s)
 {
 	if (nn) {
 	    pfq = new PFQ[nn + 1];
@@ -141,7 +134,6 @@ SigII::SigII(const int* poss, int nn, int s) :
 }
 
 SigII::SigII(const Seq** slist, const GAPS** gsrc, FTYPE* wtlst)
-	: pfqnum(0), lstnum(0), step(0), pfq(0), lst(0), eijtab(0), lone(0)
 {
 	int	i = 0, j = 0, k = 0;
 	for (const Seq** sq = slist ; *sq; ++sq, ++k) {
@@ -1232,7 +1224,7 @@ void Vulgar::postproc()
 	}
 }
 
-Eijnc::Eijnc(bool que) : num(0), rec(0), fstque(0), q(0)
+Eijnc::Eijnc(bool que)
 {
 	emfd = new Mfile(sizeof(EISCR));
 	if (que) {

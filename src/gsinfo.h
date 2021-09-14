@@ -39,13 +39,13 @@ extern  VTYPE   SpbFact;
 extern	PFQ	pfqend;
 
 struct SigII {
-	int	pfqnum;
-	int	lstnum;
-	int	step;
-	PFQ*	pfq;
-	int*	lst;
-	int**	eijtab;
-	int*	lone;
+	int	pfqnum = 0;
+	int	lstnum = 0;
+	int	step = 0;
+	PFQ*	pfq = 0;
+	int*	lst = 0;
+	int**	eijtab = 0;
+	int*	lone = 0;
 
 	SigII(const Seq* sd = 0);		// 
 	SigII(const SigII& src);	// copy constructor
@@ -78,7 +78,6 @@ template <typename file_t>
 
 template <typename file_t>
 SigII::SigII(file_t fd, char* str, FTYPE* wt)
-	: pfqnum(0), lstnum(0), step(0), pfq(0), lst(0), eijtab(0), lone(0)
 {
 	sscanf(str, "%*s %d %d", &pfqnum, &lstnum);
 	if (pfqnum == 0) return;
@@ -130,7 +129,7 @@ readlst:
 }
 
 class Cip_score {
-	Dhash<int, VTYPE>*	cip_hash;
+	Dhash<int, VTYPE>*	cip_hash = 0;
 public:
 	Cip_score(const Seq* sd);
 	~Cip_score() {
@@ -153,8 +152,8 @@ private:
 	int	step;
 	PFQ*	pfq;
 	int*	lst;
-	PFQ*	wfq;
-	int*	wst;
+	PFQ*	wfq = 0;
+	int*	wst = 0;
 	PFQ*	tfq;
 #if USE_WEIGHT
 	FTYPE*	weight;
@@ -249,14 +248,14 @@ public:
 struct	Iiinfo {
 const	Seq*&	a;
 const	Seq*&	b;
-	PfqItr*	api;
-	PfqItr*	bpi;
-	SigII*	sgi;
-	PfqItr*	cpi;
-	int	step;
-	int	agap;
-	int	bgap;
-	int	amany;
+const	int&	amany;
+const	int	step;
+	PfqItr*	api = 0;
+	PfqItr*	bpi = 0;
+	SigII*	sgi = 0;
+	PfqItr*	cpi = 0;
+	int	agap = 0;
+	int	bgap = 0;
 	Iiinfo(const Seq* seqs[], int m, int n, bool save = false);
 	~Iiinfo() {delete api; delete bpi; delete cpi; delete sgi;}
 	VTYPE	StoreIIinfo(int m, int n);
@@ -299,11 +298,11 @@ struct VULGAR {
 };
 
 class Cigar {
-	int	num;
-	Mfile*	cmfd;
+	int	num = 0;
+	Mfile*	cmfd = 0;
 public:
-	CIGAR*	rec;
-	Cigar() : num(0) {cmfd = new Mfile(sizeof(CIGAR));}
+	CIGAR*	rec = 0;
+	Cigar() {cmfd = new Mfile(sizeof(CIGAR));}
 	~Cigar() {delete[] rec;}
 	void	push(char mk, int len) {
 	    CIGAR	buf = {mk, len};
@@ -318,11 +317,11 @@ public:
 };
 
 class Vulgar {
-	int	num;
-	Mfile*	vmfd;
+	int	num = 0;
+	Mfile*	vmfd = 0;
 public:
 	VULGAR*	rec;
-	Vulgar() : num(0) {vmfd = new Mfile(sizeof(VULGAR));}
+	Vulgar() {vmfd = new Mfile(sizeof(VULGAR));}
 	~Vulgar() {delete[] rec;}
 	void	push(char mk, int alen, int blen) {
 	    VULGAR	buf = {mk, alen, blen};
@@ -338,11 +337,11 @@ public:
 };
 
 class Eijnc {
-	int	num;
-	Mfile*	emfd;
-	EISCR*	rec;
-	FSTAT*	fstque;
-	int	q;
+	int	num = 0;
+	Mfile*	emfd = 0;
+	EISCR*	rec = 0;
+	FSTAT*	fstque = 0;
+	int	q = 0;
 public:
 	Eijnc(bool que = false);
 	~Eijnc() {delete[] rec; delete[] fstque;}
@@ -364,18 +363,16 @@ public:
 };
 
 struct Samfmt : public Cigar {
-	int	flag;
-	int	pos;
-	int	mapq;
-const	char*	rnext;
-	int	pnext;
-	int	tlen;
-	char*	qual;
-mutable	int	left;
-mutable	int	right;
-	Samfmt() : Cigar(),
-	    flag(0), pos(0), mapq(0), rnext(0), pnext(0),
-	    tlen(0), qual(0), left(0), right(0) {}
+	int	flag = 0;
+	int	pos = 0;
+	int	mapq = 0;
+const	char*	rnex = 0;
+	int	pnext = 0;
+	int	tlen = 0;
+	char*	qual = 0;
+mutable	int	left = 0;
+mutable	int	right = 0;
+	Samfmt() : Cigar() {}
 	~Samfmt() {}
 };
 
@@ -398,24 +395,21 @@ mutable	FILE*	fd;
 	void	SamForm(const Seq* gene, Seq* qry) const;
 public:
 	int	end_error_thr;
-	VTYPE	scr;
-	VTYPE	rscr;
-	SKL*	skl;
+	VTYPE	scr = 0;
+	VTYPE	rscr = 0;
+	SKL*	skl =  0;
 	FSTAT	fstat;
-	int	noeij;
-	RANGE*	CDSrng;
-	Eijnc*	eijnc;
-	Cigar*	cigar;
-	Vulgar*	vlgar;
-	Samfmt*	samfm;
-	SigII*	sigII;
-const	char*	prefix;
+	int	noeij = 0;
+	RANGE*	CDSrng = 0;
+	Eijnc*	eijnc = 0;
+	Cigar*	cigar = 0;
+	Vulgar*	vlgar = 0;
+	Samfmt*	samfm = 0;
+	SigII*	sigII = 0;
+const	char*	prefix = 0;
 	bool	intronless() const;
-	Gsinfo(SKL* s = 0) :
-	    end_error_thr(int(alprm2.jneibr * 0.8)), scr(0), rscr(0),
-	    skl(s), noeij(0), CDSrng(0), eijnc(0), cigar(0), vlgar(0),
-	    samfm(0), sigII(0), prefix(0) {
-		vclear(&fstat);
+	Gsinfo(SKL* s = 0) : end_error_thr(int(alprm2.jneibr * 0.8)), skl(s) {
+	    vclear(&fstat);
 	}
 	~Gsinfo() {
 	    delete[] skl;
@@ -458,5 +452,6 @@ inline	bool	neoeij(const EISCR* eij) {return (eij->left != endrng.left);}
 inline	bool	neopfq(const PFQ* pfq) {return (pfq && pfq->num);}
 inline	bool	use_spb() {return (SpbFact > 0);}
 inline	bool	isEIJ(int phs) {return (algmode.lsg && phs > -2);}
+inline	bool	isPhs1(int phs) {return (algmode.lsg && phs > 0);}
 
 #endif

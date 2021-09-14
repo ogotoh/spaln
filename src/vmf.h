@@ -38,7 +38,7 @@ class Vmf {
 	SKLP*	brk;
 	VMFBLK* hed;
 	VMFBLK*	blk;
-	int    idx;
+	int	idx;
 	VMFBLK*	newblk();
 	void	freeblk(VMFBLK* blk);
 public:
@@ -54,5 +54,6 @@ public:
 	int	readvmf(SKLP* rec, int recno);
 	SKL*	traceback(int pp);
 	SKL*	vmferror(Mfile& mfd);
+	SKLP&	operator[](int recno);
 };
 #endif

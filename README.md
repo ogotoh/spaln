@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.5
-#### Last updated: 2021-07-10
+#### Present Version 2.4.6
+#### Last updated: 2021-09-14
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -110,7 +110,7 @@ not specified, *MAX_GENE* is also estimated from the genome size.
  * Options : (default value)
    * -g: The outputs are gzipped.
    * -t*N*: Number of threads. (1)
-   * -E: Generate local lookup table.
+   * ~~-E: Generate local lookup table.~~
    * -yX:    Format for remote queries (more sensitive but less economic than default)
    * -XA*N*: Alphabet size of the reduced amino acids: 6 < *N* <= 20 (20)
    * -XB*S*: Bit patterns of the spaced seeds concatenated with commas. The pattern should be asymmetric  when the number of patterns > 2.
@@ -140,7 +140,7 @@ the query without prior expansion.
    * Only a subset of queries may be examined if *query* is replaced with '*query* (from to)' (quotations are necessary), where 'from' and 'to' are the first and last entry numbers in *query* to be examined.  
    * Options: (default value)
      * -C *N*:	Use the genetic code specified by the "transl_table number" defined in [NCBI transl_table](http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi) (1).
-     * -E: Use local lookup table.
+     * ~~-E: Use local lookup table.~~
      * -H *N*: Output is suppressed if the alignment score is less than *N*. See also -pw. (35)
      * -K[D|P|A]: Format either genomic DNA for sequence search with DNA (D) or Protein (P) queries or protein database sequences for search with a genomic segment or protein queries (A). Use in combination with -W option below.
      * -LS: Smith-Waterman-type local alignment. This option may prune out weakly matched terminal regions.
@@ -309,6 +309,12 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.6
+1. Fix several bugs that caused occasional segmentation faults and memory leaks.
+2. The -E option has been abolished from both format and search modes.
+3. Avoid DP calculation when realistic alignment is desperately obtainable, particularly in the local alignment mode with -LS option.
+4. "Bad molecular type ..." error message at the run time is suppressed when the query molecular type is specified by -K option.
+
 ## Changes in version 2.4.5
 1. Fix a serious bug for DNA query with -S3 option.
 2. Back to the original default settings in the formatting mode. Use -yX option to format genomic sequence for more sensitive yet expensive block search than the standard setting.

@@ -123,9 +123,9 @@ inline	int fseek(gzFile gzfd, long offset, int whence) {
 inline	long ftell(gzFile gzfd) {
 	return (gztell(gzfd));
 }
-/*inline	int feof(gzFile gzfd) {
+inline	int feof(gzFile gzfd) {
 	return (gzeof(gzfd));
-}*/
+}
 inline	int fclose(gzFile gzfd) {
 	return (gzclose(gzfd));
 }

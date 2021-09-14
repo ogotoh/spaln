@@ -273,7 +273,7 @@ template <typename file_t>
 public:
 	int	sid;		// seq id.
 	int	did;		// databse id number
-	int	vrtl;		// hare seuence memory with other instance
+	int	vrtl;		// share seuence memory with other instance
 	int	many;		// number of sequences = 1
 	int	byte;		// = many
 	int	len;		// seq length
@@ -315,6 +315,7 @@ mutable	int	right;		// right boundary to be operated
 		inex.molc == RNA || inex.molc == GENOME;}
 	bool	isprotein() const {return inex.molc == PROTEIN;}
 	bool	istron() const {return inex.molc == TRON;}
+	bool	is_eldest(int wide = 1) const {return (vrtl < wide);}
 	bool	empty()	const {return left == right;}
 	INT	r2s(INT r) const {return (isprotein()? r + ALA: ((1 << r) + _));}
 	void	setmolc(int molc);
@@ -448,6 +449,8 @@ template <typename file_t>
 				// copy or extract
 	~Seq();
 friend	void 	antiseq(Seq** seqs);
+friend	void	rectiseq(Seq** seqs, Seq** cur);
+friend	void 	reportseq(Seq** sqs, int n);
 };
 
 template <typename file_t>
@@ -1436,8 +1439,10 @@ extern	int	setoutmode(int nsa);
 extern	void	setalgmode(int nsa, int reg);
 extern	void	setstrip(int sh);
 extern	void	initseq(Seq** seqs, int n);
+extern	void	rectiseq(Seq** seqs, Seq** cur);
 extern	void	clearseq(Seq** seqs, int n);
-extern	void	cleanseq(Seq** seqs, int n);
+extern	void	cleanseq(Seq** seqs, int n, int num = 0);
+extern	void	reportseq(Seq** sqs, int n);
 extern	void	setdfn(const char* newdfn);
 extern	void	antiseq(Seq** seqs);
 extern	SEQ_CODE* setSeqCode(Seq* sd, int molc);

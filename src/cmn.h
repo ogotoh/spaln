@@ -108,8 +108,11 @@ enum {LINEAR, CIRCLE};
 enum {RAWSEQ, VECTOR, PROVEC, VECPRO};
 enum {Ade, Cyt, Gua, Thy};
 enum {___,_,A,C,M,G,R,S,V,T,U=9,W,Y,H,K,D,B,N,NTS=16,Z};
+//      0 1 2 3 4 5 6 7 8 9 9  10111213141516  16   17
 enum {NIL,UNP,AMB,ALA,ARG,ASN,ASP,CYS,GLN,GLU,GLY,HIS,ILE,LEU,LYS,MET,PHE,
+//      0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16
 PRO,SER,THR,TRP,TYR,VAL,ASX,SER2=23,GLX,SEC=24,TRM2=24,AAS=24,TRM,ZZZ};
+//17 18  19  20  21  22  23   23     24          24     24     25  26
 enum {MINIMUM, MAXIMUM};
 
 inline	int	elem(int i, int j) {

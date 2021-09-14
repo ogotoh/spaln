@@ -47,8 +47,9 @@ public:
 	INT	ConvTabSize;
 	INT	Nalpha;
 	CHAR*	aConvTab;	// text -> reduced alphabet
-const	CHAR*	a2r;
-	CHAR*	g2r;
+const	CHAR*	a2r;		// aa -> reduced aa
+	CHAR*	g2r = 0;	// codon -> raa
+	CHAR*	g2r_c = 0;	// reverse complementary codon -> raa
 	CHAR*	iConvTab;	// internal code -> reduced alphabet
 	ReducWord(const Seq* sd, INT elms = 0, const char* ap = 0);
 	ReducWord(const ReducWord& src) {
@@ -78,20 +79,21 @@ public:
 	    master = false;
 	}
 	~Bitpat() {if (master) delete[] exam;}
+	bool	spaced() const {return (width > weight);}
 };
 
 class Bitpat_wq : public Bitpat {	// bit pattern with queue 
-	INT	nalpha;
-	INT*	queue;
-	INT*	fstat;
-	CHAR*	qp;
-	INT	msb;
-	int	noq;
-	int	qsize;
-	int	nframe;
-	bool	reverse;
+const	INT	nalpha;
+const	INT	msb;
+const	int	nframe;
+const	bool	reverse;
+const	int	noq;
+const	int	qsize;
+	INT*	queue = 0;
+	INT*	fstat = 0;
+	CHAR*	qp = 0;
 public:
-	INT	TabSize;
+const	INT	TabSize;
 	Bitpat_wq(INT elms, int nf, bool rvs, INT npat, const char* spat = 0);
 	Bitpat_wq(const Bitpat_wq& src);
 	~Bitpat_wq() {delete[] queue; delete[] fstat; delete[] qp;}
@@ -113,28 +115,28 @@ struct WordState {
 
 class WordTab : public ReducWord {
 protected:
-	INT     Nbitpat;
-	INT	kmer;
-	INT	BitPat;
-	INT	BitPat2;
-	INT	Nshift;
-	INT	npos;
+const	INT     Nbitpat;
+const	INT	kmer;
+const	INT	BitPat;
+const	INT	BitPat2;
+const	INT	Nshift;
+const	INT	npos;
+	int	wq_size;
+const	int	nfrm;
 	INT	toomany;
-	int	p;
-	int	nfrm;
-	Bitpat_wq**	bpp;
+	int	p = 0;
+	Bitpat_wq**	bpp = 0;
 	SHORT	cc[6];
 	INT	xx[3];
-	INT**	heads;
-	INT**	wposs;
-	SHORT&	ss;
+	INT**	heads = 0;
+	INT**	wposs = 0;
 	SHORT	ss6[6];
-	INT*	word_at_0s;
-	INT*	head;
-	INT*	wpos;
-	int	w_qp;
-	int	wq_size;
-	INT**	w_queue;
+	SHORT&	ss = ss6[0];
+	INT*	word_at_0s = 0;
+	INT*	head = 0;
+	INT*	wpos = 0;
+	int	w_qp = 0;
+	INT**	w_queue = 0;
 public:
 	WordTab(const Seq* sd, INT tpl, INT nsft = 1, INT elms = 0, 
 	    const char* ap = 0, INT bp = 0, INT bp2 = 0, INT nbt = 1, 

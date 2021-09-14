@@ -20,7 +20,6 @@
 *	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
-#define EDEBUG	0
 #define IDEBUG	0
 
 #include "aln.h"
@@ -37,8 +36,8 @@ enum {AA, AC, AG, AT, CA, CC, CG, CT, GA, GC, GG, GT, TA, TC, TG, TT};
 
 INTRONPEN IntronPrm = {FQUERY, FQUERY, -2.767, 20, 224, 
 //		     	ip, 	fact,	mean,llmt,  mu, 
-	825, 2, 5, 20, 0, 0, 0, 0,
-//	rlmt, minexon, tlmt, maxl, array, table
+	825, 2, 5, 20, 0, 0, 0, 0, 0,
+//	rlmt, minexon, tlmt, maxl, array, table, sip
 	0.2767, -22.80, 83.35, 5.488, 21.870, 223.95, 0.7882,
 //	a1      m1      t1     k1     m2      t2      k2
 	0, 0, 0, 0};
@@ -101,11 +100,6 @@ const	CHAR*	b3 = n3? b->at(n3): pyrim;
 	return (spj_tron_amb_tab[w]);
 }
 
-inline	bool	Exinon::within(const Seq* sd) const
-{
-	return (bias < sd->left && sd->right < (bias + size));
-}
-
 STYPE	Premat::prematT(const CHAR* ps) const
 {
 	if (bn == 1)
@@ -147,6 +141,7 @@ IntronPenalty::IntronPenalty(VTYPE f, int dvsp, EijPat* eijpat, ExinPot* exinpot
 	if (IntronPrm.fact == FQUERY) IntronPrm.fact = defprm2[dvsp > 0].Y;
 	if (alprm2.y == FQUERY) alprm2.y = defprm2[dvsp > 0].y;
 	if (IntronPrm.ip == FQUERY) IntronPrm.ip = dvsp? 15: 12;
+	IntronPrm.sip = (STYPE) (f * IntronPrm.ip);
 
 	if (IntronPrm.maxl <= 0)
 	    IntronPrm.maxl = max_intron_len(0.99, 0);
@@ -264,60 +259,6 @@ EijPat::~EijPat()
 	delete patternB;
 }
 
-Exinon::Exinon(const Seq* sd, FTYPE ff, const PwdB* pwd)
-{
-static	const	INT53	zero53 = {0, 0, 0, 0};
-	size = sd->right - sd->left + 2;
-	bias = sd->left - 1;
-	fact = ff;
-	sig53tab = 0;		// +1 for dummy
-	int53 = new INT53[size + 1];
-	int53[0] = int53[size] = zero53;
-	int53 -= bias;
-	data = (pwd->DvsP || alprm2.sss > 0.)? new EXIN[size + 1] - bias: 0;
-	exinpot = pwd? pwd->exinpot: 0;
-}
-
-Exinon::~Exinon()
-{
-	if (data) 	delete[] (data + bias);
-	if (int53)	delete[] (int53 + bias);
-	if (!statictab && sig53tab) {
-	    delete[] *sig53tab;
-	    delete[] sig53tab;
-	}
-}
-
-STYPE Exinon::sig53(int m, int n, INTENDS c) const
-{
-	STYPE	sig = 0;
-	if (alprm2.sss < 1.) {
-	  switch (c) {		// canonical signal
-	    case IE5:	sig = sig53tab[0][int53[m].dinc5]; break;
-	    case IE3:	sig = sig53tab[1][int53[n].dinc3]; break;
-	    case IE53:	sig = sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3];  break;
-	    case IE35:	sig = sig53tab[3][16 * int53[m].dinc5 + int53[n].dinc3]; break;
-	    case IE5P3:	sig = sig53tab[0][int53[m].dinc5] +
-			sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3]; break;
-	  }
-	}
-	if (!data) return sig;
-	STYPE	sss = 0;	// species specific signal
-	switch (c) {
-	    case IE5:	sss = data[m].sig5; break;
-	    case IE35:	sss = data[m].sig5; break;
-	    case IE3:	sss = data[n].sig3; break;
-	    case IE53:	sss = data[n].sig3; break;
-	    case IE5P3:	sss = data[m].sig5 + data[n].sig3; break;
-	}
-	sig = (STYPE) ((1. - alprm2.sss) * sig + alprm2.sss * sss);
-	if (alprm2.Z > 0) {
-	    if (c == IE53 || c == IE5P3) sig += exinpot->intpot(data + m, data + n);
-	    else if (c == IE35) sig += exinpot->intpot(data + n, data + m);
-	}
-	return (sig);
-}
-
 Sig53::Sig53(const FTYPE fS, const char* fname)
 {
 	sig53tab = new STYPE*[4];
@@ -385,8 +326,6 @@ Sig53::~Sig53()
 	}
 }
 
-// Intron53N
-
 void EraStdSig53() {delete stdSig53;}
 
 void makeStdSig53()
@@ -397,31 +336,79 @@ void makeStdSig53()
 	}
 }
 
-void Intron53N(Seq* sd, FTYPE ff,  const PwdB* pwd, bool both_ori)
+Exinon::Exinon(Seq* sd_, const PwdB* pwd_, bool bo) :
+	sd(sd_), pwd(pwd_), both_ori(bo),
+	size(sd->right - sd->left + 2), bias(sd->left - 1), 
+	exinpot(pwd? pwd->exinpot: 0), 
+	fact((FTYPE) (pwd->Vab / sd->many)),
+	fS(alprm2.y * fact)
+{
+	if (!stdSig53) fatal("call makeStdSig53 beforehand !\n");
+const	INT53	zero53 = {0, 0, 0, 0};
+	int53 = new INT53[size + 1];
+	int53[0] = int53[size] = zero53;
+	int53 -= bias;
+	data = new EXIN[size + 1] - bias;
+
+	if (fS == stdfS) {
+	    sig53tab = stdSig53->sig53tab;
+	    statictab = true;
+	} else {
+	    sig53tab = new53tab(fS / stdfS, stdSig53);
+	    statictab = false;
+	}
+	intron53N();
+	intron53();
+}
+
+Exinon::~Exinon()
+{
+	if (data) 	delete[] (data + bias);
+	if (int53)	delete[] (int53 + bias);
+	if (!statictab && sig53tab) {
+	    delete[] *sig53tab;
+	    delete[] sig53tab;
+	}
+}
+
+STYPE Exinon::sig53(int m, int n, INTENDS c) const
+{
+	STYPE	sig = 0;
+	switch (c) {		// canonical signal
+	    case IE5:	sig = data[m].sig5; break;
+	    case IE3:	sig = data[n].sig3; break;
+	    case IE53:	sig = data[n].sig3 + (1. - alprm2.sss) * 
+		(sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3] -
+		 sig53tab[1][int53[n].dinc3]);
+		break;
+	    case IE35:	sig = data[m].sig5 + (1. - alprm2.sss) * 
+		(sig53tab[3][16 * int53[m].dinc5 + int53[n].dinc3] -
+		 sig53tab[0][int53[m].dinc5]);
+		break;
+	    case IE5P3: sig = data[m].sig5 + data[n].sig3 + (1. - alprm2.sss) * 
+		(sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3] - 
+		 sig53tab[1][int53[n].dinc3]);
+		break;
+	}
+	if (alprm2.Z > 0) {
+	    if (c == IE53 || c == IE5P3) sig += exinpot->intpot(data + m, data + n);
+	    else if (c == IE35) sig += exinpot->intpot(data + n, data + m);
+	}
+	return (sig);
+}
+
+void Exinon::intron53N()
 {
 const	static	INT	jlevelac[4] = {0, 2, 3, 1};
 const	static	INT	jlevelgt[4] = {0, 0, 3, 1};
 	int	nc = 1;		/* reduced numeric code for 'C' */
 	CHAR*	redctab = sd->istron()? tnredctab: ncredctab;
-	FTYPE	fS = alprm2.y * ff;
-	Exinon*	exin = sd->exin;
 
-	if (!stdSig53) fatal("call makeStdSig53 beforehand !\n");
-	delete exin;
-	exin = sd->exin = new Exinon(sd, ff, pwd);
-	if (fS == stdfS) {
-	    exin->sig53tab = stdSig53->sig53tab;
-	    exin->statictab = true;
-	} else {
-	    exin->sig53tab = new53tab(fS / stdfS, stdSig53);
-	    exin->statictab = false;
-	}
-
-	INT53*	wk5 = exin->int53 + exin->bias;
+	INT53*	wk5 = int53 + bias;
 	INT53*	wk3 = wk5 + 2;
 	CHAR*	ss = sd->at(sd->left);
 	CHAR*	ts = sd->at(sd->right);
-	for ( ; ss < ts; ++ss, wk5++, wk3++) {
+	for ( ; ss < ts; ++ss, ++wk5, ++wk3) {
 	    int	c = redctab[*ss];
 	    if (c >= 4) c = 1;	// 'C'
 	    nc = ((nc << 2) + c) & 0xf;
@@ -452,25 +439,13 @@ const	static	INT	jlevelgt[4] = {0, 0, 3, 1};
 	}
 }
 
-void Intron53(Seq* sd, const PwdB* pwd, bool both_ori)
+void Exinon::intron53()
 {
-	FTYPE	ff = (FTYPE) (pwd->Vab / sd->many);
-	if (sd->exin && sd->exin->int53 && ff == sd->exin->fact && sd->exin->within(sd))
-	    return;
-	Intron53N(sd, ff, pwd, both_ori);
-	if (pwd->DvsP == 0 && alprm2.sss <= 0.) return;
-
-	FTYPE	fE = alprm2.z * ff;
-	FTYPE	fI = alprm2.Z * ff;
-	FTYPE	fS = alprm2.y * ff;
-	FTYPE	fT = alprm2.bti * ff;
-	FTYPE	fB = bpprm.factor * ff;
-	FTYPE	fO = -alprm2.o * ff;
-#if EDEBUG
-	int	i;
-	char*	ps;
-	int	trn = !isdrna(sd);
-#endif
+	FTYPE	fE = alprm2.z * fact;
+	FTYPE	fI = alprm2.Z * fact;
+	FTYPE	fT = alprm2.bti * fact;
+	FTYPE	fB = bpprm.factor * fact;
+	FTYPE	fO = -alprm2.o * fact;
 
 	--sd->left; ++sd->right;
 	STYPE	th3 = (STYPE) (fS * pwd->eijpat->tonic3);
@@ -500,24 +475,28 @@ void Intron53(Seq* sd, const PwdB* pwd, bool both_ori)
 	if (prefE)	++prfE;
 	if (prefI)	++prfI;
 
-	sd->exin->clear();
+	vset(data + bias, ZeroExin, size + 1);
+	at_sig5 = (1 - alprm2.sss) * sig53tab[0][3];
+	gc_sig5 = (1 - alprm2.sss) * sig53tab[0][9];
 	CHAR*	ss = sd->at(sd->left);
 	STYPE	sigB = 0;
 	CHAR*	posB = 0;
-	EXIN*	last = sd->exin->end();
-	INT53*	wk53 = sd->exin->int53 + sd->exin->bias + 1;
-	for (EXIN* wkb = sd->exin->begin(); ++wkb < last; ++ss, ++wk53) {
-	    wkb->sigS = (STYPE) (fT * *prfS++);
-	    wkb->sigT = (STYPE) (fT * *prfT++);
+	EXIN*	last = end();
+	INT53*	wk53 = int53 + bias + 1;
+	for (EXIN* wkb = begin(); ++wkb < last; ++ss, ++wk53) {
+	    wkb->sigS = prefS? (STYPE) (fT * *prfS++): 0;
+	    wkb->sigT = prefT? (STYPE) (fT * *prfT++): 0;
+	    wkb->sigI = prefI? (STYPE) (fI * *prfI++): 0;
 	    if (prfE) {
 		FTYPE	sigE = fE * *prfE++;
 		if (*ss == TRM || *ss == TRM2) sigE += fO;
 		else if (wkb + 3 < last && (ss[3] == TRM || ss[3] == TRM2)) sigE = 0;
 		wkb->sigE = (STYPE) sigE;
 	    } else	wkb->sigE = 0;
-	    wkb->sigI = prfI? (STYPE) (fI * *prfI++): 0;
-	    STYPE	sig5 = pref5? (STYPE) (fS * *prf5++): 0;
-	    STYPE	sig3 = pref3? (STYPE) (fS * *prf3++): 0;
+	    STYPE	sig5 = pref5? (STYPE) (fS * alprm2.sss * *prf5++): 0;
+	    STYPE	sig3 = pref3? (STYPE) (fS * alprm2.sss * *prf3++): 0;
+	    sig5 += (1 - alprm2.sss) * sig53tab[0][wk53->dinc5];
+	    sig3 += (1 - alprm2.sss) * sig53tab[1][wk53->dinc3];
 	    if (prefB) {
 		sig3 += sigB;
 		FTYPE	sigb = *prfB++;
@@ -551,6 +530,26 @@ void Intron53(Seq* sd, const PwdB* pwd, bool both_ori)
 	}
 	delete[] pref5; delete[] pref3; delete[] prefS; delete[] prefT;
 	delete[] prefB; delete[] prefE; delete[] prefI;
+}
+
+void Exinon::resize() {
+	if (bias < sd->left && sd->right < (bias + size)) return;
+	RANGE	rng;
+	sd->saverange(&rng);
+	if (data) 	delete[] (data + bias);
+	if (int53)	delete[] (int53 + bias);
+	if (bias + 1 < sd->left) sd->left = bias + 1;
+	if (sd->left + size - 2 > sd->right) sd->right = sd->left + size - 2;
+	bias = sd->left - 1;
+	size = sd->right - sd->left + 2;
+	int53 = new INT53[size + 1];
+const	INT53	zero53 = {0, 0, 0, 0};
+	int53[0] = int53[size] = zero53;
+	int53 -= bias;
+	data = new EXIN[size + 1] - bias;
+	intron53N();
+	intron53();
+	sd->restrange(&rng);
 }
 
 STYPE IntronPenalty::Penalty(int n) const 

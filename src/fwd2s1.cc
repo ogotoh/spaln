@@ -5,6 +5,8 @@
 *	are considered.
 *	Assumes there is no internal gap in either sequence.
 *
+*	Implement unidirectional Hirschberg linear-space algorithm
+*
 *	Osamu Gotoh, ph.D.	(-2001)
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
@@ -28,13 +30,12 @@
 #include "vmf.h"
 #include "wln.h"
 #include "boyer_moore.h"
-
 #define	CigarM	0
 
-static	const	int	Newd = 8;
 static	const	int	expected_max_overlap = 1024;
 static	const	int	expected_overlap_ext = 16;
 static	const	int	max_dist2ss = 9;
+static	const	CHAR	Newd = 8;
 
 static int infer_orientation(Seq** sqs, const PwdB* pwd);
 
@@ -44,13 +45,15 @@ const	Seq**	seqs;
 const	Seq*	a;
 const	Seq*	b;
 const 	PwdB*	pwd;
-	Mfile*	mfd;
-	Vmf*	vmf;
+const	bool	Local;
+	Mfile*	mfd = 0;
+	Vmf*	vmf = 0;
 const	INT	lowestlvl;
 const	int	end_margin;
 const	VTYPE	slmt;
 	int	wlmt;
-	bool	island;
+	bool	island = false;
+	bool	is3end = false;
 const	int	Nod;
 	VTYPE	backward[expected_max_overlap];
 public:
@@ -60,18 +63,19 @@ public:
 	~Aln2s1() {delete mfd; delete spjcs; delete cip;}
 	void	reset(const Seq** sqs) {
 	    delete mfd; mfd = 0;
+	    delete spjcs;
 	    a = sqs[0];
 	    b = sqs[1];
-	    delete spjcs;
 	    spjcs = new SpJunc(b, pwd);
+	    island = is3end = false;
 	}
-	void	initS_ng(RVP* hh[], const WINDOW& wdw, CHAR* hdir, const RANGE* cutrng = 0);
+	void	initS_ng(RVP* hh[], CHAR* hdir, const WINDOW& wdw, const RANGE* cutrng = 0);
 	RVP*	lastS_ng(RVP* hh[], const WINDOW& wdw, const RANGE* cutrng = 0);
 	VTYPE	forwardS_ng(const WINDOW& wdw, int pp[] = 0, 
-		const int mode = 0, const RANGE* cutrng = 0);
+		const RANGE* cutrng = 0);
 	VTYPE	shortcutS_ng(int ovr, const BOUND& bab);
-	void	hinitS_ng(Rvpwml* hhg[], const WINDOW& wdw);
-	Rvpwml*	hlastS_ng(Rvpwml* hh[], const WINDOW& wdw);
+	void	hinitS_ng(Rvwml* hh[], const WINDOW& wdw);
+	Rvwml*	hlastS_ng(Rvwml* hh[], const WINDOW& wdw);
 	VTYPE	hirschbergS_ng(int cpos[], 		// coordinates on center row
 		const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb);
 	void	sinitS_ng(VTYPE* hh[], const WINDOW& wdw);
@@ -83,7 +87,7 @@ public:
 	VTYPE	for2ward3endS_ng(int* ptr, const WINDOW& wdw);
 	VTYPE	openendS_ng(int cmode);
 	bool	indelfreespjS(int agap, VTYPE& iscr);
-	VTYPE	diagonalS_ng();
+	VTYPE	diagonalS_ng(bool r_justt = false);
 	VTYPE	trcbkalignS_ng(const WINDOW& wdw, bool spj = true,
 		const RANGE* cutrng = 0);
 	VTYPE	ordinaryS_ng(const WINDOW& wdw);
@@ -105,16 +109,16 @@ public:
 };
 
 Aln2s1::Aln2s1(const Seq* _seqs[], const PwdB* _pwd) :
-	seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd),
-	mfd(0), vmf(0), lowestlvl(b->wllvl),
+	seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd), 
+	Local(algmode.lcl & 16), lowestlvl(b->wllvl),
 	end_margin((int) ((pwd->Vthr + pwd->BasicGOP) / pwd->BasicGEP)),
-	slmt(pwd->Vthr / 2), island(false), Nod(2 * pwd->Noll - 1)
+	slmt(pwd->Vthr / 2), Nod(2 * pwd->Noll - 1)
 {
 	spjcs = new SpJunc(b, pwd);
 	cip = new Cip_score(a);
 }
 
-void Aln2s1::initS_ng(RVP* hh[], const WINDOW& wdw, CHAR* hdir, const RANGE* cutrng)
+void Aln2s1::initS_ng(RVP* hh[], CHAR* hdir, const WINDOW& wdw, const RANGE* cutrng)
 {
 	int	n = b->left;
 	int	r = b->left - a->left;
@@ -145,22 +149,22 @@ void Aln2s1::initS_ng(RVP* hh[], const WINDOW& wdw, CHAR* hdir, const RANGE* cut
 	rr = b->left - a->right;
 	h = hh[0] + r;
 	if (hdir) hd = hdir + r;
-	RVP*	g = hh[1] + r;
+	RVP*	f = hh[1] + r;
 	if (wdw.lw > rr) rr = wdw.lw;
 	for (int i = 1; --r >= rr; ++i) {
-	    --h; --g; if (hd) *--hd = 2;
-	    if (b->inex.exgl) {		/* local */
+	    --h; --f; if (hd) *--hd = 2;
+	    if (b->inex.exgl) {		// local
 		h->val = 0;
 		h->ptr = vmf? vmf->add(a->left + i, b->left, 0): 0;
-	    } else {			/* (semi) global */
+	    } else {			// (semi) global
 		*h = h[1];
 		if (i == 1) {
 		    h->val += pwd->GapPenalty(1);
-		    *g = *h;
+		    *f = *h;
 		} else {
-		    *g = g[1];
+		    *f = f[1];
 		    h->val += pwd->GapExtPen(i);
-		    g->val += pwd->BasicGEP;
+		    f->val += pwd->BasicGEP;
 		}
 	    }
 	}
@@ -196,28 +200,25 @@ RVP* Aln2s1::lastS_ng(RVP* hh[], const WINDOW& wdw, const RANGE* cutrng)
 	return (mx);
 }
 
-VTYPE Aln2s1::forwardS_ng(const WINDOW& wdw, int* pp, 
-	const int mode, const RANGE* cutrng)
+VTYPE Aln2s1::forwardS_ng(const WINDOW& wdw, int* pp, const RANGE* cutrng)
 {
 const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
-const	bool	spj = mode & 1;
-const	bool	align = mode & 2;
+const	bool	spj = b->inex.intr;
 	RVP*	hh[NOL];	// H matrix
-	RVP	f1, f2;
-	RVP*	hf[NOD] = {0, &f1, 0, &f2, 0};	// [DIAG, HORI, VERT, HORL, VERTL]
-	RVPDJ	hl[NCAND + 1]; // [candidates]
-	int	nx[NCAND + 1]; // [candidates]
-	RVPDJ*	maxphl[NOD];
+	RVP	e1, e2;
+	RVP*	hf[NOD] = {0, &e1, 0, &e2, 0};	// [DIAG, HORI, VERT, HORL, VERTL]
+	RVPDJ	rcd[NCAND + 1]; // [candidates]
+	int	idx[NCAND + 1]; // [candidates]
+const	RVPDJ*	maxphl[NOD];
 	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
-	int	Local = algmode.lcl & 16;
-	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
-	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
-	int	cutlen = cutrng? cutrng->right - cutrng->left: 0;
-	VTYPE	longgep = pwd->BasicGEP * cutlen;
-	VTYPE	longgep2 = pwd->LongGEP * cutlen;
+const	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
+const	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+const	int	cutlen = cutrng? cutrng->right - cutrng->left: 0;
+const	VTYPE	longgep = pwd->BasicGEP * cutlen;
+const	VTYPE	longgep2 = pwd->LongGEP * cutlen;
 
-	int	width = wdw.width - cutlen;
-	size_t	bufsiz = pwd->Noll * width;
+const	int	width = wdw.width - cutlen;
+const	size_t	bufsiz = pwd->Noll * width;
 	RVP*	jbuf = new RVP[bufsiz];
 	vset(jbuf, black_vp, bufsiz);
 	RVP*	blackvp = jbuf + bufsiz - 1;
@@ -226,11 +227,11 @@ const	bool	align = mode & 2;
 	CHAR*	dbuf = new CHAR[width];
 	vclear(dbuf, width);
 	CHAR*	hdir = dbuf - wdw.lw + 1;
-	if (vmf) vmf->add(0, 0, 0);	/* Skip 0-th record */
-	initS_ng(hh, wdw, hdir, cutrng);
+	if (vmf) vmf->add(0, 0, 0);	// Skip 0-th record
+	initS_ng(hh, hdir, wdw, cutrng);
 
 	int	m = a->left;
-	if (!a->inex.exgl) --m; /* global */
+	if (!a->inex.exgl) --m; 	// global
 	int	n1 = m + wdw.lw - 1;
 	int	n2 = m + wdw.up;
 const	CHAR*	as = a->at(m);
@@ -244,98 +245,102 @@ const	    CHAR*	bs = b->at(n);
 	    int	r = n - m;
 	    int k = 0;
 	    RVP*&	h = hf[0] = hh[k] + r;
-	    RVP*&	g = hf[2] = hh[++k] + r;
-	    RVP*&	g2 = hf[4] = dagp? hh[++k] + r: blackvp;
+	    RVP*&	f = hf[2] = hh[++k] + r;
+	    RVP*&	f2 = hf[4] = dagp? hh[++k] + r: blackvp;
 	    CHAR*	dir = hdir + r;
-	    f1 = f2 = black_vp;
+	    CHAR	psp = 0;
+	    e1 = e2 = black_vp;
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
-	    vset((RVPDJ*) hl, black_vpdj, NCAND + 1);
-	    for (int l = 0; l <= NCAND; ++l) nx[l] = l;
+	    vset((RVPDJ*) rcd, black_vpdj, NCAND + 1);
+	    for (int l = 0; l <= NCAND; ++l) idx[l] = l;
 	    int	ncand = -1;
 #if DEBUG
-	if (OutPrm.debug) {
-	    printf("%2d %2d %2d", m, n, *dir);
-	    putvar(h->val); putchar('\n');
-	}
+	    if (OutPrm.debug) {
+		printf("%2d %2d %2d", m, n, *dir);
+		putvar(h->val); putchar('\n');
+	    }
 #endif
 	    for ( ; ++n <= n9; ++bs) {
 		VTYPE	x;
-		++dir; ++h; ++g; if (dagp) ++g2;
-/*	Diagonal	*/
+		++dir; ++h; ++f; if (dagp) ++f2;
+//	Diagonal
 		RVP*	from = h;
 		RVP*	mx = h;
-		VTYPE	diag = h->val;
+const		VTYPE	diag = h->val;
 		if (m == a->left) goto HorizonS;
 		h->val += qprof[*bs];
 		*dir = (*dir % Newd)? Newd: 0;
 
-/*	Vertical	*/
+//	Vertical
 		x = (++from)->val + pwd->BasicGOP;
-		if (x >= g[1].val) {
-		    g->val = x;
-		    g->ptr = from->ptr;
-		} else	*g = g[1];
-		g->val += pwd->BasicGEP;
-		if (g->val > mx->val) mx = g;
+		if (x >= f[1].val) {
+		    f->val = x;
+		    f->ptr = from->ptr;
+		} else	*f = f[1];
+		f->val += pwd->BasicGEP;
+		if (f->val > mx->val) mx = f;
 
-/*	Vertical2	*/
+//	Vertical2
 		if (dagp) {
 		  x = from->val + pwd->LongGOP;
-		  if (x >= g2[1].val) {
-		    g2->val = x;
-		    g2->ptr = from->ptr;
-		  } else	*g2 = g2[1];
-		  g2->val += pwd->LongGEP;
-		  if (g2->val > mx->val) mx = g2;
+		  if (x >= f2[1].val) {
+		    f2->val = x;
+		    f2->ptr = from->ptr;
+		  } else	*f2 = f2[1];
+		  f2->val += pwd->LongGEP;
+		  if (f2->val > mx->val) mx = f2;
 		}
 HorizonS:
-/*	Horizontal	*/
+//	Horizontal
 		x = h[-1].val + pwd->BasicGOP;
-		if (x >= f1.val) {
-		    f1.val = x;
-		    f1.ptr = h[-1].ptr;
-		}
-		f1.val += pwd->BasicGEP;
-		if (f1.val >= mx->val) mx = &f1;
+const		CHAR	prev_psp = psp;
+		if (x >= e1.val) {
+		    e1.val = x;
+		    e1.ptr = h[-1].ptr;
+		    psp = psp? e1_psp: 0;
+		} else
+		    psp &= e1_psp;
+		e1.val += pwd->BasicGEP;
+		if (e1.val >= mx->val) mx = &e1;
 
-/*	Horizontal2	*/
+//	Horizontal2
 		if (dagp) {
 		    x = h[-1].val + pwd->LongGOP;
-		    if (x >= f2.val) {
-			f2.val = x;
-			f2.ptr = h[-1].ptr;
-		    }
-		    f2.val += pwd->LongGEP;
-		    if (f2.val >= mx->val) mx = &f2;
+		    if (x >= e2.val) {
+			e2.val = x;
+			e2.ptr = h[-1].ptr;
+			if (prev_psp) psp |= e2_psp;
+		    } else
+			psp |= (prev_psp & e2_psp);
+		    e2.val += pwd->LongGEP;
+		    if (e2.val >= mx->val) mx = &e2;
 		}
 
-/*	intron 3' boundary, assume no overlapping signals	*/
+//	intron 3' boundary, assume no overlapping signals
 		if (internal && b->exin->isAccpt(n)) {
 		    vclear(maxphl, Nod);
 		    for (int l = 0; l <= ncand; ++l) {
-			RVPDJ*	phl = hl + nx[l];
-			if (n - phl->jnc < IntronPrm.llmt) continue;
-			x = phl->val + sigB + spjcs->spjscr(phl->jnc, n);
-			from = hf[phl->dir];
+const			RVPDJ*	prd = rcd + idx[l];
+			if (n - prd->jnc < IntronPrm.llmt) continue;
+			x = prd->val + sigB + spjcs->spjscr(prd->jnc, n);
+			from = hf[prd->dir];
 			if (x >= from->val) {
 			    from->val = x;
-			    maxphl[phl->dir] = phl;
+			    maxphl[prd->dir] = prd;
 			}
 		    }
-		    for (int d = 0; d < Nod; ++d) {
-			RVPDJ*	phl = maxphl[d];
-			if (!phl) continue;
-			from = hf[d];
+		    for (int k = 0; k < Nod; ++k) {
+const			RVPDJ*	prd = maxphl[k];
+			if (!prd) continue;
+			from = hf[k];
+			psp |= psp_bit[k];
 			if (vmf) from->ptr = vmf->add(m, n, 
-			    vmf->add(m, phl->jnc, phl->ptr));
-			if (from->val >= mx->val) {
-			    mx = from;
-			    *dir |= SPJCI;
-			}
+			    vmf->add(m, prd->jnc, prd->ptr));
+			if (from->val >= mx->val) mx = from;
 		    }
 		}
 
-/*	Find optimal path	*/
+//	Find optimal path
 #if DEBUG
 		VTYPE	y = h->val;
 #endif
@@ -343,10 +348,9 @@ HorizonS:
 		if (h != mx) {		// non-diagonal
 		    *h = *mx;
 		    while (mx != hf[++hd]) ;
-		    *dir = hd + (*dir & ~15);
-		    if (hd & 1) *dir |= (dir[-1] & SPIN);
+		    *dir = hd;
 		} else if (Local && h->val > diag) {
-		    if (LocalL && diag == 0 && !(*dir & SPJC))
+		    if (LocalL && diag == 0)
 			h->ptr = vmf? vmf->add(m - 1, n - 1, 0): 0;
 		    else if (LocalR && h->val > maxh.val) {
 			maxh.val = h->val;
@@ -356,15 +360,15 @@ HorizonS:
 		    }
 		}
 		if (LocalL && h->val <= 0) {h->val = 0; *dir = 1;}
-		else if (vmf && align && *dir == Newd)
+		else if (vmf && *dir == Newd && !(psp & psp_bit[0]))
 		    h->ptr = vmf->add(m - 1, n - 1, h->ptr);
 
-/*	intron 5' boundary	*/
+//	intron 5' boundary
 		if (internal && b->exin->isDonor(n)) {
-		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
+const		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 		    for (int k = hd == 0? 0: 1; k < Nod; ++k) {
 			from = hf[k];
-			if (*dir & SPIN) continue;	// disallow orphan exon
+			if (psp & psp_bit[k]) continue;	// disallow orphan exon
 			if (k != hd) {
 			    y = mx->val;
 			    if (hd == 0 || (k - hd) % 2) y += pwd->GOP[k / 2];
@@ -373,18 +377,17 @@ HorizonS:
 			x = from->val + sigJ;
 			int	l = ncand < NCAND? ++ncand: NCAND;
 			while (--l >= 0) {
-			    if (x > hl[nx[l]].val +
-				pwd->IntPen->PenaltyDrop(n - hl[nx[l]].jnc))
-				std::swap(nx[l], nx[l + 1]);
+			    if (x > rcd[idx[l]].val)
+				std::swap(idx[l], idx[l + 1]);
 			    else
 				break;
 			}
 			if (++l < NCAND) {
-			    RVPDJ*	phl = hl + nx[l];
-			    phl->val = x;
-			    phl->jnc = n;
-			    phl->dir = k;
-			    phl->ptr = from->ptr;
+			    RVPDJ*	prd = rcd + idx[l];
+			    prd->val = x;
+			    prd->jnc = n;
+			    prd->dir = k;
+			    prd->ptr = from->ptr;
 			} else --ncand;
 		    }
 		}
@@ -393,22 +396,22 @@ HorizonS:
 		if (OutPrm.debug) {
 		    printf("%2d %2d %2d ", m, n, *dir);
 		    putvar(mx->val); putvar(y); 
-		    putvar(g->val); putvar(f1.val);
+		    putvar(f->val); putvar(e1.val);
 		    if (dagp) {
-			putvar(g2->val); putvar(f2.val);
+			putvar(f2->val); putvar(e2.val);
 		    }
 		    if (algmode.lsg) {
-			putvar(hl[nx[0]].val);
-			putvar(hl[nx[1]].val);
+			putvar(rcd[idx[0]].val);
+			putvar(rcd[idx[1]].val);
 		    }
 		    putchar('\n');
 		}
 #endif
 		if (cutrng && n == cutrng->left) {	// shortcut
-		    f1.val += longgep;
-		    if (dagp) f2.val += longgep2;
-		    *h = dagp? f2: f1;
-		    *g = black_vp;
+		    e1.val += longgep;
+		    if (dagp) e2.val += longgep2;
+		    *h = dagp? e2: e1;
+		    *f = black_vp;
 		    n += cutlen;
 		    bs += cutlen;
 		}
@@ -467,7 +470,7 @@ const	SKL*	wsk = gsi->skl;
 const	CHAR*	as = a->at(m);
 const	CHAR*	bs = b->at(n);
 	PfqItr	api(a, m);
-	bool	usespb = api.size() && use_spb();
+const	bool	usespb = api.size() && use_spb();
 	rbuf.left = n;
 	rbuf.rleft = m;
 	rbuf.iscr = NEVSEL;
@@ -479,16 +482,16 @@ const	CHAR*	bs = b->at(n);
 	}
 	while (--num) {
 	    ++wsk;
-	    int	mi = wsk->m - m;
+const	    int	mi = wsk->m - m;
 	    if (mi && insert) {
-		bool	j = a->inex.exgl && m == a->left;
+const		bool	j = a->inex.exgl && m == a->left;
 		VTYPE	x = j? 0: pwd->GapPenalty(insert);
 		VTYPE	xi = NEVSEL;
 		if (intlen) {
 		    insert -= intlen;
 		    xi = rbuf.iscr + pwd->GapPenalty(insert);
 		}
-		if (xi >= x) {  /* intron */
+		if (xi >= x) {		// intron
 		    if (cigar) {
 			if (preint) cigar->push('D', preint);
 			cigar->push('N', intlen);
@@ -512,7 +515,7 @@ const	CHAR*	bs = b->at(n);
 		    rbuf.iscr = NEVSEL;
 		    h += xi;
 		    insert -= preint;
-		} else {	/* gap */
+		} else {		// gap
 		    h += x;
 		}
 		if (insert) {
@@ -522,7 +525,7 @@ const	CHAR*	bs = b->at(n);
 		    insert = intlen = preint = 0;
 		}
 	    }
-	    int	ni = wsk->n - n;
+const	    int	ni = wsk->n - n;
 	    if (ni && deletn) {
 		if (!(b->inex.exgl && n == b->left)) {
 		    h += pwd->GapPenalty(deletn);
@@ -586,7 +589,7 @@ const	CHAR*	bs = b->at(n);
 		if (samfm) samfm->push('I', i);
 		if (vlgar) vlgar->push('G', i, 0);
 	    } else if (i < 0) {
-		int	n3 = n + (i = -i);
+const		int	n3 = n + (i = -i);
 		if (algmode.lsg && i > IntronPrm.minl) {
 		    sig5 = exin->sig53(n, n3, IE5);
 		    sig3 = exin->sig53(n, n3, IE3);
@@ -677,13 +680,13 @@ const	CHAR*	bs = b->at(n);
 *
 ********************************************************/
 
-void Aln2s1::hinitS_ng(Rvpwml* hhg[], const WINDOW& wdw)
+void Aln2s1::hinitS_ng(Rvwml* hh[], const WINDOW& wdw)
 {
 	int	r = b->left - a->left;
 	int	r0 = r;
 	int	rr = b->right - a->left;
 
-	Rvpwml*	h = hhg[0]  + r;
+	Rvwml*	h = hh[0]  + r;
 	h->val = 0;
 	h->lwr = h->upr = h->ulk = r;
 	h->ml = a->left;
@@ -699,10 +702,10 @@ void Aln2s1::hinitS_ng(Rvpwml* hhg[], const WINDOW& wdw)
 	r = r0;
 	rr = b->left - a->right;
 	if (wdw.lw > rr) rr = wdw.lw;
-	h = hhg[0] + r;
-	Rvpwml*	g = hhg[1] + r;
+	h = hh[0] + r;
+	Rvwml*	f = hh[1] + r;
 	for (int i = 1; --r >= rr; ++i) {
-	    --h; --g;
+	    --h; --f;
 	    if (b->inex.exgl) {
 		h->val = 0;
 		h->lwr = h->upr = h->ulk = r;
@@ -710,31 +713,31 @@ void Aln2s1::hinitS_ng(Rvpwml* hhg[], const WINDOW& wdw)
 		*h = h[1];
 		if (i == 1) {
 		    h->val += pwd->GapPenalty(1);
-		    *g = *h;
+		    *f = *h;
 		} else {
-		    *g = g[1];
+		    *f = f[1];
 		    h->val += pwd->GapExtPen(i);
-		    g->val += pwd->BasicGEP;
+		    f->val += pwd->BasicGEP;
 		}
-		h->lwr = g->lwr = r;
-		h->ulk = g->ulk = r0;
+		h->lwr = f->lwr = r;
+		h->ulk = f->ulk = r0;
 	    }
 	}
 }
 
-Rvpwml* Aln2s1::hlastS_ng(Rvpwml* hh[], const WINDOW& wdw)
+Rvwml* Aln2s1::hlastS_ng(Rvwml* hh[], const WINDOW& wdw)
 {
-	Rvpwml*	h9 = hh[0] + b->right - a->right;
-	Rvpwml*	mx = h9;
+	Rvwml*	h9 = hh[0] + b->right - a->right;
+	Rvwml*	mx = h9;
 
 	if (b->inex.exgr) {
 	    int	rw = std::min(wdw.up, b->right - a->left);
-	    for (Rvpwml* h = hh[0] + rw; h > h9; --h)
+	    for (Rvwml* h = hh[0] + rw; h > h9; --h)
 		if (h->val > mx->val) mx = h;
 	}
 	if (a->inex.exgr) {
 	    int	rw = std::max(wdw.lw, b->left - a->right);
-	    for (Rvpwml* h = hh[0] + rw; h < h9; ++h)
+	    for (Rvwml* h = hh[0] + rw; h < h9; ++h)
 		if (h->val > mx->val) mx = h;
 	}
 	return (mx);
@@ -744,41 +747,40 @@ VTYPE Aln2s1::hirschbergS_ng(int cpos[],
 		const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb)
 {
 const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
-	Rvpwml*	hhg[NOL];
-	Rvpwml*	hf[NOD];
-	Rvdwmlj	hl[NCAND + 1];;		// [candidates]
-	int	nx[NCAND + 1];		// [candidates]
-	Rvdwmlj*	maxphl[NOD];
-	Rvpwml	e[2];
-	Rvpwml*&	f1 = hf[1] = e;
-	Rvpwml*&	f2 = hf[3] = e + 1;
+	Rvwml*	hh[NOL];
+	Rvwml*	hf[NOD];
+	Rvdwmlj	rcd[NCAND + 1];;		// [candidates]
+	int	idx[NCAND + 1];		// [candidates]
+const	Rvdwmlj*	maxphl[NOD];
+	Rvwml	e[2];
+	Rvwml*&	e1 = hf[1] = e;
+	Rvwml*&	e2 = hf[3] = e + 1;
 	int*	center_lwr[NOL];
 	int*	center_upr[NOL];
 	int*	center_end[NOL];
 	int*	center_lnk[NOD];
 	Rvwmrmn	maxh = {NEVSEL, 0, 0, 0, 0};
-	int	Local = algmode.lcl & 16;
-	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
-	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+const	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
+const	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
 #if MONITOR
 	long	start = time(0);
 	long	stop;
 #endif
 
-	size_t	bufsiz = pwd->Noll * wdw.width;
-	Rvpwml*	wbuf = new Rvpwml[bufsiz];
+const	size_t	bufsiz = pwd->Noll * wdw.width;
+	Rvwml*	wbuf = new Rvwml[bufsiz];
 	int	r = b->left - a->left;
-	Rvpwml	black_vpwml = {NEVSEL, false, r, r, 0, end_of_ulk};
+const	Rvwml	black_vpwml = {NEVSEL, r, r, 0, end_of_ulk};
 	vset(wbuf, black_vpwml, bufsiz);
-	Rvpwml*	blackvwu = wbuf + bufsiz - 1;	// assume to be const
-	hhg[0] = wbuf - wdw.lw + 1;
+	Rvwml*	blackvwu = wbuf + bufsiz - 1;	// assume to be const
+	hh[0] = wbuf - wdw.lw + 1;
 	int*	ibuf = new int[4 * bufsiz];
 	center_lwr[0] = ibuf - wdw.lw + 1;
 	center_upr[0] = center_lwr[0] + bufsiz;
 	center_end[0] = center_upr[0] + bufsiz;
 	center_lnk[0] = center_end[0] + bufsiz;
 	for (int k = 1; k < pwd->Noll; ++k) {
-	    hhg[k] = hhg[k-1] + wdw.width;
+	    hh[k] = hh[k-1] + wdw.width;
 	    center_lwr[k] = center_lwr[k - 1] + wdw.width;
 	    center_upr[k] = center_upr[k - 1] + wdw.width;
 	    center_end[k] = center_end[k - 1] + wdw.width;
@@ -788,10 +790,10 @@ const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	vset(ibuf, r, 2 * bufsiz);
 	vset(ibuf + 3 * bufsiz, end_of_ulk, bufsiz);
 
-	hinitS_ng(hhg, wdw);
+	hinitS_ng(hh, wdw);
 
 	int	m = a->left;
-	int	mm = (a->left + a->right + 1) / 2;
+const	int	mm = (a->left + a->right + 1) / 2;
 	if (!a->inex.exgl) --m; 	// global
 	int	n1 = m + wdw.lw - 1;
 	int	n2 = m + wdw.up;
@@ -802,13 +804,14 @@ const	    VTYPE	sigB = cip->cip_score(m);
 	    int	n = std::max(n1, b->left);
 const	    int	n9 = std::min(n2, b->right);
 const	    CHAR*	bs = b->at(n);
+	    CHAR	psp = 0;
 	    int	r = n - m;
-	    Rvpwml*&	h = hf[0] = hhg[0] + r;
-	    Rvpwml*&	g = hf[2] = hhg[1] + r;
-	    Rvpwml*&	g2 = hf[4] = dagp? hhg[2] + r: blackvwu;
+	    Rvwml*&	h = hf[0] = hh[0] + r;
+	    Rvwml*&	f = hf[2] = hh[1] + r;
+	    Rvwml*&	f2 = hf[4] = dagp? hh[2] + r: blackvwu;
 	    vset(e, black_vpwml, 2);
-	    vset(hl, black_vdwmlj, NCAND + 1);
-	    for (int l = 0; l <= NCAND; ++l) nx[l] = l;
+	    vset(rcd, black_vdwmlj, NCAND + 1);
+	    for (int l = 0; l <= NCAND; ++l) idx[l] = l;
 	    int	ncand = -1;
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
@@ -829,80 +832,83 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 		    }
 		}
 
-/*	Diagonal	*/
-		Rvpwml*	from = h;
-		Rvpwml*	mx = h;
+//	Diagonal
+		Rvwml*	from = h;
+		Rvwml*	mx = h;
 		if (m == a->left) goto HorizonF;
 		h->val += qprof[*bs];
 
-/*	Vertical	*/
+//	Vertical
 		x = (++from)->val + pwd->BasicGOP;
-		if (x >= g[1].val) {
-		    *g = *from;
-		    g->val = x;
-		} else	*g = g[1];
-		g->val += pwd->BasicGEP;
-		if (g->val >= mx->val) mx = g;
+		if (x >= f[1].val) {
+		    *f = *from;
+		    f->val = x;
+		} else	*f = f[1];
+		f->val += pwd->BasicGEP;
+		if (f->val >= mx->val) mx = f;
 
-/*	Vertical2	*/
+//	Vertical2
 		if (dagp) {
 		  x = from->val + pwd->LongGOP;
-		  if (x >= g2[1].val) {
-		    *g2 = *from;
-		    g2->val = x;
-		  } else 	*g2 = g2[1];
-		  g2->val += pwd->LongGEP;
-		  if (g2->val >= mx->val) mx = g2;
+		  if (x >= f2[1].val) {
+		    *f2 = *from;
+		    f2->val = x;
+		  } else 	*f2 = f2[1];
+		  f2->val += pwd->LongGEP;
+		  if (f2->val >= mx->val) mx = f2;
 		}
 HorizonF:
-/*	Horizontal	*/
+//	Horizontal
 		x = h[-1].val + pwd->BasicGOP;
-		if (x >= f1->val) {
-		    *f1 = h[-1];
-		    f1->val = x;
-		}
-		f1->val += pwd->BasicGEP;
-		if (f1->val >= mx->val) mx = f1;
+const		CHAR	prev_psp = psp;
+		if (x >= e1->val) {
+		    *e1 = h[-1];
+		    e1->val = x;
+		    psp = psp? e1_psp: 0;
+		} else
+		    psp &= e_psp;
+		e1->val += pwd->BasicGEP;
+		if (e1->val >= mx->val) mx = e1;
 
-/*	Horizontal2	*/
+//	Horizontal2
 		if (dagp) {
 		    x = h[-1].val + pwd->LongGOP;
-		    if (x >= f2->val) {
-			*f2 = h[-1];
-			f2->val = x;
-		    }
-		    f2->val += pwd->LongGEP;
-		    if (f2->val >= mx->val) mx = f2;
+		    if (x >= e2->val) {
+			*e2 = h[-1];
+			e2->val = x;
+			if (prev_psp) psp |= e2_psp;
+		    } else
+			psp |= (prev_psp & e2_psp);
+		    e2->val += pwd->LongGEP;
+		    if (e2->val >= mx->val) mx = e2;
 		}
 
-/*	intron 3' boundary	*/
+//	intron 3' boundary
 		if (b->exin->isAccpt(n)) {
 		    vclear(maxphl, Nod);
 		    for (int l = 0; l <= ncand; ++l) {
-			Rvdwmlj*	phl = hl + nx[l];
-			if (n - phl->jnc < IntronPrm.llmt) continue;
-			from = hf[phl->dir];
-			x = phl->val + sigB + spjcs->spjscr(phl->jnc, n);
+const			Rvdwmlj*	prd = rcd + idx[l];
+			if (n - prd->jnc < IntronPrm.llmt) continue;
+			from = hf[prd->dir];
+			x = prd->val + sigB + spjcs->spjscr(prd->jnc, n);
 			if (x > from->val) {
 			    from->val = x;
-			    maxphl[phl->dir] = phl;
+			    maxphl[prd->dir] = prd;
 			}
 		    }
 		    for (int k = 0; k < Nod; ++k) {
-			Rvdwmlj*	phl = maxphl[k];
-			if (!phl) continue;
+const			Rvdwmlj*	prd = maxphl[k];
+			if (!prd) continue;
+			psp |= psp_bit[k];
 			from = hf[k];
-			from->upr = std::max(phl->upr, r);
-			from->lwr = std::min(phl->lwr, r);
-			from->ulk = (m == mm)? r: phl->ulk;
-			if (from->val > mx->val) {
-			    mx = from;
-			    mx->psp = true;
-			}
+			from->upr = std::max(prd->upr, r);
+			from->lwr = std::min(prd->lwr, r);
+			from->ulk = (m == mm)? r: prd->ulk;
+			if (from->val > mx->val) mx = from;
 		    }
 		}
 
-/*	Find optimal path	*/
+//	Find optimal path
 		y = h->val;
 		int	hd = 0;		// diag: 0, hori: 1, vert: 2
 		if (h == mx) {
@@ -927,12 +933,12 @@ HorizonF:
 		    h->ulk = h->upr = h->lwr = r;
 		}
 
-/*	intron 5' boundary	*/
+//	intron 5' boundary
 		if (b->exin->isDonor(n)) {
-		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
+const		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 		    for (int k = mx == h? 0: 1; k < Nod; ++k) {
 			from = hf[k];
-			if (from->psp) continue;        // disallow orphan exon
+			if (psp & psp_bit[k]) continue;	// disallow orphan exon
 			if (k != hd) {
 			    y = mx->val;
 			    if (hd == 0 || (k - hd) % 2) y += pwd->GOP[k / 2];
@@ -941,36 +947,35 @@ HorizonF:
 			x = from->val + sigJ;
 			int	l = ncand < NCAND? ++ncand: NCAND;
 			while (--l >= 0) {
-			    if (x >= hl[nx[l]].val)
-				std::swap(nx[l], nx[l + 1]);
+			    if (x > rcd[idx[l]].val)
+				std::swap(idx[l], idx[l + 1]);
 			    else
 				break;
 			}
 			if (++l < NCAND) {
-			    Rvdwmlj*	phl = hl + nx[l];
-			    phl->val = x;
-			    phl->jnc = n;
-			    phl->dir = k;
-			    phl->upr = from->upr;
-			    phl->lwr = from->lwr;
-			    phl->ulk = (m == mm)? r: from->ulk;
+			    Rvdwmlj*	prd = rcd + idx[l];
+			    prd->val = x;
+			    prd->jnc = n;
+			    prd->dir = k;
+			    prd->upr = from->upr;
+			    prd->lwr = from->lwr;
+			    prd->ulk = (m == mm)? r: from->ulk;
 			} else --ncand;
 		    }
 		}
-		for (int k = 0; k < Nod; k += 2) hf[k]->psp = false;
 
 #if DEBUG
 		if (OutPrm.debug) {
 		    printf("%2d %2d ", m, n);
 		    putvar(mx->val); putvar(y); 
-		    putvar(g->val); putvar(f1->val);
+		    putvar(f->val); putvar(e1->val);
 		    if (dagp) {
-			putvar(g2->val); putvar(f2->val);
+			putvar(f2->val); putvar(e2->val);
 		    }
 		    if (algmode.lsg) {
-			putvar(hl[nx[0]].val);
-			putvar(hl[nx[1]].val);
-			putvar(hl[nx[2]].val);
+			putvar(rcd[idx[0]].val);
+			putvar(rcd[idx[1]].val);
+			putvar(rcd[idx[2]].val);
 		    }
 		    putchar('\n');
 		}
@@ -1005,20 +1010,19 @@ const		    int	vk = (hd == 2 || hd == 4)? hd / 2: 0;
 	    wdwb.width = wdwb.up - wdwb.lw + 3;
 	    if (center_lnk[0][maxh.ulk] == end_of_ulk) {
 		b->left = maxh.ulk + maxh.ml;
-		a->inex.exgl = b->inex.exgl = 
-		a->inex.exgr = b->inex.exgr = 0;
+		b->inex.exgl = 0;
 		cpos[0] = end_of_ulk;		// don't cross center
 		return (maxh.val);
 	    }
 	} else {
-	    Rvpwml*	mx = hlastS_ng(hhg, wdw);
+	    Rvwml*	mx = hlastS_ng(hh, wdw);
 	    maxh.val = mx->val;
 	    maxh.ulk = mx->ulk;
 	    wdwb.up = mx->upr;
 	    wdwb.lw = mx->lwr;
 	    wdwb.width = wdwb.up - wdwb.lw + 3;
 	    int	rr = b->right - a->right;
-	    int	r = mx - hhg[0];
+	    int	r = mx - hh[0];
 	    if (a->inex.exgr && rr < r) a->right = b->right - r;
 	    if (b->inex.exgr && rr > r) b->right = a->right + r;
 	}
@@ -1078,17 +1082,17 @@ void Aln2s1::sinitS_ng(VTYPE* hh[], const WINDOW& wdw)
 	    vclear(hh[0] + rr, r - rr);
 	    return;
 	}
-	VTYPE*	g = hh[1] + r;
+	VTYPE*	f = hh[1] + r;
 	for (int i = 1; --r >= rr; ++i) {
-	    --h; --g;
+	    --h; --f;
 	    *h = h[1];
 	    if (i == 1) {
 		*h += pwd->GapPenalty(1);
-		*g = *h;
+		*f = *h;
 	    } else {
-		*g = g[1];
+		*f = f[1];
 		*h += pwd->GapExtPen(i);
-		*g += pwd->BasicGEP;
+		*f += pwd->BasicGEP;
 	    }
 	}
 }
@@ -1115,18 +1119,17 @@ VTYPE Aln2s1::scorealoneS_ng(const WINDOW& wdw)
 {
 const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	VTYPE*	hh[NOL];
-	RVDJ	hl[NCAND + 1];
-	int	nx[NCAND + 1];		// [candidates]
-	RVDJ*	maxphl[NOD];
-	VTYPE	f1;
-	VTYPE	f2;
-	VTYPE*	hf[NOD] = {0, &f1, 0, &f2, 0};
+	RVDJ	rcd[NCAND + 1];
+	int	idx[NCAND + 1];		// [candidates]
+const	RVDJ*	maxphl[NOD];
+	VTYPE	e1;
+	VTYPE	e2;
+	VTYPE*	hf[NOD] = {0, &e1, 0, &e2, 0};
 	VTYPE	maxh = NEVSEL;
-	int	Local = algmode.lcl & 16;
-	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
-	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+const	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
+const	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
 
-	size_t	bufsiz = pwd->Noll * wdw.width;
+const	size_t	bufsiz = pwd->Noll * wdw.width;
 	VTYPE*	wbuf = new VTYPE[bufsiz];
 	vset(wbuf, NEVSEL, bufsiz);
 	VTYPE*	blackv = wbuf + bufsiz - 1;	// assume to be const
@@ -1140,19 +1143,19 @@ const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	int	n2 = m + wdw.up;
 const	CHAR*	as = a->at(m);
 	for ( ; ++m <= a->right; ++as) {
+const	    VTYPE	sigB = cip->cip_score(m);
 	    ++n1; ++n2;
 	    int	n = std::max(n1, b->left);
-	    int	n9 = std::min(n2, b->right);
+const	    int	n9 = std::min(n2, b->right);
 const	    CHAR*	bs = b->at(n);
+	    CHAR	psp = 0;
 	    int	r = n - m;
-	    bool	psp[NOD];	// post splicing
-	    vset(psp, false, NOD);
 	    VTYPE*&	h = hf[0] = hh[0] + r;
-	    VTYPE*&	g = hf[2] = hh[1] + r;
-	    VTYPE*&	g2 = hf[4] = dagp? hh[2] + r: blackv;
-	    f1 = f2 = NEVSEL;
-	    vset(hl, black_vdj, NCAND + 1);
-	    for (int l = 0; l <= NCAND; ++l) nx[l] = l;
+	    VTYPE*&	f = hf[2] = hh[1] + r;
+	    VTYPE*&	f2 = hf[4] = dagp? hh[2] + r: blackv;
+	    e1 = e2 = NEVSEL;
+	    vset(rcd, black_vdj, NCAND + 1);
+	    for (int l = 0; l <= NCAND; ++l) idx[l] = l;
 	    int	ncand = -1;
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
@@ -1163,63 +1166,72 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #endif
 	    for ( ; ++n <= n9; ++bs) {
 		VTYPE	x, y;
-		++h; ++g; if (dagp) ++g2;
+		++h; ++f; if (dagp) ++f2;
 
-/*	Diagonal	*/
+//	Diagonal
 		VTYPE*	from = h;
 		VTYPE*	mx = h;
 		if (m == a->left) goto HorizonF;
 		*h += qprof[*bs];
 
-/*	Vertical	*/
+//	Vertical
 		x = *++from + pwd->BasicGOP;
-		*g = std::max(x, g[1]) + pwd->BasicGEP;
-		if (*g > *mx) mx = g;
+		*f = std::max(x, f[1]) + pwd->BasicGEP;
+		if (*f > *mx) mx = f;
 
-/*	Vertical2	*/
+//	Vertical2
 		if (dagp) {
 		  x = *from + pwd->LongGOP;
-		  *g2 = std::max(x, g2[1]) + pwd->LongGEP;
-		  if (*g2 > *mx) mx = g2;
+		  *f2 = std::max(x, f2[1]) + pwd->LongGEP;
+		  if (*f2 > *mx) mx = f2;
 		}
 HorizonF:
-/*	Horizontal	*/
+//	Horizontal
 		x = h[-1] + pwd->BasicGOP;
-		f1 = std::max(x, f1) + pwd->BasicGEP;
-		if (f1 > *mx) mx = &f1;
+const		CHAR	prev_psp = psp;
+		if (x > e1) {
+		    e1 = x;
+		    psp = psp? e1_psp: 0;
+		} else
+		    psp &= e1_psp;
+		e1 += pwd->BasicGEP;
+		if (e1 > *mx) mx = &e1;
 
-/*	Horizontal2	*/
+//	Horizontal2
 		if (dagp) {
 		    x = h[-1] + pwd->LongGOP;
-		    f2 = std::max(x, f2) + pwd->LongGEP;
-		    if (f2 > *mx) mx = &f2;
+		    if (x > e2) {
+			e2 = x;
+			if (prev_psp) psp |= e2_psp;
+		    } else
+			psp |= (prev_psp & e2_psp);
+		    e2 += pwd->LongGEP;
+		    if (e2 > *mx) mx = &e2;
 		}
 
-/*	intron 3' boundary	*/
+//	intron 3' boundary
 		if (b->exin->isAccpt(n)) {
 		    vclear(maxphl, Nod);
 		    for (int l = 0; l <= ncand; ++l) {
-			RVDJ*	phl = hl + nx[l];
-			if (n - phl->jnc < IntronPrm.llmt) continue;
-			from = hf[phl->dir];
-			x = phl->val + spjcs->spjscr(phl->jnc, n);
+const			RVDJ*	prd = rcd + idx[l];
+			if (n - prd->jnc < IntronPrm.llmt) continue;
+			from = hf[prd->dir];
+			x = prd->val + sigB + spjcs->spjscr(prd->jnc, n);
 			if (x > *from) {
 			    *from = x;
-			    maxphl[phl->dir] = phl;
+			    maxphl[prd->dir] = prd;
 			}
 		    }
 		    for (int k = 0; k < Nod; ++k) {
-			RVDJ*	phl = maxphl[k];
-			if (!phl) continue;
+const			RVDJ*	prd = maxphl[k];
+			if (!prd) continue;
+			psp |= psp_bit[k];
 			from = hf[k];
-			if (*from > *mx) {
-			    mx = from;
-			    psp[k] = true;
-			}
+			if (*from > *mx) mx = from;
 		    }
 		}
 
-/*	Find optimal path	*/
+//	Find optimal path
 		y = *h;
 		if (h != mx) *h = *mx;
 		else if (LocalR && y > maxh) maxh = y;
@@ -1227,12 +1239,12 @@ HorizonF:
 		int	hd = 0;
 		for ( ; mx != hf[hd]; ++hd) ;
 
-/*	intron 5' boundary	*/
+//	intron 5' boundary
 		if (b->exin->isDonor(n)) {
-		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
+const		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 		    for (int k = hd == 0? 0: 1; k < Nod; ++k) {
 			from = hf[k];
-			if (psp[k]) continue;
+			if (psp & psp_bit[k]) continue;
 			if (k != hd) {
 			    y = *mx;
 			    if (hd == 0 || (k - hd) % 2) y += pwd->GOP[k / 2];
@@ -1241,33 +1253,32 @@ HorizonF:
 			x = *from + sigJ;
 			int	l = ncand < NCAND? ++ncand: NCAND;
 			while (--l >= 0) {
-			    if (x >= hl[nx[l]].val)
-				std::swap(nx[l], nx[l + 1]);
+			    if (x >= rcd[idx[l]].val)
+				std::swap(idx[l], idx[l + 1]);
 			    else
 				break;
 			}
 			if (++l < NCAND) {
-			    RVDJ*	phl = hl + nx[l];
-			    phl->val = x;
-			    phl->jnc = n;
-			    phl->dir = k;
+			    RVDJ*	prd = rcd + idx[l];
+			    prd->val = x;
+			    prd->jnc = n;
+			    prd->dir = k;
 			} else --ncand;
 		    }
 		}
-		for (int k = 0; k < Nod; k += 2) psp[k] = false;
 
 #if DEBUG
 		if (OutPrm.debug) {
 		    printf("%2d %2d ", m, n);
 		    putvar(*mx); putvar(y); 
-		    putvar(*g); putvar(f1);
+		    putvar(*f); putvar(e1);
 		    if (dagp) {
-			putvar(*g2); putvar(f2);
+			putvar(*f2); putvar(e2);
 		    }
 		    if (algmode.lsg) {
-			putvar(hl[0].val);
-			putvar(hl[1].val);
-			putvar(hl[2].val);
+			putvar(rcd[0].val);
+			putvar(rcd[1].val);
+			putvar(rcd[2].val);
 		    }
 		    putchar('\n');
 		}
@@ -1286,7 +1297,7 @@ void Aln2s1::pfinitS_ng(RVP* hh[], const WINDOW& wdw)
 	int	rr = b->right - a->left;
 
 	RVP*	h = hh[0] + r;
-	RVP*	g = hh[1] + r;
+	RVP*	f = hh[1] + r;
 	h->val = 0;
 	h->ptr = vmf? vmf->add(a->left, b->left, 0): 0;
 
@@ -1294,11 +1305,11 @@ void Aln2s1::pfinitS_ng(RVP* hh[], const WINDOW& wdw)
 	rr = b->left - a->right;
 	if (wdw.lw > rr) rr = wdw.lw;
 	for (int i = 1; --r >= rr; ++i) {
-	    --h; --g;
+	    --h; --f;
 	    *h = h[1];
 	    if (i == 1)	h->val += pwd->BasicGOP;
 	    h->val += pwd->BasicGEP;
-	    *g = *h;
+	    *f = *h;
 	}
 }
 
@@ -1308,7 +1319,7 @@ void Aln2s1::pbinitS_ng(RVP* hh[], const WINDOW& wdw)
 	int	rr = b->left - a->right;
 
 	RVP*	h = hh[0] + r;
-	RVP*	g = hh[1] + r;
+	RVP*	f = hh[1] + r;
 	h->val = 0;
 	h->ptr = vmf? vmf->add(a->right, b->right, 0): 0;
 
@@ -1316,11 +1327,11 @@ void Aln2s1::pbinitS_ng(RVP* hh[], const WINDOW& wdw)
 	rr = b->right - a->left;
 	if (wdw.up < rr) rr = wdw.up;
 	for (int i = 1; ++r <= rr; ++i) {
-	    ++h; ++g;
+	    ++h; ++f;
 	    *h = h[-1];
 	    if (i == 1) h->val += pwd->BasicGOP;
 	    h->val += pwd->BasicGEP;
-	    *g = *h;
+	    *f = *h;
 	}
 }
 
@@ -1330,13 +1341,12 @@ VTYPE Aln2s1::back2ward5endS_ng(int *ptr, const WINDOW& wdw)
 {
 	RVP*	hh[2];			// H matrix
 	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
-	VSKLP	lsth = maxh;
-	RVP	f1 = black_vp;
-	RVP*	hf[3] = {0, &f1, 0};
+	RVP	e1 = black_vp;
+	RVP*	hf[3] = {0, &e1, 0};
 	RVP*&	h = hf[0];
-	RVP*&	g = hf[2];
+	RVP*&	f = hf[2];
 
-	size_t	bufsiz = 2 * wdw.width;
+const	size_t	bufsiz = 2 * wdw.width;
 	RVP*	jbuf = new RVP[bufsiz];
 	vset(jbuf, black_vp, bufsiz);
 	RVP*	blackvp = jbuf + bufsiz - 1;
@@ -1344,7 +1354,7 @@ VTYPE Aln2s1::back2ward5endS_ng(int *ptr, const WINDOW& wdw)
 	hh[1] = hh[0] + wdw.width;
 	CHAR*	dbuf = new CHAR[wdw.width];
 	vset(dbuf, CHAR(1), wdw.width);
-	CHAR*	hdir = dbuf  - wdw.lw + 1;
+	CHAR*	hdir = dbuf - wdw.lw + 1;
 	vmf->add(0, 0, 0);		// Skip 0-th record
 	pbinitS_ng(hh, wdw);
 
@@ -1355,8 +1365,6 @@ const	CHAR*	as = a->at(m);
 	int	n9 = 0;
 	int	n1 = m + wdw.lw;
 	int	n2 = m + wdw.up + 1;
-	bool	enda = a->inex.exgl && algmode.lcl < 16;
-	bool	endb = b->inex.exgl && algmode.lcl < 16;
 	while (--m >= a->left) {
 	    --as; --n1; --n2;
 	    n = std::min(n2, b->right);
@@ -1366,9 +1374,9 @@ const	CHAR*	as = a->at(m);
 	    int	peak = 0;
 const	    CHAR*	bs = b->at(n);
 	    h = hh[0] + r;
-	    g = hh[1] + r;
+	    f = hh[1] + r;
 	    CHAR*	dir = hdir + r;
-	    f1 = black_vp;
+	    e1 = black_vp;
 	    RVP*	mxd = ((h->val + pwd->Vthr) < maxh.val)? blackvp: h;
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 
@@ -1380,34 +1388,34 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #endif
 	    while (--n >= n9) {
 		VTYPE	x;
-		--bs; --r; --h; --g;
+		--bs; --r; --dir; --h; --f;
 
-/*	Diagonal	*/
+//	Diagonal
 		RVP*	from = h;
 		RVP*	mx = h;
 		if (m == a->right) goto HorizonB;
 		h->val += qprof[*bs];
 		*dir = *dir % Newd? Newd: 0;
 
-/*	Vertical	*/
+//	Vertical
 		x = (--from)->val + pwd->BasicGOP;
-		if (x >= g[-1].val) {
-		    *g = *from;
-		    g->val = x;
-		} else *g = g[-1];
-		g->val += pwd->BasicGEP;
-		if (g->val >= mx->val) mx = g;
+		if (x >= f[-1].val) {
+		    *f = *from;
+		    f->val = x;
+		} else *f = f[-1];
+		f->val += pwd->BasicGEP;
+		if (f->val >= mx->val) mx = f;
 HorizonB:
-/*	Horizontal	*/
+//	Horizontal
 		x = h[1].val + pwd->BasicGOP;
-		if (x >= f1.val) {
-		    f1 = h[1];
-		    f1.val = x;
+		if (x >= e1.val) {
+		    e1 = h[1];
+		    e1.val = x;
 		}
-		f1.val += pwd->BasicGEP;
-		if (f1.val >= mx->val) mx = &f1;
+		e1.val += pwd->BasicGEP;
+		if (e1.val >= mx->val) mx = &e1;
 
-/*	Find optimal path	*/
+//	Find optimal path
 #if DEBUG
 		VTYPE	y = maxh.val;
 #endif
@@ -1437,37 +1445,19 @@ HorizonB:
 	if (OutPrm.debug) {
 		printf("%2d %2d %2d ", m, n, *dir);
 		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(f1.val);
+		putvar(f->val); putvar(e1.val);
 		putchar('\n');
 	}
 #endif
-		if (m == a->left && enda && h->val > lsth.val) {
-		    lsth.val = h->val;
-		    lsth.p = h->ptr;
-		    lsth.m = m;
-		    lsth.n = n;
-		}
 	    } // end of n loop
 	    if (mxd->val <= NEVSEL) break;	// no peak
 	    if (peak) n1 = n;
-	    if (++n == b->left && endb && h->val > lsth.val) {
-		lsth.val = h->val;
-		lsth.p = h->ptr;
-		lsth.m = m;
-		lsth.n = n;
-	    }
 	} // end of m loop
 
-	if (!a->inex.exgl && !b->inex.exgl && h) {		// global
-	    lsth.val = h->val;
-	    lsth.p = h->ptr;
-	    lsth.m = ++m;
-	    lsth.n = std::max(n, n9);
-	} else if (lsth.val == NEVSEL) lsth = maxh;
-	if (vmf) *ptr = vmf->add(lsth.m, lsth.n, lsth.p);
+	if (vmf) *ptr = vmf->add(maxh.m, maxh.n, maxh.p);
 	delete[] jbuf;
 	delete[] dbuf;
-	return (lsth.val);
+	return (maxh.val);
 }
 
 // intron-less forward extension
@@ -1476,13 +1466,12 @@ VTYPE Aln2s1::for2ward3endS_ng(int *ptr, const WINDOW& wdw)
 {
 	RVP*	hh[2];		// H matrix
 	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
-	VSKLP	lsth = maxh;
-	RVP	f1 = black_vp;
-	RVP*	hf[3] = {0, &f1, 0};
+	RVP	e1 = black_vp;
+	RVP*	hf[3] = {0, &e1, 0};
 	RVP*&	h = hf[0];
-	RVP*&	g = hf[2];
+	RVP*&	f = hf[2];
 
-	size_t	bufsiz = 2 * wdw.width;
+const	size_t	bufsiz = 2 * wdw.width;
 	RVP*	jbuf = new RVP[bufsiz];
 	vset(jbuf, black_vp, bufsiz);
 	RVP*	blackvp = jbuf + bufsiz - 1;
@@ -1492,7 +1481,7 @@ VTYPE Aln2s1::for2ward3endS_ng(int *ptr, const WINDOW& wdw)
 	vset(dbuf, CHAR(1), wdw.width);
 	CHAR*	hdir = dbuf  - wdw.lw + 1;
 	vmf->add(0, 0, 0);		// Skip 0-th record
-	pbinitS_ng(hh, wdw);
+	pfinitS_ng(hh, wdw);
 
 	int	m = a->left;
 	if (!a->inex.exgl) --m;		// global
@@ -1501,8 +1490,6 @@ VTYPE Aln2s1::for2ward3endS_ng(int *ptr, const WINDOW& wdw)
 	int	n = 0;
 	int	n9 = 0;
 const	CHAR*	as = a->at(m);
-	bool	enda = a->inex.exgr && algmode.lcl < 16;
-	bool	endb = b->inex.exgr && algmode.lcl < 16;
 	for ( ; ++m <= a->right; ++as) {
 	    ++n1; ++n2;
 	    n = std::max(n1, b->left);
@@ -1512,10 +1499,10 @@ const	CHAR*	as = a->at(m);
 	    int	r = n - m;
 const	    CHAR*	bs = b->at(n);
 	    h = hh[0] + r;;
-	    g = hh[1] + r;
+	    f = hh[1] + r;
 	    CHAR*	dir = hdir + r;
 	    RVP*	mxd = ((h->val + pwd->Vthr) < maxh.val)? blackvp: h;
-	    f1 = black_vp;
+	    e1 = black_vp;
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 
 #if DEBUG
@@ -1526,33 +1513,33 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #endif
 	    for ( ; ++n <= n9; ++bs) {
 		VTYPE	x;
-		++r; ++h; ++g;
+		++r; ++dir, ++h; ++f;
 
-/*	Diagonal	*/
+//	Diagonal
 		RVP*	from = h;
 		RVP*	mx = h;
 		if (m == a->left) goto HorizonP;
 		h->val += qprof[*bs];
 		*dir = (*dir % Newd)? Newd: 0;
 
-/*	Vertical	*/
+//	Vertical
 		x = (++from)->val + pwd->BasicGOP;
-		if (x >= g[1].val) {
-		    *g = *from;
-		    g->val = x;
-		} else	*g = g[1];
-		g->val += pwd->BasicGEP;
-		if (g->val >= mx->val) mx = g;
+		if (x >= f[1].val) {
+		    *f = *from;
+		    f->val = x;
+		} else	*f = f[1];
+		f->val += pwd->BasicGEP;
+		if (f->val >= mx->val) mx = f;
 HorizonP:
-/*	Horizontal	*/
+//	Horizontal
 		x = h[-1].val + pwd->BasicGOP;
-		if (x >= f1.val) {
-		    f1 = h[-1];
-		    f1.val = x;
+		if (x >= e1.val) {
+		    e1 = h[-1];
+		    e1.val = x;
 		}
-		f1.val += pwd->BasicGEP;
-		if (f1.val >= mx->val) mx = &f1;
-/*	Find optimal path	*/
+		e1.val += pwd->BasicGEP;
+		if (e1.val >= mx->val) mx = &e1;
+//	Find optimal path
 #if DEBUG
 		VTYPE	y = h->val;
 #endif
@@ -1582,51 +1569,36 @@ HorizonP:
 	if (OutPrm.debug) {
 		printf("%2d %2d %2d ", m, n, *dir);
 		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(f1.val);
+		putvar(f->val); putvar(e1.val);
 		putchar('\n');
 	}
 #endif
-		if (m == a->right && enda && h->val > lsth.val) {
-		    lsth.val = h->val;
-		    lsth.p = h->ptr;
-		    lsth.m = m;
-		    lsth.n = n;
-		}
 	    } // end of n-loop
 	    if (peak) n2 = n;
 	    if (mxd->val <= NEVSEL) break;
-	    if (--n == b->right && endb && h->val > lsth.val) {
-		lsth.val = h->val;
-		lsth.p = h->ptr;
-		lsth.m = m;
-		lsth.n = n;
-	    }
 	} // end of m-loop
 
-	if (!a->inex.exgr && !b->inex.exgr && h) {	// global
-	    lsth.val = h->val;
-	    lsth.p = h->ptr;
-	    lsth.m = --m;
-	    lsth.n = std::min(n, n9);
-	} else if (lsth.val == NEVSEL) lsth = maxh;	// local
-	*ptr = vmf->add(lsth.m, lsth.n, lsth.p);
+	*ptr = vmf->add(maxh.m, maxh.n, maxh.p);
+	is3end = true;
 	delete[] jbuf;
 	delete[] dbuf;
-	return (lsth.val);
+	return (maxh.val);
 }
 
-VTYPE Aln2s1::diagonalS_ng()
+VTYPE Aln2s1::diagonalS_ng(bool r_just)
 {
+const	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
+const	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+const	int	dlt = Local? 0: ((b->right - b->left) - (a->right - a->left));
+	if (dlt < 0) std::swap(a, b);
+	int	mL = a->left;
+	int	mR = a->right;
 const	CHAR*	as = a->at(a->left);
 const	CHAR*	bs = b->at(b->left);
+	if (r_just && !Local) bs += abs(dlt);
 	VTYPE	scr = 0;
 	VTYPE	maxh = NEVSEL;
 	SKL	wskl;
-	int	mL = a->left;
-	int	mR = a->right;
-	int	Local = algmode.lcl & 16;
-	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
-	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
 
 	for (int m = a->left; m++ < a->right; ++as, ++bs) {
 	    scr += pwd->sim2(as, bs);
@@ -1639,23 +1611,25 @@ const	CHAR*	bs = b->at(b->left);
 		mR = m;
 	    }
 	}
-	int m = b->left - a->left;
+	int r = b->left - a->left;
+	if (dlt < 0) r -= dlt;
 	wskl.m = mL;
-	wskl.n = mL + m;
+	wskl.n = mL + r;
 	mfd->write((UPTR) &wskl);
 	wskl.m = mR;
-	wskl.n = mR + m;
+	wskl.n = mR + r;
 	mfd->write((UPTR) &wskl);
+	if (dlt < 0) std::swap(a, b);
 	return (LocalR? maxh: scr);
 }
 
-VTYPE Aln2s1::trcbkalignS_ng(const WINDOW& wdw, bool spj, const RANGE* cutrng)
+VTYPE Aln2s1::trcbkalignS_ng(const WINDOW& wdw, bool spj, const RANGE* mc)
 {
 	int	ptr = 0;
-	int	mode = (spj? 1: 0) + 2;
-
+	VTYPE	scr = 0;
 	vmf = new Vmf();
-	VTYPE	scr = forwardS_ng(wdw, &ptr, mode, cutrng);
+
+	scr = forwardS_ng(wdw, &ptr, mc);
 	if (ptr) {
 	    SKL* lskl = vmf->traceback(ptr);
 	    if (!lskl) {
@@ -1671,10 +1645,10 @@ eop:
 	return (scr);
 }
 
-VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)  /* recursive */ 
+VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)  // recursive
 {
-	int	m = a->right - a->left;
-	int	n = b->right - b->left;
+const	int	m = a->right - a->left;
+const	int	n = b->right - b->left;
 	if (!m && !n) return (0);
 	if (wdw.up == wdw.lw) return(diagonalS_ng());
 	float	cvol = wdw.lw - b->left + a->right;
@@ -1684,9 +1658,14 @@ VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)  /* recursive */
 
 	RANGE	rng[2];			// reserve
 	save_range(seqs, rng, 2);
+const	INT	bexgl = b->inex.exgl;	// reserve
 	int	cpos[6];
+	VTYPE	scr;
 	WINDOW	wdwf, wdwb;
-	VTYPE	scr = hirschbergS_ng(cpos, wdw, wdwf, wdwb);
+	int	upf = INT_MAX; 
+	int	upb = INT_MAX;
+
+	scr = hirschbergS_ng(cpos, wdw, wdwf, wdwb);
 	SKL	wskl = {cpos[0], 0};
 	int	c = 0;
 	if (cpos[c] < end_of_ulk) {	// cross center
@@ -1696,17 +1675,26 @@ VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)  /* recursive */
 	    }
 	    int	aright = a->right;	// reserve
 	    int	bright = b->right;
-	    INT	bexgl = b->inex.exgl;
-	    a->inex.exgl = b->inex.exgl =
+	    INT	exgl = b->inex.exgl;	// reserve
+	    b->inex.exgl = bexgl;
 	    a->inex.exgr = b->inex.exgr = 0;
 	    a->right = cpos[0];
 	    b->right = cpos[c - 1];
+	    if (upf < INT_MAX) {
+		stripe(seqs, &wdwf, alprm.sh);
+		wdwf.up = upf;
+	    }
+	    wdwf.width = wdwf.up - wdwf.lw +3;
 	    lspS_ng(wdwf);		// first half
 	    a->left = cpos[0];
 	    b->left = cpos[1];
 	    a->right = aright;		// recover
 	    b->right = bright;
-	    b->inex.exgl = bexgl;
+	    b->inex.exgl = exgl;
+	}
+	if (upb < INT_MAX) {		// local
+	    stripe(seqs, &wdwb, alprm.sh);
+	    wdwb.up = upb;
 	}
 	lspS_ng(wdwb);			// second half
 	rest_range(seqs, rng, 2);
@@ -1720,7 +1708,7 @@ VTYPE Aln2s1::shortcutS_ng(int ovr, const BOUND& bab)
 	ovr = (ovr > 0? 0: ovr) - 3;
 	scr -= creepback(ovr, 0, bab);
 	scr -= creepfwrd(ovr, 0, bab);
-	int	alen = a->right - a->left;
+const	int	alen = a->right - a->left;
 	int	sh = alen / 2;
 	if (alprm.sh < 0) {
 	    float f = -alprm.sh;
@@ -1733,11 +1721,11 @@ VTYPE Aln2s1::shortcutS_ng(int ovr, const BOUND& bab)
 	WINDOW	wdw;
 	stripe(seqs, &wdw, sh);
 
-	int	interval = b->right - b->left - 2 * margin;
+const	int	interval = b->right - b->left - 2 * margin;
 	RANGE	rng = {b->left + margin, b->right - margin};
 
-	int	aexg = a->inex.exgl;
-	int	bexg = b->inex.exgl;
+const	int	aexg = a->inex.exgl;
+const	int	bexg = b->inex.exgl;
 	a->inex.exgl = b->inex.exgl = 0;	// global
 	scr += trcbkalignS_ng(wdw, true, (interval > 0)? &rng: 0);
 	a->inex.exgr = aexg;
@@ -1750,6 +1738,17 @@ VTYPE Aln2s1::openendS_ng(int cmode)
 	vmf = new Vmf();
 	int	ptr;
 	WINDOW	wdw;
+	if (cmode == 3) {
+	    int	ar = a->len - a->right;
+	    if (a->left > ar) {
+		cmode = 2;
+		a->right = a->len;
+	    } else {
+		cmode = 1;
+		a->left = 0;
+		mfd->reset(0);
+	    }
+	}
 	stripe(seqs, &wdw, alprm.sh);
 	VTYPE scr = (cmode == 1)? 
 	    back2ward5endS_ng(&ptr, wdw):
@@ -1783,7 +1782,7 @@ const	CHAR*	bs = b->at(b->left);
 	n = b->right + i;
 	as = a->at(m);
 	bs = b->at(n);
-	while (i++ < ovr && m++ < lub.ua && n++ <lub.ub) {
+	while (i++ < ovr && m++ < lub.ua && n++ < lub.ub) {
 	    scr += pwd->sim2(as++, bs++);
 	    if ((bscr[i] += scr) > maxscr) {
 		maxscr = bscr[i]; ii = i;
@@ -1809,7 +1808,7 @@ const	CHAR*	bs = b->at(b->left);
 
 bool Aln2s1::indelfreespjS(int agap, VTYPE& iscr)
 {
-	int	ilen = b->right - b->left - agap;	// intron length
+const	int	ilen = b->right - b->left - agap;	// intron length
 	agap = 1 - agap;
 	int	n = min3(a->left, b->left, agap + expected_overlap_ext);
 	VTYPE*	bw = (n + 1 > expected_max_overlap)? new VTYPE[n + 1]: backward;
@@ -1829,11 +1828,11 @@ const	CHAR*	ds = bs + ilen;		// bl + ilen
 	  int	n = skl.n;
 	  as = a->at(m);
 	  PfqItr	api(a, m);
-	  bool	usespb = api.size() && use_spb();
+const	  bool	usespb = api.size() && use_spb();
 	  bs = ds;
 	  for (VTYPE v = i = 0; n <= b->left; ++n, ++i, ++m) {
-	    bool	a_in_zone = usespb && (api == m);
-	    int	rc = b->exin->isCanon(n, n + ilen);
+const	    bool	a_in_zone = usespb && (api == m);
+const	    int	rc = b->exin->isCanon(n, n + ilen);
 	    if (retry || rc) {		// canonical or revserse canonical
 		VTYPE	x = b->exin->sig53(n, n + ilen, IE5P3);
 		if (a_in_zone && rc > 3) x += api.match_score(m);
@@ -1902,16 +1901,20 @@ ss5:
 	int	ta = std::max(bab.la, pa - max_dist2ss);
 const	EXIN*	bbu = b->exin->score(nu);
 	for ( ; pa > ta && nu > bab.lb; --nu, --bbu, --pa) 
-	    if (bbu->sig5 > 0 || (retry && bbu->phs5 == 0)) break;
+	    if (bbu->sig5 > b->exin->gc_sig5 || (retry && bbu->phs5 == 0))
+		break;
 	if (nu == from) return (nu);
 	pa = a->left;
 	int	nd = from;
 	ta = std::min(pa + max_dist2ss, bab.ua);
 const	EXIN*	bbd = b->exin->score(nd);
 	while (++pa < ta && ++nd < bab.ub)
-	    if ((++bbd)->sig5 > 0 || (retry && bbd->phs5 == 0)) break;
+	    if ((++bbd)->sig5 > b->exin->gc_sig5 || (retry && bbd->phs5 == 0))
+		break;
 	if (retry++ == 0 && bbu->sig5 <= 0 && bbd->sig5 <= 0) goto ss5;
-	else if (bbu->phs5 || bbd->phs5) return (-1);
+	else if (bbu->phs5 && bbd->phs5) return (-1);
+	if (bbu->phs5) return (nd);
+	if (bbd->phs5) return (nu);
 	if ((from - nu) == (nd - from)) return ((bbu->sig5 > bbd->sig5)? nu: nd);
 	return ((from - nu < nd - from)? nu: nd);
 }
@@ -1934,7 +1937,9 @@ const	EXIN*	bbd = b->exin->score(nd);
 	while (++pa < ta && ++nd < bab.ub)
 	    if ((++bbd)->sig3 > 0 || (retry && bbd->phs3 == 0)) break;
 	if (retry++ == 0 && bbu->sig3 <= 0 && bbd->sig3 <= 0) goto ss3;
-	else if (bbu->phs3 || bbd->phs3) return (-1);
+	else if (bbu->phs3 && bbd->phs3) return (-1);
+	if (bbu->phs3) return (nd);
+	if (bbd->phs3) return (nu);
 	if ((from - nu) == (nd - from)) return ((bbu->sig3 > bbd->sig3)? nu: nd);
 	return ((from - nu < nd - from)? nu: nd);
 }
@@ -1943,13 +1948,13 @@ const	EXIN*	bbd = b->exin->score(nd);
 
 VTYPE Aln2s1::micro_exon(const BOUND& bab)
 {
-	int	l = nearest5ss(b->left, bab);
+const	int	l = nearest5ss(b->left, bab);
 	if (l < 0) return (NEVSEL);
-	int	r = nearest3ss(b->right, bab);
+const	int	r = nearest3ss(b->right, bab);
 	if (r < 0) return (NEVSEL);
 	int	d5 = l - b->left;
 	int	d3 = r - b->right;
-	int	alen = r - l;
+const	int	alen = r - l;
 	b->left = l;
 	a->left += d5;
 	b->right = r;
@@ -1969,9 +1974,9 @@ VTYPE Aln2s1::micro_exon(const BOUND& bab)
 	    return (maxscr + b->exin->sig53(l, r, IE5P3));
 	}
 	int	n = b->left + IntronPrm.minl;
-	int	n9 = b->right - alen - IntronPrm.minl;
-	EXIN*	bb5 = b->exin->score(n);		// 5' end of internal exon
-	EXIN*	bb3 = b->exin->score(n + alen);	// 3' end of internal exon
+const	int	n9 = b->right - alen - IntronPrm.minl;
+const	EXIN*	bb5 = b->exin->score(n);	// 5' end of internal exon
+const	EXIN*	bb3 = b->exin->score(n + alen);	// 3' end of internal exon
 const	CHAR*	ts = a->at(a->right);
 const	CHAR*	ss = a->at(a->left);
 	for ( ; n < n9; ++n, ++bb5, ++bb3) {
@@ -2013,12 +2018,12 @@ const	    CHAR*	bs = b->at(n);
 
 int Aln2s1::first_exon_wmm(VTYPE& maxscr)
 {
-	int	r = b->right;
-	int	rr = b->right - a->right;
+const	int	r = b->right;
+const	int	rr = b->right - a->right;
 	int	n = rr - IntronPrm.minl;
 	int	nd = n + a->right;
-	EXIN*	bbi = b->exin->score(n);
-	EXIN*	bb5 = b->exin->score(nd);
+const	EXIN*	bbi = b->exin->score(n);
+const	EXIN*	bb5 = b->exin->score(nd);
 const	CHAR*	ts = a->at(a->right);
 const	CHAR*	ss = a->at(a->left);
 	VTYPE	pmch = 0;
@@ -2028,7 +2033,7 @@ const	CHAR*	ss = a->at(a->left);
 	int	f = -1;
 	for ( ; n >= b->left; --n, --nd, --bbi, --bb5) {
 	    if (!b->exin->isCanon(nd, r)) continue;
-	    VTYPE	ip = pwd->IntPen->Penalty(r - nd);
+const	    VTYPE	ip = pwd->IntPen->Penalty(r - nd);
 	    VTYPE	scr = bb5->sig5 + ip;
 //	    if (ip + pmch < maxscr) break;	// longer intron is unlikely
 const	    CHAR*	bs = b->at(n);
@@ -2049,12 +2054,13 @@ const	    CHAR*	bs = b->at(n);
 
 VTYPE Aln2s1::first_exon(const BOUND& bab)
 {
-	int	r = nearest3ss(b->right, bab);
+const	int	r = nearest3ss(b->right, bab);
 	if (r < 0) {		// no acceptor site nearby
 	    b->left = std::max(b->right - a->right - wlmt, 0);
+	    if (b->exin) b->exin->resize();
 	    return (NEVSEL);
 	}
-	int	d = r - b->right;
+const	int	d = r - b->right;
 	b->right = r;
 	a->right += d;
 	if (a->right == 0 || b->right == 0) {
@@ -2066,11 +2072,11 @@ VTYPE Aln2s1::first_exon(const BOUND& bab)
 	VTYPE	maxscr = NEVSEL;
 	int	maxf = -1;
 	while (!bm.finished()) {
-	    int	f = bm.nexthit();
+const	    int	f = bm.nexthit();
 	    if (f >= 0) {
 		int	nd = f + a->right;
 		if (b->exin->isCanon(nd, r)) {
-		    VTYPE	scr = pwd->IntPen->Penalty(r - nd) +
+const		    VTYPE	scr = pwd->IntPen->Penalty(r - nd) +
 			b->exin->sig53(nd, r, IE5P3);
 		    if (scr > maxscr) {
 			maxscr = scr;
@@ -2102,11 +2108,11 @@ const	    CHAR*	ts = a->at(a->right);
 
 int Aln2s1::last_exon_wmm(VTYPE& maxscr)
 {
-	int	l = b->left;
-	int	alen = a->right - a->left;
-	int	rr = b->right - alen;
+const	int	l = b->left;
+const	int	alen = a->right - a->left;
+const	int	rr = b->right - alen;
 	int	n = b->left + IntronPrm.minl;
-	EXIN*	bb3 = b->exin->score(n);
+const	EXIN*	bb3 = b->exin->score(n);
 const	CHAR*	ts = a->at(a->right);
 const	CHAR*	ss = a->at(a->left);
 	VTYPE	pmch = 0;			// perfect match score
@@ -2116,7 +2122,7 @@ const	CHAR*	ss = a->at(a->left);
 	int	f = -1;
 	for ( ; n < rr; ++n, ++bb3) {
 	    if (!b->exin->isCanon(l, n)) continue;
-	    VTYPE	ip = pwd->IntPen->Penalty(n - l);
+const	    VTYPE	ip = pwd->IntPen->Penalty(n - l);
 	    VTYPE	scr = bb3->sig3 + ip;
 //	    if (ip + pmch < maxscr) break;	// longer intron is unlikely
 	    const CHAR*	bs = b->at(n);
@@ -2137,19 +2143,20 @@ const	CHAR*	ss = a->at(a->left);
 
 VTYPE Aln2s1::last_exon(const BOUND& bab)
 {
-	int	l = nearest5ss(b->left, bab);
+const	int	l = nearest5ss(b->left, bab);
 	if (l < 0) {		// no splice donor site nearby
 	    b->right = std::min(b->left + a->right + wlmt, b->len);
+	    if (b->exin) b->exin->resize();
 	    return (NEVSEL);
 	}
-	int	d = l - b->left;
+const	int	d = l - b->left;
 	b->left = l;
 	a->left += d;
 	VTYPE	maxscr = NEVSEL;
 	int	maxf = -1;
 	BoyerMoore	bm(b, a, 1);
 	while (!bm.finished()) {
-	    int	f = bm.nexthit();
+const	    int	f = bm.nexthit();
 	    if (f >= 0) {
 		if (b->exin->isCanon(l, f)) {
 		    VTYPE	scr = pwd->IntPen->Penalty(f - l) +
@@ -2172,16 +2179,20 @@ const	    CHAR*	ts = a->at(a->right);
 	mfd->write(&skl);
 	skl.n = maxf;
 	mfd->write(&skl);
+	skl.m = a->right;
+	skl.n += (a->right - a->left);
+	mfd->write(&skl);
 	return (maxscr);
 }
 
 VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode, 
 		JUXT* wjxt, const BOUND& bab)
 {
+	if (is3end) return (0); 
 	int	ovr = std::min(agap, bgap);
-	int	dgap = bgap - agap;
-	bool	cont = agap <= 0;			// connect adjacent HSPs
-	bool	no_rec = ovr < wlmt;			// no recurrsion
+const	int	dgap = bgap - agap;
+const	bool	cont = agap <= 0;			// connect adjacent HSPs
+const	bool	no_rec = ovr < wlmt;			// no recurrsion
 	VTYPE	iscore = NEVSEL;
 	VTYPE	scr = 0;
 	Mfile*	save_mfd = 0;
@@ -2198,11 +2209,16 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 		iscore = 0;
 	    } else if (agap < IntronPrm.elmt) {
 		SKL	skl = {wjxt->jx - agap, wjxt->jy - agap};
-		mfd->write(&skl);
+		if (skl.m >= a->left && skl.n >= b->left)
+		    mfd->write(&skl);
 		mfd->write((UPTR) wjxt);
 		iscore = agap * getsmn(4);
 	    } else
 		iscore = first_exon(bab);
+	    if (iscore > NEVSEL) {
+		scr += iscore;
+		iscore = 0;
+	    }
 	} else if (cmode == 2 && no_rec) {
 	    if  (agap < IntronPrm.elmt) {
 		SKL	skl = {a->left, b->left};	// 3' end
@@ -2212,22 +2228,31 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 		if (agap) {
 		    skl.m += agap;
 		    skl.n += agap;
-		    mfd->write(&skl);
+		    if (skl.m < a->right && skl.n < b->right)
+			mfd->write(&skl);
 		}
 	    } else
 		iscore = last_exon(bab);
+	    if (iscore > NEVSEL) {
+		scr += iscore;
+		iscore = 0;
+	    }
 	} else if (cmode == 3 && cont && dgap >= IntronPrm.minl && 
 	    indelfreespjS(agap, iscore)) {		// indel-free spj
 	    scr += iscore;
 	    iscore = 0;
 	} else if (cmode == 3 && no_rec && dgap >= IntronPrm.minl) {
-	    if (!cont) iscore = micro_exon(bab);
+	    if (algmode.crs == 0) iscore = micro_exon(bab);
 	    if (iscore == NEVSEL && agap < IntronPrm.elmt)
 		iscore = shortcutS_ng(ovr, bab);	// shortcut
-	} else if (cont && dgap < IntronPrm.minl) {
+	    if (iscore < NEVSEL) {
+		scr += iscore;
+		iscore = 0;
+	    }
+	} else if (ovr <= 0 && dgap < IntronPrm.minl) {
 	    scr += backforth(-ovr, bab);		// ordinary gap
 	    iscore = 0;
-	} else if (dgap < IntronPrm.minl) {
+	} else if (abs(dgap) < IntronPrm.minl) {
 	    scr -= creepback(ovr, slmt, bab);
 	    scr -= creepfwrd(ovr, slmt, bab);
 	    WINDOW	wdw;
@@ -2243,7 +2268,7 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 		iscore = 0;
 	    }
 	}
-	if (iscore < 0) {
+	if (iscore == NEVSEL || (!algmode.crs && iscore < 0)) {
 	    if (save_mfd) std::swap(mfd, save_mfd);
 	    scr -= creepback(ovr, slmt, bab);
 	    scr -= creepfwrd(ovr, slmt, bab);
@@ -2252,8 +2277,9 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 	    VTYPE	kscore = NEVSEL;
 	    if (algmode.crs < 2 && dpspace >= alprm.maxsp && cmode < 3) {
 		bgap = int(alprm.maxsp * MEGA / agap);
-		if (cmode == 1) b->left = b->right - bgap;
-		else	b->right = b->left + bgap;
+		if (cmode == 1) b->left = std::max(b->right - bgap, 0);
+		else	b->right = std::min(b->left + bgap, b->len);
+		if (b->exin) b->exin->resize();
 		dpspace = (float) agap * (float) bgap / MEGA;
 	    }
 	    if (dpspace < alprm.maxsp) {
@@ -2262,18 +2288,21 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 		kscore = trcbkalignS_ng(wdw, b->inex.intr);	// DP
 	    } else if (cmode == 1) {
 		if (wjxt) {
-		    int	bl = wjxt->jy + end_margin;		// near 5' end
+		    int	bl = wjxt->jy + end_margin;	// near 5' end
 		    if (bl > b->left) b->left = bl;
 		}
 		kscore = openendS_ng(cmode);		// drop off
 	    } else if (cmode == 2) {
 		if (wjxt) {
-		    int	br = wjxt->jy - end_margin;		// near 3' end
+		    int	br = wjxt->jy - end_margin;	// near 3' end
 		    if (br > b->left && br < b->right) b->right = br;
 		}
 		kscore = openendS_ng(cmode);		// drop off
-	    } else {		// cmode == 3, space-saving DP
-		WINDOW	wdw;
+	    } else if (algmode.crs < 2) {
+		kscore = Local?				// give up
+		    openendS_ng(cmode): shortcutS_ng(ovr, bab);
+	    } else {					// cmode == 3
+		WINDOW	wdw;				// space-saving DP
 		stripe(seqs, &wdw, alprm.sh);
 		kscore = lspS_ng(wdw);
 	    }
@@ -2288,13 +2317,13 @@ VTYPE Aln2s1::interpolateS(INT level, int agap, int bgap, int cmode,
 	return (scr);
 }
 
-/* eimode 1: 5'end, 2: 3' end, 3: internal */
+// eimode 1: 5'end, 2: 3' end, 3: internal
 VTYPE Aln2s1::seededS_ng(INT level, int eimode, const BOUND& lub)
 {
-	INT	aexgl = a->inex.exgl;
-	INT	aexgr = a->inex.exgr;
-	INT	bexgl = b->inex.exgl;
-	INT	bexgr = b->inex.exgr;
+const	INT	aexgl = a->inex.exgl;
+const	INT	aexgr = a->inex.exgr;
+const	INT	bexgl = b->inex.exgl;
+const	INT	bexgr = b->inex.exgr;
 	RANGE	rng[2];
 	int	cmode = eimode;
 	int	agap = a->right - a->left;
@@ -2364,9 +2393,11 @@ VTYPE Aln2s1::seededS_ng(INT level, int eimode, const BOUND& lub)
 		cmode = 2;
 	}
 
-	VTYPE	iscore = interpolateS(level, agap, bgap, cmode, wjxt, bab);
+const	VTYPE	iscore = interpolateS(level, agap, bgap, cmode, wjxt, bab);
 	if (iscore != NEVSEL) scr += iscore;
-	rest_range(seqs, rng, 2);
+	rest_range(seqs, rng, 1);
+	if (b->left  > rng[1].left ) b->left  = rng[1].left;
+	if (b->right < rng[1].right) b->right = rng[1].right;
 	a->inex.exgl = aexgl;
 	b->inex.exgl = bexgl;
 	if (level == lowestlvl && wjxt) {
@@ -2399,22 +2430,21 @@ SKL* Aln2s1::globalS_ng(const WINDOW& wdw, VTYPE* scr)
 	return (trimskl(seqs, stdskl(&skl)));
 }
 
-
 VTYPE HomScoreS_ng(const Seq* seqs[], const PwdB* pwd)
 {
 	Aln2s1 alnv(seqs, pwd);
 	WINDOW	wdw;
 	stripe(seqs, &wdw, alprm.sh);
-	return alnv.scorealoneS_ng(wdw);
+	return (alnv.scorealoneS_ng(wdw));
 }
 
 static int infer_orientation(Seq** sqs, const PwdB* pwd)
 {
 	Seq*&	a = sqs[0];
-	VTYPE	scr1 = HomScoreS_ng((const Seq**) sqs, pwd);
+const	VTYPE	scr1 = HomScoreS_ng((const Seq**) sqs, pwd);
 	a->comrev();
 	antiseq(sqs + 1);
-	VTYPE	scr2 = HomScoreS_ng((const Seq**) sqs, pwd);
+const	VTYPE	scr2 = HomScoreS_ng((const Seq**) sqs, pwd);
 	if (scr2 > scr1) return (1);
 	a->comrev();
 	antiseq(sqs + 1);
