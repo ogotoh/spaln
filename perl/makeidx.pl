@@ -40,7 +40,9 @@
 ###############################################################################
 
 use strict;
+use FindBin;
 
+my $scriptpath = $FindBin::Bin;
 my ($obj, $gz, $opt, $compress) = ('i');
 my $makefile = "./Makefile";
 my $src_dir = "./";
@@ -143,7 +145,7 @@ for (my $i = 0; $i < @ind; ++$i) {
 
 sub makeidx {
 	my $fa = shift;
-	my $cmd = "makdbs -K";
+	my $cmd = "$scriptpath/makdbs -K";
 	$cmd .= ($src_ext eq 'fa' || $src_ext eq 'faa')? 'A': 'D';
 	$cmd .= ' -g' if ($compress);
 	$cmd .= " $fa";

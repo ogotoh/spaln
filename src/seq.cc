@@ -83,7 +83,7 @@ static	const	INEX	def_inex = {0};
 
 void setdfn(const char* newdfn) {topath(seqdfn, newdfn);}
 
-int setdefmolc(int molc)
+int setdefmolc(const int& molc)
 {
 	switch (molc) {
 	    case 'X': case 'x': def_setup.delamb = 1;
@@ -128,7 +128,7 @@ static bool isattrib(const char* s)
 	return (!*s || isspace(*s));
 }
 
-SEQ_CODE* setSeqCode(Seq* sd, int molc)
+SEQ_CODE* setSeqCode(Seq* sd, const int& molc)
 {
 	SEQ_CODE* sqcode;
 
@@ -403,7 +403,7 @@ void Seq::refresh(const int& num, const int& length)
 
 // alias of this
 
-Seq* Seq::aliaseq(Seq* dest, bool this_is_alias)
+Seq* Seq::aliaseq(Seq* dest, const bool& this_is_alias)
 {
 	if (!dest)	dest = new Seq(0);
 	else	dest->refresh();
@@ -469,7 +469,7 @@ void clearseq(Seq** seqs, int n)
 	for ( ; n--; ++seqs) delete *seqs;
 }
 
-void cleanseq(Seq** seqs, int n, int num)
+void cleanseq(Seq** seqs, int n, const int& num)
 {
 	rectiseq(seqs, seqs + n - 1);
 	for ( ; n--; ++seqs) (*seqs)->refresh(num);
@@ -497,9 +497,9 @@ void swapseq(Seq** x, Seq** y)
 	swap(*x, *y);
  }
 
-void Seq::seqalloc(int num, int length, bool keep)
+void Seq::seqalloc(const int& num, const int& len, const bool& keep)
 {
-	if (!length) length = DEFSEQLEN;
+	int length = len? len: DEFSEQLEN;
 	int	area = num * (length + 2);
 	if (seq_ && area <= area_) {
 	    if (num != many) {
@@ -578,6 +578,7 @@ Seq::Seq(const int& num, const int& length)
 Seq::Seq(const char* fname)
 {
 	initialize();
+	if (!fname) return;
 	FILE*	fd = 0;
 #if USE_ZLIB
 	gzFile  gzfd = 0;
@@ -595,14 +596,14 @@ Seq::Seq(const char* fname)
 	fclose(fd);
 }
 
-Seq::Seq(Seq& sd, int* which, int snl)
+Seq::Seq(Seq& sd, const int* which, const int& snl)
 {
 	initialize();
 	if (which) sd.extseq(this, which, snl);
 	else	sd.copyseq(this, snl);
 }
 
-Seq::Seq(Seq* sd, int* which, int snl)
+Seq::Seq(Seq* sd, const int* which, const int& snl)
 {
 	initialize();
 	if (which) sd->extseq(this, which, snl);
@@ -724,7 +725,7 @@ JUXT* Seq::revjxt()
 
 /* assume seq.many = 1 */
 
-CHAR* spliceTron(CHAR* spliced, const CHAR* b5,  const CHAR* b3, int n)
+CHAR* spliceTron(CHAR* spliced, const CHAR* b5, const CHAR* b3, const int& n)
 {
 	int	nn = n + n;
 	CHAR*	sp = spliced + nn;
@@ -765,7 +766,7 @@ void Seq::nuc2tron()
 	delete[] cmps; cmps = 0;
 }
 
-void Seq::tron2nuc(bool cmpl)
+void Seq::tron2nuc(const bool& cmpl)
 {
 	if (!istron()) return;
 
@@ -864,7 +865,7 @@ Seq* Seq::attrseq(const char* pa)
 	return (this);
 }
 
-int Seq::isAmb(CHAR r) const
+int Seq::isAmb(const CHAR& r) const
 {
 static	CHAR nucamb[] = {0,0,0,0,2,0,2,2,3,0,2,2,3,2,3,3,4};
 static	CHAR aasamb[] = {0,0,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2};
@@ -969,7 +970,7 @@ static const float pcmp[21] = {0.00000, 0.07686, 0.12792, 0.17047, 0.22173,
 	return (a + ALA);
 }
 
-Seq* Seq::deamb(int bzx)
+Seq* Seq::deamb(const int& bzx)
 {
 	if (!inex.ambs) return this;
 	CHAR*	ss = at(left) - 1;
@@ -1003,6 +1004,7 @@ void Seq::copyattr(Seq* dest) const
 	if (msaname) dest->msaname = strrealloc(dest->msaname, msaname);
 	dest->code = code;
 	dest->inex = inex;
+	dest->did = did;
 }
 
 void Seq::fillnbr(Seq* dest) const
@@ -1051,7 +1053,7 @@ void Seq::copyweight(Seq* dest) const
 
 // dest is a new seq sliced from this's segment
 
-Seq* Seq::cutseq(Seq* dest, int snl) const
+Seq* Seq::cutseq(Seq* dest, const int& snl) const
 {
 const	CHAR*	s = at(left);
 	int	l = right - left;
@@ -1074,7 +1076,7 @@ const	CHAR*	s = at(left);
 // dest is a copy of this's segment
 // seq numbering is preserved
 
-Seq* Seq::copyseq(Seq* dest, int snl) const
+Seq* Seq::copyseq(Seq* dest, const int& snl) const
 {
 	if (snl & CPY_SEQ) {
 	    if (dest)	dest->refresh(many, len);
@@ -1111,7 +1113,7 @@ Seq* Seq::duplseq(Seq* dest) const
 
 // catenate this after head with a spacer of length cushion
 
-Seq* Seq::catseq(Seq* head, int cushion)
+Seq* Seq::catseq(Seq* head, const int& cushion)
 {
 	CHAR*	s = at(left);
 	int	l = right - left + cushion;
@@ -1130,11 +1132,11 @@ Seq* Seq::catseq(Seq* head, int cushion)
 	return (head);
 }
 
-Seq* Seq::extseq(Seq* dest, int* which, int snl, FTYPE nfact)
+Seq* Seq::extseq(Seq* dest, const int* which, const int& snl, const FTYPE& nfact)
 {
 	int	dmany = 0;
 	for ( ; which[dmany] >= 0; ++dmany) ;
-	CHAR*	sseq = at(left);
+const	CHAR*	sseq = at(left);
 	if (snl & CPY_SEQ) {
 	    if (dest)	dest->refresh(dmany, right - left);
 	    else	dest = new Seq(dmany, right - left);
@@ -1144,8 +1146,8 @@ Seq* Seq::extseq(Seq* dest, int* which, int snl, FTYPE nfact)
 	    dest->inex.prof = dest->inex.algn = 0;
 	    dest->inex.sngl = dmany == 1;
 	    for (int i = left; i < right; ++i, sseq += many) {
-		for (int* wk = which; *wk >= 0; ) {
-		    CHAR	s = sseq[*wk++];
+		for (const int* wk = which; *wk >= 0; ) {
+		    const CHAR	s = sseq[*wk++];
 		    if (isGap(s)) dest->inex.dels = 1;
 		    if (isAmb(s)) dest->inex.ambs = 1;
 		    *dseq++ = s;
@@ -1156,14 +1158,14 @@ Seq* Seq::extseq(Seq* dest, int* which, int snl, FTYPE nfact)
 	if (!dest) return (0);
 	if (msaname) dest->msaname = strrealloc(dest->msaname, msaname);
 	if (snl & CPY_NBR) {
-	    int*	wk = which;
+	    const int*	wk = which;
 	    for (int i = 0; *wk >= 0; ++i, ++wk) {
 		dest->lens[i] = lens[*wk];
 		dest->nbr[i] = nbr[*wk];
 	    }
 	}
 	if (snl & CPY_LBL) {
-	    int*	wk = which;
+	    const int*	wk = which;
 	    if (dest->sname) dest->sname->reset(dmany);
 	    else dest->sname = new Strlist(dmany);
 	    for (int i = 0; *wk >= 0; ++i, ++wk)
@@ -1179,7 +1181,7 @@ Seq* Seq::extseq(Seq* dest, int* which, int snl, FTYPE nfact)
 	    if (!dest->weight) dest->weight = new FTYPE[dmany];
 	    if (dmany == 1) dest->weight[0] = 1;
 	    else { 
-		int*	wk = which;
+		const int*	wk = which;
 		for (int i = 0; *wk >= 0; ++i, ++wk) {
 		    dest->weight[i] = weight[*wk] / nfact;
 		}
@@ -1364,7 +1366,7 @@ int infermolc(const char* fname)
 
 // remove polyA sequences if present
 
-SHORT PolyA::rmpolyA(Seq* sd, int q_mns) const
+SHORT PolyA::rmpolyA(Seq* sd, const int& q_mns) const
 {
 	if (sd->isprotein() || sd->inex.intr) return (1);
 	int	rv = q_mns? q_mns: 3;
@@ -1504,7 +1506,7 @@ char* Seq::sqline(int i, char* ps)
 	return (ps);
 }
 
-void Seq::header_nat_aln(int n, FTYPE sumwt)
+void Seq::header_nat_aln(const int& n, const FTYPE& sumwt)
 {
 	sname->setfill();
 #if USE_WEIGHT
@@ -1530,7 +1532,7 @@ int cmpPfqPos(const PFQ* a, const PFQ* b)
 	return (a->num - b->num);
 }
 
-CHAR* Seq::ToInferred(CHAR* src, CHAR* lastseq, int step)
+CHAR* Seq::ToInferred(CHAR* src, CHAR* lastseq, const int& step)
 {
 	FTYPE	total = 0;
 
@@ -1556,7 +1558,7 @@ CHAR* Seq::ToInferred(CHAR* src, CHAR* lastseq, int step)
 	return (dst);
 }
 
-void Seq::estimate_len(FILE* fd, int nos)
+void Seq::estimate_len(FILE* fd, const int& nos)
 {
 	long	fpos = ftell(fd);
 	if (nos == 1) {		// FASTA single sequence
@@ -1581,7 +1583,7 @@ void Seq::estimate_len(FILE* fd, int nos)
 }
 
 #if USE_ZLIB
-void Seq::estimate_len(gzFile gzfd, int nos)
+void Seq::estimate_len(gzFile gzfd, const int& nos)
 {
 	long	fpos = ftell(gzfd);
 	char	str[MAXL];
@@ -1667,7 +1669,7 @@ Seq* Seq::getseq(const char* str, DbsDt* dbf)
 	return (sd);
 }
 
-Seq* Seq::apndseq(char* aname)
+Seq* Seq::apndseq(const char* aname)
 {
 	Seq* temp = new Seq(many);
 	temp->getseq(aname);
@@ -1729,7 +1731,7 @@ void save_range(const Seq* seqs[], RANGE* temp, int n)
 	}
 }
 
-void rest_range(const Seq* seqs[], RANGE* temp, int n)
+void rest_range(const Seq* seqs[], const RANGE* temp, int n)
 {
 	while (n--) {
 	    (*seqs)->left = temp->left;
@@ -1737,7 +1739,7 @@ void rest_range(const Seq* seqs[], RANGE* temp, int n)
 	}
 }
 
-void setthr(double thr)
+void setthr(const double& thr)
 {
 	if ((int) thr == QUERY)
 		promptin("Threshold (%.1f) : ", &alprm.thr);
@@ -1781,7 +1783,7 @@ void setalgmode(int nsa, int reg)
 	}
 }
 
-void setstrip(int sh)
+void setstrip(const int& sh)
 {
 	if (sh >= 0)
 	    alprm.sh = sh;
@@ -1855,7 +1857,7 @@ FTYPE* Seq::composition(FTYPE* cmp) const
 	return (cmp);
 }
 
-int Seq::countgap(int mem, int from, int to) const
+int Seq::countgap(const int& mem, int from, int to) const
 {
 	if (from < left) from = left;
 const	CHAR*	ss = at(from) + mem;
@@ -1921,7 +1923,7 @@ const	CHAR*	ss = at(left);
 
 // return information on deleted columns when (which & RET_GAP)
 
-GAPS* Seq::elim_column(int which, float frac)
+GAPS* Seq::elim_column(const int& which, float frac)
 {
 	bool	store_gap = (which & RET_GAP) || sigII;
 	int	cond = which & ~RET_GAP;
@@ -2053,7 +2055,7 @@ Seq* Seq::randseq(double* pcmp)
  	else substitutions may occur in any members
 *****************************************************/
 
-Seq* Seq::substseq(int n, int which)
+Seq* Seq::substseq(int n, const int& which)
 {
 	composition();
 	INT	nelm = isprotein()? 20: 4;
@@ -2096,7 +2098,7 @@ FTYPE* Seq::saveseqwt() const
 	return (vcopy(tmpwt, weight, many));
 }
 
-void Seq::restseqwt(FTYPE* tmpwt)
+void Seq::restseqwt(const FTYPE* tmpwt)
 {
 	if (!tmpwt) return;
 	if (!weight) weight = new FTYPE[many];

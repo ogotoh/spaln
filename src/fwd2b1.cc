@@ -23,32 +23,39 @@
 *	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
-#define	DEBUG	0
+#define	DEBUG	1
 
 #include "aln.h"
 #include "vmf.h"
 #include "wln.h"
+#if __SSE4_1__
+#include "fwd2s1_simd.h"
+#endif
 
 class Aln2b1 {
 const	Seq**	seqs;
 const	Seq*&	a;
 const	Seq*&	b;
 const	PwdB*	pwd;
-	Mfile*	mfd;
-	Vmf*	vmf;
-	INT	lowestlvl;
+const	bool	Local;
+	Mfile*	mfd = 0;
+	Vmf*	vmf = 0;
+const	INT	lowestlvl;
 public:
 	Aln2b1(const Seq** _seqs, const PwdB* _pwd) :
-	    seqs(_seqs), a(seqs[0]), b(seqs[1]), 
-	    pwd(_pwd), mfd(0), vmf(0), lowestlvl(b->wllvl) {} 
+	    seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd), 
+	    Local(algmode.lcl & 16), lowestlvl(b->wllvl) {} 
 	~Aln2b1() {delete vmf; delete mfd;}
 	void	initB_ng(RVPD* hh[], const WINDOW& wdw);
 	RVPD*	lastB_ng(RVPD* hh[], const WINDOW& wdw);
-	VTYPE	forwardB_ng(const WINDOW& wdw, long pp[] = 0);
-	void	finitB_ng(RVDWL* hhf[], int mm, const WINDOW& wdw);
-	void	binitB_ng(RVDWL* hhb[], int mm, const WINDOW& wdw);
-	VTYPE	centerB_ng(int* ml, int* mr, int* nl, int* nr,
-		const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb);
+	VTYPE	forwardB_ng(const WINDOW& wdw, int pp[] = 0);
+	void	hinitB_ng(Rvwml* hh[], const WINDOW& wdw);
+	Rvwml*	hlastB_ng(Rvwml* hh[], const WINDOW& wdw);
+	VTYPE	hirschbergB_ng(int cpos[], 		// coordinates on center row
+		const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb, INT& bexgl);
+	void	sinitB_ng(VTYPE* hh[], const WINDOW& wdw);
+	VTYPE	slastB_ng(VTYPE* hh[], const WINDOW& wdw);
+	VTYPE	scorealoneB_ng(const WINDOW& wdw);
 	VTYPE	diagonalB_ng();
 	VTYPE	trcbkalignB_ng(const WINDOW& wdw);
 	void	cinitB_ng(RVDWC* hhc[], const WINDOW& wdw);
@@ -65,7 +72,7 @@ void Aln2b1::initB_ng(RVPD* hh[], const WINDOW& wdw)
 {
 	int	r = b->left - a->left;
 	int	rr = b->right - a->left;
-	long	origin = vmf? vmf->add(a->left, b->left, 0): r;
+	int	origin = vmf->add(a->left, b->left, 0);
 	FTYPE	ltgapf = a->left? 1: (a->inex.exgl? 0: alprm.tgapf);
 
 	RVPD*	h = hh[0] + r;
@@ -77,8 +84,8 @@ void Aln2b1::initB_ng(RVPD* hh[], const WINDOW& wdw)
 	for (int i = 1; ++r <= rr; ++i) {
 	    ++h;
 	    h->dir = HORI;
-	    h->ptr = vmf? origin: r;
-	    VTYPE	gpn = (i == 1)? pwd->GapPenalty(1): pwd->GapExtPen(i);
+	    h->ptr = origin;
+const	    VTYPE	gpn = (i == 1)? pwd->GapPenalty(1): pwd->GapExtPen(i);
 	    h->val = h[-1].val + (VTYPE) (gpn * ltgapf);
 	}
 
@@ -90,7 +97,7 @@ void Aln2b1::initB_ng(RVPD* hh[], const WINDOW& wdw)
 	for (int i = 1; --r >= rr; ++i) {
 	    --h;
 	    h->dir = VERT;
-	    h->ptr = vmf? origin: r;
+	    h->ptr = origin;
 	    VTYPE	gpn = (i == 1)? pwd->GapPenalty(1): pwd->GapExtPen(i);
 	    h->val = h[1].val  + (VTYPE) (gpn * ltgapf);
 	    *--g = *h;
@@ -134,107 +141,109 @@ RVPD* Aln2b1::lastB_ng(RVPD* hh[], const WINDOW& wdw)
 		else	dn = 0;
 	    }
 	}
-	if (vmf && (dn || dm)) {
+	if (dn || dm) {
 	    if (dn) dm = 0;
 	    h9->ptr = vmf->add(a->right - dm, b->right - dn, h9->ptr);
 	}
-	if (vmf) h9->ptr = vmf->add(a->right, b->right, h9->ptr);
+	h9->ptr = vmf->add(a->right, b->right, h9->ptr);
 	return (h9);
 }
 
-VTYPE Aln2b1::forwardB_ng(const WINDOW& wdw, long pp[])
+VTYPE Aln2b1::forwardB_ng(const WINDOW& wdw, int pp[])
 {
+const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
+const	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
+const	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
 	RVPD*	hh[NOL];
 	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
-	int	Local = algmode.lcl & 16;
-	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
-	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
 
 	RVPD*	rbuf = new RVPD[pwd->Noll * wdw.width];
 	vset(rbuf, black_vpd, pwd->Noll * wdw.width);
 	hh[0] = rbuf - wdw.lw + 1;
 	for (int k = 1; k < pwd->Noll; ++k) hh[k] = hh[k-1] + wdw.width;
-	if (vmf) vmf->add(0, 0, 0);	// Skip 0-th record
+	vmf->add(0, 0, 0);	// Skip 0-th record
 	initB_ng(hh, wdw);
+
 	int	m = a->left;
 	int	n1 = m + wdw.lw;
 	int	n2 = m + wdw.up + 1;
 const	CHAR*	as = a->at(m);
 
-	for ( ; m < a->right; ++as, ++m, ++n1, ++n2) {
-	    RVPD	f1 = black_vpd;
-	    RVPD	f2 = black_vpd;
+	for ( ; ++m <= a->right; ++as, ++n1, ++n2) {
+	    RVPD	e1 = black_vpd;
+	    RVPD	e2 = black_vpd;
 	    int		n = max(n1, b->left);
-	    int		n9 = min(n2, b->right);
+const	    int		n9 = min(n2, b->right);
 const	    CHAR*	bs = b->at(n);
 	    int		r = n - m;
 	    int		k = 0;
 	    RVPD*	h = hh[k] + r;
-	    RVPD*	g = hh[++k] + r;
-	    RVPD*	g2 = (pwd->Noll == 3)? hh[++k] + r: 0;
+	    RVPD*	f = hh[++k] + r;
+	    RVPD*	f2 = dagp? hh[++k] + r: 0;
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
 	if (OutPrm.debug) {
-	    printf("%2d %2d %2d", m + 1, n + 1, h->dir);
+	    printf("%2d %2d %2d", m, n, h->dir);
 	    putvar(h->val); putchar('\n');
 	}
 #endif
-	    for ( ; n < n9; ++bs, ++n, ++h, ++g) {
-		VTYPE	x;
+	    for ( ; ++n <= n9; ++bs) {
+		++h; ++f; if (dagp) ++f2;
 //	Diagonal
 		RVPD*	from = h;
 		RVPD*	mx = h;
 		VTYPE	diag = h->val;
-		h->val += pwd->sim2(as, bs);
+		h->val += qprof[*bs];
 		h->dir = isdiag(from)? DIAG: NEWD;
 
 //	Vertical
-		x = (++from)->val + pwd->BasicGOP;
-		if (x >= g[1].val) {
-		    g->val = x;
-		    g->ptr = from->ptr;
-		    g->dir = VERT;
-		} else	*g = g[1];
-		g->val += pwd->BasicGEP;
-		if (g->val > mx->val) mx = g;
+		VTYPE	x = (++from)->val + pwd->BasicGOP;
+		if (x >= f[1].val) {
+		    f->val = x;
+		    f->ptr = from->ptr;
+		    f->dir = VERT;
+		} else	*f = f[1];
+		f->val += pwd->BasicGEP;
+		if (f->val > mx->val) mx = f;
 
 //	Vertical2
-		if (g2) {
+		if (dagp) {
 		  x = from->val + pwd->LongGOP;
-		  if (x >= g2[1].val) {
-		    g2->val = x;
-		    g2->ptr = from->ptr;
-		    g2->dir = VERT;
-		  } else	*g2 = g2[1];
-		  g2->val += pwd->LongGEP;
-		  if (g2->val > mx->val) mx = g2;
+		  if (x >= f2[1].val) {
+		    f2->val = x;
+		    f2->ptr = from->ptr;
+		    f2->dir = VERT;
+		  } else	*f2 = f2[1];
+		  f2->val += pwd->LongGEP;
+		  if (f2->val > mx->val) mx = f2;
 		}
 //	Horizontal
 		x = h[-1].val + pwd->BasicGOP;
-		if (x >= f1.val) {
-		    f1.val = x;
-		    f1.ptr = h[-1].ptr;
-		    f1.dir = HORI;
+		if (x >= e1.val) {
+		    e1.val = x;
+		    e1.ptr = h[-1].ptr;
+		    e1.dir = HORI;
 		}
-		f1.val += pwd->BasicGEP;
-		if (f1.val >= mx->val) mx = &f1;
+		e1.val += pwd->BasicGEP;
+		if (e1.val >= mx->val) mx = &e1;
 
 //	Horizontal2
-		if (g2) {
+		if (dagp) {
 		    x = h[-1].val + pwd->LongGOP;
-		    if (x >= f2.val) {
-			f2.val = x;
-			f2.ptr = h[-1].ptr;
-			f2.dir = HORL;
+		    if (x >= e2.val) {
+			e2.val = x;
+			e2.ptr = h[-1].ptr;
+			e2.dir = HORL;
 		    }
-		    f2.val += pwd->LongGEP;
-		    if (f2.val >= mx->val) mx = &f2;
+		    e2.val += pwd->LongGEP;
+		    if (e2.val >= mx->val) mx = &e2;
 		}
 
 //	Find optimal path
 		if (h != mx) *h = *mx;	// non-diagonal
 		else if (Local && h->val > diag) {
 		    if (LocalL && diag == 0)
-			h->ptr = vmf? vmf->add(m, n, 0): 0;
+			h->ptr = vmf->add(m - 1, n - 1, 0);
 		    else if (LocalR && h->val > maxh.val) {
 			maxh.val = h->val;
 			maxh.p = h->ptr;
@@ -243,36 +252,30 @@ const	    CHAR*	bs = b->at(n);
 		    }
 		}
 		if (LocalL && h->val <= 0) h->val = h->dir = 0;
-		else if (vmf) {
-		    if (h->dir == NEWD || h->dir == NEWV || h->dir == NEWH)
-			h->ptr = vmf->add(m, n, h->ptr);
-		} else if (m == a->left)
-		    h->ptr = n - m;
+		else if (h->dir == NEWD || h->dir == NEWV || h->dir == NEWH)
+			h->ptr = vmf->add(m - 1, n - 1, h->ptr);
 
 #if DEBUG
 		if (OutPrm.debug) {
-		    printf("%2d %2d %2d ", m + 1, n + 1, mx->dir);
+		    printf("%2d %2d %2d ", m, n, mx->dir);
 		    putvar(mx->val); putvar(diag); 
-		    putvar(g->val); putvar(f1.val);
-		    if (g2) {
-			putvar(g2->val); putvar(f2.val);
+		    putvar(f->val); putvar(e1.val);
+		    if (dagp) {
+			putvar(f2->val); putvar(e2.val);
 		    }
 		    putchar('\n');
 		}
 #endif
-		if (g2) ++g2;
 	    }	/* end of n-loop */
 	}	/* end of m-loop */
 
 	if (LocalR) {
-	    if (vmf) *pp = vmf->add(maxh.m, maxh.n, maxh.p);
+	    *pp = vmf->add(maxh.m, maxh.n, maxh.p);
 	} else {
 	    RVPD*	mx = lastB_ng(hh, wdw);
 	    maxh.val = mx->val;
-	    if (vmf) {
-		pp[0] = mx->ptr;
-		pp[1] = b->left - a->left + mx - hh[0];
-	    }
+	    pp[0] = mx->ptr;
+	    pp[1] = b->left - a->left + mx - hh[0];
 	}
 	delete[] rbuf;
 	return (maxh.val);
@@ -379,406 +382,296 @@ const	CHAR*	bs = b->at(n);
 	return (scr);
 }
 
-void Aln2b1::finitB_ng(RVDWL* hhf[], int mm, const WINDOW& wdw)
+/********************************************************
+*
+*	unidirectional Hirschberg algorithm
+*
+********************************************************/
+
+void Aln2b1::hinitB_ng(Rvwml* hh[], const WINDOW& wdw)
 {
 	int	r = b->left - a->left;
 	int	r0 = r;
 	int	rr = b->right - a->left;
-	FTYPE	ltgapf = a->left? 1: (a->inex.exgl? 0: alprm.tgapf);
 
-	RVDWL*	h = hhf[0] + r;
-	RVDWL*	g = hhf[1] + r;
+	Rvwml*	h = hh[0]  + r;
 	h->val = 0;
-	h->dir = DEAD;
-	h->lwr = h->upr = h->lst = r;
-	if (wdw.up < rr) rr = wdw.up;
-	for (int i = 1; ++r <= rr; ++i) {
-	    ++h;
-	    if (a->inex.exgl) {
+	h->lwr = h->upr = h->ulk = r;
+	h->ml = a->left;
+	if (a->inex.exgl) {	// semi-global
+	    if (wdw.up < rr) rr = wdw.up;
+	    while (++r <= rr) {
+		++h;
 		h->val = 0;
-		h->dir = DEAD;
-		h->lwr = h->upr = h->lst = r;
-	    } else {
-		h->dir = HORI;
-		h->lwr = h->lst = r0;
-		h->upr = r;
-		VTYPE	gpn = (i == 1)? pwd->GapPenalty(1): pwd->GapExtPen(i);
-		h->val = h[-1].val + (VTYPE) (gpn * ltgapf);
+		h->lwr = h->upr = h->ulk = r;
 	    }
 	}
 
-	ltgapf = b->left? 1: (b->inex.exgl? 0: alprm.tgapf);
 	r = r0;
-	rr = b->left - mm;
+	rr = b->left - a->right;
 	if (wdw.lw > rr) rr = wdw.lw;
-	h = hhf[0] + r;
+	h = hh[0] + r;
+	Rvwml*	f = hh[1] + r;
 	for (int i = 1; --r >= rr; ++i) {
-	    --h; --g;
+	    --h; --f;
 	    if (b->inex.exgl) {
 		h->val = 0;
-		h->dir = DEAD;
-		h->lwr = h->upr = h->lst = r;
+		h->lwr = h->upr = h->ulk = r;
 	    } else {
 		*h = h[1];
 		if (i == 1) {
-		    h->val += (VTYPE) (pwd->GapPenalty(1) * ltgapf);
-		    h->dir = VERT;
-		    *g = *h;
+		    h->val += pwd->GapPenalty(1);
+		    *f = *h;
 		} else {
-		    *g = g[1];
-		    h->val += (VTYPE) (pwd->GapExtPen(i) * ltgapf);
-		    g->val += (VTYPE) (pwd->BasicGEP * ltgapf);
+		    *f = f[1];
+		    h->val += pwd->GapExtPen(i);
+		    f->val += pwd->BasicGEP;
 		}
-		h->lwr = g->lwr = r;
+		h->lwr = f->lwr = r;
+		h->ulk = f->ulk = r0;
 	    }
 	}
 }
 
-void Aln2b1::binitB_ng(RVDWL* hhb[], int mm, const WINDOW& wdw)
+Rvwml* Aln2b1::hlastB_ng(Rvwml* hh[], const WINDOW& wdw)
 {
-	int	r = b->right - a->right;
-	int	r9 = r;
-	int	rr = b->left - a->right;
-	FTYPE	rtgapf = a->right < a->len? 1: (a->inex.exgr? 0: alprm.tgapf);
+	Rvwml*	h9 = hh[0] + b->right - a->right;
+	Rvwml*	mx = h9;
 
-	RVDWL*	h = hhb[0] + r;
-	h->val = 0;
-	h->dir = DEAD;
-	h->lwr = h->upr = h->lst = r;
-	if (wdw.lw > rr) rr = wdw.lw;
-	for (int i = 1; --r >= rr; ++i) {
-	    --h;
-	    if (a->inex.exgr) {
-		h->val = 0;
-		h->dir = DEAD;
-		h->lwr = h->upr = h->lst = r;
-	    } else {
-		h->dir = HORI;
-		h->upr = h->lst = r9;
-		h->lwr = r;
-		VTYPE	gpn = (i == 1)? pwd->GapPenalty(1): pwd->GapExtPen(i);
-		h->val = h[1].val + (VTYPE) (gpn * rtgapf);
-	    }
+	if (b->inex.exgr) {
+	    int	rw = std::min(wdw.up, b->right - a->left);
+	    for (Rvwml* h = hh[0] + rw; h > h9; --h)
+		if (h->val > mx->val) mx = h;
 	}
-
-	rtgapf = b->right < b->len? 1: (b->inex.exgr? 0: alprm.tgapf);
-	r = r9;
-	rr = b->right - mm;
-	if (wdw.up < rr) rr = wdw.up;
-	h = hhb[0] + r;
-	RVDWL*	g = hhb[1] + r;
-	for (int i = 1; ++r <= rr; ++i) {
-	    ++h; ++g;
-	    if (b->inex.exgr) {
-		h->val = 0;
-		h->dir = DEAD;
-		h->lwr = h->upr = h->lst = r;
-	    } else {
-		*h = h[-1];
-		if (i == 1) {
-		    h->val += (VTYPE) (pwd->GapPenalty(1) * rtgapf);
-		    h->dir = VERT;
-		    *g = *h;
-		} else {
-		    *g = g[-1];
-		    h->val += (VTYPE) (pwd->GapExtPen(i) * rtgapf);
-		    g->val += (VTYPE) (pwd->BasicGEP * rtgapf);
-		}
-		h->upr = g->upr = r;
-	    }
+	if (a->inex.exgr) {
+	    int	rw = std::max(wdw.lw, b->left - a->right);
+	    for (Rvwml* h = hh[0] + rw; h < h9; ++h)
+		if (h->val > mx->val) mx = h;
 	}
+	return (mx);
 }
 
-VTYPE Aln2b1::centerB_ng(int* ml, int* mr, int* nl, int* nr, 
-	const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb)
+VTYPE Aln2b1::hirschbergB_ng(int cpos[], 
+	const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb, INT& bexgl)
 {
-	int	kk = 0;
-	int	rr[2] = {0, 0};
-	RVDWL*	hhf[NOL];
-	RVDWL*	hhb[NOL];
-	RVDWL*	hf[NOL];
-	RVDWL*	hb[NOL];
-	RVDWL	f[NOL];
-	RVDWL*	f1 = f + 1;
-	RVDWL*	g2 = 0;
-	VTYPE	mxh = NEVSEL;
-	int	Local = algmode.lcl & 16;
-	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
-	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
+const	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
+const	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+	Rvwml*	hh[NOL];
+	Rvwml*	hf[NOD];
+	Rvwml	e[2];
+	Rvwml*&	e1 = hf[1] = e;
+	Rvwml*&	e2 = hf[3] = e + 1;
+	int*	center_lnk[NOL];
+	int*	center_end[NOL];
+	int*	center_lwr[NOL];
+	int*	center_upr[NOL];
+	Rvwmrmn	maxh = {NEVSEL, 0, 0, 0, 0};
 
-	RVDWL*	wbuf = new RVDWL[2 * pwd->Noll * wdw.width];
-	vset(wbuf, black_vdwl, 2 * pwd->Noll * wdw.width);
-	hhf[0] = wbuf - wdw.lw + 1;
-	hhb[0] = hhf[0] + pwd->Noll * wdw.width;
-	for (int k = 1; k < pwd->Noll; ++k) hhf[k] = hhf[k-1] + wdw.width;
-	for (int k = 1; k < pwd->Noll; ++k) hhb[k] = hhb[k-1] + wdw.width;
-	int	mm = (a->left + a->right + 1) / 2;
-	RVDWL*	f2 = (pwd->Noll == 3)? f + 2: 0;
+const	size_t	bufsiz = pwd->Noll * wdw.width;
+	Rvwml*	wbuf = new Rvwml[bufsiz];
+	int	r = b->left - a->right;
+const	Rvwml	black_vpwml = {NEVSEL, r, r, 0, end_of_ulk};
+	vset(wbuf, black_vpwml, bufsiz);
+	Rvwml*	blackvwu = wbuf + bufsiz - 1;	// assume to be const
+	hh[0] = wbuf - wdw.lw + 1;
+	int*	ibuf = new int[4 * bufsiz];
+	center_lnk[0] = ibuf - wdw.lw + 1;
+	center_end[0] = center_lnk[0] + bufsiz;
+	center_lwr[0] = center_end[0] + bufsiz;
+	center_upr[0] = center_lwr[0] + bufsiz;
+	for (int k = 1; k < pwd->Noll; ++k) {
+	    hh[k] = hh[k-1] + wdw.width;
+	    center_lnk[k] = center_lnk[k - 1] + wdw.width;
+	    center_end[k] = center_end[k - 1] + wdw.width;
+	    center_lwr[k] = center_lwr[k - 1] + wdw.width;
+	    center_upr[k] = center_upr[k - 1] + wdw.width;
+	}
+	vset(ibuf, end_of_ulk, 2 * bufsiz);	// center_lnk
 
-/*******	backward phase	*******/
+	hinitB_ng(hh, wdw);
 
-	binitB_ng(hhb, mm, wdw);
-	int	m = a->right - 1;
-const	CHAR*	as = a->at(m);
+	int	m = a->left;
+const	int	mm = (a->left + a->right + 1) / 2;
+	if (!a->inex.exgl) --m; 	// global
 	int	n1 = m + wdw.lw;
 	int	n2 = m + wdw.up + 1;
-	for ( ; m >= mm; --m, --as, --n1, --n2) {
-	    int	n = min(n2, b->right) - 1;
-	    int	n9 = max(n1, b->left);
+const	CHAR*	as = a->at(m);
+	for ( ; ++m <= a->right; ++as, ++n1, ++n2) {
+	    int	n = std::max(n1, b->left);
+const	    int	n9 = std::min(n2, b->right);
 const	    CHAR*	bs = b->at(n);
-	    int	r = n - m;
-	    int	d = 0;
-	    RVDWL*	h = hhb[d] + r;
-	    RVDWL*	g = hhb[++d] + r;
-	    *f1 = black_vdwl;
-	    if (pwd->Noll == 3) {
-		g2 = hhb[++d] + r;
-		*f2 = black_vdwl;
-	    }
+	    r = n - m;
+	    Rvwml*&	h = hf[0] = hh[0] + r;
+	    Rvwml*&	f = hf[2] = hh[1] + r;
+	    Rvwml*&	f2 = hf[4] = dagp? hh[2] + r: blackvwu;
+	    vset(e, black_vpwml, 2);
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
-	if (OutPrm.debug) {
-	    printf("%2d %2d %2d", m + 1, n + 1, h->dir);
-	    putvar(h->val); putchar('\n');
-	}
+	    if (OutPrm.debug) {
+		printf("%2d %2d ", m, n);
+		putvar(h->val); putchar('\n');
+	    }
 #endif
-	    for ( ; n >= n9; --n, --bs, --r, --h, --g) {
-/*	Diagonal	*/
-		RVDWL*	from = h;
-		RVDWL*	mx = h;
-		h->val += pwd->sim2(as, bs);
-		h->dir = isdiag(from)? DIAG: NEWD;
-/*	Vertical	*/
-		VTYPE	x = (--from)->val + pwd->BasicGOP;
-		if (x >= g[-1].val) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = VERT;
-		} else *g = g[-1];
-		g->val += pwd->BasicGEP;
-		if (g->val >= mx->val) mx = g;
-
-/*	Vertical2	*/
-		if (g2) {
-		  x = from->val + pwd->LongGOP;
-		  if (x >= g2[-1].val) {
-		    *g2 = *from;
-		    g2->val = x;
-		    g2->dir = VERT;
-		  } else *g2 = g2[-1];
-		  g2->val += pwd->LongGEP;
-		  if (g2->val >= mx->val) mx = g2;
-		}
-/*	Horizontal	*/
-		x = h[1].val + pwd->BasicGOP;
-		if (x >= f1->val) {
-		    *f1 = h[1];
-		    f1->val = x;
-		    f1->dir = HORI;
-		}
-		f1->val += pwd->BasicGEP;
-		if (f1->val >= mx->val) mx = f1;
-
-/*	Horizontal2	*/
-		if (f2) {
-		    x = h[1].val + pwd->LongGOP;
-		    if (x >= f2->val) {
-			*f2 = h[1];
-			f2->val = x;
-			f2->dir = HORI;
+	    for ( ; ++n <= n9; ++bs) {
+		++r;
+		for (int k = 0; k < pwd->Noll; ++k) {
+		    int	kk = k + k;
+		    ++hf[kk];
+		    if (m == mm) {
+			center_end[k][r] = hf[kk]->ulk;
+			hf[kk]->ulk = k? end_of_ulk: r;
 		    }
-		    f2->val += pwd->LongGEP;
-		    if (f2->val >= mx->val) mx = f2;
 		}
-		if (mx->dir == NEWD) mx->lst = r;
 
-/*	Find optimal path	*/
-#if DEBUG
-		VTYPE	y = h->val;
-#endif
-		if (h != mx) {
-		    *h = *mx;
-		    if (h->upr < r) h->upr = r;
-		    if (h->lwr > r) h->lwr = r;
-		}
-		if (LocalR && h->val <= 0) h->val = h->dir = 0;
-#if DEBUG
-	if (OutPrm.debug) {
-		printf("%2d %2d %2d ", m + 1, n + 1, mx->dir);
-		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(f1->val);
-		if (g2) {
-		    putvar(g2->val); putvar(f2->val);
-		}
-		putchar('\n');
-	}
-#endif
-		if (g2) --g2;
-	    }	/* end of n loop */
-	}	/* end of m loop */
+//	Diagonal
+		Rvwml*	from = h;
+		Rvwml*	mx = h;
+		VTYPE	x;
+		if (m == a->left) goto HorizonF;
+		h->val += qprof[*bs];
 
-/*******	forward phase	*******/
+//	Vertical
+		x = (++from)->val + pwd->BasicGOP;
+		if (x >= f[1].val) {
+		    *f = *from;
+		    f->val = x;
+		} else	*f = f[1];
+		f->val += pwd->BasicGEP;
+		if (f->val >= mx->val) mx = f;
 
-	finitB_ng(hhf, mm, wdw);
-	m = a->left;
-	n1 = m + wdw.lw;
-	n2 = m + wdw.up + 1;
-	as = a->at(m);
-	int	mm1 = mm - 1;
-	for ( ; m < mm; ++m, ++as, ++n1, ++n2) {
-	    int	n = max(n1, b->left);
-	    int	n9 = min(n2, b->right);
-const	    CHAR*	bs = b->at(n);
-	    int	r = n - m;
-	    int	d = 0;
-	    RVDWL*	h = hhf[d] + r;
-	    RVDWL*	g = hhf[++d] + r;
-	    *f1 = black_vdwl;
-	    if (g2) {
-		g2  = hhf[++d] + r;
-		*f2 = black_vdwl;
-	    }
-	    if (m == mm1)
-		for (int k = 0; k < pwd->Noll; k++) hb[k] = hhb[k] + r;
-
-	    for ( ; n < n9; ++n, ++bs, ++h, ++g, ++r) {
-		RVDWL*	from = h;
-		RVDWL*	mx = h;
-
-/*	Diagonal	*/
-		h->val += pwd->sim2(as, bs);
-		h->dir = isdiag(from)? DIAG: NEWD;
-
-/*	Vertical	*/
-		VTYPE	x = (++from)->val + pwd->BasicGOP;
-		if (x >= g[1].val) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = VERT;
-		} else	*g = g[1];
-		g->val += pwd->BasicGEP;
-		if (g->val >= mx->val) mx = g;
-
-/*	Vertical2	*/
-		if (g2) {
+//	Vertical2
+		if (dagp) {
 		  x = from->val + pwd->LongGOP;
-		  if (x >= g2[1].val) {
-		    *g2 = *from;
-		    g2->val = x;
-		    g2->dir = VERT;
-		  } else 	*g2 = g2[1];
-		  g2->val += pwd->LongGEP;
-		  if (g2->val >= mx->val) mx = g2;
+		  if (x >= f2[1].val) {
+		    *f2 = *from;
+		    f2->val = x;
+		  } else 	*f2 = f2[1];
+		  f2->val += pwd->LongGEP;
+		  if (f2->val >= mx->val) mx = f2;
 		}
-/*	Horizontal	*/
+HorizonF:
+//	Horizontal
 		x = h[-1].val + pwd->BasicGOP;
-		if (x >= f1->val) {
-		    *f1 = h[-1];
-		    f1->val = x;
-		    f1->dir = HORI;
+		if (x >= e1->val) {
+		    *e1 = h[-1];
+		    e1->val = x;
 		}
-		f1->val += pwd->BasicGEP;
-		if (f1->val >= mx->val) mx = f1;
+		e1->val += pwd->BasicGEP;
+		if (e1->val >= mx->val) mx = e1;
 
-/*	Horizontal2	*/
-		if (f2) {
+//	Horizontal2
+		if (dagp) {
 		    x = h[-1].val + pwd->LongGOP;
-		    if (x >= f2->val) {
-			*f2 = h[-1];
-			f2->val = x;
-			f2->dir = HORI;
+		    if (x >= e2->val) {
+			*e2 = h[-1];
+			e2->val = x;
 		    }
-		    f2->val += pwd->LongGEP;
-		    if (f2->val >= mx->val) mx = f2;
+		    e2->val += pwd->LongGEP;
+		    if (e2->val >= mx->val) mx = e2;
 		}
-		if (mx->dir == NEWD) mx->lst = r;
 
-/*	Find optimal path	*/
+//	Find optimal path
+#if DEBUG
 		VTYPE	y = h->val;
-		if (h != mx)  {
+#endif
+		int	hd = 0;		// diag: 0, hori: 1, vert: 2
+		if (h == mx) {
+		    if (LocalR && h->val > maxh.val) {
+			maxh.val = h->val;
+			maxh.upr = h->upr;
+			maxh.lwr = h->lwr;
+			maxh.ml = h->ml;
+			maxh.ulk = h->ulk;
+			maxh.mr = m;
+			maxh.nr = n;
+		    }
+		} else {
+		    while (mx != hf[++hd]) ;
 		    *h = *mx;
 		    if (h->upr < r) h->upr = r;
 		    if (h->lwr > r) h->lwr = r;
 		}
-		if (LocalL && h->val <= 0) h->val = h->dir = 0;
+		if (LocalL && h->val <= 0) {
+		    h->val = 0;
+		    h->ml = m;
+		    h->ulk = h->upr = h->lwr = r;
+		}
 
 #if DEBUG
-	if (OutPrm.debug) {
-		printf("%2d %2d %2d ", m + 1, n + 1, mx->dir);
-		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(f1->val);
-		if (g2) {
-		    putvar(g2->val); putvar(f2->val);
+		if (OutPrm.debug) {
+		    printf("%2d %2d ", m, n);
+		    putvar(mx->val); putvar(y); 
+		    putvar(f->val); putvar(e1->val);
+		    if (dagp) {
+			putvar(f2->val); putvar(e2->val);
+		    }
+		    putchar('\n');
 		}
-		putchar('\n');
-	}
 #endif
 
-/* Find Center */
-		if (m == mm1) {
-		    x = h->val + (*hb)->val;
-		    int	k1 = isvert(h)? 1: 0;
-		    int	k2 = isvert(*hb)? 1: 0;
-		    y = g->val + hb[1]->val - pwd->BasicGOP;
-		    int	l = g->lst - hb[1]->lst - pwd->codonk1;
-		    if (l > 0) y += pwd->diffu * l;
-		    if (y >= x) {x = y; k1 = k2 = 1;}
-		    if (g2) {
-			y = g->val + hb[2]->val - pwd->BasicGOP + pwd->diffu * (g->lst - r);
-			if (y > x) {x = y; k1 = 1; k2 = 2;}
-			y = g2->val + hb[1]->val - pwd->BasicGOP + pwd->diffu * (r - hb[1]->lst);
-			if (y > x) {x = y; k1 = 2; k2 = 1;}
-			y = g2->val + hb[2]->val - pwd->LongGOP;
-			if (y > x) {x = y; k1 = k2 = 2;}
+// save variables at the center
+		if (m == mm) {
+const		    int	vk = (hd == 2 || hd == 4)? hd / 2: 0;
+		    for (int k = 0; k < pwd->Noll; ++k) {
+			int	kk = k + k;
+			center_lwr[k][r] = hf[kk]->lwr;
+		        center_upr[k][r] = hf[kk]->upr;
+			hf[kk]->upr = r;
+			if (!(hd % 2)) hf[kk]->lwr = r;
+			if (k) hf[kk]->ulk = r + k * wdw.width;
+			else {
+			    center_lnk[0][r] = hf[0]->ulk;
+			    hf[0]->ulk = r + vk * wdw.width;
+			}
 		    }
-		    if (gt(x, mxh)) {
-			mxh = x;
-			rr[0] = rr[1] = r;
-			kk = k1 + 4 * k2;
-		    } else if (ge(x, mxh)) {
-			rr[1] = r;
-		    }
-		    for (int k = 0; k < pwd->Noll; k++) ++hb[k];
-		}
-		if (g2) ++g2;
-	    }	/* end of n-loop */
-	}	/* end of m-loop */
+		}	// was center
+	    }	// end of n-loop
+	}	// end of m-loop
 
-	int	k1 = kk % 4;
-	int	k2 = kk / 4;
-	int	r = rr[0];
-	*nl = r + mm;
-	for (int k = 0; k < pwd->Noll; ++k) hf[k] = hhf[k] + r;
-	wdwf.up = hf[k1]->upr;
-	wdwf.lw = hf[k1]->lwr;
-	wdwf.width = wdwf.up - wdwf.lw + 3;
-	SKL	wskl;
-	if (k1) {
-	    wskl.m = *ml = *nl - hf[k1]->lst;
-	    wskl.n = *nl;
-	    mfd->write((UPTR) &wskl);
+const	int	rl = b->left - a->left;
+	if (LocalR) {
+	    a->right = maxh.mr;
+	    b->right = maxh.nr;
+	    wdwb.up = maxh.upr;
+	    wdwb.lw = maxh.lwr;
 	} else {
-	    wskl.m = *ml = mm;
+const	    int	rr = b->right - a->right;
+const	    Rvwml*	mx = hlastB_ng(hh, wdw);
+	    maxh.val = mx->val;
+	    maxh.ulk = mx->ulk;
+	    wdwb.up = mx->upr;
+	    wdwb.lw = mx->lwr;
+	    r = mx - hh[0];
+	    if (a->inex.exgr && rr < r) a->right = b->right - r;
+	    if (b->inex.exgr && rr > r) b->right = a->right + r;
 	}
-	wskl.n = *nr = (r = rr[1]) + mm;
-	for (int k = 0; k < pwd->Noll; ++k) hb[k] = hhb[k] + r;
-	wdwb.up = hb[k2]->upr;
-	wdwb.lw = hb[k2]->lwr;
-	wdwb.width = wdwb.up - wdwb.lw + 3;
-	if (k2) {
-	    mfd->write((UPTR) &wskl);
-	    wskl.m = *mr = *nr - hb[k2]->lst;
-	    mfd->write((UPTR) &wskl);
+	int	c = 0;
+	int	d = 0;
+	for (r = maxh.ulk; r > wdw.up; r -= wdw.width) ++d;
+	if (center_end[d][r] < end_of_ulk) {	// cross center
+	    cpos[c++] = mm;
+	    for (int rp = center_lnk[d][r]; rp < end_of_ulk && r != rp;
+		rp = center_lnk[0][r = rp]) {
+		cpos[c++] = r + mm;
+	    }
+	    cpos[c++] = r + mm;
+	    cpos[c] = end_of_ulk;
+	    wdwf.up = center_upr[d][r];
+	    wdwf.lw = center_lwr[0][r];
+	    r = center_end[d][r];
+	} else	cpos[0] = end_of_ulk;		// don't cross center
+	if (LocalL) {
+	    a->left = maxh.ml;
+	    b->left = r + maxh.ml;
 	} else {
-	    *mr = mm;
+	    if (a->inex.exgl && rl > r) a->left = b->left - r;
+	    if (b->inex.exgl && rl < r) b->left = a->left + r;
 	}
-
-#if MONITOR
-	stop = time(0);
-	printf("(%4d, %4d) (%4d, %4d) %4d %4d %4d %4ld\n",
-	a->left,b->left,a->right,b->right,mm,wdw.lw,wdw.up, stop - start);
-#endif
+	bexgl = (d > 0)? 1: 0;
 	delete[] wbuf;
-	return (mxh);
+	delete[] ibuf;
+	return (maxh.val);
 }
 
 void Aln2b1::cinitB_ng(RVDWC* hhc[], const WINDOW& wdw)
@@ -813,10 +706,11 @@ void Aln2b1::cinitB_ng(RVDWC* hhc[], const WINDOW& wdw)
 
 Colonies* Aln2b1::fwdswgB_ng(VTYPE* scr, const WINDOW& wdw)
 {
+const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	RVDWC*	hhc[NOL];
 	RVDWC   hl[NOL];
-	RVDWC	f[NOL]; 	/* [DIAG, HORI, HORL] */
-	RVDWC*	g2 = 0;
+	RVDWC	e[NOL]; 		// [DIAG, HORI, HORL]
+	RVDWC*	f2 = 0;
 	Colonies*	cl = new Colonies(0);
 	COLONY*	clny = cl->at();
 
@@ -826,10 +720,10 @@ Colonies* Aln2b1::fwdswgB_ng(VTYPE* scr, const WINDOW& wdw)
         for (int k = 1; k < pwd->Noll; ++k) hhc[k] = hhc[k-1] + wdw.width;
 	cinitB_ng(hhc, wdw);
 	int	m  = a->left;
-const	CHAR*	as = a->at(m);
 	int	n1 = m + wdw.lw;
 	int	n2 = m + wdw.up + 1;
-	for ( ; m < a->right; ++m, ++as, ++n1, ++n2) {
+const	CHAR*	as = a->at(m);
+	for ( ; ++m <= a->right; ++as, ++n1, ++n2) {
 	    int 	n = max(n1, b->left);
 	    int 	n9 = min(n2, b->right);
 const	    CHAR*	bs = b->at(n);
@@ -837,106 +731,108 @@ const	    CHAR*	bs = b->at(n);
 	    RVDWC*	hlb = hhc[0] + r;
 	    RVDWC*	hrb = hhc[0] + n9 - m;
 	    RVDWC*	h = hlb;
-	    RVDWC*	g = hhc[1] + r;
-	    if (pwd->Noll == 3) g2 = hhc[2] + r;
+	    RVDWC*	f = hhc[1] + r;
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+	    if (dagp) f2 = hhc[2] + r;
 	    for (int k = 0; k < pwd->Noll; ++k)
-		hl[k] = f[k] = black_vdwc;
+		hl[k] = e[k] = black_vdwc;
 
 #if DEBUG
 	if (OutPrm.debug) {
-	    printf("%2d %2d %2d", m+1, n+1, h->dir);
+	    printf("%2d %2d %2d", m, n, h->dir);
 	    putvar(h->val); putchar('\n');
 	}
 #endif
-	    for ( ; n < n9; ++n, ++r, ++h, ++g, ++bs) {
-/*	Diagonal	*/
+	    for ( ; ++n <= n9; ++bs) {
+		++r; ++h; ++f; if (f2) ++f2;
+//	Diagonal
 		RVDWC*	mx = h;
-		f[0] = *h;	/* diag */
+		e[0] = *h;	/* diag */
 #if DEBUG
 		VTYPE	diag = h->val;
 #endif
-		h->val += pwd->sim2(as, bs);
+		h->val += qprof[*bs];
 		h->dir = isdiag(h)? DIAG: NEWD;
 
-/*	Vertical	*/
+//	Vertical
 		VTYPE	x = h[1].val + pwd->BasicGOP;
-		if (x >= g[1].val) {
-		    *g = h[1];
-		    g->val = x;
-		    g->dir = VERT;
-		} else	*g = g[1];
-		g->val += pwd->BasicGEP;
-		if (g->val > mx->val) mx = g;
-
-/*	Vertical2	*/
-		if (g2) {
-		  x = h[1].val + pwd->LongGOP;
-		  if (x >= g2[1].val) {
-		    *g2 = h[1];
-		    g2->val = x;
-		    g2->dir = VERT;
-		  } else 	*g2 = g2[1];
-		  g2->val += pwd->LongGEP;
-		  if (g2->val > mx->val) mx = g2;
-		}
-
-/*	Horizontal	*/
-		x = h[-1].val + pwd->BasicGOP;
 		if (x >= f[1].val) {
-		    f[1] = h[-1];
-		    f[1].dir = HORI;
-		    f[1].val = x;
-		}
-		if (f[1].dir) {
-		    f[1].val += pwd->BasicGEP;
-		    f[1].dir = HORI;
-		    if (f[1].val >= mx->val) mx = f + 1;
+		    *f = h[1];
+		    f->val = x;
+		    f->dir = VERT;
+		} else	*f = f[1];
+		f->val += pwd->BasicGEP;
+		if (f->val > mx->val) mx = f;
+
+//	Vertical2
+		if (dagp) {
+		  x = h[1].val + pwd->LongGOP;
+		  if (x >= f2[1].val) {
+		    *f2 = h[1];
+		    f2->val = x;
+		    f2->dir = VERT;
+		  } else 	*f2 = f2[1];
+		  f2->val += pwd->LongGEP;
+		  if (f2->val > mx->val) mx = f2;
 		}
 
-/*	Horizontal2	*/
-		if (pwd->Noll == 3) {
+//	Horizontal
+		x = h[-1].val + pwd->BasicGOP;
+		if (x >= e[1].val) {
+		    e[1] = h[-1];
+		    e[1].dir = HORI;
+		    e[1].val = x;
+		}
+		if (e[1].dir) {
+		    e[1].val += pwd->BasicGEP;
+		    e[1].dir = HORI;
+		    if (e[1].val >= mx->val) mx = e + 1;
+		}
+
+//	Horizontal2
+		if (dagp) {
 		    x = h[-1].val + pwd->LongGOP;
-		    if (x >= f[2].val) {
-			f[2] = h[-1];
-			f[2].val = x;
-			f[2].dir = HORL;
+		    if (x >= e[2].val) {
+			e[2] = h[-1];
+			e[2].val = x;
+			e[2].dir = HORL;
 		    }
-		    if (f[2].dir) {
-			f[2].val += pwd->LongGEP;
-			f[2].dir = HORL;
-			if (f[2].val >= mx->val) mx = f + 2;
+		    if (e[2].dir) {
+			e[2].val += pwd->LongGEP;
+			e[2].dir = HORL;
+			if (e[2].val >= mx->val) mx = e + 2;
 		    }
 		}
 
-/*	Find optimal path	*/
-		if (h != mx) {		/* non-diagonal */
+//	Find optimal path
+		if (h != mx) {			// non-diagonal
 		    *h = *mx;
 		    if (h->upr < r) h->upr = r;
 		    if (h->lwr > r) h->lwr = r;
-		} else if (h->val > f->val) {
-		    if (f->val == 0) {	/* new colony */
+		} else if (h->val > e->val) {
+		    if (e->val == 0) {		// new colony
 			h->upr = h->lwr = r;
-			h->mlb = m;
-			h->nlb = n;
+			h->mlb = m - 1;
+			h->nlb = n - 1;
 		    }
-		    if (h->val > clny->val) {	/* max local score */
+		    if (h->val > clny->val) {	// max local score
 			clny->val = h->val;
-			clny->mrb = m + 1;
-			clny->nrb = n + 1;
+			clny->mrb = m;
+			clny->nrb = n;
 			clny->lwr = h->lwr;
 			clny->upr = h->upr;
 			clny->mlb = h->mlb;
 			clny->nlb = h->nlb;
 		    }
 		}
-		if (h->val < 0) {		/* reset to blank */
-		    *h = f[1] = *g = white_vdwc;
-		    if (g2) {f[2] = *g2 = white_vdwc;}
+		if (h->val < 0) {		// reset to blank
+		    *h = e[1] = *f = white_vdwc;
+		    if (f2) {e[2] = *f2 = white_vdwc;}
 		    h->clny = 0;
 		}
 		if (algmode.mlt > 1 && h->val >= pwd->Vthr && !h->clny) {
-		    if (cl->size() >= (int) OutPrm.MaxOut) {	/* Gabage collecton */
-			for (RVDWC* hw = hlb; hw < hrb; ++hw)	/* mark active colony */
+		    if (cl->size() >= (int) OutPrm.MaxOut) {	// Gabage collecton
+			for (RVDWC* hw = hlb; hw < hrb; ++hw)	// mark active colony
 			    if (hw->clny) hw->clny->mark = 1;
 			if (algmode.mlt == 2) cl->removeoverlap();
 			if (cl->size() >= (int) OutPrm.MaxOut) cl->removelowscore();
@@ -953,38 +849,195 @@ const	    CHAR*	bs = b->at(n);
 		if (cc) {
 		    if (h->val > cc->val) {
 			cc->val = h->val;
-			cc->mrb = m + 1;
-			cc->nrb = n + 1;
+			cc->mrb = m;
+			cc->nrb = n;
 			cc->lwr = h->lwr;
 			cc->upr = h->upr;
 			cc->mlb = h->mlb;
 			cc->nlb = h->nlb;
 		    } else if (h->val <= cc->val - pwd->Vthr) {
-			*h = f[1] = *g = white_vdwc;		// X-drop
-			if (g2) {f[2] = *g2 = white_vdwc;}
+			*h = e[1] = *f = white_vdwc;		// X-drop
+			if (f2) {e[2] = *f2 = white_vdwc;}
 			h->clny = 0;
 		    }
 		}
 #if DEBUG
 	if (OutPrm.debug) {
-		printf("%2d %2d %2d ", m + 1, n + 1, mx->dir);
+		printf("%2d %2d %2d ", m, n, mx->dir);
 		putvar(mx->val); putvar(diag); 
-		putvar(g->val); putvar(f[1].val);
-		if (g2) {
-		    putvar(g2->val); putvar(f[2].val);
+		putvar(f->val); putvar(e[1].val);
+		if (f2) {
+		    putvar(f2->val); putvar(e[2].val);
 		}
 		putchar('\n');
 	}
 #endif
-		if (g2) ++g2;
-	    }	/* end of n-loop */
-	}	/* end of m-loop */
+	    }	// end of n-loop
+	}	// end of m-loop
 
 	delete[] cbuf;
 	*scr = clny->val;
 	if (algmode.mlt == 2) cl->removeoverlap();
 	cl->sortcolonies();
 	return (cl);
+}
+
+/********************************************************
+*
+*	score only algorithm
+*
+********************************************************/
+
+void Aln2b1::sinitB_ng(VTYPE* hh[], const WINDOW& wdw)
+{
+	int	r = b->left - a->left;
+	int	rr = b->right - a->left;
+
+	VTYPE*	h = hh[0]  + r;
+	*h = 0;
+	if (a->inex.exgl) {	// semi-global
+	    if (wdw.up < rr) rr = wdw.up;
+	    vclear(h + 1, rr - r);
+	}
+
+	rr = b->left - a->right;
+	if (wdw.lw > rr) rr = wdw.lw;
+	if (b->inex.exgl) {
+	    vclear(hh[0] + rr, r - rr);
+	    return;
+	}
+	VTYPE*	f = hh[1] + r;
+	for (int i = 1; --r >= rr; ++i) {
+	    --h; --f;
+	    *h = h[1];
+	    if (i == 1) {
+		*h += pwd->GapPenalty(1);
+		*f = *h;
+	    } else {
+		*f = f[1];
+		*h += pwd->GapExtPen(i);
+		*f += pwd->BasicGEP;
+	    }
+	}
+}
+
+VTYPE Aln2b1::slastB_ng(VTYPE* hh[], const WINDOW& wdw)
+{
+	VTYPE*	h9 = hh[0] + b->right - a->right;
+	VTYPE	mx = *h9;
+
+	if (b->inex.exgr) {
+	    int	rw = std::min(wdw.up, b->right - a->left);
+	    for (VTYPE* h = hh[0] + rw; h > h9; --h)
+		if (*h > mx) mx = *h;
+	}
+	if (a->inex.exgr) {
+	    int	rw = std::max(wdw.lw, b->left - a->right);
+	    for (VTYPE* h = hh[0] + rw; h < h9; ++h)
+		if (*h > mx) mx = *h;
+	}
+	return (mx);
+}
+
+VTYPE Aln2b1::scorealoneB_ng(const WINDOW& wdw)
+{
+const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
+	VTYPE*	hh[NOL];
+	VTYPE	e1;
+	VTYPE	e2;
+	VTYPE*	hf[NOD] = {0, &e1, 0, &e2, 0};
+	VTYPE	maxh = NEVSEL;
+const	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
+const	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+
+const	size_t	bufsiz = pwd->Noll * wdw.width;
+	VTYPE*	wbuf = new VTYPE[bufsiz];
+	vset(wbuf, NEVSEL, bufsiz);
+	VTYPE*	blackv = wbuf + bufsiz - 1;	// assume to be const
+	hh[0] = wbuf - wdw.lw + 1;
+	for (int k = 1; k < pwd->Noll; ++k) hh[k] = hh[k-1] + wdw.width;
+	sinitB_ng(hh, wdw);
+
+	int	m = a->left;
+	if (!a->inex.exgl) --m; 	// global
+	int	n1 = m + wdw.lw;
+	int	n2 = m + wdw.up + 1;
+const	CHAR*	as = a->at(m);
+	for ( ; ++m <= a->right; ++as, ++n1, ++n2) {
+	    int	n = std::max(n1, b->left);
+const	    int	n9 = std::min(n2, b->right);
+const	    CHAR*	bs = b->at(n);
+	    int	r = n - m;
+	    VTYPE*&	h = hf[0] = hh[0] + r;
+	    VTYPE*&	f = hf[2] = hh[1] + r;
+	    VTYPE*&	f2 = hf[4] = dagp? hh[2] + r: blackv;
+	    e1 = e2 = NEVSEL;
+const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+#if DEBUG
+	    if (OutPrm.debug) {
+		printf("%2d %2d ", m, n);
+		putvar(*h); putchar('\n');
+	    }
+#endif
+	    for ( ; ++n <= n9; ++bs) {
+		++h; ++f; if (dagp) ++f2;
+
+//	Diagonal
+		VTYPE*	from = h;
+		VTYPE*	mx = h;
+		VTYPE	x;
+		if (m == a->left) goto HorizonF;
+		*h += qprof[*bs];
+
+//	Vertical
+		x = *++from + pwd->BasicGOP;
+		*f = std::max(x, f[1]) + pwd->BasicGEP;
+		if (*f > *mx) mx = f;
+
+//	Vertical2
+		if (dagp) {
+		  x = *from + pwd->LongGOP;
+		  *f2 = std::max(x, f2[1]) + pwd->LongGEP;
+		  if (*f2 > *mx) mx = f2;
+		}
+HorizonF:
+//	Horizontal
+		x = h[-1] + pwd->BasicGOP;
+		e1 = std::max(x, e1) + pwd->BasicGEP;
+		if (e1 > *mx) mx = &e1;
+
+//	Horizontal2
+		if (dagp) {
+		    x = h[-1] + pwd->LongGOP;
+		    e2 = std::max(x, e2) + pwd->LongGEP;
+		    if (e2 > *mx) mx = &e2;
+		}
+
+//	Find optimal path
+		VTYPE	y = *h;
+		if (h != mx) *h = *mx;
+		else if (LocalR && y > maxh) maxh = y;
+		if (LocalL && *h < 0) *h = 0;
+		int	hd = 0;
+		for ( ; mx != hf[hd]; ++hd) ;
+
+#if DEBUG
+		if (OutPrm.debug) {
+		    printf("%2d %2d ", m, n);
+		    putvar(*mx); putvar(y); 
+		    putvar(*f); putvar(e1);
+		    if (dagp) {
+			putvar(*f2); putvar(e2);
+		    }
+		    putchar('\n');
+		}
+#endif
+	    }	// end of n-loop
+	}	// end of m-loop
+	if (!LocalR) maxh = slastB_ng(hh, wdw);
+
+	delete[] wbuf;
+	return (maxh);
 }
 
 VTYPE Aln2b1::diagonalB_ng()
@@ -996,7 +1049,6 @@ const	CHAR*	bs = b->at(b->left);
 	SKL	wskl;
 	int	mL = a->left;
 	int	mR = a->right;
-	int	Local = algmode.lcl & 16;
 	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
 	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
 
@@ -1024,10 +1076,41 @@ const	CHAR*	bs = b->at(b->left);
 
 VTYPE Aln2b1::trcbkalignB_ng(const WINDOW& wdw)
 {
-	long	ptr[2];
+	int	ptr[2];
+	VTYPE	scr;
 
 	vmf = new Vmf();
-	VTYPE	scr = forwardB_ng(wdw, ptr);
+
+#if !__SSE4_1__	// scalar version of forward DP 
+	scr = forwardB_ng(wdw, ptr);
+#else
+const	int	nelem = 8;
+const	int	m = a->right - a->left;
+	if (m < nelem) scr = forwardB_ng(wdw, ptr);
+	else {
+	    float	cvol = wdw.lw - b->left + a->right;
+	    cvol =  (float) (a->right - a->left) * (b->right - b->left)
+		 - cvol * cvol / 2;
+const	    int	mode = 2 + (cvol < USHRT_MAX? 0: 4);
+#if _SIMD_PP_	// vectorized forward DP 
+#if __AVX2__
+	    SimdAln2s1<short, 16, 
+		simdpp::int16<16>, simdpp::mask_int16<16>>
+#else
+	    SimdAln2s1<short, SIMDPP_FAST_INT16_SIZE, 
+		simdpp::int16<8>, simdpp::mask_int16<8>>
+#endif	// __AVX2__
+#elif __AVX512BW__
+	    SimdAln2s1<short, 32, __m512i, __m512i> 
+#elif __AVX2__
+	    SimdAln2s1<short, 16, __m256i, __m256i>
+#else	// __SSE4_1__
+	    SimdAln2s1<short, 8, __m128i, __m128i> 
+#endif	// _SIMD_PP_
+		trbfwd(seqs, pwd, wdw, 0, 0, mode, vmf);
+	    scr = trbfwd.forwardS1(ptr);
+	}
+#endif	// !__SSE4_1__
 	if (*ptr) {
 	    SKL* lskl = vmf->traceback(*ptr);
 	    if (!lskl) {
@@ -1036,7 +1119,7 @@ VTYPE Aln2b1::trcbkalignB_ng(const WINDOW& wdw)
 	    }
 	    SKL* lwsk = lskl;
 	    while (lskl->n--) mfd->write((UPTR) ++lwsk);
-	    if (!(algmode.lcl & 16)) {
+	    if (!Local) {
 		lskl->m = a->left;
 		lskl->n = b->left;
 		if (lskl->m != lwsk->m || lskl->n != lwsk->n)
@@ -1052,45 +1135,103 @@ eop:
 
 VTYPE Aln2b1::lspB_ng(const WINDOW& wdw)  /* recursive */ 
 {
-	WINDOW	wdwl;
-	WINDOW	wdwr;
-	RANGE	rng[2];			/* reserve */
-	int	aexg = a->inex.exgr;	/* reserve */
-	int	bexg = b->inex.exgr;	/* reserve */
-
-	if (wdw.up == wdw.lw) return(diagonalB_ng());
-	int	m = a->right - a->left;
-	int	n = b->right - b->left;
-	int	k = wdw.lw - b->left + a->right;
-	int	q = b->right - a->left - wdw.up;
-	long	cvol =  m * n - (k * k + q * q) / 2;
-	if (cvol < MaxVmfSpace || m == 1 || n <= 1) {
-	    return (trcbkalignB_ng(wdw));
+const	int	m = a->right - a->left;
+const	int	n = b->right - b->left;
+	if (!m && !n) return (0);
+const	INT	aexgl = b->inex.exgl;	// reserve
+const	INT	aexgr = a->inex.exgr;	// reserve
+const	INT	bexgl = b->inex.exgl;	// reserve
+const	INT	bexgr = b->inex.exgr;	// reserve
+	if (!m || !n) {
+	    SKL	wskl = {a->left, b->left};
+	    mfd->write((UPTR) &wskl);
+	    wskl.m = a->right;
+	    wskl.n = b->right;
+	    mfd->write((UPTR) &wskl);
+	    if (m)
+		return (aexgl || aexgr)? 
+		    pwd->GapExtPen(m): pwd->GapPenalty(m);
+	    else
+		return (bexgl || bexgr)?
+		    pwd->GapExtPen(n): pwd->UnpPenalty(n);
 	}
+	if (wdw.up == wdw.lw) return(diagonalB_ng());
+const	float	k = wdw.lw - b->left + a->right;
+const	float	q = b->right - a->left - wdw.up;
+	float	cvol =  m * n - (k * k + q * q) / 2;
+	if (cvol < MaxVmfSpace || m == 1 || n <= 1)
+	    return (trcbkalignB_ng(wdw));
+
+	RANGE	rng[2];			// reserve
 	save_range(seqs, rng, 2);
-	VTYPE	scr = centerB_ng(&m, &q, &n, &k, wdw, wdwl, wdwr);
-	a->inex.exgr = b->inex.exgr = 0;
-	int	r = b->left - a->left;
-	if (r < wdwl.lw) b->left = a->left + wdwl.lw;
-	if (r > wdwl.up) a->left = b->left - wdwl.up;
-	a->right = m;
-	b->right = n;
-	lspB_ng(wdwl);
+	int	cpos[6];
+	VTYPE	scr;
+	WINDOW	wdwf = {INT_MAX};
+	WINDOW	wdwb = {INT_MAX};
+	int	upf = INT_MAX; 
+	int	upb = INT_MAX;
+	INT	exgl = bexgl;
+
+#if !__SSE4_1__	// scalar version of unidirectional Hirschberg method
+	scr = hirschbergB_ng(cpos, wdw, wdwf, wdwb, exgl);
+#else
+	if (m < 4) scr = hirschbergB_ng(cpos, wdw, wdwf, wdwb, exgl);
+	else {
+	    int	mode = 1 + ((std::max(abs(wdw.lw), wdw.up) < SHRT_MAX)? 0: 4);
+#if _SIMD_PP_	// 2B int vectorized unidirectional Hirschberg method
+#if __AVX2__
+	    SimdAln2s1<short, 16, 
+		simdpp::int16<16>, simdpp::mask_int16<16>>
+#else
+	    SimdAln2s1<short, SIMDPP_FAST_INT16_SIZE, 
+		simdpp::int16<8>, simdpp::mask_int16<8>>
+#endif	// __AVX2__
+#elif __AVX512BW__
+	    SimdAln2s1<short, 32, __m512i, __m512i> 
+#elif __AVX2__
+	    SimdAln2s1<short, 16, __m256i, __m256i>
+#else	// __SSE4_1__
+	    SimdAln2s1<short, 8, __m128i, __m128i> 
+#endif	// _SIMD_PP_
+		sb1(seqs, pwd, wdw, 0, 0, mode);
+	    scr = sb1.hirschbergS1(cpos, upf, upb, exgl);
+	}
+#endif	// !__SSE4_1__
+	a->inex.exgl = a->inex.exgr = b->inex.exgl = b->inex.exgr = 0;
+	SKL	wskl = {cpos[0], 0};
+	int	c = 0;
+	if (cpos[c] < end_of_ulk) {	// cross center
+	    while (cpos[++c] < end_of_ulk) {
+		wskl.n = cpos[c];
+		mfd->write((UPTR) &wskl);
+	    }
+const	    int	aright = a->right;	// reserve
+const	    int	bright = b->right;
+	    a->right = cpos[0];
+	    b->right = cpos[c - 1];
+	    if (upf < INT_MAX || wdwf.lw == INT_MAX) {
+		stripe(seqs, &wdwf, alprm.sh);
+		if (upf < INT_MAX) wdwf.up = upf;
+	    }
+	    wdwf.width = wdwf.up - wdwf.lw + 3;
+	    lspB_ng(wdwf);		// first half
+	    a->left = cpos[0];
+	    b->left = cpos[1];
+	    a->right = aright;		// recover
+	    b->right = bright;
+	    b->inex.exgl = exgl;
+	}
+	if (upb < INT_MAX || wdwb.lw == INT_MAX) {		// local
+	    stripe(seqs, &wdwb, alprm.sh);
+	    if (upb < INT_MAX) wdwb.up = upb;
+	}
+	wdwb.width = wdwb.up - wdwb.lw + 3;
+	lspB_ng(wdwb);			// second half
 	rest_range(seqs, rng, 2);
-	a->inex.exgr = aexg;
-	b->inex.exgr = bexg;
-	aexg = a->inex.exgl;
-	bexg = b->inex.exgl;
-	a->inex.exgl = b->inex.exgl = 0;
-	r = b->right - a->right;
-	if (r < wdwr.lw) a->right = b->right - wdwr.lw;
-	if (r > wdwr.up) b->right = a->right + wdwr.up;
-	a->left = q;
-	b->left = k;
-	lspB_ng(wdwr);
-	rest_range(seqs, rng, 2);
-	a->inex.exgl = aexg;
-	b->inex.exgl = bexg;
+	a->inex.exgl = aexgl;
+	a->inex.exgr = aexgr;
+	b->inex.exgl = bexgl;
+	b->inex.exgr = bexgr;
 	return scr;
 }
 
@@ -1314,12 +1455,36 @@ SKL* Aln2b1::globalB_ng(VTYPE* scr, const WINDOW& wdw)
 	return (stdskl(&skl));
 }
 
-VTYPE HomScoreB_ng(const Seq* seqs[], const PwdB* pwd, long rr[])
+VTYPE HomScoreB_ng(const Seq* seqs[], const PwdB* pwd)
 {
-	Aln2b1 alnv(seqs, pwd);
 	WINDOW	wdw;
 	stripe((const Seq**) seqs, &wdw, alprm.sh);
-	return alnv.forwardB_ng(wdw, rr);
+#if !__SSE4_1__	// scalar version of forward DP 
+	Aln2b1 alnv(seqs, pwd);
+	return (alnv.scorealoneB_ng(wdw));
+#else
+const	Seq*&	a = seqs[0];
+const	int	m = a->right - a->left;
+	if (m < 4) {
+	    Aln2b1 alnv(seqs, pwd);
+	    return (alnv.scorealoneB_ng(wdw));
+	}
+#if _SIMD_PP_	// vectorized forward DP 
+#if __AVX2__
+	SimdAln2s1<short, 16, simdpp::int16<16>, simdpp::mask_int16<16>>
+#else
+	SimdAln2s1<short, 8, simdpp::int16<8>, simdpp::mask_int16<8>>
+#endif	// __AVX2__
+#elif __AVX512BW__
+	SimdAln2s1<short, 32, __m512i, __m512i> 
+#elif __AVX2__
+	SimdAln2s1<short, 16, __m256i, __m256i>
+#else	// __SSE4_1__
+	SimdAln2s1<short, 8, __m128i, __m128i> 
+#endif	// _SIMD_PP_
+	    fwds(seqs, pwd, wdw, 0, 0, 0);
+	return (fwds.scoreonlyS1());
+#endif	// !__SSE4_1__
 }
 
 Colonies* swg1stB_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr)

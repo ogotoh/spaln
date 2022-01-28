@@ -359,40 +359,55 @@ Strlist::Strlist(const char* str)
 	strcpy(strbuf, str);
 }
 
-Strlist::Strlist(char* str, const char* delim)
+Strlist::Strlist(const char* str, const char* indelim)
 	: lastlen(0), maxlen(0), many(0)
 {
-	bool	spc = true;
-	for (const char* ps = delim; *ps; ++ps)
-	    if (!(spc = isspace(*ps))) break;
-	for (char* ps = str; ps && *ps; ++many)
-	    ps = spc? cdr(ps): cdr(ps, delim);
-	totallen = sunitsize = strlen(str) + 1;
-	strbuf = new char[totallen];
-	punitsize = (many + defpunit - 1) / defpunit * defpunit;
-	idxlst = new INT[punitsize + 1];
+	char*	delim = new char[strlen(indelim) + 1];
+	bool	spc = false;	// space is a delim
+	char*	pd = delim;
+	for (const char* ps = indelim; *ps; ++ps) {
+	    if (isspace(*ps)) spc = true;
+	    else	*pd++ = *ps;
+	}
+	*pd = '\0';
 
-	char*	ps = str;
-	char*	pb = strbuf;
-	for (INT ttl = 0, m = 0; *ps; ) {
-	    idxlst[m] = ttl;
-	    if (spc)
-		while (*ps && isspace(*ps)) ++ps;
-	    else
-		while (*ps && strchr(delim, *ps)) ++ps;
-	    char*	qb = pb;
-	    if (spc)
-		while (*ps && !isspace(*ps)) *pb++ = *ps++;
-	    else
-		while (*ps && !strchr(delim, *ps)) *pb++ = *ps++;
-	    *pb++ = '\0';
-	    if ((lastlen = pb - qb)) {
-		++m;
-		ttl += lastlen;
-		if (lastlen > maxlen) maxlen = lastlen;
+const	char	dchar = *delim? *delim: ' ';
+	totallen = sunitsize = strlen(str) + 2;
+	char*	pb = strbuf = new char[totallen];
+	int	state = 1;		// isspc = 2, isdlm = 1
+	for (const char* ps = str; *ps; ++ps) {
+	    if (spc && isspace(*ps)) {
+		if (!state) *pb++ = dchar;
+		state = 2;
+	    } else if (strchr(delim, *ps)) {
+		if (state == 2) --pb;	// cancel previous space
+		*pb++ = dchar;
+		state = 1;
+	    } else {
+		*pb++ = *ps;
+		if (state) ++many;
+		state = 0;
 	    }
 	}
+	if (state == 2) --pb;		// cancel tailing space
+	*pb++ = dchar;
+	*pb = '\0';
+
+	punitsize = (many + defpunit - 1) / defpunit * defpunit;
+	idxlst = new INT[punitsize + 1];
+	char*	ps = pb = strbuf;
+	for (INT ttl = 0, m = 0; *ps; ) {
+	    if (*ps == dchar) {
+		*ps++ = '\0';
+		lastlen = ps - pb;
+		pb = ps;
+		idxlst[m++] = ttl;
+		ttl += lastlen;
+		if (lastlen > maxlen) maxlen = lastlen;
+	    } else	++ps;
+	}
 	filled = true;
+	delete[] delim;
 }
 
 void Strlist::format()
@@ -522,48 +537,6 @@ char* Strlist::push(const char* str)
 	delete[] word;
 	totallen = sumlen;
 	return (rv);
-}
-
-AddExt::AddExt(int argc, const char** argv, const char* ext) 
-	: argv_(argv), arg_ext(0)
-{
-	int     tl = strlen(argv[0]);
-	int     woext = 0;
-	for (int i = 1; i < argc; ++i) {
-	    if (argv[i][0] == OPTCHAR) tl += strlen(argv[i]);
-	    else {
-		const char* dot = strrchr(argv[i], '.');
-		if (!dot) {
-		    tl += strlen(argv[i]) + 4;
-		    ++woext;
-		} else if (strcmp(dot, ext)) {
-		    tl += dot - argv[i] + 4;
-		    ++woext;
-		} else      tl += strlen(argv[i]);
-	    }
-	}
-	if (!woext) return;
-	arg_ext = new char*[argc + 1];
-	char*   ps = new char[tl + argc];
-	arg_ext[0] = strcpy(ps, argv[0]);
-	for (int i = 1; i < argc; ++i) {
-	    ps += strlen(ps) + 1;
-	    if (argv[i][0] == OPTCHAR) {
-		arg_ext[i] = strcpy(ps, argv[i]);
-	    } else {
-		const char* dot = strrchr(argv[i], '.');
-		if (!dot) {
-		    arg_ext[i] = strcpy(ps, argv[i]);
-		    strcat(ps, ext);
-		} else if (strcmp(dot, ext)) {
-		    arg_ext[i] = strncpy(ps, argv[i], dot - argv[i]);
-		    strcat(ps, ext);
-		} else {    
-		    arg_ext[i] = strcpy(ps, argv[i]);
-		}
-	    }
-	}
-	arg_ext[argc] = 0;
 }
 
 //      distribute into bins

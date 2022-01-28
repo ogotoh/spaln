@@ -625,12 +625,13 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	if (!vl && !(opt == 'H' || opt == 'S')) return;
 
 	const	char*	ps;
-	const	char*	cs = strchr(vl, ':');
+	const	char*	cs = vl? strchr(vl, ':'): 0;
 	int	k = cs? atoi(cs + 1): 0;
 	if (k > max_simmtxes - 1) k = 0;
-	switch (opt) {
-	    case 'a': algmode.any = *vl? atoi(vl): 3; break;	// boundary stringency
-	    case 'b': defPprm[k].b = atof(vl); break;		// bias added to mat elem
+	if (vl) {
+	  switch (opt) {
+	    case 'a': algmode.any = atoi(vl); break;	// boundary stringency
+	    case 'b': defPprm[k].b = atof(vl); break;	// bias added to mat elem
 	    case 'c': alprm2.jneibr = atoi(vl); break;	// 
 	    case 'e': alprm.u0 = atof(vl); break;	// background gep
 	    case 'f': alprm.v0 = atof(vl); break;	// background gop
@@ -671,8 +672,7 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 		if (vl) bpprm.g_beta = atof(vl + 1); 
 		break;	// Gamma distribution parameters of pranch position
 	    case 'H':
-		setthr(*vl? atof(vl): (double) (INT_MIN + 3));
-		break;
+		setthr(atof(vl)); break;
 	    case 'I': 
 		IntronPrm.a1 = 1.; IntronPrm.a2 = 0.;
 		sscanf(vl + 1, "%d %d %f %f %f %f %f %f %f %f %f %f %f %f", 
@@ -687,18 +687,25 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	    case 'L': IntronPrm.llmt = atoi(vl); break;	// lower limit of intron
 	    case 'M': IntronPrm.maxl = int(ktof(vl)); break;	// maximum expected length of intron
 //	    case 'N': alprm2.nrmlipot = 1; break;	// normalize intron potential
-	    case 'S': alprm2.sss = *vl? atof(vl): 100.; 
+	    case 'S': alprm2.sss = atof(vl); 
 		if (alprm2.sss > 1.) alprm2.sss /= 100.;
 		break;
 	    case 'T': IntronPrm.tlmt = atoi(vl); break;	// 
 	    case 'U': alprm.ubh = atoi(vl); break;	// min vects for uni-dir Hirschberg
 	    case 'V': alprm.maxsp = atof(vl); break;	// max traceback volume
 	    case 'W': alprm2.w = atof(vl); break;	// match factor in very short alignment
-	    case 'X': algmode.crs = vl? atoi(vl): 2;
-			break;				// set cross-species switch
+	    case 'X': algmode.crs = atoi(vl); break;	// cross-species				// set cross-species switch
 	    case 'Y': IntronPrm.fact = atof(vl); break;	// amplitude of intron pen.
 	    case 'Z': alprm2.Z = atof(vl); break;	// intron potential
 	    default:  break;
+	  }
+	} else {
+	  switch (opt) {
+	    case 'a': algmode.any = 3; break;
+	    case 'H': setthr((double) (INT_MIN + 3)); break;
+	    case 'S': alprm2.sss = 1.; break;
+	    case 'X': algmode.crs = 2; break;
+	  }
 	}
 }
 

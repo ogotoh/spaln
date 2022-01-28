@@ -113,7 +113,7 @@ static	void*	worker_func(void* targ);
 static	void 	MasterWorker(Seq** sqs, SeqServer* svr, void* prm);
 #else
 class	ThQueue;
-#endif
+#endif	// M_THREAD
 
 static	void	usage(const char* messg);
 static	int	getoption(int argc, const char** argv);
@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.6";
-static	const	int	date = 210910;
+static	const	char*	version = "2.4.7";
+static	const	int	date = 220128;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -482,7 +482,6 @@ const	char**	argbs = argv;
 	    }
 	    if (*dbs && (dbs + 1 < dbs_dt + MAX_DBS)) ++dbs;
 	}
-	if (OutPrm.supself) ++OutPrm.MaxOut;
 	return (argv - argbs);
 }
 
@@ -543,7 +542,7 @@ const	bool	swp = sqs[1]->inex.intr;
 	    int	gr = GsI->eijnc->genright();
 	    if (gl > gr) std::swap(gl, gr);
 	    if (gl < gene->left || gr > gene->right)
-		fprintf(stderr, "Bad gene coord: %s %d %d %d %d %c %s\n",
+		prompt("Bad gene coord: %s %d %d %d %d %c %s\n",
 		    gene->sqname(), gene->left, gl, gr, gene->right, 
 		    gene->inex.sens? '<': ' ', sqs[1]->sqname());
 	}
@@ -717,8 +716,10 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	if (QRYvsDB == GvsA || QRYvsDB == AvsG) b->inex.intr = algmode.lsg;
 	int	ori = a->inex.ori;
 	if (pwd->DvsP != 3) {
-	    if (algmode.mns == 0 || algmode.mns == 3 || ori == 3)
+	    if (algmode.mns == 0 || algmode.mns == 3 || ori == 3) {
+		if (pwd->DvsP == 1) b->nuc2tron();
 		geneorient(sqs, pwd);
+	    }
 	    if (algmode.mns == 1 && ori == 3) ori = b->inex.sens? 2: 1;
 	    if (algmode.mns == 2 && ori == 3) ori = b->inex.sens? 1: 2;
 	    if (algmode.lsg == 0 && ori == 3) ori = 1;
@@ -771,15 +772,14 @@ static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q)
 	}
 	bks->setseqs(sqs);
 
+	if (algmode.lcl & 16) a->exg_seq(1, 1);	// SWG local alignment
+	else	a->exg_seq(algmode.lcl & 4, algmode.lcl & 8);
 	if (QRYvsDB == AvsA || QRYvsDB == CvsC || QRYvsDB == GvsC)
 	    nparalog = bks->finds(sqs);
 	else if (QRYvsDB == GvsA)
 	    nparalog = bks->findh(sqs);
-	else {
-	    if (algmode.lcl & 16) a->exg_seq(1, 1);	// SWG local alignment
-	    else	a->exg_seq(algmode.lcl & 4, algmode.lcl & 8);
+	else
 	    nparalog = bks->findblock(sqs);
-	}
 	if (nparalog == ERROR || algmode.nsa == MAP1_FORM || algmode.nsa == MAP2_FORM)
 	    return (0);		// no alignment
 #if USE_FULL_RANGE
@@ -1463,6 +1463,7 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 	    }
 	    SeqServer	svr(1, argv++, IM_SNGL, 0, TgtMolc);
 	    mb = makeblock(&svr);
+	    dbs_dt[0] = mb->get_dbf();
 	}
 	SeqServer	svr(argc, argv, input_form, catalog, QryMolc, TgtMolc);
 	if (algmode.blk) {
@@ -1476,6 +1477,7 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 	    no_seqs = OutPrm.MaxOut2 + bprm->NoWorkSeq + 2;	// query + last
 	    if (a->inex.intr || b->inex.intr) makeStdSig53();
 	    set_max_extend_gene_rng(def_max_extend_gene_rng);
+	    if (bprm->pwd->DvsP == 3) OutPrm.SkipLongGap = 0;
 	    if (algmode.nsa == SAM_FORM) put_genome_entries();
 	    outputs.setup(a->spath);
 #if M_THREAD
@@ -1493,6 +1495,7 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 		goto postproc;
 	    }
 	    PwdB*	pwd = SetUpPwd(seqs);
+	    if (pwd->DvsP == 3) OutPrm.SkipLongGap = 0;
 	    if (a->inex.intr || b->inex.intr) makeStdSig53();
 	    set_max_extend_gene_rng(0);
 	    outputs.setup(a->spath);

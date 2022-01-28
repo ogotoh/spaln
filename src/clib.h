@@ -842,7 +842,7 @@ protected:
 public:
 	Strlist(int m = 1, int len = defsunit);
 	Strlist(const char* str);
-	Strlist(char* str, const char* delim);
+	Strlist(const char* str, const char* delim);
 	Strlist(FILE* fd, int m = 0);
 #if USE_ZLIB
 	Strlist(gzFile gzfd, int m = 0);
@@ -1098,15 +1098,6 @@ public:
 	RandNumGen(double* pcmp, INT dim, INT resol = 1024);
 	~RandNumGen() {delete[] buf;}
 	int	get() {return buf[int(resol * drand48())];}
-};
-
-class AddExt {
-	const	char**	argv_;
-	char**	arg_ext;
-public:
-	AddExt(int argc, const char** argv, const char* ext);
-	~AddExt() {if (arg_ext) {delete[] arg_ext[0]; delete[] arg_ext;}}
-	const char** add_ext() {return arg_ext? (const char**) arg_ext: argv_;}
 };
 
 extern	int	ipower(int x, int n);

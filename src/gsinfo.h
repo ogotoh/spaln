@@ -439,7 +439,8 @@ const	char*	prefix = 0;
 };
 
 extern	SigII*  copySigII(const SigII* src);
-extern	SigII*	extSigII(const Seq* sorc, const int* which, FTYPE nfact = 1, bool renum_lst = false);
+extern	SigII*	extSigII(const Seq* sorc, const int* which, 
+		const FTYPE& nfact = 1, const bool& renum_lst = false);
 extern	void	cutSigII(Seq* dstseq, const Seq* srcseq);
 extern	void	catSigII(Seq* dstseq, const Seq* srcseq, int bias);
 extern	FTYPE*	eijdmx(Seq* sd);

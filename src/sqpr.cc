@@ -75,7 +75,7 @@ static	const	char	arext[] = ".ard";		// alignment
 //	const	char	cigar[] = "MIDNSHP=XJA";	// J=5, A=3
 //	const	char	vulgar[] = "MCGN53ISFJA";	// J=5, A=3
 
-int setlpw(int lpwd)
+int setlpw(const int& lpwd)
 {
 	if (lpwd >= 0)
 	    OutPrm.lpw = lpwd;
@@ -853,6 +853,10 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 	    if (binary) {
 		strcpy(str, prefix);
 		char*	bdy = str + strlen(str);
+		if (is_gz(bdy)) {
+		    char*	dot = strrchr(bdy, '.');
+		    *dot = '\n';
+		}
 		strcpy(bdy, grext);
 #if USE_ZLIB
 		if (OutPrm.gzipped) {
@@ -1172,7 +1176,7 @@ const	GAPS*	gp = gaps[0];
 		break;
 	    case Form_CLW: break;
 	    default:
-		if (skip < 1)	fphseqs((const Seq**) seqs, 3, fd);
+		if (skip < 1)	fphseqs((const Seq**) seqs, 2, fd);
 		if (OutPrm.ColorEij) break;
 		sm->fparam(fd);
 		if (skip == -1)	return (OK);
@@ -1466,7 +1470,7 @@ static int csym(const int cmp[], int rows, const SEQ_CODE* defcode)
 	}
 }
 
-void setprmode(int pmd, int lorn, int trc)
+void setprmode(const int& pmd, const int& lorn, int trc)
 {
 	static char msg1[] = 
 	"Native Form 0[None]/1[Last]/2[Every]/3[First]/4[Ditto]\n";
@@ -1733,7 +1737,7 @@ void Seq::fpweight(FILE* fd) const
 }
 #endif
 
-void fprint_seq_mem(const Seq* seqs[], int n, FILE* fd)
+void fprint_seq_mem(const Seq* seqs[], const int& n, FILE* fd)
 {
 	if (!fd) fd = out_fd;
 	for (int i = 0; i < n; ++i) {
@@ -1829,7 +1833,7 @@ bool Seq::findGate(RANGE* gate)
 	return (true);
 }
 
-int Seq::calcResNum(int i)
+int Seq::calcResNum(const int& i)
 {
 	int	n = 0;
 	CHAR*	s = at(left) + i;
@@ -1924,7 +1928,7 @@ static	const	char* hml_color[] = {"black", "red", "green", "blue"};
 static	const	char spc9[] = "	 ";
 static	const	char spc12[] = "	    ";
 
-PrintAln::PrintAln(const GAPS**  _gaps, Seq* _seqs[], int _seqnum, FILE* _fd)
+PrintAln::PrintAln(const GAPS**  _gaps, Seq* _seqs[], const int& _seqnum, FILE* _fd)
 	: gaps(_gaps), seqs(_seqs), seqnum(_seqnum), 
 	  globpt(1), cpm(prmode), markeij(0), fd(_fd? _fd: out_fd)
 {
@@ -1948,8 +1952,6 @@ PrintAln::PrintAln(const GAPS**  _gaps, Seq* _seqs[], int _seqnum, FILE* _fd)
 	    pfqs = new PFQ*[seqnum];
 	    tfqs = new PFQ*[seqnum];
 	    lsts = new int*[seqnum];
-	} else {
-	    ecc = 0; hcc = 0; pfqs = tfqs = 0; lsts = 0;
 	}
 	for (int i = rows = 0; i < seqnum; ++i) rows += seqs[i]->many;
 	gp  = new const GAPS*[seqnum];
@@ -2152,7 +2154,7 @@ void PrintAln::printaln()
 	int	k = 0;
 	int	gpos = 0;
 	int 	active = seqnum;
-	RANGE*	exon = 0;
+const	RANGE*	exon = 0;
 	int	maxleft = 0;
 	gene = -1;
 	for (int j = htl = 0; j < seqnum; ++j) {
@@ -2175,7 +2177,7 @@ void PrintAln::printaln()
 	    agap[j] = 0;
 	}
 	pro = (gene >= 0)? gene + 1: -1;
-	int	c_step = (htl == 1)? 3: 1;
+const	int	c_step = (htl == 1)? 3: 1;
 	if (markeij) {
 	    for (int j = 0; j < seqnum; ++j) {
 		Seq*&	sd = seqs[j];
@@ -2203,17 +2205,17 @@ void PrintAln::printaln()
 			jj = j;
 		    }
 		}
-		int	pos = gp[jj]->gps - gaps[jj]->gps; 	// print one line
-		int	upr = (gap - z - OutPrm.EijMergin) / OutPrm.lpw * OutPrm.lpw;
+const		int	pos = gp[jj]->gps - gaps[jj]->gps; 	// print one line
+const		int	upr = (gap - z - OutPrm.EijMergin) / OutPrm.lpw * OutPrm.lpw;
 		if (gap < INT_MAX && z - pos > OutPrm.EijMergin && upr > 0) {
 		    for (int j = k = 0; j < seqnum; k += seqs[j++]->many) {
 			Seq*&	sd = seqs[j];
+const			bool	step3 = htl == 3 && !sd->inex.intr;
 			if (j == jj) {
-			    if (!sd->inex.intr)
-				gph = phs = (phs + upr) % 3;
+			    if (step3) gph = phs = (phs + upr) % 3;
 			} else {
 			    int	inc = upr;
-			    if (!sd->inex.intr) {
+			    if (step3) {
 				int	r = upr % 3;
 				inc /= 3;
 				if (r && phs != 2 && (r + phs) > 1) ++inc;
@@ -2310,7 +2312,7 @@ void PrintAln::printaln()
 	} while(active);
 }
 
-void pralnseq(const GAPS** gaps, Seq* seqs[], int seqnum, FILE* fd)
+void pralnseq(const GAPS** gaps, Seq* seqs[], const int& seqnum, FILE* fd)
 {
 	if (!OutPrm.lpw) return;
 	PrintAln	praln(gaps, seqs, seqnum, fd);

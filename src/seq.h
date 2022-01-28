@@ -89,6 +89,9 @@ static	const	CHAR	t2atab[] =
 {NIL,UNP,AMB,ALA,ARG,ASN,ASP,CYS,GLN,GLU,GLY,HIS,ILE,LEU,LYS,MET,
 PHE,PRO,SER,THR,TRP,TYR,VAL,SER,AMB,AMB};
 
+static	const	int	next_p[3] = {1, 2, 0};
+static	const	int	prev_p[3] = {2, 0, 1};
+
 enum {DEL_GAP, DEL_AMB, DEL_GRC, DEL_ARC, RET_GAP};
 
 enum {	LABEL_None,		/* No r-field label	*/
@@ -108,11 +111,11 @@ inline	bool isnbr(const char* ps)
 {
 	return (isdigit(*ps) || ((*ps == '-' || *ps == '+') && isdigit(ps[1])));
 }
-inline	bool isseqchar(int c)
+inline	bool isseqchar(const int& c)
 {
 	return (isalpha(c) || c == _UNP || c == _TRM);
 }
-inline	int aton(int c)
+inline	int aton(const int& c)
 {
 	return (c - 'A' + A);
 }
@@ -212,7 +215,7 @@ const	char*	out_file;
 
 extern	OUTPRM	OutPrm;
 extern	DefSetup def_setup;
-extern	SEQ_CODE* setSeqCode(Seq* sd, int molc);
+extern	SEQ_CODE* setSeqCode(Seq* sd, const int& molc);
 
 inline	int	isDRNA(int a)
 	{ return (a == DNA || a == RNA || a == GENOME); }
@@ -241,9 +244,9 @@ class PolyA {
 public:
 	PolyA(int s = 0) : thr(s) {}	// remove polyA
 	void	setthr(const char* s) {thr = *s? atoi(s): 0;}
-	void	setthr(int v) {thr = v;}
+	void	setthr(const int& v) {thr = v;}
 	int	getthr() {return (thr);}
-	SHORT	rmpolyA(Seq* sd, int q_mns = 1) const;
+	SHORT	rmpolyA(Seq* sd, const int& q_mns = 1) const;
 };
 
 static	PolyA	polyA;
@@ -262,13 +265,13 @@ protected:
 	RANGE*	setrange(const char* pa, int* ncr = 0) const;
 template <typename file_t>
 	char*	readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd);
-	void	estimate_len(FILE* fd, int nos);
+	void	estimate_len(FILE* fd, const int& nos);
 #if USE_ZLIB
-	void	estimate_len(gzFile fd, int nos);
+	void	estimate_len(gzFile fd, const int& nos);
 #endif
-	void	header_nat_aln(int n, FTYPE sumwt);
+	void	header_nat_aln(const int& n, const FTYPE& sumwt);
 	CHAR*	seq_realloc();
-	int	calcResNum(int i);
+	int	calcResNum(const int& i);
 	char*	onecds(RANGE& wexon, char* ps, int& par);
 public:
 	int	sid;		// seq id.
@@ -301,24 +304,24 @@ mutable	int	right;		// right boundary to be operated
 	FTYPE*	pairwt;		// weight to each pair of members
 	void	fpweight(FILE* fd = 0) const;	// print weight
 	FTYPE*	saveseqwt() const;	// save weight vector
-	void	restseqwt(FTYPE* tmpwt);// retore weight vector
+	void	restseqwt(const FTYPE* tmpwt);// retore weight vector
 	void	copyweight(Seq* dest) const;
 #endif
-	int	isAmb(CHAR r) const;
-	bool	isGap(CHAR r) const {return r == gap_code || r == nil_code;}
-	bool	isGap(CHAR* s) const {
-	    int n = 0; int i = 0;
-	    for ( ; i < many; ++i) if (!IsGap(*s++)) break;
-	    return (i == n);
+	int	isAmb(const CHAR& r) const;
+	bool	isGap(const CHAR& r) const {return r == gap_code || r == nil_code;}
+	bool	isGap(const CHAR* s) const {
+	    const CHAR*	t = s + many;
+	    while (s < t) {if (!IsGap(*s++)) return (false);}
+	    return (true);
 	}
 	bool	isdrna() const {return inex.molc == DNA ||
 		inex.molc == RNA || inex.molc == GENOME;}
 	bool	isprotein() const {return inex.molc == PROTEIN;}
 	bool	istron() const {return inex.molc == TRON;}
-	bool	is_eldest(int wide = 1) const {return (vrtl < wide);}
+	bool	is_eldest(const int& wide = 1) const {return (vrtl < wide);}
 	bool	empty()	const {return left == right;}
-	INT	r2s(INT r) const {return (isprotein()? r + ALA: ((1 << r) + _));}
-	void	setmolc(int molc);
+	INT	r2s(const INT& r) const {return (isprotein()? r + ALA: ((1 << r) + _));}
+	void	setmolc(const int& molc) {inex.molc = molc;}
 const	char	Strand() const {return inex.sens? '-': '+';}
 const	char*	path2fn(const char* pname) const;
 const	char*	sqname(bool fpri = false) const {
@@ -330,20 +333,27 @@ const	char*	sqname(bool fpri = false) const {
 	}
 	Seq*	attrseq(const char* pa);
 	Seq*	splice(Seq* dest, RANGE* rng, const int edit = 0);
-	int	siteno(int n) const {return base_ + n;}
-	int	SiteNm(int n, int m = 0) const {return base_ + ((inex.sens & REVERS)? lens[m] - 1 - n: n);}
-	int	SiteNz(int n, int m = 0) const {return base_ + ((inex.sens & REVERS)? lens[m] - n: n);}
-	int	SiteLe(int m = 0) const {return base_ + ((inex.sens & REVERS)? lens[m] - right: left);}
-	int	SiteRe(int m = 0) const {return base_ + ((inex.sens & REVERS)? lens[m] - left: right);}
-	int	SiteNoBO(int n, int m = 0) const {return (inex.sens & REVERS)? lens[m] - n: n + 1;}
-	int	SiteNo(int n, int m = 0) const {return base_ + SiteNoBO(n, m);}
-	int	SiteOn(int n, int m = 0) const {return (inex.sens & REVERS)? lens[m] - n + base_: n - 1 - base_;}
+	int	siteno(const int& n) const {return base_ + n;}
+	int	SiteNm(const int& n, const int& m = 0) const
+		{return base_ + ((inex.sens & REVERS)? lens[m] - 1 - n: n);}
+       	int	SiteNz(const int& n, const int& m = 0) const
+		{return base_ + ((inex.sens & REVERS)? lens[m] - n: n);}
+	int	SiteLe(const int& m = 0) const
+		{return base_ + ((inex.sens & REVERS)? lens[m] - right: left);}
+	int	SiteRe(const int& m = 0) const
+		{return base_ + ((inex.sens & REVERS)? lens[m] - left: right);}
+	int	SiteNoBO(const int& n, const int& m = 0) const
+		{return (inex.sens & REVERS)? lens[m] - n: n + 1;}
+	int	SiteNo(const int& n, const int& m = 0) const
+		{return base_ + SiteNoBO(n, m);}
+	int	SiteOn(const int& n, const int& m = 0) const
+		{return (inex.sens & REVERS)? lens[m] - n + base_: n - 1 - base_;}
 	int	senschar() const {return SensChar[inex.sens];}
-	int	index(CHAR* ss) const {return (ss - seq_) / many;}
-	void	seqalloc(int num, int length, bool keep = false);
+	int	index(const CHAR* ss) const {return (ss - seq_) / many;}
+	void	seqalloc(const int& num, const int& len, const bool& keep = false);
 	void	fullrange() {left = 0; right = len;}
 	void	saverange(RANGE* rng) const {rng->left = left; rng->right = right;}
-	void	restrange(RANGE* rng) const {left = rng->left; right = rng->right;}
+	void	restrange(const RANGE* rng) const {left = rng->left; right = rng->right;}
 	void	refresh(const int& num = 0, const int& length = 0);
 	void	exg_seq(int gl, int gr);
 	CHAR*	at(const int n) const {return seq_ + many * n;}
@@ -354,39 +364,40 @@ const	char*	sqname(bool fpri = false) const {
 	void	comrev(Seq** sqs);
 	JUXT*	revjxt();
 	void	setanti(Seq** cmpl) {anti_ = cmpl;}
-	Seq**	getanti() {return (anti_);}
+	Seq**	getanti() const {return (anti_);}
 	void	copyattr(Seq* dest) const;
-	Seq*	cutseq(Seq* dest, int snl = CPY_ALL) const;
-	Seq*	copyseq(Seq* dest, int snl = CPY_ALL) const;
+	Seq*	cutseq(Seq* dest, const int& snl = CPY_ALL) const;
+	Seq*	copyseq(Seq* dest, const int& snl = CPY_ALL) const;
 	Seq*	duplseq(Seq* dest) const;
-	Seq*	extseq(Seq* dest, int* which, int snl = CPY_ALL, FTYPE nfact = 1.);
-	Seq*	aliaseq(Seq* dest, bool thisisalias = false);
-	Seq*	catseq(Seq* tail, int cushion = 0);
+	Seq*	extseq(Seq* dest, const int* which, const int& snl = CPY_ALL,
+			const FTYPE& nfact = 1.);
+	Seq*	aliaseq(Seq* dest, const bool& thisisalias = false);
+	Seq*	catseq(Seq* head, const int& cushion = 0);
 	Seq&	operator=(Seq& src) {return (*src.copyseq(this));}
 	Seq*	rndseq();
-	Seq*	deamb(int bzx = 3);
+	Seq*	deamb(const int& bzx = 3);
 	void	fillnbr(Seq* dest) const;
 	void	copynbr(Seq* dest) const;
 	void	copylbl(Seq* dest) const;
 	Seq*	postseq(const CHAR* last);
 	void	nuc2tron();
-	void	tron2nuc(bool rev);
+	void	tron2nuc(const bool& rev);
 	CHAR	tron2aa(const CHAR res) {return inex.molc == TRON? t2atab[res]: res;}
 	void	elim_amb();
-	GAPS*	elim_column(int which, float frac = 0.);
-	void	push(CHAR c, CHAR*& ps, int step = 1) {
+	GAPS*	elim_column(const int& which, float frac = 0.);
+	void	push(const CHAR& c, CHAR*& ps, const int& step = 1) {
 		    if (ps >= end_) ps = seq_realloc();
 		    *ps = c; ps += step;
 		}
 template <typename file_t>
-	CHAR*	seq_readin(file_t fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd = 0);
+	CHAR*	seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* pfqmfd = 0);
 template <typename file_t>
 	CHAR*	get_seq_aln(file_t fd, char* str, RANGE* pcr);
 template <typename file_t>
 	CHAR*	get_mfasta(file_t fd, long fpos, char* str, RANGE* pcr, const SeqDb* dbf);
 template <typename file_t>
-	int	infermolc(file_t fd, char* str, bool msf = false);
-	CHAR*	ToInferred(CHAR* src, CHAR* lastseq, int step);
+	int	infermolc(file_t fd, char* str, const bool& msf = false);
+	CHAR*	ToInferred(CHAR* src, CHAR* lastseq, const int& step);
 template <typename file_t>
 	Seq*	fgetseq(file_t fd, const char* attr = 0, const char* attr2 = 0);
 template <typename file_t>
@@ -405,7 +416,7 @@ template <typename file_t>
 	Seq*	read_dbseq(DbsDt* dbf, DbsRec* rec, const RANGE* rng);
 	Seq*	read_dbseq(DbsDt* dbf, long pos);
 	Seq*	getdbseq(DbsDt* dbf, const char* code, int c = -1, bool readin = true);
-	Seq*	apndseq(char* aname);
+	Seq*	apndseq(const char* aname);
 	void	fphseq(FILE* fd = 0, int n = 3) const;
 	FTYPE*	composition();
 	FTYPE*	composition(FTYPE* cmps) const;
@@ -435,17 +446,17 @@ template <typename file_t>
 	void	pregap(int* gl) const;
 	bool	isgap(const CHAR* ps) const;
 	bool	nogap(const CHAR* ps) const;
-	int	countgap(int mem = 0, int from = 0, int to = INT_MAX) const;
+	int	countgap(const int& mem = 0, int from = 0, int to = INT_MAX) const;
 	VTYPE	countunps() const;
-	int	pfqPos(int n) const {return isprotein()? 3 * n: n;}
+	int	pfqPos(const int& n) const {return isprotein()? 3 * n: n;}
 	int	sname2memno(const char* memid);
 	Seq*	randseq(double* pcmp);
-	Seq*	substseq(int n, int which);
+	Seq*	substseq(int n, const int& which);
 	void	initialize();
-	Seq(const int& num = 1, const int& length = 0);
+	Seq(const int& num = 1, const int& lenth = 0);
 	Seq(const char* fname);
-	Seq(Seq& sd, int* which = 0, int snl = CPY_ALL);
-	Seq(Seq* sd, int* which = 0, int snl = CPY_ALL);
+	Seq(Seq& sd, const int* which = 0, const int& snl = CPY_ALL);
+	Seq(Seq* sd, const int* which = 0, const int& snl = CPY_ALL);
 				// copy or extract
 	~Seq();
 friend	void 	antiseq(Seq** seqs);
@@ -846,7 +857,7 @@ CHAR* Seq::get_msf_aln(file_t fd, char* str, RANGE* pcr)
 }
 
 template <typename file_t>
-CHAR* Seq::seq_readin(file_t fd, char* str, int mem, RANGE* pcr, Mfile* pfqmfd)
+CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* pfqmfd)
 {
 	SeqDb*	db = whichdb(str, fd);
 	if (!db)	return (0);		// bad format
@@ -1104,7 +1115,7 @@ CHAR* Seq::get_seq_aln(file_t fd, char* str, RANGE* pcr)
 }
 
 template <typename file_t>
-int Seq::infermolc(file_t fd, char* str, bool msf)
+int Seq::infermolc(file_t fd, char* str, const bool& msf)
 {
 	INT	cmp[28];
 	vclear(cmp, 28);
@@ -1378,13 +1389,13 @@ const	GAPS**  gp;
 	CHAR*   wbuf;
 	int     rows;
 	int     globpt;
-	Row_Mode	cpm;
+const	Row_Mode	cpm;
 	int     markeij;
-	EscCharCtl*     ecc;
-	HtmlCharCtl*    hcc;
-	PFQ**   pfqs;
-	PFQ**   tfqs;
-	int**   lsts;
+	EscCharCtl*     ecc = 0;
+	HtmlCharCtl*    hcc = 0;
+	PFQ**   pfqs = 0;
+	PFQ**   tfqs = 0;
+	int**   lsts = 0;
 	int*    agap;
 	int     htl;
 	int     pro;
@@ -1400,7 +1411,7 @@ const	GAPS**  gp;
 		const SEQ_CODE* defcode);
 public:
 	void    printaln();
-	PrintAln(const GAPS** _gaps, Seq* _seqs[], int _seqnum, FILE* _fd = 0);
+	PrintAln(const GAPS** _gaps, Seq* _seqs[], const int& _seqnum, FILE* _fd = 0);
 	~PrintAln();
 };
 
@@ -1432,44 +1443,44 @@ extern	CHAR	aa2nuc[];
 
 /*	Headers to seq.c	*/
 
-extern	int	setdefmolc(int molc = QUERY);
-extern	void	setthr(double thr);
+extern	int	setdefmolc(const int& molc = QUERY);
+extern	void	setthr(const double& thr);
 extern	void	setminus(int yon);
 extern	int	setoutmode(int nsa);
 extern	void	setalgmode(int nsa, int reg);
-extern	void	setstrip(int sh);
+extern	void	setstrip(const int& sh);
 extern	void	initseq(Seq** seqs, int n);
 extern	void	rectiseq(Seq** seqs, Seq** cur);
 extern	void	clearseq(Seq** seqs, int n);
-extern	void	cleanseq(Seq** seqs, int n, int num = 0);
+extern	void	cleanseq(Seq** seqs, int n, const int& num = 0);
 extern	void	reportseq(Seq** sqs, int n);
 extern	void	setdfn(const char* newdfn);
 extern	void	antiseq(Seq** seqs);
-extern	SEQ_CODE* setSeqCode(Seq* sd, int molc);
-extern	CHAR*	spliceTron(CHAR* spliced, const CHAR* b5, const CHAR* b3, int n);
+extern	SEQ_CODE* setSeqCode(Seq* sd, const int& molc);
+extern	CHAR*	spliceTron(CHAR* spliced, const CHAR* b5, const CHAR* b3, const int& n);
 extern	int	Nprim_code(int c);
 extern	CHAR*	tosqcode(CHAR* ns, const SEQ_CODE* code);
 extern	Seq*	inputseq(Seq* seqs[], char* str);
 extern	int	samerange(const Seq* a, const Seq* b);
 extern	void	swapseq(Seq** x, Seq** y);
 extern	void	save_range(const Seq* seqs[], RANGE* temp, int n);
-extern	void	rest_range(const Seq* seqs[], RANGE* temp, int n);
+extern	void	rest_range(const Seq* seqs[], const RANGE* temp, int n);
 extern	void	eraStrPhrases();
 extern	int	infermolc(const char* fname);
 extern	InputMode	get_def_input_mode();
 
 /*	Headers to sqpr.c	*/
 
-extern	int	setlpw(int lpwd);
+extern	int	setlpw(const int& lpwd);
 extern	INT	setdeflbl(int msf);
 extern	FILE*	setup_output(int omode = 0, const char* def_fn = 0, bool setup_out_fd = true);
 extern	void	close_output();
 extern	void	closeGeneRecord();
-extern	void	setprmode(int pmd, int lorn, int trc);
+extern	void	setprmode(const int& pmd, const int& lorn, int trc);
 extern	void	fphseqs(const Seq* seqs[], int n = 3, FILE* fd = 0);
 extern	void	GBcdsForm(const RANGE* rng, const Seq* sd, FILE* fd = 0);
-extern	void	fprint_seq_mem(const Seq* seqs[], int n, FILE* fd = 0);
-extern	void	pralnseq(const GAPS** gaps, Seq* seqs[], int seqnum, FILE* fd = 0);
+extern	void	fprint_seq_mem(const Seq* seqs[], const int& n, FILE* fd = 0);
+extern	void	pralnseq(const GAPS** gaps, Seq* seqs[], const int& seqnum, FILE* fd = 0);
 
 inline	VTYPE axbscale(const Seq** seqs)
 {
@@ -1477,7 +1488,7 @@ inline	VTYPE axbscale(const Seq** seqs)
 }
 
 template <typename file_t>
-inline	char*	withinline(char* str, INT maxl, file_t fd)
+inline	char*	withinline(char* str, const INT& maxl, file_t fd)
 {
 	return ((strlen(str) + 1) == maxl? fgets(str, maxl, fd): 0);
 }

@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.6
-#### Last updated: 2021-09-14
+#### Present Version 2.4.7
+#### Last updated: 2022-01-28
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -309,6 +309,12 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.7
+1. The lower limit of query length has been halved, which improved mappability of short queries.
+2. A serious bug for DNA queries with -LS option has been fixed.
+3. A bug at the format mode (-W option) with gzipped input has been fixed.
+4. Several other bugs in **spaln** and **sortgrcd** that cause occasional segmentation faults and memory leaks have been fixed.
+
 ## Changes in version 2.4.6
 1. Fix several bugs that caused occasional segmentation faults and memory leaks.
 2. The -E option has been abolished from both format and search modes.

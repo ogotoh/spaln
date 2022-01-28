@@ -44,8 +44,6 @@ static	const	int	dir2nod[16] =
 static	const	float	defSss[3] = {0.3, 0.50, 0.7};
 static	const	int	N_Out_Modes = 16;
 static	const	int	NCAND = 4;
-static	const	int	nextp[3] = {1, 2, 0};
-static	const	int	prevp[3] = {2, 0, 1};
 static	const	CHAR	psp_bit[5] = {4, 1, 8, 2, 16};
 static	const	CHAR	e1_psp = 1;
 static	const	CHAR	e2_psp = 2;
@@ -205,8 +203,8 @@ inline void RVPDJ::reseth() {*this = black_vpdj;}
 
 class Colonies {
 protected:
-	int	no_clny;
-	COLONY*	clny;
+	int	no_clny = 0;
+	COLONY*	clny = 0;
 public:
 	Colonies(int n = 0);
 	~Colonies() {delete[] clny;}
@@ -247,18 +245,19 @@ const	Simmtx*	simmtx;
 	int	codonk1;
 	VTYPE	LongGOP;	// GasicGOP + diffu * k1
 	VTYPE	GOP[NOL];
-	int	MaxGapL;
-	VTYPE	ExtraGOP;
-	VTYPE	GapE1;
-	VTYPE	GapE2;
-	VTYPE	GapW1;
-	VTYPE	GapW2;
-	VTYPE	GapW3;
-	VTYPE	GapW3L;
-	Premat*	pmt;
-	CodePot* codepot;
-	ExinPot* exinpot;
-	EijPat*	eijpat;
+	int	MaxGapL = 0;
+	VTYPE	ExtraGOP = 0;
+	VTYPE	GapE1 = 0;
+	VTYPE	GapE2 = 0;
+	VTYPE	GapW1 = 0;
+	VTYPE	GapW2 = 0;
+	VTYPE	GapW3 = 0;
+	VTYPE	GapW3L = 0;
+	Premat*	pmt = 0;
+	CodePot* codepot = 0;
+	ExinPot* exinpot = 0;
+	EijPat*	eijpat = 0;
+	IntronPenalty*	IntPen = 0;
 
 	PwdB(const Seq** seqs, const ALPRM* alp = 0);
 	~PwdB();
@@ -270,7 +269,6 @@ const	Simmtx*	simmtx;
 	  }
 	}
 	VTYPE	sim2(const CHAR* as, const CHAR* bs) const {return simmtx->mtx[*as][*bs];}
-	IntronPenalty*	IntPen;
 	VTYPE	GapPenalty(int i) const {
 	    if (i == 0) return 0;
 	    return	(i > codonk1)? LongGOP + i * LongGEP:
@@ -300,19 +298,19 @@ const	Simmtx*	simmtx;
 	}
 };
 
-/*	Select one or more output modes of aln and spaln */
+//	Select one or more output modes of aln and spaln
 
 class AlnOutModes {
-	int	n_out_modes;
+	int	n_out_modes = 0;
 	int	out_mode[N_Out_Modes];
-	char*	prefix;
+	char*	prefix = 0;
 public:
-	FILE**	fds;
+	FILE**	fds = 0;
 	void	getopt(const char* arg);
 	void	setup(const char* prefix);
 	void	alnoutput(Seq** sqs, Gsinfo* GsI);
 	int	end() {return (n_out_modes);}
-	AlnOutModes() :  n_out_modes(0), prefix(0), fds(0) {
+	AlnOutModes() {
 	     vset(out_mode, -1, N_Out_Modes);
 	}
 	~AlnOutModes() {
@@ -325,7 +323,7 @@ public:
 	}
 };
 
-/*	Headers to aln2.c	*/
+//	Headers to aln2.c
 
 extern	void	putvar(VTYPE x);
 extern	VTYPE	selfAlnScr(const Seq* sd, const Simmtx* sm);
@@ -350,7 +348,7 @@ extern	VTYPE	skl_rngS_ng(const Seq* seqs[], Gsinfo* gsi, const PwdB* pwd);
 extern	VTYPE	alnScoreD(const Seq* seqs[], const Simmtx* sm, int* ends = 0);
 extern	FTYPE	alnscore2dist(Seq* sqs[], const PwdB* pwd, int* ends = 0, FTYPE denom = 0);
 
-/*	Header to sqpr.c	*/
+//	Header to sqpr.c
 
 extern	int print2(Seq* seqs[], const GAPS** gps, double fscr, 
 	Gsinfo* GsI, int nbr, int ttl, int skip, FILE* fd = 0);

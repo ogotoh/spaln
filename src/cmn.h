@@ -58,6 +58,7 @@ static	const	VTYPE	NEVSEL = -(DBL_MAX / 16 * 7);
 #else
 static	const	VTYPE	NEVSEL = -(FLT_MAX / 16 * 7);
 #endif
+inline	VTYPE vabs(VTYPE x) {return (fabs(x));}
 inline	bool gt(FTYPE a, FTYPE b) {return (a >  (b + fepsilon * MAX(1., fabs(b))));}
 inline	bool ge(FTYPE a, FTYPE b) {return (a >= (b - fepsilon * MAX(1., fabs(b))));}
 inline	bool lt(FTYPE a, FTYPE b) {return (a <  (b - fepsilon * MAX(1., fabs(b))));}
@@ -79,6 +80,7 @@ static	const	VTYPE	fInfinit = INT_MAX;
 #endif	// LVAL
 typedef	int	PVTYPE;
 static	const	FTYPE	fepsilon = 0;
+inline	VTYPE vabs(VTYPE x) {return (abs(x));}
 inline	bool gt(int a, int b) {return (a >  b);}
 inline	bool ge(int a, int b) {return (a >= b);}
 inline	bool lt(int a, int b) {return (a <  b);}

@@ -611,6 +611,7 @@ static	const	char	hdr15[] = "# gID\tdir   Donor  Acceptor Count   tgt_5     tgt_
 	    niso++;
 	    if (OutMode == 15 && niso == 1) {	/* unique intron */
 		lrfn = findGeneEnd(&Nexon, grfn, grfn + gcn - n, &GeneRB);
+		delete ihh;
 		ihh = new Ihash((INT) (Nexon * 1.2) + SecondHS);
 	    }
 	    pwrk = gwrk;
@@ -1017,7 +1018,7 @@ Sortgrcd::Sortgrcd(int ac, const char** av) : argc(ac), grdname(*av)
 #endif
 	    FILE*	fd = fopen(fname(str, *av, qrext, nth), "r");
 	    if (fd) {
-		gerNo.sname = new Strlist(fd, gerNo.ern);
+		gerNo.sname = new Strlist(fd, gerNo.grn);
 		fclose(fd);
 	    } else {
 #if USE_ZLIB

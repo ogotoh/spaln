@@ -30,8 +30,7 @@ enum {ON_SCORE, ON_RDIAG, ON_POSIT};
 
 static	const	INT	MaxWlpLevel = 3;
 static	const	int	WlnPamNo = 2;
-static	const	int	next_p[3] = {1, 2, 0};
-static	const	int	prev_p[3] = {2, 0, 1};
+static	int	shortquery = 50;
 
 class	mSeq;
 
@@ -73,9 +72,9 @@ class Wilip {
 	WLUNIT*	wlu = 0;
 	bool	int_wlp = true;
 public:
-	Wilip(const Seq* seqs[], const PwdB* pwd, const INT level);
+	Wilip(const Seq* seqs[], const PwdB* pwd, const int level);
 	Wilip(const Seq* seqs[], Wlp* wln);
-	Wilip(mSeq* seqs[], const PwdB* pwd, const INT level);
+	Wilip(mSeq* seqs[], const PwdB* pwd, const int level);
 	~Wilip() {delete[] top; if (int_wlp) delete[] wlu;}
 	int	size() const {return nwlu;}
 	WLUNIT*	begin() {return wlu;}
@@ -153,16 +152,18 @@ const	int	mm = 0;		// query length
 const	int	sect_l = 0;	// section length
 	Mfile*	mfd = 0;
 const	WLPRM*	wlprm = 0;
-	Bitpat_wq*	bpp = 0;
+	WLPRM	tmprm;		// temporaly
 const	int	tplwt = 0;
 const	int	awspan = 0;
 const	int	bwspan = 0;
+	int	precutoff = 0;
+const	JXTD	ixtd;
 	INT*	header = 0;
 	INT*	position = 0;
 	JXTD*	jxtd = 0;
+	Bitpat_wq*	bpp = 0;
 public:
-	Wlp() {}
-	Wlp(const Seq* seqs[], const PwdB* _pwd, const INT level);
+	Wlp(const Seq* seqs[], const PwdB* _pwd, const int level);
 virtual	~Wlp() {
 	    delete bpp; delete mfd; delete[] header; 
 	    delete[] position; delete[] jxtd;}
@@ -196,10 +197,10 @@ struct Wlprms {
 	void	initilize(INT level);
 };
 
+inline	void	set_shortquery(const int s) {shortquery = s;}
 extern	void	makeWlprms(int dvsp);
 extern	void	eraWlprms();
 extern	WLPRM*	setwlprm(INT level);
-extern	WLPRM*	selectwlprm(INT sz, int dvsp, WLPRM* wlp = 0);
 extern	void	setexprm_x(int& argc, const char**& argv);
 extern	int	geneorient(Seq* seqs[], const PwdB* pwd, int max_n = 0);
 

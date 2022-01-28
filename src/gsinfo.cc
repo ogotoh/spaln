@@ -1026,7 +1026,7 @@ const 	PFQ*	wfq = pfq;
 	}
 }
 
-SigII* extSigII(const Seq* sorc, const int* which, FTYPE nfact, bool renum_lst)
+SigII* extSigII(const Seq* sorc, const int* which, const FTYPE& nfact, const bool& renum_lst)
 {
 const 	SigII*	src = sorc->sigII;
 	if (!src) return (0);

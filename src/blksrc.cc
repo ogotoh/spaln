@@ -339,7 +339,7 @@ Block::Block(const Seq* sq, INT blklen, bool mk_blk)
 	if (!istron) MinOrf = 0;
 	prelude = max_width() * (istron? 3: 1) - 1;
 	wcp.TabSize = bpp[0]->TabSize;
-	if (thread_num < 1 && mkblk) 
+//	if (thread_num < 1 && mkblk) 
 	    ch = new Chash(int(hfact * wcp.blklen));
 	margin = prelude;
 	margin += MinOrf;
@@ -546,7 +546,11 @@ static  const char* wfmt =
 	char    block_fn[LINE_MAX];
 	strcpy(block_fn, WriteFile);
 	char*   dot = strrchr(block_fn, '.');
-	if (dot && !is_gz(block_fn)) {
+	if (dot && is_gz(block_fn)) {
+	    *dot = '\0';
+	    dot = strrchr(block_fn, '.');
+	}
+	if (dot) {
 	    ++dot;
 	    if (strcmp(dot, BKA_EXT) && strcmp(dot, BKP_EXT) && strcmp(dot, BKN_EXT)) {
 		*--dot = '\0';
@@ -1922,7 +1926,7 @@ Seq* SrchBlk::setgnmrng(const BPAIR* wrkbp)
 }
 
 int SrchBlk::MinQuery() const {
-	return wcp.Ktuple * (pwd->DvsP? 3: 5) + wcp.Nshift;
+	return (2 * wcp.Ktuple + wcp.Nshift);
 }
 
 int SrchBlk::MaxGene() const {
@@ -2125,6 +2129,7 @@ void SrchBlk::initialize(Seq* sqs[], const char* fn)
 	ExtBlockL = MaxBlock / 2 + 1;
 	nseg = chrblk(pbwc->ChrNo);
 	bbt = pwd->DvsP == 1? 3: 1;
+	set_shortquery(8 * wcp.Ktuple);
 	Ncand = OutPrm.MaxOut + NCAND2PHS;
 	if (gnmdb)	bh4 = new Bhit4(nseg);
 	else {
@@ -2235,7 +2240,7 @@ bool extend_gene_rng(Seq* sqs[], const PwdB* pwd, DbsDt* dbf)
 	    swap(b, tmp);
 	    b->getdbseq(dbf, str);
 	    if (pwd->DvsP == 1) b->nuc2tron();
-	    Wilip	wl((const Seq**) sqs, pwd, 0);
+	    Wilip	wl((const Seq**) sqs, pwd, -1);
 	    WLUNIT* wlu = wl.begin();
 	    if (wlu) {
 		b->jxt = new JUXT[wlu->num + 1];
@@ -2275,7 +2280,7 @@ retry:
 	if (query->isprotein()) cursd->nuc2tron();
 	swap(*curgr, seqs[1]);		// temporally save
 	delete wilip;
-	wilip = new Wilip((const Seq**) seqs, pwd, algmode.lvl);
+	wilip = new Wilip((const Seq**) seqs, pwd, -1);
 	WLUNIT*	wlu = wilip->begin();
 	swap(*curgr, seqs[1]);		// restore
 	if (!wlu) {delete wilip; return (2);}
@@ -2875,13 +2880,16 @@ BLKTYPE	Qwords::next_mrglist()
 
 int SrchBlk::findblock(Seq** sqs)
 {
-	if (query->right - query->left - (wcp.Nshift + bpp[0]->width) < 1) return (ERROR);
+const	int	qlen = query->right - query->left;
+	if (qlen - (wcp.Nshift + bpp[0]->width) < 1) return (ERROR);
 	init4(query);
 	int	nohit = 0;
 	int	sigpr = 0;
-	int	c = (query->right - query->left) / (wcp.Nshift + wcp.Nshift) - 1;
-const	CHAR*	rms = query->at(query->right) - wcp.Nshift * ((c < ptpl)? c: ptpl);
-	int	meet[2] = {0, 0};
+	int	c = qlen / (wcp.Nshift + wcp.Nshift) - 1;
+const	bool	is_shorquery = qlen < shortquery;
+const	CHAR*	at = is_shorquery? query->at(query->right): 0;
+const	CHAR*	ab = is_shorquery? query->at(query->left): 0;
+	bool	meet[2] = {false, false};
 	Dhash<INT, int>	hh(2 * pbwc->MaxBlk);
 	INT	nmmc = 0;
 	int	notry = 0;
@@ -2890,7 +2898,7 @@ const	CHAR*	rms = query->at(query->right) - wcp.Nshift * ((c < ptpl)? c: ptpl);
 	Qwords	qwd(kk, DRNA, ConvTab, pbwc, bpp, query);
 	INT	totalsign = 0;
 	critjscr = 0;
-	while (meet[0] + meet[1] == 0)  {
+	while (!(meet[0] || meet[1])) {
 	  totalsign = 0;
 	  for (SHORT d = 0; d < 4; ++d) {
 	    if (meet[d / 2]) continue;
@@ -2898,11 +2906,11 @@ const	CHAR*	rms = query->at(query->right) - wcp.Nshift * ((c < ptpl)? c: ptpl);
 	    SHORT	e = prty? d - 1: d + 1;	// tally
 	    bool	rvs = d >= 2;
 	    int*&	rscr = bh4->bscr[d];
+const	    CHAR*	ms = prty? ab: at;
 	    SHORT	maxp = 0;
 	    for (INT s = 0; s < wcp.Nshift; s++) {
 const		CHAR**	ws = bh4->as[d] + s;
-const		CHAR*	ms = bh4->as[e][s];
-		if (!prty && ms > rms) ms = rms;
+		if (!is_shorquery) ms = bh4->as[e][s];
 		int	cscr = 0, q = 0, p = 0;
 		hh.clear();
 		do {				// continueous hits
@@ -2910,7 +2918,7 @@ const		    CHAR*	ss = *ws;
 		    if (prty)	*ws -= wcp.Nshift;	// right side
 		    else	*ws += wcp.Nshift;	// left side
 		    if (prty ^ (ss >= ms)) {		// has scanned
-			meet[d / 2]++;
+			meet[d / 2] = true;
 			break;
 		    }
 		    int wdscr = qwd.querywords(ss, d, rvs);
@@ -2989,7 +2997,7 @@ const		    CHAR*	ss = *ws;
 
 INT SrchBlk::bestref(Seq* sqs[], KVpair<INT, int>* sh, int n)
 {
-	Seq*	a = sqs[1];
+	Seq*&	a = sqs[1];
 	Wilip**	wl = new Wilip*[n];
 	GeneRng	gr;
 	Mfile	mfd(sizeof(GeneRng));
@@ -2998,7 +3006,7 @@ INT SrchBlk::bestref(Seq* sqs[], KVpair<INT, int>* sh, int n)
 	for (int i = 0; i < n; ++i, ++sh) {
 	    if (!sh->val) continue;
 	    setaaseq(a, sh->key);
-	    wl[i] = new Wilip((const Seq**) sqs, pwd, 0);
+	    wl[i] = new Wilip((const Seq**) sqs, pwd, -1);
 	    for (WLUNIT* wlu = wl[i]->begin(); wlu && wlu->num; ++wlu) {
 		JUXT*	wjxt = wlu->jxt;
 		gr.jxt = wjxt;
@@ -3074,7 +3082,7 @@ int Bhit2::update(BLKTYPE blk)
 INT Bhit2::hsort()
 {
 	INT	w = OutPrm.MaxOut;
-	if (sigm < OutPrm.MaxOut) w = sigm;
+	if (sigm < w) w = sigm;
 	prqueue_b->hsort();
 	return (w);
 }
@@ -3091,7 +3099,7 @@ int SrchBlk::findh(Seq** sqs)
 	INT	norf = 0;
 	int	c;
 	for (ORF* wrf = orf; wrf->len; ++norf, ++wrf) {
-	  INT	meet = 0;
+	  bool	meet = false;
 	  b->translate(a, *wrf);
 	  if (a->right - a->left - (wcp.Nshift + bpp[0]->width) < 1) continue;
 	  qwd.reset(a);
@@ -3100,7 +3108,7 @@ int SrchBlk::findh(Seq** sqs)
 const	  CHAR*	rms = a->at(a->right) - wcp.Nshift * ((c < ptpl)? c: ptpl);
 	  INT	nmmc = 0;
 	  int	sigpr = 0;
-	  for ( ; nmmc < maxmmc && meet == 0; ++nmmc) {
+	  for ( ; nmmc < maxmmc && !meet; ++nmmc) {
 	    for (int d = 0; d < 2; ++d) {
 	      int	e = 1 - d;		// tally
 	      int	maxp = 0;
@@ -3117,7 +3125,7 @@ const		    CHAR*	ss = *ws;
 		    if (d)	*ws -= wcp.Nshift;	// right side
 		    else	*ws += wcp.Nshift;	// left side
 		    if (d ^ (ss >= ms)) {		// has scanned
-			meet++;
+			meet = true;
 			break;
 		    }
 		    int wdscr = qwd.querywords(ss);
@@ -3176,7 +3184,7 @@ int SrchBlk::finds(Seq** sqs)
 	init2(query);
 	int	c = (query->right - query->left) / (wcp.Nshift + wcp.Nshift) - 1;
 	INT	testword[2] = {0, 0};
-	INT	meet = 0;
+	bool	meet = false;
 	BLKTYPE	maxb = 0;
 	Dhash<INT, int>	hh(int(2 * pbwc->MaxBlk));
 	Qwords	qwd(kk,  DRNA, ConvTab, pbwc, bpp, query);
@@ -3185,7 +3193,7 @@ const	CHAR*	rms = query->at(query->right) - wcp.Nshift * ((c < ptpl)? c: ptpl);
 	int	sigpr = 0;
 #endif
 	INT	nmmc = 0;
-	for ( ; nmmc < maxmmc && meet == 0; ++nmmc) {
+	for ( ; nmmc < maxmmc && !meet; ++nmmc) {
 	    for (SHORT d = 0; d < 2; ++d) {
 	      int	e = 1 - d;		// tally
 	      int	maxp = 0;
@@ -3202,7 +3210,7 @@ const		    CHAR*	ss = *ws;
 		    if (d)	*ws -= wcp.Nshift;	// right side
 		    else	*ws += wcp.Nshift;	// left side
 		    if (d ^ (ss >= ms)) {		// has scanned
-			meet++;
+			meet = true;
 			break;
 		    }
 		    int wdscr = qwd.querywords(ss);
@@ -3247,12 +3255,15 @@ const		    CHAR*	ss = *ws;
 #endif
 	if (bh2->sigm) {	// heap sort in the order of block score
 	    INT	w = bh2->hsort();
+	    if (w < bh2->sigm && OutPrm.supself) ++w;
 	    Dhash<INT, int>	shash(2 * w);
 	    int	j = 1;
 	    for (INT i = 0; i < w; ++i) {
 		c = findChrNo((*bh2->prqueue_b)[i].key);
 		KVpair<INT, int>*	h = shash.incr(c);
-		if (h->val < 2) setaaseq(sqs[j++], c);
+		if (h->val < 2) setaaseq(sqs[j], c);
+		if (!OutPrm.supself || 
+		    strcmp((*query->sname)[0], (*sqs[j]->sname)[0]) < 0) ++j;
 	    }
 	    c = j - 1;
 	} else

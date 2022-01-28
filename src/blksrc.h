@@ -305,6 +305,7 @@ public:
 	void	WriteBlkInfo();
 	int	dbsmolc() const {return (molc);}
 	int	no_entry() const {return cntblk.ChrNo;}
+	DbsDt*	get_dbf() const {return wdbf;}
 	void	delete_dbf() {delete wdbf; wdbf = 0;}
 	void	store_blk(bool first, Block* blk = 0);
 template <typename file_t>

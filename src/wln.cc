@@ -24,6 +24,7 @@
 #include <math.h>
 
 static	int	cmpwlscr(const WLUNIT* a, const WLUNIT* b);
+static	int	scorecmp(const JUXT* a, const JUXT* b);
 static	int	rdiagcmp(const JUXT* a, const JUXT* b);
 static	int	yposicmp(const JUXT* a, const JUXT* b);
 static	JUXT*	jxtsort(JUXT* jxt, int n, int key);
@@ -31,13 +32,9 @@ static	JUXT*	jxtsort(JUXT* jxt, int n, int key);
 static	WLPRM	wlprms[MaxWlpLevel + 1] = {{0}, {0}, {0}, {0}};
 static	HSPPRM	hspprm = {20, 10};
 static	Wlprms*	wlparams = 0;
-static  int     max_no_jxts = 128;
-static	INT	lutwdshft = 0;
 static	const	char*	WlnDefBitPat[MaxBitPat] = {"", "1", "101", "1101",
 	"11011","1101101", "110011011", "1101101011", "110010110111",
 	"11101100101011", "110110010110111", "1111011001011011"};
-static	const	int	too_many = 100;
-
 
 void	makeWlprms(int dvsp)
 	{if (!wlparams) wlparams = new Wlprms(dvsp);}
@@ -51,24 +48,24 @@ WLPRM*	setwlprm(INT level)
 static void fillin_wlprm(WLPRM* wlprm, int dvsp)
 {
 	if (wlprm->bitpat) {
-	    if (!*wlprm->bitpat) {	/* default bit pattern */
+	    if (!*wlprm->bitpat) {		// default bit pattern
 		if (wlprm->tpl < MaxBitPat)
-		    wlprm->bitpat = WlnDefBitPat[wlprm->tpl];
+		    wlprm->bitpat = algmode.crs? WlnDefBitPat[wlprm->tpl]: 0;
 		else
 		    fatal("Ktuple must be < %d\n", MaxBitPat);
-	    } else if (*wlprm->bitpat != '1')  /* continuous pattern */
-		wlprm->bitpat = 0;	  /* else given pattern */
+	    } else if (*wlprm->bitpat != '1')	// continuous pattern
+		wlprm->bitpat = 0;	  	// else given pattern
 	}
+	wlprm->gain1 = wlprm->gain;
 	if (wlprm->bitpat) {
 const	    char* bp = wlprm->bitpat;
-	    wlprm->gain1 = wlprm->gain;
 	    for (wlprm->tpl = 0; *bp; ++bp) {
 		if (*bp == '1') ++wlprm->tpl;
 		else if (bp[-1] == '1') wlprm->gain1 += wlprm->gain;
 	    }
 	    wlprm->width = bp - wlprm->bitpat;
 	    if (wlprm->width == wlprm->tpl)
-		wlprm->bitpat = 0; /* continuous */
+		wlprm->bitpat = 0;		// continuous
 	} else
 	    wlprm->width = wlprm->tpl;
 const	int	Ncode = ZZZ + 1;
@@ -90,10 +87,11 @@ const	VTYPE	Vab = (VTYPE) alprm.scale;
 	wlprm->vthr = (VTYPE) (Vab * wlprm->thr);
 const	Simmtx*	simmtx = getSimmtx(WlnPamNo);
 const	double	nmlfact = simmtx->avrmatch(wlprm->ConvTab);
-	wlprm->cutoff = (int) (wlprm->gain * wlprm->vthr / nmlfact);
+	wlprm->cutoff = algmode.crs? (int) (wlprm->gain * wlprm->vthr / nmlfact):
+			(3 * wlprm->gain * wlprm->tpl - 1);
 }
 
-/*	bitpat, redpat, elem, tpl, mask, width, gain, gain1, thr, xdrp	*/
+//	bitpat, redpat, elem, tpl, mask, width, gain, gain1, thr, xdrp
 static	WLPRM	ncprm[] = 
 	{{"", 0, 4, 8, 65536, 12, 1, 4, 50, -1, 0, 0, 0},
 	 {"", 0, 4, 6,  4096,  9, 1, 3, 40, -1, 0, 0, 0},
@@ -108,46 +106,7 @@ static	WLPRM	trprm[] =
 	 {"", DefConvPat[DefConvPatNo[14]], 14, 4, 38416, 5, 4, 8, 40, -1, 0, 0, 0},
 	 {"", DefConvPat[DefConvPatNo[12]], 12, 3, 1728, 4, 4, 8, 30, -1, 0, 0, 0}};
 
-WLPRM*	selectwlprm(INT sz, int dvsp, WLPRM* wlpr)
-{
-	if (!wlpr) wlpr = wlprms + MaxWlpLevel;
-	vclear(wlpr);
-	if (dvsp == 0) {		// DNA vs DNA
-	    wlpr->tpl = INT(log((double) sz) / log(4.) + 0.5);
-	    if (wlpr->tpl > 8) wlpr->tpl = 8;
-	    if (wlpr->tpl < 4) wlpr->tpl = 4;
-	    wlpr->bitpat = WlnDefBitPat[wlpr->tpl];
-	    wlpr->gain = 1;
-	    wlpr->thr = wlpr->tpl * 5 + 10;
-	    fillin_wlprm(wlpr, dvsp);
-	} else {
-	    int	diff = INT_MAX;
-	    wlpr->elem  = 16;
-	    wlpr->tpl = 0;
-	    for (INT a = 16; a <= 20; ++a) {	// alphabets
-		INT	t = INT(log((double) sz) / log(double(a)));
-		for ( ; t < 6U; ++t) {
-		    INT	mask = ipower(a, t);
-		    if (mask > 65538) break;
-		    int	d = mask - sz;
-		    if (d >= 0) {
-			if (d < diff) {		// sup
-			    diff = d; wlpr->elem = a; wlpr->tpl = t;
-			}
-			break;
-		    }
-		}
-	    }
-	    wlpr->redpat = DefConvPat[DefConvPatNo[wlpr->elem]];
-	    wlpr->bitpat = WlnDefBitPat[wlpr->tpl];
-	    wlpr->gain = wlpr->elem / 4;
-	    wlpr->thr = wlpr->gain * (wlpr->tpl + wlpr->elem) / 2;
-	    fillin_wlprm(wlpr, dvsp);
-	}
-	return (wlpr);
-}
-    
-/* assume the following variables are constant after once set */
+// assume the following variables are constant after once set
 
 void Wlprms::initilize(INT level)
 {
@@ -161,7 +120,7 @@ void Wlprms::initilize(INT level)
 	}
 	if (wlprm->elem == 0) {
 	    wlprm->elem = wlpr->elem;
-	    wlprm->redpat = wlpr->redpat;
+	    wlprm->redpat = algmode.crs? wlpr->redpat: 0;
 	}
 	if (wlprm->tpl == 0)	wlprm->tpl = wlpr->tpl;
 	if (wlprm->gain == 0)	wlprm->gain = wlpr->gain;
@@ -196,7 +155,7 @@ Wlprms::~Wlprms()
 inline void resetwlprm(WLPRM* wp, int k)
 {
 	if (k < 0 || 20 < k) k = 20;
-	wp->redpat = DefConvPat[DefConvPatNo[k]];
+	wp->redpat = algmode.crs? DefConvPat[DefConvPatNo[k]]: 0;
 }
 
 void setexprm_x(int& argc, const char**& argv)
@@ -224,26 +183,34 @@ const	char*	vl = getarg(argc, argv, num, 3);
 	  case 'd': hspprm.RepPen = atof(vl); break;
 	  case 'g': wlp2->gain = atoi(vl); break;
 	  case 'h': wlp2->thr = atoi(vl); break;
-	  case 'j': max_no_jxts = atoi(vl); break;
 	  case 'k': wlp2->tpl = atoi(vl); break;
 	  case 'r': 
 	    if (isdigit(*vl)) resetwlprm(wlp2, atoi(vl));
 	    else	wlp2->redpat = vl;
 	    break;
-	  case 's': lutwdshft = atoi(vl); break;
 	  case 'x': wlp2->xdrp = *vl? atoi(vl): 0; break;
 	}
 }
 
 static	const	int	byte[5] = {1, 3, 0, 1, 3};
 
-Wlp::Wlp(const Seq* seqs[], const PwdB* _pwd, const INT level)
+Wlp::Wlp(const Seq* seqs[], const PwdB* _pwd, const int level)
 	: a(seqs[0]), b(seqs[1]), pwd(_pwd), bbt(byte[pwd->DvsP]), 
 	  mm(a->right - a->left), sect_l(bbt * mm), 
-	  wlprm(setwlprm(level)), tplwt(wlprm->tpl * wlprm->gain), 
-	  awspan(wlprm->width - 1), bwspan(3 * wlprm->width - 1)
+	  wlprm(setwlprm(std::max(level, 0))), 
+	  tplwt(wlprm->tpl * wlprm->gain), 
+	  awspan(wlprm->width - 1), bwspan(3 * wlprm->width - 1), 
+	  precutoff(wlprm->cutoff - wlprm->gain * wlprm->tpl), 
+	  ixtd{0, 0, -int(wlprm->width + 1), 0, 0}
 {
 	if (mm <= awspan) return;
+	if (level < 0 && a->len < shortquery) {
+	    tmprm = *wlprm;
+	    tmprm.cutoff = wlprm->cutoff * a->len / shortquery;
+	    tmprm.vthr = wlprm->vthr * a->len / shortquery;
+	    precutoff = precutoff * a->len / shortquery;
+	    wlprm = &tmprm;
+	}
 	mfd = new Mfile(sizeof(JUXT));
 	position = foldseq();
 	header = lookup(position, mm);
@@ -279,7 +246,7 @@ const	CHAR*	ts = a->at(a->left + awspan);
 	delete bpp;
 	bpp = new Bitpat_wq(wlprm->elem, 1, false, 
 	    bitmask(wlprm->width), wlprm->bitpat);
-	while (ps < ts) {	// prelude
+	while (ps < ts) {		// prelude
 const	    INT	c = wlprm->ConvTab[*ps++];
 	    if (bpp->good(c)) bpp->word(c);
 	    else	bpp->flaw();
@@ -305,11 +272,12 @@ VTYPE Wlp::eval(JUXT* jxt)
 {
 	VTYPE	scr = 0;
 const	CHAR*	as = a->at(jxt->jx);
-const	CHAR*	at = a->at(min(jxt->jx + jxt->jlen, a->right));
 const	CHAR*	bs = b->at(jxt->jy);
-const	CHAR*	ax = a->at(a->left);
-const	CHAR*	bx = b->at(b->left);
-const	CHAR*	az = a->at(a->len);
+const	CHAR*	at = as;
+const	CHAR*	bt = bs;
+const	CHAR*	ax = a->at(0);
+const	CHAR*	bx = b->at(0);
+const	CHAR*	az = a->at(a->tlen);
 const	EXIN*	bb = 0;
 
 	if (bbt == 3) {
@@ -320,33 +288,41 @@ const	EXIN*	bb = 0;
 	    }
 	}
 	if (scr <= 0) {
-	    int	lend = wlprm->tpl - jxt->jx;
-	    if (a->inex.exgl && lend > 0)
-		scr += wlparams->EndBonus * lend;
+	    int	lend = a->left + wlprm->tpl - jxt->jx;
+	    if (lend > 0)
+		scr += wlparams->EndBonus * std::min(lend, int(wlprm->tpl));
 	}
-	while (--as >= ax && (bs -= bbt) >= bx &&
-	    wlprm->ConvTab[*as] == wlprm->ConvTab[*bs]) {
-		jxt->jx--; jxt->jy -= bbt;	// backward extension
-		if (bb) bb -= bbt;
+	while (--as >= ax && (bs -= bbt) >= bx) {
+	    if ((as < at || bs < bt) && 	// backward extension
+		wlprm->ConvTab[*as] != wlprm->ConvTab[*bs]) break;
+	    jxt->jx--; jxt->jy -= bbt;
+	    ++jxt->jlen;
+	    if (*as == *bs || (*as == SER && *bs == SER2)) ++jxt->nid;
+	    if (bb) bb -= bbt;
 	}
 	if (as < ax) bs -= bbt;
-	ax = a->at(a->right);
-	bx = b->at(b->right);
+	at = a->at(min(jxt->jx + jxt->jlen, a->right));
+	bt = b->at(min(jxt->jy + bbt * jxt->jlen, b->right));
+	ax = a->at(a->tlen);
+	bx = b->at(b->len);
 	if (bbt == 3) --bx;
 	jxt->jlen = jxt->nid = 0;
 	while (++as < ax && (bs += bbt) < bx) {
-	    if (as >= at && wlprm->ConvTab[*as] != wlprm->ConvTab[*bs])
-		break;				// forward extension
-	    jxt->jlen++;
+	    if ((as >= at || bs >= bt) && 	// forward extension
+		wlprm->ConvTab[*as] != wlprm->ConvTab[*bs]) break;
+	    ++jxt->jlen;
 	    scr += wlparams->sim2(as, bs);
-	    if (*as == *bs || (*as == SER && *bs == SER2)) jxt->nid++;
+	    if (*as == *bs || (*as == SER && *bs == SER2)) ++jxt->nid;
 	    if (bb) bb += bbt;
 	}
+	int	nmmc = std::min(jxt->jlen - jxt->nid, 3);
+	if (algmode.crs == 0 && bbt == 3 && nmmc)
+	    scr -= nmmc * wlprm->vthr;
 	if (as == az && bb && bb->sigT > 0) scr += wlprm->vthr / 2;
 	else {
-const	    int	rend = wlprm->tpl - a->tlen + jxt->jx + jxt->jlen;
-	    if (a->inex.exgr && rend > 0)
-		scr += wlparams->EndBonus * rend;
+const	    int	rend = wlprm->tpl - a->right + jxt->jx + jxt->jlen;
+	    if (rend > 0)
+		scr += wlparams->EndBonus * std::min(rend, int(wlprm->tpl));
 	}
 	return (scr);
 }
@@ -436,7 +412,7 @@ const		int	land = wxtd->mxscr - wlprm->cutoff;
 		if (land > wxtd->score || wxtd->score < 0) {
 		    if (land > 0) enter(wxtd, r);	// end of HSP
 		    wxtd->score = tplwt;
-		    if (m < wlprm->width)		// end bonus
+		    if (m < wlprm->width)	// end bonus
 			wxtd->score += wlprm->gain * (wlprm->width - m);
 		    wxtd->mxscr = wxtd->score;
 		    wxtd->maxj = wxtd->lastj = m;
@@ -444,10 +420,6 @@ const		int	land = wxtd->mxscr - wlprm->cutoff;
 	    } else if (m - wxtd->lastj == 1)
 		wxtd->score += wlprm->gain1;
 	    else	wxtd->score += wlprm->gain;
-	    if (!position[m]) {				// end bonus
-		r = m + wlprm->width + wlprm->width - mm;
-		if (r > 0) wxtd->score += wlprm->gain * r;
-	    }
 	    if (wxtd->score > wxtd->mxscr) {
 		wxtd->mxscr = wxtd->score;
 		wxtd->maxj = m;
@@ -458,12 +430,10 @@ const		int	land = wxtd->mxscr - wlprm->cutoff;
 
 void Wlp::dmsnno()
 {
-const	int	intvl = -wlprm->width - 1;
 const	INT	nn = b->right - b->left - awspan;
 const	CHAR*	bs = b->at(b->left);
 const	CHAR*	ts = b->at(b->left + awspan);
 	jxtd = new JXTD[mm];
-	JXTD	ixtd = {0, 0, intvl, 0, 0};
 
 	vset(jxtd, ixtd, mm);
 	while (bs < ts) {
@@ -480,23 +450,29 @@ const	    INT	c = wlprm->ConvTab[*bs++];
 	    } else bpp->flaw();
 const	    int	r = ++n - mm;
 	    JXTD*	wxtd = jxtd + n % mm;
-	    if (wxtd->mxscr > wlprm->cutoff) enter(wxtd, r);
+	    if (wxtd->mxscr > precutoff) {
+		int	d = wxtd->maxj + 2 * wlprm->width - mm;
+		if (d > 0) wxtd->mxscr += wlprm->gain * d;	// end bonus
+		if (wxtd->mxscr > wlprm->cutoff) enter(wxtd, r);
+	    }
 	    *wxtd = ixtd;
 	}
 	for (int r = nn - mm; r < (int) nn; ++r) {
 	    JXTD*	wxtd = jxtd + (r + mm) % mm;
-	    if (wxtd->mxscr > wlprm->cutoff) enter(wxtd, r);
+	    if (wxtd->mxscr > precutoff) {
+		int	d = wxtd->maxj + 2 * wlprm->width - mm;
+		if (d > 0) wxtd->mxscr += wlprm->gain * d;	// end bonus
+		if (wxtd->mxscr > wlprm->cutoff) enter(wxtd, r);
+	    }
 	}
 }
 
 void Wlp::dmsnno31()
 {
-const	int	intvl = -wlprm->width - 1;
 const	INT	nn = b->right - b->left - bwspan;
 const	CHAR*	bs = b->at(b->left);
 const	CHAR*	ts = b->at(b->left + bwspan) - 1;
 	jxtd = new JXTD[sect_l];
-	JXTD	ixtd = {0, 0, intvl, 0, 0};
 	INT	p = 0;
 
 	vset(jxtd, ixtd, sect_l);
@@ -515,12 +491,20 @@ const		INT	w = bpp->word(c, p);
 	    } else bpp->flaw(p);
 const	    int	r = ++n - sect_l;
 	    JXTD*	wxtd = jxtd + n % sect_l;
-	    if (wxtd->mxscr > wlprm->cutoff) enter(wxtd, r);
+	    if (wxtd->mxscr > precutoff) {
+		int	d = wxtd->maxj + 2 * wlprm->width - mm;
+		if (d > 0) wxtd->mxscr += wlprm->gain * d;	// end bonus
+		if (wxtd->mxscr > wlprm->cutoff) enter(wxtd, r);
+	    }
 	    *wxtd = ixtd;
 	}	// end of n-loop
 	for (int r = nn - sect_l; r < (int) nn; ++r) {
 	    JXTD*	wxtd = jxtd + (r + sect_l) % sect_l;
-	    if (wxtd->mxscr > wlprm->cutoff) enter(wxtd, r);
+	    if (wxtd->mxscr > precutoff) {
+		int	d = wxtd->maxj + 2 * wlprm->width - mm;
+		if (d > 0) wxtd->mxscr += wlprm->gain * d;	// end bonus
+		if (wxtd->mxscr > wlprm->cutoff) enter(wxtd, r);
+	    }
 	}
 }
 
@@ -611,7 +595,7 @@ int JxtQueue::push(JUXT* wjx)
 	return (kq);
 }
 
-/* quadratic sparse DP */
+// quadratic sparse DP
 
 WLUNIT* Wlp::jxtcore(int& num, JUXT** jxt)
 {
@@ -674,33 +658,30 @@ WLUNIT* Wlp::jxtcore(int& num, JUXT** jxt)
 	JUXT*	wjx = wbf.jxt;
 	while (qcl->sscr >= maxh) {
 	    for (ncl = qcl; qcl && qcl->sscr > 0; qcl = qcl->ulnk)
-		wjx++;		/* count */
-	    if (qcl) {		/* partial overlap */
+		wjx++;		// count
+	    if (qcl) {		// partial overlap
 		for (qcl = ncl; qcl && qcl->sscr > 0; qcl = qcl->ulnk)
 		    qcl->sscr = 0;
 		wjx = wbf.jxt;
 		goto nextchain;
 	    }
-	    wbf.num = wjx - wbf.jxt;	/* count legitimate segments */
+	    wbf.num = wjx - wbf.jxt;	// count legitimate segments
 	    wjx->jx = a->right;
 	    wjx->jy = b->right;
 	    wjx->jlen = 0;
+	    wjx->jscr = 0;
 	    wbf.scr = wbf.nid = wbf.tlen = 0;
 	    for (qcl = ncl; qcl; qcl = qcl->ulnk) {
-		--wjx;		/* traceback */
+		--wjx;		// traceback
 		wjx->jx = qcl->lx;
 		wjx->jy = qcl->ly;
 		wjx->jlen = qcl->len;
 		wjx->nid = qcl->nid;
 		wjx->jscr = qcl->jscr;
 		wbf.scr += qcl->jscr;
-		int	ovr = wjx->jx + wjx->jlen - wjx[1].jx;
-		if (ovr > 0)
-		    wbf.scr -= ovr * (wjx->jscr + wjx[1].jscr) 
-			/ (wjx->jlen + wjx[1].jlen);
 		wbf.nid += qcl->nid;
 		wbf.tlen += qcl->len;
-		qcl->sscr = 0;	/* erase once read */
+		qcl->sscr = 0;	// erase once read
 	    }
 	    wmfd.write(&wbf);
 	    wbf.jxt = wjx += wbf.num + 1;
@@ -827,7 +808,7 @@ WLUNIT* Wlp::willip(JUXT** ptop, int& nwlu, JUXT* jxt)
 	return (wlu);
 }
 
-Wilip::Wilip(const Seq* seqs[], const PwdB* pwd, const INT level)
+Wilip::Wilip(const Seq* seqs[], const PwdB* pwd, const int level)
 	: int_wlp(true)
 {
 	Wlp	wln(seqs, pwd, level);
