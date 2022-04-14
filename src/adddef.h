@@ -88,16 +88,28 @@ static	const	char	OPTCHAR = '-';
 #ifndef USE_ZLIB
 #define USE_ZLIB 1
 #endif
+
 #if USE_ZLIB
 #include <zlib.h>
 static	const	char	gz_ext[] = ".gz";
 #if ZLIB_VERNUM < 0x12c0
+
+extern	size_t	lgzread(gzFile gzfd, char* buf, size_t sz);
+extern	size_t	lgzwrite(gzFile gzfd, const char* buf, size_t sz);
+
 inline	size_t  fread(void* buf, size_t s, size_t c, gzFile gzfd) {
-	int	rv = gzread(gzfd, buf, s * c);
-	return (rv < 0? 0: rv / s);
+	size_t	sz = s * c;
+	size_t	rv = (sz > size_t(INT_MAX))?
+	    lgzread(gzfd, (char*) buf, sz):
+	    gzread(gzfd, buf, sz);
+	return (rv <= 0? rv: rv / s);
 }
-inline	size_t fwrite(const void* buf, size_t s, size_t c, gzFile gzfd) {
-	return (gzwrite(gzfd, buf, s * c) / s);
+inline	size_t	fwrite(const void* buf, size_t s, size_t c, gzFile gzfd) {
+	size_t	sz = s * c;
+	size_t	rv = (sz > size_t(INT_MAX))?
+	    lgzwrite(gzfd, (const char*) buf, sz):
+	    gzwrite(gzfd, buf, sz);
+	return (rv <= 0? rv: rv / s);
 }
 inline	int fputs(const char* buf, gzFile gzfd) {
 	return (gzputs(gzfd, buf));

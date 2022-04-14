@@ -211,6 +211,7 @@ const	char*	out_file;
 	INT	printweight:	1;	// output seq weights in MSA
 	INT	gzipped:	1;	// gzipped output for spaln
 	INT	debug:		1;	// print debug lines
+	INT	supTcodon:	1;	// don't show termination codon
 };
 
 extern	OUTPRM	OutPrm;
@@ -265,9 +266,9 @@ protected:
 	RANGE*	setrange(const char* pa, int* ncr = 0) const;
 template <typename file_t>
 	char*	readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd);
-	void	estimate_len(FILE* fd, const int& nos);
+	void	estimate_len(FILE* fd, const int& nos, const SeqDb* dbf = 0);
 #if USE_ZLIB
-	void	estimate_len(gzFile fd, const int& nos);
+	void	estimate_len(gzFile fd, const int& nos, const SeqDb* dbf = 0);
 #endif
 	void	header_nat_aln(const int& n, const FTYPE& sumwt);
 	CHAR*	seq_realloc();
@@ -558,7 +559,7 @@ const   char*   attrs[3] = {attr, attr2, 0};
 // infer input sequence format
 	SeqDb*  dbf = seq_NandL(nos, len, mode, str, fd, dm);
 	if (nos) {
-	    if (!len) estimate_len(fd, nos);
+	    if (!len) estimate_len(fd, nos, dbf);
 	    refresh(nos, len);
 	}
 	setSeqCode(this, dm);

@@ -1558,18 +1558,18 @@ CHAR* Seq::ToInferred(CHAR* src, CHAR* lastseq, const int& step)
 	return (dst);
 }
 
-void Seq::estimate_len(FILE* fd, const int& nos)
+void Seq::estimate_len(FILE* fd, const int& nos, const SeqDb* dbf)
 {
 	long	fpos = ftell(fd);
 	if (nos == 1) {		// FASTA single sequence
 	    char	str[MAXL];
 	    while (fgets(str, MAXL, fd)) {
 		if (*str == _NHEAD || *str == _CHEAD || *str == _EOS) {
-		    flush_line(fd);
+		    if ((strlen(str) + 1) == MAXL) flush_line(fd);
 		    break;
 		}
 		if (*str == _COMM || *str == _LCOMM || *str == _WGHT) {
-		    flush_line(fd);
+		    if ((strlen(str) + 1) == MAXL) flush_line(fd);
 		    continue;
 		}
 		len += strlen(str) - 1;
@@ -1583,30 +1583,26 @@ void Seq::estimate_len(FILE* fd, const int& nos)
 }
 
 #if USE_ZLIB
-void Seq::estimate_len(gzFile gzfd, const int& nos)
+void Seq::estimate_len(gzFile gzfd, const int& nos, const SeqDb* dbf)
 {
 	long	fpos = ftell(gzfd);
 	char	str[MAXL];
-	int	many = 1;
 	while (fgets(str, MAXL, gzfd)) {
-	    if (nos == 1 &&
-		(*str == _NHEAD || *str == _CHEAD || *str == _EOS)) {
-		    flush_line(gzfd);
-		    break;
-	    }
-	    if (*str == _NHEAD || *str == _CHEAD) {
-		flush_line(gzfd);
-		++many;
+	    if (*str == _NHEAD || *str == _CHEAD || *str == _EOS ||
+		*str == _COMM || *str == _LCOMM || *str == _WGHT) {
+		if ((strlen(str) + 1) == MAXL) flush_line(gzfd);
 		continue;
 	    }
-	    if (*str == _COMM || *str == _LCOMM || *str == _WGHT || *str == _EOS) {
-		flush_line(gzfd);
-		continue;
+	    if (nos == 1 || (dbf && dbf->FormID == FASTA)) {
+		len += strlen(str) - 1;
+	    } else {
+		Strlist	stl(str, stddelim);
+		if (stl.size() > 1) 
+		    len += strlen(stl[1]) - 1;
 	    }
-	    len += strlen(str) - 1;
 	}
 	area_ = len;
-	len /= many;
+	len /= nos;
 	fseek(gzfd, fpos, SEEK_SET);
 }
 #endif

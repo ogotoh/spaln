@@ -70,8 +70,11 @@ static	const	float	FQUERY = QUERY + 0.L;
 static	const	int	n_tabpath = 3;
 static	const	float	FSILENT = FQUERY + 1.L;
 static	const	float	FPOPUP = FQUERY + 2.L;
-static	const	char*	esc_code = "\x1b[";
-static	const	char*	font_end = "</font></b>";
+
+extern	const	char*	gnm2tab;
+extern	const	char*	bad_file;
+extern	const	char*	esc_code;
+extern	const	char*	font_end;
 
 enum CharColorCode {
 	CMC_BLACK = '0', CMC_RED, CMC_GREEN, CMC_YELLOW,
@@ -137,8 +140,8 @@ class Ftable {
 	char*	subdir;
 	Gnm2tab*	g2t;
 public:
-	Ftable() : subdir(0), g2t(0) {
-	    tabpath[0] = ".";
+	Ftable(const bool cur_dir = true) : subdir(0), g2t(0) {
+	    tabpath[0] = cur_dir? ".": 0;
 	    tabpath[1] = getenv(ALN_TAB);
 	    tabpath[2] = DEF_TAB_PATH;
 	}
@@ -191,6 +194,7 @@ extern	int	getiarray(int* array, int size, const char* ps);
 extern	size_t	file_size(FILE* fd);
 extern	FILE*	out_fd;
 extern	const	char*	gz_unsupport;
+extern	char*	add_ext(const char* fn, const char* ext, char* buf);
 
 inline	size_t	file_size(const char* fn) {
 	struct	stat buf;

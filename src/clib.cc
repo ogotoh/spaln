@@ -7,7 +7,7 @@
 *	ipower	lpower	
 *	next_wd	wordcmp
 *	isBlankLine   car	cdr
-*	chop	replace
+*	chop	replace	rm_end_spc
 *	fbisrch
 *	comb2	comb3	decomb
 *
@@ -194,6 +194,22 @@ int chop(char* ps)
 	return (c);
 }
 
+char* rm_end_spc(char* str)
+{
+	char*	ps = str;
+	char*	pd = str;
+	int	ns = 0;
+	while (*ps && isspace(*ps)) ++ps;
+	while (*ps) {
+	    if (isspace(*ps)) ++ns;
+	    else ns = 0;
+	    *pd++ = *ps++;
+	}
+	pd -= ns;
+	*pd = '\0';
+	return (str);
+}
+
 char* next_wd(char** sp)
 {
 	char c;
@@ -319,39 +335,28 @@ double ktof(const char* str)
 }
 
 Strlist::Strlist(int m, int len) 
-	: totallen(0), lastlen(0), maxlen(0), many(0), filled(false)
 {
-	if (m == 0) {
-	    sunitsize = 0; strbuf = 0;
-	} else {
+	if (m > 0) {
 	    sunitsize = (len + defsunit - 1) / defsunit * defsunit;
 	    strbuf = new char[sunitsize];
 	    *strbuf = '\0'; 
-	}
-	if (m > 1) {
-	    punitsize = (m + defpunit - 1) / defpunit * defpunit;
+	    punitsize = (m < defpunit)? m: 
+		(m + defpunit - 1) / defpunit * defpunit;
 	    idxlst = new INT[punitsize];
 	    *idxlst = 0;
-	} else {
-	    punitsize = 0; idxlst = 0;
 	}
 }
 
-void Strlist::reset(int m)
+Strlist::Strlist(const Strlist& src)
 {
-	if (m > 1 && (INT) m > punitsize) {
-	    punitsize = (m + defpunit - 1) / defpunit * defpunit;
-	    delete[] idxlst;
-	    idxlst = new INT[punitsize];
-	    *idxlst = 0;
-	}
-	*strbuf = '\0';
-	many = totallen = lastlen = maxlen = 0;
-	filled = false;
+	*this = src;
+	strbuf = new char[src.totallen];
+	idxlst = new INT[src.many];
+	vcopy(strbuf, src.strbuf, totallen);
+	vcopy(idxlst, src.idxlst, many);
 }
 
-Strlist::Strlist(const char* str)
-	: idxlst(0), punitsize(0), many(1), filled(true)
+Strlist::Strlist(const char* str) : many(1), filled(true)
 {
 	totallen = lastlen = maxlen = strlen(str) + 1;
 	sunitsize = (totallen + defsunit - 1) / defsunit * defsunit;
@@ -360,37 +365,36 @@ Strlist::Strlist(const char* str)
 }
 
 Strlist::Strlist(const char* str, const char* indelim)
-	: lastlen(0), maxlen(0), many(0)
 {
-	char*	delim = new char[strlen(indelim) + 1];
-	bool	spc = false;	// space is a delim
-	char*	pd = delim;
-	for (const char* ps = indelim; *ps; ++ps) {
-	    if (isspace(*ps)) spc = true;
-	    else	*pd++ = *ps;
-	}
-	*pd = '\0';
+const	char*	delim = (indelim && *indelim)? indelim: stddelim;
+	bool	spc = false;		// space is a delim
+	for (const char* ps = delim; *ps; ++ps)
+	    if (*ps == ' ') spc = true;
+const	char	dchar = *delim;
 
-const	char	dchar = *delim? *delim: ' ';
 	totallen = sunitsize = strlen(str) + 2;
 	char*	pb = strbuf = new char[totallen];
 	int	state = 1;		// isspc = 2, isdlm = 1
 	for (const char* ps = str; *ps; ++ps) {
-	    if (spc && isspace(*ps)) {
-		if (!state) *pb++ = dchar;
-		state = 2;
-	    } else if (strchr(delim, *ps)) {
-		if (state == 2) --pb;	// cancel previous space
-		*pb++ = dchar;
-		state = 1;
-	    } else {
+	    if (!strchr(delim, *ps)) {	// not delim
 		*pb++ = *ps;
-		if (state) ++many;
 		state = 0;
+	    } else if (spc) {		// pack continuous delims
+		if (!state) {
+		    *pb++ = dchar;
+		    ++many;
+		}
+		state = 2;
+	    } else {			// individual delims
+		*pb++ = dchar;
+		++many;
+		state = 1;
 	    }
 	}
-	if (state == 2) --pb;		// cancel tailing space
-	*pb++ = dchar;
+	if (state == 0) {
+	    *pb++ = dchar;
+	    ++many;
+	}
 	*pb = '\0';
 
 	punitsize = (many + defpunit - 1) / defpunit * defpunit;
@@ -407,7 +411,57 @@ const	char	dchar = *delim? *delim: ' ';
 	    } else	++ps;
 	}
 	filled = true;
-	delete[] delim;
+}
+
+Strlist::Strlist(FILE* fd)
+{
+	if (fread(this, sizeof(Strlist), 1, fd) != 1)
+	    fatal(fread_error, "Strlist");
+	strbuf = new char[totallen];
+	idxlst = new INT[many];
+	if (fread(strbuf, sizeof(char), totallen, fd) != totallen)
+	    fatal(fread_error, "Strlist");
+	if (fread(idxlst, sizeof(int), many, fd) != many)
+	    fatal(fread_error, "Strlist");
+}
+
+Strlist::Strlist(FILE* fd, int m) : many(m)
+{
+	fseek(fd, 0L, SEEK_END);
+	totallen = ftell(fd);
+	sunitsize = (totallen + defsunit - 1) / defsunit * defsunit;
+	strbuf = new char[sunitsize];
+	fseek(fd, 0L, SEEK_SET);
+	if (fread(strbuf, sizeof(char), totallen, fd) != (INT) totallen)
+	    fatal(fread_error, "Strlist");
+	format();
+}
+
+#if USE_ZLIB
+Strlist::Strlist(gzFile gzfd, int m) : many(m)
+{
+	int	c;
+	while ((c = gzgetc(gzfd)) != EOF) ++totallen;
+	sunitsize = (totallen + defsunit - 1) / defsunit * defsunit;
+	strbuf = new char[sunitsize];
+	fseek(gzfd, 0L, SEEK_SET);
+	if (fread(strbuf, sizeof(char), totallen, gzfd) <= 0)
+	    fatal("Strlist file may be corupped !\n");
+	format();
+}
+#endif
+
+void Strlist::reset(int m)
+{
+	if (m > 1 && (INT) m > punitsize) {
+	    punitsize = (m + defpunit - 1) / defpunit * defpunit;
+	    delete[] idxlst;
+	    idxlst = new INT[punitsize];
+	    *idxlst = 0;
+	}
+	*strbuf = '\0';
+	many = totallen = lastlen = maxlen = 0;
+	filled = false;
 }
 
 void Strlist::format()
@@ -433,34 +487,6 @@ void Strlist::format()
 	filled = true;
 }
 
-Strlist::Strlist(FILE* fd, int m) 
-	: lastlen(0), maxlen(0), many(m)
-{
-	fseek(fd, 0L, SEEK_END);
-	totallen = ftell(fd);
-	sunitsize = (totallen + defsunit - 1) / defsunit * defsunit;
-	strbuf = new char[sunitsize];
-	fseek(fd, 0L, SEEK_SET);
-	if (fread(strbuf, sizeof(char), totallen, fd) != (INT) totallen)
-	    fatal("Strlist file may be corupped !\n");
-	format();
-}
-
-#if USE_ZLIB
-Strlist::Strlist(gzFile gzfd, int m) 
-	: totallen(0), lastlen(0), maxlen(0), many(m)
-{
-	int	c;
-	while ((c = gzgetc(gzfd)) != EOF) ++totallen;
-	sunitsize = (totallen + defsunit - 1) / defsunit * defsunit;
-	strbuf = new char[sunitsize];
-	fseek(gzfd, 0L, SEEK_SET);
-	if (fread(strbuf, sizeof(char), totallen, gzfd) <= 0)
-	    fatal("Strlist file may be corupped !\n");
-	format();
-}
-#endif
-
 char* Strlist::assign(const Strlist& src)
 {
 	if (sunitsize < src.sunitsize) {
@@ -481,15 +507,6 @@ char* Strlist::assign(const Strlist& src)
 	many = src.many;
 	if (src.idxlst) vcopy(idxlst, src.idxlst, many);
 	return (strbuf);
-}
-
-Strlist::Strlist(Strlist& src)
-{
-	*this = src;
-	strbuf = new char[sunitsize];
-	memcpy(strbuf, src.strbuf, totallen);
-	idxlst = punitsize? new INT[punitsize]: 0;
-	if (src.idxlst) vcopy(idxlst, src.idxlst, many);
 }
 
 char* Strlist::assign(const char* str)
@@ -537,6 +554,58 @@ char* Strlist::push(const char* str)
 	delete[] word;
 	totallen = sumlen;
 	return (rv);
+}
+
+void Strlist::write_binary(FILE* fd)
+{
+	if (fwrite(this, sizeof(Strlist), 1, fd) != 1)
+	    fatal(fwrite_error, "Strlist");
+	if (fwrite(strbuf, sizeof(char), totallen, fd) != totallen)
+	    fatal(fwrite_error, "Strlist");
+	if (fwrite(idxlst, sizeof(int), many, fd) != many)
+	    fatal(fwrite_error, "Strlist");
+}
+
+AddExt::AddExt(int argc, const char** argv, const char* ext) 
+	: argv_(argv), arg_ext(0)
+{
+	int     tl = strlen(argv[0]);
+	int     woext = 0;
+	for (int i = 1; i < argc; ++i) {
+	    if (argv[i][0] == OPTCHAR) tl += strlen(argv[i]);
+	    else {
+		const char* dot = strrchr(argv[i], '.');
+		if (!dot) {
+		    tl += strlen(argv[i]) + 4;
+		    ++woext;
+		} else if (strcmp(dot, ext)) {
+		    tl += dot - argv[i] + 4;
+		    ++woext;
+		} else      tl += strlen(argv[i]);
+	    }
+	}
+	if (!woext) return;
+	arg_ext = new char*[argc + 1];
+	char*   ps = new char[tl + argc];
+	arg_ext[0] = strcpy(ps, argv[0]);
+	for (int i = 1; i < argc; ++i) {
+	    ps += strlen(ps) + 1;
+	    if (argv[i][0] == OPTCHAR) {
+		arg_ext[i] = strcpy(ps, argv[i]);
+	    } else {
+		const char* dot = strrchr(argv[i], '.');
+		if (!dot) {
+		    arg_ext[i] = strcpy(ps, argv[i]);
+		    strcat(ps, ext);
+		} else if (strcmp(dot, ext)) {
+		    arg_ext[i] = strncpy(ps, argv[i], dot - argv[i]);
+		    strcat(ps, ext);
+		} else {    
+		    arg_ext[i] = strcpy(ps, argv[i]);
+		}
+	    }
+	}
+	arg_ext[argc] = 0;
 }
 
 //      distribute into bins

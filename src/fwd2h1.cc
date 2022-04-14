@@ -624,7 +624,7 @@ const	Seq*	b = seqs[1];
 	SKL*	wsk = gsi->skl;
 	int	num = (wsk++)->n;
 	SpJunc*	spjcs = new SpJunc(b, pwd);
-	VTYPE	h = 0;		// 
+	VTYPE	h = 0;
 	VTYPE	hi = NEVSEL;		// intron-containing path
 	VTYPE	ha = 0;
 	VTYPE	hb = 0;
@@ -639,11 +639,12 @@ const	Seq*	b = seqs[1];
 	int	preint = 0;
 	int	phs = 0;
 	int	nb = 0;
+	int	psp = 0;		// post splicing position
 	int	maxexon = IntronPrm.rlmt;
 	EISCR	rbuf;
 	FSTAT*	fst = &gsi->fstat;
 	FSTAT	pst;
-	Eijnc*	eijnc = gsi->eijnc = new Eijnc();
+	Eijnc*	eijnc = gsi->eijnc = new Eijnc(true);
 	Cigar*	cigar = gsi->cigar = 0;
 	Vulgar*	vlgar = gsi->vlgar = 0;
 	switch (algmode.nsa) {
@@ -655,20 +656,22 @@ const	Seq*	b = seqs[1];
 	vclear(&pst);
 	vclear(&rbuf);
 	gsi->noeij = 0;
-const	CHAR*	cs = b->at(wsk[num - 1].n - 2);
-	int	termcodon = (*cs == TRM || *cs == TRM2);
-	cs = 0;
-	if (termcodon) wsk[num-1].n -= 3;
+	int	termcodon = 0;
+	if (OutPrm.supTcodon) {
+const	    CHAR*	cs = b->at(wsk[num - 1].n - 2);
+	    termcodon = (*cs == TRM || *cs == TRM2);
+	    if (termcodon) wsk[num-1].n -= 3;
+	}
 	if (wsk[1].n == wsk->n && b->inex.exgl) {++wsk; --num;}
 	int	m = wsk->m;
 	int	n = wsk->n;
 const	CHAR*	as = a->at(m);
 const	CHAR*	bs = b->at(n);
+const	CHAR*	cs = 0;
 const	EXIN*	bb = b->exin->score(n);
 const	EXIN*	bb_last = b->exin->score(b->right);
 	PfqItr	api(a, m);
-	int	api_size = api.size();
-	bool	usespb = api_size && use_spb();
+const	bool	usespb = api.size() && use_spb();
 	if ((algmode.lcl & (16 + 1)) && bb[1].sigS > h)	h = bb[1].sigS;
 	if ((algmode.lcl & (16 + 4)) && bb->sig3 > h)	h = bb->sig3;
 	rbuf.left = n;
@@ -713,14 +716,18 @@ const	EXIN*	bb_last = b->exin->score(b->right);
 		}
 		hi = NEVSEL;
 		if (insert) {				// post-intron gap
-		    if (term && IsTerm(bs[insert - 1])) insert -= 3;
+		    if (term && IsTerm(bs[-1])) insert -= 3;
 		    if (cigar) cigar->push('D', insert);
 		    phs = insert % 3;
 		    insert -= phs;
 		    if (!((a->inex.exgl && m == a->left) ||
 			  (a->inex.exgr && m == a->right))) 
 			    fst->gap += gop;
-		    fst->unp += insert;
+		    for (int j = 0; j < insert; j += 3, psp += 3) {
+			if (eijnc) eijnc->shift(rbuf, *fst, 
+			    psp / 3 == alprm2.jneibr);
+			fst->unp += 3;
+		    }
 		    if (phs) {	// insertion frame shift
 			rbuf.right = n - phs;
 			rbuf.rright = m;
@@ -743,7 +750,6 @@ const	EXIN*	bb_last = b->exin->score(b->right);
 		if (!(b->inex.exgl && n == b->left)) {
 		    h += pwd->GapPenalty3(deletn);
 		    fst->gap += 1;
-		    fst->unp += deletn;
 		}
 		as += deletn / 3;
 		if ((phs = deletn % 3)) {	// deletion frame shift
@@ -773,7 +779,9 @@ const	EXIN*	bb_last = b->exin->score(b->right);
 		if (vlgar) vlgar->push('M', d / 3, d);
 		n += d;
 		m += d / 3;
-		for ( ; d > 2; d -= 3, ++as, bs += 3, bb += 3) {
+		for ( ; d > 2; d -= 3, ++as, bs += 3, bb += 3, psp += 3) {
+		    if (eijnc) eijnc->shift(rbuf, *fst, 
+			psp / 3 == alprm2.jneibr);
 const		    CHAR*	gs = (cs? cs: bs) + 1;
 		    hvl = pwd->sim2(as, gs);
 		    fst->val += hvl;
@@ -788,6 +796,11 @@ const		    CHAR*	gs = (cs? cs: bs) + 1;
 		cs = 0;
 		deletn += i;
 		if (cigar) cigar->push('I', i);
+		for (int j = 0; j < i; j += 3, psp += 3) {
+		    if (eijnc) eijnc->shift(rbuf, *fst, 
+			psp / 3 == alprm2.jneibr);
+		    fst->unp += 3;
+		}
 	    } else if (i < 0) {
 const		EXIN*	b3 = bb + (i = -i);
 		if (hi <= NEVSEL && i >= IntronPrm.minl && wsk->n < b->right) {	// intron?
@@ -849,11 +862,11 @@ const		    CHAR*	cm = 0;
 			rbuf.escr = h + pwd->GapPenalty3(insert);
 			ha = rbuf.escr + xi - sig3;
 			rbuf.escr += sig5 - hb;
-			rbuf.mch = (int) (fst->mch - pst.mch);
-			rbuf.mmc = (int) (fst->mmc - pst.mmc);
-			rbuf.gap = (int) (fst->gap - pst.gap);
-			rbuf.unp = (int) (fst->unp - pst.unp) / 3;
-			pst = *fst;
+			if (eijnc) {
+			    eijnc->store(rbuf, *fst, pst, psp < alprm2.jneibr);
+			    pst = *fst;
+			    psp = 0;
+			}
 		    }
 		} else	++gop;
 		if (i < maxexon) h += SumCodePot(bb, i, 0, pwd);
@@ -882,10 +895,7 @@ const		    CHAR*	cm = 0;
 	    rbuf.sig5 = sig5;
 	    rbuf.right = n;
 	    rbuf.rright = m;
-	    rbuf.mch = (int) (fst->mch - pst.mch);
-	    rbuf.mmc = (int) (fst->mmc - pst.mmc);
-	    rbuf.gap = (int) (fst->gap - pst.gap);
-	    rbuf.unp = (int) (fst->unp - pst.unp) / 3;
+	    eijnc->store(rbuf, *fst, pst, n - rbuf.left <= alprm2.jneibr);
 	    eijnc->push(&rbuf);
 	    rbuf.left = endrng.left;
 	    rbuf.right = endrng.right;

@@ -44,8 +44,11 @@ const	char*	not_found = "\'%s\' is not found!\n";
 const	char*	read_error = "\'%s\' read error!\n";
 const	char*	write_error = "\'%s\' write error!\n";
 const	char*	gz_unsupport = "compressed %s is not supported!\n";
+const	char*	bad_file = "Bad binary file : %s !\n";
+const	char*	gnm2tab = "gnm2tab";
+const	char*	esc_code = "\x1b[";
+const	char*	font_end = "</font></b>";
 
-static	const	char*	gnm2tab = "gnm2tab";
 static  const   char*   font_tag[3] = {
 	"<b><font color=\"%s\">",
 	"<b><font style=\"background-color:%s\">",
@@ -60,7 +63,7 @@ static	int	raw_scn(char* str, char* format, va_list args);
 static	void	display(const char* s, va_list args);
 
 #if LEAKTRACE
-LeakTrace	leak_trace;
+//leaktracer::LeakTrace	leak_trace;
 #endif
 
 char* fgets_wocr(char* str, INT maxl, FILE* fd)
@@ -172,6 +175,19 @@ size_t file_size(FILE* fd)
 	size_t	fs = ftell(fd);
 	fseek(fd, fpos, SEEK_SET);
 	return (fs);
+}
+
+// sizeof(buf) must be larger than strlen(fn) + strlen(ext)
+
+char* add_ext(const char* fn, const char* ext, char* buf)
+{
+	strcpy(buf, fn);
+	if (!ext || !*ext) return (buf);
+	if (*ext == '.') ++ext;
+	char*	dot = strrchr(buf, '.');
+	if (dot && !strcmp(dot + 1, ext)) return (buf);
+	if (!dot || strlen(dot) > 1) strcat(buf, ".");
+	return (strcat(buf, ext));
 }
 
 FILE* fopenpbe(const char* path, const char* name, 
@@ -864,6 +880,34 @@ const 	char*	pt = path? path: "";
 	    fprintf(stderr, "%s: cannot be open!\n", str);
 	if (lvl > 0) exit (lvl);
 	return (0);
+}
+
+size_t lgzread(gzFile gzfd, char* buf, size_t sz)
+{
+	char*	tq = buf + sz;
+	for (char* sq = buf; sq < tq; sq += INT_MAX) {
+const	    int	n = std::min(long(INT_MAX), tq - sq);
+	    int	actural_read = gzread(gzfd, sq, n);
+	    if (actural_read <= 0) {
+		int	z_errnum = 0;
+		fatal("gz_read_error %s!\n", gzerror(gzfd, &z_errnum));
+	    }
+	}
+	return (sz);
+}
+
+size_t lgzwrite(gzFile gzfd, const char* buf, size_t sz)
+{
+const	char*	tq = buf + sz;
+	for (const char* sq = buf; sq < tq; sq += INT_MAX) {
+const	    int	n = std::min(long(INT_MAX), tq - sq);
+	    int	actural_write = gzwrite(gzfd, sq, n);
+	    if (actural_write <= 0) {
+		int	z_errnum = 0;
+		fatal("gz_write_error %s!\n", gzerror(gzfd, &z_errnum));
+	    }
+	}
+	return (sz);
 }
 
 #endif

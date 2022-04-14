@@ -624,8 +624,8 @@ static 	const	char	openmsg[] =
 		    pseq = strrealloc(0, str);
 		    dbsseq = new CHAR[rss];
 		    if (!dbsseq) fatal(no_space);
-		    if (gzread(gzfd, dbsseq, rss) <= 0)
-			fatal("fail to read %s!\n", str);
+		    if (fread(dbsseq, sizeof(CHAR), rss, gzfd) <= 0)
+			fatal("Fail to read .seq.gz file !\n");
 		    fclose(gzfd);
 #else
 		    continue;

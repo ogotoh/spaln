@@ -1224,12 +1224,12 @@ void Vulgar::postproc()
 	}
 }
 
-Eijnc::Eijnc(bool que)
+Eijnc::Eijnc(bool que) : qsize(que? alprm2.jneibr: 0)
 {
 	emfd = new Mfile(sizeof(EISCR));
 	if (que) {
-	    fstque = new FSTAT[alprm2.jneibr];
-	    vclear(fstque, alprm2.jneibr);
+	    fstque = new FSTAT[qsize];
+	    vclear(fstque, qsize);
 	}
 }
 
@@ -1249,18 +1249,16 @@ void Eijnc::store(EISCR& rbuf, FSTAT& now, FSTAT& prv, bool nearjnc)
 	rbuf.mmc3 = (int) (now.mmc - fstque[q].mmc);
 	rbuf.unp3 = (int) (now.unp - fstque[q].unp);
 	rbuf.gap3 = (int) (now.gap - fstque[q].gap);
-	vclear(fstque, alprm2.jneibr);
-	q = 0;
 }
 
-void Eijnc::shift(EISCR& rbuf, FSTAT& now, FSTAT& prv, bool nearjnc)
+void Eijnc::shift(EISCR& rbuf, FSTAT& now, bool nearjnc)
 {
 	if (nearjnc) {
-	    rbuf.mch5 = (int) (now.mch - prv.mch);
-	    rbuf.mmc5 = (int) (now.mmc - prv.mmc);
-	    rbuf.unp5 = (int) (now.unp - prv.unp);
-	    rbuf.gap5 = (int) (now.gap - prv.gap);
+	    rbuf.mch5 = (int) (now.mch - fstque[q].mch);
+	    rbuf.mmc5 = (int) (now.mmc - fstque[q].mmc);
+	    rbuf.unp5 = (int) (now.unp - fstque[q].unp);
+	    rbuf.gap5 = (int) (now.gap - fstque[q].gap);
 	}
 	fstque[q] = now;
-	if (++q == alprm2.jneibr) q = 0;
+	if (++q == qsize) q = 0;
 }

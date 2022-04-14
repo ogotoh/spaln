@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.7
-#### Last updated: 2022-01-28
+#### Present Version 2.4.8
+#### Last updated: 2022-04-14
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -221,6 +221,7 @@ or more comment lines starting with ';C', such as
      * -pq:	Suppress warning messages sent to *stderr*.
      * -pw:	Report result even if alignment score is below threshold value.
      * -px:	Suppress self-comparisons in the execution mode (C) or (D).
+     * -pT:	Exclude termination codon from output (include).
      * -u *N*:	Gap-extension penalty (3, 2, 2)
      * -v *N*:	Gap-opening penalty (8, 6, 9)
      * -xB *S*: 	Bit pattern of seeds used for HSP search at level 1
@@ -309,6 +310,11 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.8
+1. By default, termination codon is included in the output of any form with a protein query. Use -pT option to get the previous forms (without termination codon) of outputs.
+2. Enable to read long (>= 2**31B) gzipped files by *spaln* and *sortgrcd*.
+3. Fix a bug at the format time with -g option.
+
 ## Changes in version 2.4.7
 1. The lower limit of query length has been halved, which improved mappability of short queries.
 2. A serious bug for DNA queries with -LS option has been fixed.

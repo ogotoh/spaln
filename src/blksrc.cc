@@ -256,7 +256,6 @@ int MakeDbs::write_recrd(file_t fd, int c)
 #else
 	    rec.seqptr = ftell(fseq);
 #endif
-	    rec.seqptr = ftell(fseq);
 	    char*	ps = entrystr;
 	    char*	pe = ps;
 	    char*	pb = ps;
@@ -1092,7 +1091,7 @@ void MakeBlk::scan_genome(file_t fd, INT* tc)
 	    mkdbs->stamp21();
 	    mkdbs->mkidx();
 	}
-	fclose(fd);
+	if (fd) fclose(fd);
 }
 
 void MakeBlk::idxblk(int argc, const char** argv)

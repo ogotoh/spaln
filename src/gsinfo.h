@@ -340,6 +340,7 @@ class Eijnc {
 	int	num = 0;
 	Mfile*	emfd = 0;
 	EISCR*	rec = 0;
+const	int	qsize = 0;
 	FSTAT*	fstque = 0;
 	int	q = 0;
 public:
@@ -358,7 +359,7 @@ public:
 	int	refleft() const {return rec? rec->rleft: 0;}
 	int	refright() const {return rec? rec[num - 2].rright: 0;}
 	void	store(EISCR& rbuf, FSTAT& now, FSTAT& prv, bool nearjnc);
-	void	shift(EISCR& rbuf, FSTAT& now, FSTAT& prv, bool nearjnc);
+	void	shift(EISCR& rbuf, FSTAT& now, bool nearjnc);
 	void	unshift() {if (q) --q; else q = alprm2.jneibr - 1;}
 };
 

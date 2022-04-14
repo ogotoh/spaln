@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.7";
-static	const	int	date = 220128;
+static	const	char*	version = "2.4.8";
+static	const	int	date = 220414;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -199,7 +199,8 @@ static void usage(const char* messg)
 	fputs("\t-o$\tFile/directory/prefix where results are written (stdout)\n", stderr);
 	fputs("\t-pa#\tRemove 3' poly A >= # (0: don't remove)\n", stderr);
 	fputs("\t-pw\tReport results even if the score is below the threshold\n", stderr);
-	fputs("\t-pq\tQuiet mode\n", stderr);
+	fputs("\t-pT\tExclude termination codon from CDS\n", stderr);
+	fputs("\t-r$\tReport information about block data file\n", stderr);
 	fputs("\t-r$\tReport information about block data file\n", stderr);
 	fputs("\t-u#\tGap-extension penalty (3)\n", stderr);
 	fputs("\t-v#\tGap-open penalty (8)\n", stderr);
@@ -405,6 +406,7 @@ const	char**	argbs = argv;
 			case 'x': OutPrm.supself = (val[1] == '2')? 2: 1; break;
 			case 'J': case 'm': case 'u': case 'v': 
 			    setexprm_z(argc, argv); break;
+			case 'T': OutPrm.supTcodon = 1; break;
 			default: break;
 		    }
 		    break;
@@ -453,7 +455,7 @@ const	char**	argbs = argv;
 #endif
 		case 'T':
 		    if ((val = getarg(argc, argv)))
-			ftable.setpath(val, GNM2TAB);
+			ftable.setpath(val, gnm2tab);
 		    readargs();
 		    break;
 		case 'u': case 'v': case 'w': 

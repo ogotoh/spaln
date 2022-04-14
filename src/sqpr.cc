@@ -52,8 +52,8 @@ static	int	SeqGCGCheckSum(const char* seq, int len);
 static	int	checksum(int* checks, const GAPS* gaps, const Seq* sd);
 static	void	gcg_out(const GAPS** gaps, Seq* seqs[], int seqnum, FILE* fd);
 
-		//lpw blk Nout Ncolony eij ovl fnm rm trim lg lbl dsc odr spj olr color self
-OUTPRM	OutPrm = {60, 0, MAX_COLONY, 1, 4, 10, 5, 0, 1, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0};
+		//lpw blk Nout Ncolony eij ovl fnm rm trim lg lbl dsc odr spj olr color self term
+OUTPRM	OutPrm = {60, 0, MAX_COLONY, 1, 4, 10, 5, 0, 1, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0};
 static	char	ditto = _IBID;
 static	Row_Mode	prmode = Row_Last;
 static	int	prtrc = TRON;
@@ -827,6 +827,7 @@ void Gsinfo::ExonForm(const Seq* gene, const Seq* qry, int mode) const
 	if (gene->exin && gene->exin->fact) scale *= gene->exin->fact;
 	float	fscr = scr / alprm.scale;
 	VTYPE	iscr = 0;
+const	int	bbt = qry->isprotein()? 3: 1;
 const 	EISCR*	fst = eijnc->begin();
 const 	EISCR*	wkr = fst;
 const 	EISCR*	prv = wkr;
@@ -894,7 +895,7 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 	}
 	while (neoeij(wkr)) {
 	    if (wkr->iscr > NEVSEL) {	// normal
-		if (qry->isdrna() && gr.nexn) {
+		if (gr.nexn) {
 		    gr.bmmc += prv->mmc3 + wkr->mmc5;
 		    gr.bunp += prv->unp3 + wkr->unp5;
 		}
@@ -912,7 +913,8 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		er.Gleft  = gene->SiteNo(skp->left);
 		er.Gright = gene->SiteNo(wkr->right - 1);
 		er.Bmmc   = prv->mmc3 + wkr->mmc5;
-		er.Bunp   = prv->unp3 + wkr->unp5;
+		if (prv->unp3 % bbt || wkr->unp5 % bbt) er.Bunp = 9;
+		else	er.Bunp = (prv->unp3 + wkr->unp5) / bbt;
 		er.Escore = (float) wkr->escr / scale;
 		er.Iscore = (float) iscr / scale;
 		er.Sig3   = (float) wkr->sig3 / scale;
@@ -951,7 +953,7 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		er.miss = wkr->left - skp->right;
 	    }
 	}
-	if (qry->isprotein()) cds /= 3;
+	cds /= bbt;
 	er.Ilen = qry->right - qry->left;
 	gr.Gstart = gene->SiteNo(fst->left);
 	gr.Gend   = gene->SiteNo(prv->right - 1);

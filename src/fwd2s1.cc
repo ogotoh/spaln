@@ -455,6 +455,7 @@ const	SKL*	wsk = gsi->skl;
 	EISCR	rbuf;
 	FSTAT*	fst = &gsi->fstat;
 	FSTAT	pst;
+	int	psp = 0;		// post splicing position
 	Eijnc*	eijnc = gsi->eijnc = new Eijnc(true);
 	Cigar*	cigar = gsi->cigar = 0;
 	Vulgar*	vlgar = gsi->vlgar = 0;
@@ -534,7 +535,6 @@ const	    int	ni = wsk->n - n;
 		if (!(b->inex.exgl && n == b->left)) {
 		    h += pwd->GapPenalty(deletn);
 		    fst->gap += 1;
-		    fst->unp += deletn;
 		}
 		as += deletn;
 		deletn = 0;
@@ -551,15 +551,17 @@ const	    int	ni = wsk->n - n;
 		VTYPE	x = 0;
 #if CigarM
 		for ( ; d; --d, ++as, ++bs, ++n) {
+		    if (eijnc) eijnc->shift(rbuf, *fst, 
+			++pst == alprm2.jneibr);
 		    x += pwd->sim2(as, bs);
 		    if (*as == *bs) ++fst->mch;
 		    else ++fst->mmc;
-		    if (eijnc) eijnc->shift(rbuf, *fst, pst,
-			n - rbuf.left == alprm2.jneibr);
 		}
 #else
 		int	run = 0;
 		for ( ; d; --d, ++as, ++bs, ++n) {
+		  if (eijnc) eijnc->shift(rbuf, *fst, 
+		    psp++ == alprm2.jneibr);
 		  x += pwd->sim2(as, bs);
 		  if (*as == *bs) {
 		    if (run < 0) {
@@ -576,8 +578,6 @@ const	    int	ni = wsk->n - n;
 		    ++fst->mmc;
 		    --run;
 		  }
-		  if (eijnc) eijnc->shift(rbuf, *fst, pst,
-		    n - rbuf.left == alprm2.jneibr);
 		  if (samfm) {
 		    if (run > 0) samfm->push('=', run); else
 		    if (run < 0) samfm->push('X', -run);
@@ -592,6 +592,11 @@ const	    int	ni = wsk->n - n;
 		if (cigar) cigar->push('I', i);
 		if (samfm) samfm->push('I', i);
 		if (vlgar) vlgar->push('G', i, 0);
+		for (int j = 0; j < i; ++j) {
+		    if (eijnc)
+			eijnc->shift(rbuf, *fst, psp++ == alprm2.jneibr);
+		    ++fst->unp;
+		}
 	    } else if (i < 0) {
 const		int	n3 = n + (i = -i);
 		if (algmode.lsg && i > IntronPrm.minl) {
@@ -611,15 +616,16 @@ const		int	n3 = n + (i = -i);
 		    ha = h + xi - sig3;
 		    if (eijnc) {
 			eijnc->store(rbuf, *fst, pst,
-			n - rbuf.left < alprm2.jneibr);
+			psp < alprm2.jneibr);
 			pst = *fst;
+			psp = 0;
 		    }
 		} else if (!a->inex.exgl || m != a->left) {
 		    if (!insert) fst->gap += 1;
 		    for (int j = 0; j < i; ++j, ++n) {
+			if (eijnc) eijnc->shift(rbuf, *fst, 
+			    psp++ == alprm2.jneibr);
 		    	++fst->unp;
-			if (eijnc) eijnc->shift(rbuf, *fst, pst,
-			    n - rbuf.left == alprm2.jneibr);
 		    }
 		}
 		bs += i;
@@ -651,7 +657,6 @@ const		int	n3 = n + (i = -i);
 	    rbuf.sig5 = 0;
 	    rbuf.right = n;
 	    rbuf.rright = m;
-	    eijnc->unshift();
 	    eijnc->store(rbuf, *fst, pst, n - rbuf.left <= alprm2.jneibr);
 	    eijnc->push(&rbuf);
 	    rbuf.left = endrng.left;
