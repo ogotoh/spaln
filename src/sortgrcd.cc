@@ -67,11 +67,12 @@ static	bool	reverse = false;
 
 static void usage()
 {
-	fputs("sortgrcd version 2.2: read binary grds and erds and sort them\n", stderr);
+	fputs("sortgrcd version 2.2.1: read binary .?rds and sort them\n", stderr);
 	fputs("\tin the order of chromosomal location in each direction\n", stderr);
 	fputs("Usage: sortgrcd [options] *.grd\n", stderr);
 	fputs("Note: version 2 supports outputs from spaln 2.1.0 or later\n", stderr);
 	fputs("Note: version 2.1 supports -O3, 6, 7, and 8 options\n", stderr);
+	fputs("Note: version 2.2 supports gzipped inputs\n", stderr);
 	fputs("Options:\n", stderr);
 	fputs("\t-CN:\tMinimum % of coverage (0-100)\n", stderr);
 	fputs("\t-EN:\tReport only the best (N=1) or all (N=2) results per gene locus (1)\n", stderr);
@@ -84,16 +85,17 @@ static void usage()
 	fputs("\t-ON:\tOutput format. 0:Gff3, 3:BED, 4:Native, 5:Intron, \n", stderr);
 	fputs("\t\t\t6:cDNA, 7:translate, 8:CDS, 15:unique intron\n", stderr);
 	fputs("\t-PN:\tMinimum Overall % identity (0-100)\n", stderr);
-	fputs("\t-UN:\tMaximum total number of unpaired bases in gaps\n", stderr);
-	fputs("\t-lN:\tNumber of residues per line for -O6 or -O7 (60)\n", stderr);
-	fputs("\t-mN:\tMaximum allowed missmatches at both exon boundaries\n", stderr);
-	fputs("\t-nN:\tallow non-canonical boundary? [0: no; 1: AT-AN; 2: 1bp mismatch; 3: any]\n", stderr);
-	fputs("\t-uN:\tMaximum allowed unpaired bases in gaps at both exon boundaries\n", stderr);
-	fputs("\t-gS:\tSpecify the .grp file name\n", stderr);
 	fputs("\t-Sa:\tsort chromosomes in the alphabetical order of identifier (default)\n", stderr);
 	fputs("\t-Sb:\tsort chromosomes in the order of abundance mapped on them\n", stderr);
 	fputs("\t-Sc:\tsort chromosomes in the order of apparence in the genome db\n", stderr);
 	fputs("\t-Sr:\tsort records mapped on minus strand in the reverse order of genomic positions\n", stderr);
+	fputs("\t-UN:\tMaximum total number of unpaired bases in gaps\n", stderr);
+	fputs("\t-VN:\ttMaximum memory size used for core sort (16M)\n", stderr);
+	fputs("\t-gS:\tSpecify the .grp file name\n", stderr);
+	fputs("\t-lN:\tNumber of residues per line for -O6 or -O7 (60)\n", stderr);
+	fputs("\t-mN:\tMaximum allowed missmatches at both exon boundaries\n", stderr);
+	fputs("\t-nN:\tallow non-canonical boundary? [0: no; 1: AT-AN; 2: 1bp mismatch; 3: any]\n", stderr);
+	fputs("\t-uN:\tMaximum allowed unpaired bases in gaps at both exon boundaries\n", stderr);
 	exit(1);
 }
 
@@ -997,8 +999,11 @@ const	char*	errmsg = "%s may be obolete or corrupted!\n";
 	    fclose(gzfd);
 	    return (nr);
 	}
+	char*	dot = strrchr(str, '.');
+	if (dot) *dot = '\0';
+	strcat(str, "(.gz)");
 #endif
-	fatal(errmsg, str);
+	fatal(not_found, str);
 	return (0);
 }
 
@@ -1134,7 +1139,7 @@ const	char*	grpfn = 0;
 
 // Get options
 	while (--argc && (++argv)[0][0] == OPTCHAR) {
-	  const char*	val = argv[0] + 2;
+const	  char*	val = argv[0] + 2;
 	  int	flevel = 0;
 	  switch (argv[0][1]) {
 	    case 'F': 

@@ -21,8 +21,6 @@
 
 #include "seq.h"
 
-static	int	cmpodr_r20(const int* a, const int* b);
-
 DbsDt*	dbs_dt[MAX_DBS];
 
 static	DbsDt*	defdbf;
@@ -349,112 +347,35 @@ void setdefdbf(DbsDt* dbf)
 	defdbf = dbf;
 }
 
-void DbsDt::readseq(const char* fn)
-{
-	fseek(fseq, 0L, SEEK_END);
-	long	fp = ftell(fseq);
-	dbsseq	= new CHAR[fp];
-	if (!dbsseq) fatal("No memory to accomodate seqdb!\n");
-	rewind(fseq);
-	if (fread(dbsseq, sizeof(CHAR), fp, fseq) != (size_t) fp)
-	    fatal("%s: Bad seq file !\n", fn);
-	fclose(fseq);
-	fseq = 0;
-}
-
 size_t DbsDt::readgrp(FILE* fgrp)
 {
-static	const	char	frmt[] = "%ld %ld %s";
 	char	str[MAXL];
 	Mfile	mfd(sizeof(DbsGrp));
 	DbsGrp	grp;
 	grplbl = new Strlist();
 
 	size_t	ress = 0;
-	while (fscanf(fgrp, frmt, &grp.seqptr, &grp.recnbr, str) == 3) {
-	    grplbl->push(str);
+	numidx = 0;
+	while (fgets(str, MAXL, fgrp)) {
+	    Strlist stl(str, stddelim);
+	    grp.seqptr = atol(stl[0]);
+	    grp.recnbr = atoi(stl[1]);
+	    if (stl.size() == 3) {		// ver21
+		grp.entspc = 0;
+		grplbl->push(stl[2]);
+	    } else if (stl.size() ==  4) {	// ver22
+		grp.entspc = atoi(stl[2]);
+		grplbl->push(stl[3]);
+	    } else
+		continue;
 	    mfd.write(&grp);
 	    ress += grp.seqptr;
+	    numidx += grp.recnbr;
+	    ent_space += grp.entspc;
 	}
 	numgrp = (INT) mfd.size() - 1;
 	dbsgrp = (DbsGrp*) mfd.flush();
 	return (ress);
-}
-
-static int cmpodr_r20(const int* a, const int* b)
-{
-	return (wordcmp(defdbf->entname(*a), defdbf->entname(*b), ENTLEN));
-}
-
-void DbsDt::readidx20(FILE* fd, const char* fn)
-{
-	fseek(fd, 0L, SEEK_END);
-	long	fp = ftell(fd);
-	if (fp % sizeof(DbsRec20)) fatal("%s: Index file may be corrupted!\n", fn);
-	numidx = (INT) (fp / sizeof(DbsRec20));
-	DbsRec20*	reched20 = new DbsRec20[numidx];
-	rewind(fd);
-	if (fread(reched20, sizeof(DbsRec20), numidx, fd) != numidx)
-	    fatal("%s: Bad index file!", fn);
-	DbsRec20*	rec20 = reched20;
-	DbsRec* rec = recidx = new DbsRec[numidx];
-	entry = new char[numidx * (ENTLEN + 1)];
-	recodr = 0;
-	size_t	entidx = 0;
-	bool	sorted = true;
-	for (INT i = 0; i < numidx; ++i, ++rec, ++rec20) {
-	    rec->seqptr = rec20->seqptr;
-	    if (i && strncmp(rec20[-1].entry, rec20->entry, ENTLEN) > 0)
-		sorted = false;
-	    rec->seqlen = (INT) rec20->seqlen;
-	    rec->entptr = entidx;
-	    entry[entidx + ENTLEN] = '\0';
-	    strncpy(entry + entidx, rec20->entry, ENTLEN);
-	    entidx += strlen(entry + entidx) + 1;
-	}
-	delete[] reched20;
-	if (sorted) return;
-	recodr = new INT[numidx];
-	for (INT i = 0; i < numidx; ++i) recodr[i] = i;
-	qsort((UPTR) recodr, numidx, sizeof(INT), (CMPF) cmpodr_r20);
-}
-
-void DbsDt::readentry(FILE* fent, const char* fn)
-{
-	fseek(fent, 0L, SEEK_END);
-	size_t	fp = ftell(fent);
-	entry = new char[fp];
-	rewind(fent);
-	if (fread(entry, sizeof(char), fp, fent) != fp)
-	    fatal("%s: Bad entry file!", fn);
-}
-
-void DbsDt::readodr(FILE* fodr, const char* fn)
-{
-	fseek(fodr, 0L, SEEK_END);
-	long	fp = ftell(fodr);
-	recodr = new INT[fp / sizeof(INT)];
-	rewind(fodr);
-	if (fread(recodr, sizeof(INT), numidx, fodr) != numidx)
-	    fatal("%s: Bad order file!", fn);
-}
-
-DbsRec* DbsDt::readidx(FILE* fidx, const char* fn)
-{
-	fseek(fidx, 0L, SEEK_END);
-	long	fp = ftell(fidx);
-	if (fp % sizeof(DbsRec))
-	    fatal("%s: Index file may be corrupted!\n", fn);
-	numidx = (INT) (fp / sizeof(DbsRec));
-	recidx = new DbsRec[numidx];
-	rewind(fidx);
-	if (fread(recidx, sizeof(DbsRec), numidx, fidx) != numidx)
-	    fatal("%s: Index file may be corrupted!\n", fn);
-	if (recidx[--numidx].seqptr != magicver21) {
-	    delete[] recidx; recidx = 0;
-	    return (0);
-	}
-	return (recidx);
 }
 
 DbsGrp* DbsDt::finddbsgrp(const char* name) const
@@ -494,17 +415,18 @@ void DbsDt::prepare(size_t entry_space, size_t num, size_t seq_space, size_t gsi
 {
 	dbsseq = new CHAR[seq_space];
 	recidx = new DbsRec[numidx = num];
-	entry = new char[entry_space];
+	entry = new char[ent_space = entry_space];
 	if (gsi_space) {
 	    gsipool = new int[gsi_space + 1];
 	    gsiidx = new int[num + 1];
 	}
 }
 
-void DbsDt::prepare(Strlist& sname, int num, size_t space, size_t gsi_space)
+void DbsDt::prepare(Strlist& sname, int num, size_t seq_space, size_t gsi_space)
 {
-	dbsseq = new CHAR[space];
+	dbsseq = new CHAR[seq_space];
 	recidx = new DbsRec[numidx = num];
+	ent_space = sname.space();
 	entry = sname.squeeze();
 	if (gsi_space) {
 	    gsipool = new int[gsi_space + 1];
@@ -514,7 +436,6 @@ void DbsDt::prepare(Strlist& sname, int num, size_t space, size_t gsi_space)
 
 DbsDt::DbsDt(int c, int molc)
 {
-	clean();
 	switch (tolower(c)) {
 	    case 'e':	curdb = SeqDBs + EMBL; break;
 	    case 'd':	curdb = SeqDBs + NBRF; break;
@@ -563,7 +484,6 @@ static 	const	char	openmsg[] =
 	char	str[LINE_MAX];
 	char	buf[LINE_MAX];
 
-	clean();
 	if (form == 0) form = progets(buf, openmsg);
 	if (strlen(form) <= 1) {
 	  switch (tolower(*form)) {
@@ -584,57 +504,77 @@ static 	const	char	openmsg[] =
 	for (int i = 0; i < 3; ++i) {
 	    const	char*	path = dbstab[i];
 	    if (!path) continue;
-	    FILE* fd = fopenpbe(path, form, IDX_EXT, "r", -1, str);
-	    if (fd) {
+
+// read "grp" file
+	    FILE*	fd = fopenpbe(path, form, GRP_EXT, "r", -1, str);
+	    if (!fd) continue;
+	    size_t	rss = readgrp(fd);
+	    fclose(fd);
+
 // read "index" file
-		DbsRec*	ridx = readidx(fd, str);
-		fclose(fd);
-		if (ridx) {
-// read "entry" and "order" files
-		    fd = fopenpbe(path, form, ENT_EXT, "r", 1, str);
-		    readentry(fd, str);
-		    fclose(fd);
-		    fd = fopenpbe(path, form, ODR_EXT, "r", -1, str);
-		    if (fd) {
-			readodr(fd, str);
-			fclose(fd);
-		    }
-		} else {
-// read "header" file
-		    setdefdbf(this);
-		    fd = fopenpbe(path, form, HED_EXT, "r", -1, str);
-		    if (!fd) fd = fopenpbe(path, form, IDX_EXT, "r", 1, str);
-		    readidx20(fd, str);
-		    fclose(fd);
-		}
-// read "group" file
-		fd = fopenpbe(path, form, GRP_EXT, "r", 1, str);
+	    fd = fopenpbe(path, form, IDX_EXT, "r", -1, str);
 #if USE_ZLIB
-		size_t	rss = readgrp(fd);
-#endif
-		fclose(fd);
-// assign "seq" file
- 		if ((fseq = fopenpbe(path, form, SEQ_EXT, "r", -1, str))) {
-		    pseq = strrealloc(0, str);
-		    if (algmode.dim) readseq(str);
-		} else {
-#if USE_ZLIB
-		    gzFile	gzfd = gzopenpbe(path, form, SGZ_EXT, "r", 1, str);
-		    if (!gzfd) continue;
-		    pseq = strrealloc(0, str);
-		    dbsseq = new CHAR[rss];
-		    if (!dbsseq) fatal(no_space);
-		    if (fread(dbsseq, sizeof(CHAR), rss, gzfd) <= 0)
-			fatal("Fail to read .seq.gz file !\n");
-		    fclose(gzfd);
+	    gzFile	gzfd = 0;
 #else
-		    continue;
+	    bool	gzfd = false;
 #endif
-		}
-		if (curdb->defmolc == UNKNOWN)
-		    curdb->defmolc = guessmolc();
-		return;
+	    if (!fd) {
+#if USE_ZLIB
+		gzfd = gzopenpbe(path, form, IDZ_EXT, "r", -1, str);
+	 	if (!gzfd) continue;
+#else
+	 	continue;
+#endif
 	    }
+	    DbsRec*	ridx = gzfd? readidx(gzfd, str): readidx(fd, str);
+	    if (!ridx) continue;
+
+// read "entry" file
+	    fd = fopenpbe(path, form, ENT_EXT, "r", -1, str);
+	    if (!fd) {
+#if USE_ZLIB
+		gzfd = gzopenpbe(path, form, ENZ_EXT, "r", -1, str);
+		if (!gzfd) continue;
+#else
+		continue;
+#endif
+	    } else	gzfd = 0;
+	    if (gzfd)	readentry(gzfd, str);
+	    else	readentry(fd, str);
+
+// read "order" file
+	    fd = fopenpbe(path, form, ODR_EXT, "r", -1, str);
+	    if (fd)	readodr(fd, str);
+#if USE_ZLIB
+	    else {
+		gzfd = gzopenpbe(path, form, ODZ_EXT, "r", -1, str);
+		if (gzfd) readodr(gzfd, str);
+	    }
+#endif
+
+// read "seq" file
+	    fseq = fopenpbe(path, form, SEQ_EXT, "r", -1, str);
+ 	    if (fseq) {
+		pseq = strrealloc(0, str);
+		if (algmode.dim) readseq(str);	// seq dat in memory
+	    } else {
+#if USE_ZLIB
+		gzfd = gzopenpbe(path, form, SGZ_EXT, "r", -1, str);
+		if (!gzfd) continue;
+		pseq = strrealloc(0, str);
+
+		dbsseq = new CHAR[rss];
+		if (!dbsseq) fatal(no_space);
+		if (fread(dbsseq, sizeof(CHAR), rss, gzfd) <= 0)
+		    fatal("Fail to read .seq.gz file !\n");
+		fclose(gzfd);
+#else
+		continue;
+#endif
+	    }
+	    if (curdb->defmolc == UNKNOWN)
+		curdb->defmolc = guessmolc();
+	    return;
 	}
 	fatal("%s was not found !\n", str);
 }
@@ -648,6 +588,19 @@ DbsDt::~DbsDt()
 	delete[] recodr; delete[] entry;
 	delete[] gsiidx; delete[] gsipool;
 }
+
+void DbsDt::readseq(const char* fn)
+{
+	fseek(fseq, 0L, SEEK_END);
+	long	fp = ftell(fseq);
+	dbsseq = new CHAR[fp];
+	if (!dbsseq) fatal(no_space);
+	if (fread(dbsseq, sizeof(CHAR), fp, fseq) != (size_t) fp)
+	    fatal("%s: Bad seq file !\n", fn);
+	fclose(fseq);
+	fseq = 0;
+}
+
 
 template <typename file_t>
 CHAR* Seq::read_dbres(file_t fd, const RANGE* rng)
@@ -712,7 +665,7 @@ CHAR* Seq::read_dbres(CHAR* dbs, const RANGE* rng)
 		dbs += rng->left / 2;	// set the start site
 		int	n = rng->right - rng->left;
 		if (n && rng->left % 2) {	// odd start
-		    int	h = *dbs & 15;
+		    int	h = *dbs++ & 15;
 		    *ps = h? h + bias: N;
 		    if (isAmb(*ps++)) inex.ambs = 1;
 		    --n;
@@ -809,7 +762,7 @@ Seq* Seq::getdbseq(DbsDt* dbf, const char* code, int c, bool readin)
 	    char	token[MAXL];
 	    car(token, code);
 	    if (sname)	sname->assign(token);
-	    else	sname = new Strlist(token);
+	    else	sname = new Strlist(token, 0);
 	    record = dbf->findcode(token);
 	    if (!record) return(0);
 	}

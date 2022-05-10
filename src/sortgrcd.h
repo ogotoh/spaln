@@ -41,7 +41,7 @@
 enum InOrder {INPUT_ODR, ALPHABETIC, ABUNDANCE};
 
 static	const	int	max_no_exon = 1024;
-static	const	int	MAXRECD = 1024 * 1024;
+static	const	int	MAXRECD = 16 * 1024 * 1024;
 static	const	char*	RGB_RED = "255,0,0";
 static	const	char*	RGB_BLUE = "0,255,255";
 

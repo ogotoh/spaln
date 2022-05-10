@@ -184,26 +184,24 @@ const	char*	val = ps + 1;
 *****************************************************/
 
 MakeDbs::MakeDbs(const char* dbn, int molc)
-	: recnbr(0), cridxf(false), isaa(molc == PROTEIN),
-	  b(0), fgrp(0), fseq(0), fidx(0), fent(0)
-#if USE_ZLIB
-	  , gzseq(0)
-#endif
+	: isaa(molc == PROTEIN)
 {
 	entryprv[0] = '\0';
 	dbname = strrealloc(0, dbn);
 #if USE_ZLIB
 	if (OutPrm.gzipped) {
 	    gzseq = gzopenpbe("", dbname, SGZ_EXT, "w", 2);
+	    gzidx = gzopenpbe("", dbname, IDZ_EXT, "w", 2);
+	    gzent = gzopenpbe("", dbname, ENZ_EXT, "w", 2);
 	} else
 #endif
 	{
 	    fseq = fopenpbe("", dbname, SEQ_EXT, "w", 2);
+	    fidx = fopenpbe("", dbname, IDX_EXT, "w+", 2);
+	    fent = fopenpbe("", dbname, ENT_EXT, "w+", 2);
 	}
 	vclear(&rec);
-	fidx = fopenpbe("", dbname, IDX_EXT, "w+", 2);
 	fgrp = fopenpbe("", dbname, GRP_EXT, "w", 2);
-	fent = fopenpbe("", dbname, ENT_EXT, "w+", 2);
 }
 
 static	DbsRec*	rbuf;
@@ -214,26 +212,72 @@ static int cmpkey(const INT* a, const INT* b)
 	return(strcmp(cbuf + rbuf[*a].entptr, cbuf + rbuf[*b].entptr));
 }
 
+template <typename file_t>
+void MakeDbs::read_ent(file_t fd)
+{
+	size_t	flen = ftell(fd);
+	cbuf = new char[flen];
+	if (gzent) {
+	    fclose(fd);
+	    gzent = gzopenpbe("", dbname, ENZ_EXT, "r", 2);
+	} else	rewind(fd);
+	if (fread(cbuf, sizeof(char), flen, fd) != flen)
+	    fatal("Corrupted entry file !\n");
+}
+
+template <typename file_t>
+void MakeDbs::read_idx(file_t fd)
+{
+	if (gzidx) {
+	    fclose(fd);
+	    gzidx = gzopenpbe("", dbname, IDZ_EXT, "r", 2);
+	} else
+	    rewind(fd);
+	if (fread(rbuf, sizeof(DbsRec), recnbr, fd) != recnbr)
+	    fatal("Corrupted index file !\n");
+}
+
+template <typename file_t>
+void MakeDbs::write_idx(file_t fd)
+{
+	if (fwrite(&rec, sizeof(DbsRec), 1, fd) != 1)
+	    fatal(write_error, "dbs.rec");
+	++recnbr;
+}
+
+template <typename file_t>
+void MakeDbs::write_odr(file_t fd, const INT* order, const char* str)
+{
+	if (fwrite(order, sizeof(INT), recnbr, fd) != recnbr)
+	    fatal(write_error, str);
+	fclose(fd);
+}
+
 void MakeDbs::mkidx()
 {
 	if (!cridxf) return;		// has been sorted
-	size_t	flen = ftell(fent);
-	cbuf = new char[flen];
-	rewind(fent);
-	if (fread(cbuf, sizeof(char), flen, fent) != flen)
-	    fatal("Corrupted entry file !\n");
+	if (gzent)	read_ent(gzent);
+	else 		read_ent(fent);
 	rbuf = new DbsRec[recnbr];
-	rewind(fidx);
-	if (fread(rbuf, sizeof(DbsRec), recnbr, fidx) != recnbr)
-	    fatal("Corrupted index file !\n");
+	if (gzidx)	read_idx(gzidx);
+	else		read_idx(fidx);
 	INT*	order = new INT[recnbr];
 	for (INT i = 0; i < recnbr; ++i) order[i] = i;
 	qsort((UPTR) order, recnbr, sizeof(INT), (CMPF) cmpkey);
 	char	str[LINE_MAX];
-	FILE*	fodr = fopenpbe("", dbname, ODR_EXT, "w", 2, str);
-	if (fwrite(order, sizeof(INT), recnbr, fodr) != recnbr)
-	    fatal(write_error, str);
-	fclose(fodr);
+	FILE*	fodr = 0;
+#if USE_ZLIB
+	gzFile	gzodr = 0;
+	if (OutPrm.gzipped)
+	    gzodr = gzopenpbe("", dbname, ODZ_EXT, "w", 2, str);
+	else
+	    fodr = fopenpbe("", dbname, ODR_EXT, "w", 2, str);
+	if (fodr)	write_odr(fodr, order, str);
+	else		write_odr(gzodr, order, str);
+#else
+	fodr = fopenpbe("", dbname, ODR_EXT, "w", 2, str);
+	write_odr(fodr, str);
+#endif
 	delete[] cbuf;
 	delete[] rbuf;
 	delete[] order;
@@ -244,18 +288,14 @@ int MakeDbs::write_recrd(file_t fd, int c)
 { 
 	putseq(SEQ_DELIM);
 	if (rec.seqlen) {
-	    if (fwrite(&rec, sizeof(DbsRec), 1, fidx) != 1)
-		fatal(write_error, "dbs.rec");
-	    ++recnbr;
+	    if (gzidx)	write_idx(gzidx);
+	    else	write_idx(fidx);
 	}
 	if (c != EOF) {
-	    rec.entptr = ftell(fent);
-#if USE_ZLIB
-	    if (fseq)	rec.seqptr = ftell(fseq);
-	    else	rec.seqptr = ftell(gzseq);
-#else
-	    rec.seqptr = ftell(fseq);
-#endif
+	    if (gzent)	rec.entptr = ftell(gzent);
+	    else	rec.entptr = ftell(fent);
+	    if (gzseq)	rec.seqptr = ftell(gzseq);
+	    else	rec.seqptr = ftell(fseq);
 	    char*	ps = entrystr;
 	    char*	pe = ps;
 	    char*	pb = ps;
@@ -271,7 +311,11 @@ int MakeDbs::write_recrd(file_t fd, int c)
 	    else	*ps = '\0';
 	    if (wordcmp(pe, entryprv) < 0) cridxf = true;
 	    strcpy(entryprv, pe);
-	    fputs(pe, fent); fputc('\0', fent);
+	    if (gzent) {
+		fputs(pe, gzent); fputc('\0', gzent);
+	    } else {
+		fputs(pe, fent); fputc('\0', fent);
+	    }
 	}
 	rec.seqlen = b = 0;
 	return (c);
@@ -651,6 +695,12 @@ static void setupbitpat(int molc, size_t gnmsz)
 static bool newer(char* str, const char** argv)
 {
 	bool    update = !file_size(str);
+#if USE_ZLIB
+	if (update) {
+	    strcat(str, gz_ext);
+	    update = !file_size(str);
+	}
+#endif
 	if (update) return (true);	// absent
 	time_t  exist_time = modify_time(str);
 	for (const char** av = argv; *av; ++av)
@@ -666,9 +716,6 @@ static bool testblk(char* str, int molc, const char** argv)
 	    case DNA:   strcat(str, BKN_EXT); break;
 	    case TRON:  strcat(str, BKP_EXT); break;
 	}
-#if USE_ZLIB
-	if (!file_size(str)) strcat(str, gz_ext);
-#endif
 	return (newer(str, argv));
 }
 
@@ -1011,9 +1058,6 @@ static bool testlut(char* str, int molc, const char** argv)
 	    case DNA:   strcat(str, LUN_EXT); break;
 	    case TRON:  strcat(str, LUP_EXT); break;
 	}
-#if USE_ZLIB
-	if (!file_size(str)) strcat(str, gz_ext);
-#endif
 	return (newer(str, argv));
 }
 
@@ -1098,7 +1142,7 @@ void MakeBlk::idxblk(int argc, const char** argv)
 {
 // first phase
 
-	const char**	seqdb = argv;
+const	char**	seqdb = argv;
 
 	for (int ac = 0; ac++ < argc && *seqdb; ++seqdb) {
 	    if (mkdbs) mkdbs->wrtgrp(*argv);
@@ -2889,7 +2933,7 @@ const	bool	is_shorquery = qlen < shortquery;
 const	CHAR*	at = is_shorquery? query->at(query->right): 0;
 const	CHAR*	ab = is_shorquery? query->at(query->left): 0;
 	bool	meet[2] = {false, false};
-	Dhash<INT, int>	hh(2 * pbwc->MaxBlk);
+	Dhash<INT, int>	hh(2 * pbwc->MaxBlk, 0);
 	INT	nmmc = 0;
 	int	notry = 0;
 	int	maxbscr[4];
@@ -3090,10 +3134,10 @@ int SrchBlk::findh(Seq** sqs)
 {
 	Seq*&	b = sqs[0];	// query
 	Seq*&	a = sqs[1];	// translated
-	Dhash<INT, int>	hh(2 * pbwc->MaxBlk);
+	Dhash<INT, int>	hh(2 * pbwc->MaxBlk, 0);
 	ORF*	orf = b->getorf();
 	if (!orf) return (ERROR);
-	Dhash<INT, int>	shash(2 * MaxNref);
+	Dhash<INT, int>	shash(2 * MaxNref, 0);
 	Qwords	qwd(kk,  DRNA, ConvTab, pbwc, bpp);
 	INT	norf = 0;
 	int	c;
@@ -3185,7 +3229,7 @@ int SrchBlk::finds(Seq** sqs)
 	INT	testword[2] = {0, 0};
 	bool	meet = false;
 	BLKTYPE	maxb = 0;
-	Dhash<INT, int>	hh(int(2 * pbwc->MaxBlk));
+	Dhash<INT, int>	hh(int(2 * pbwc->MaxBlk), 0);
 	Qwords	qwd(kk,  DRNA, ConvTab, pbwc, bpp, query);
 const	CHAR*	rms = query->at(query->right) - wcp.Nshift * ((c < ptpl)? c: ptpl);
 #if TESTRAN
@@ -3255,7 +3299,7 @@ const		    CHAR*	ss = *ws;
 	if (bh2->sigm) {	// heap sort in the order of block score
 	    INT	w = bh2->hsort();
 	    if (w < bh2->sigm && OutPrm.supself) ++w;
-	    Dhash<INT, int>	shash(2 * w);
+	    Dhash<INT, int>	shash(2 * w, 0);
 	    int	j = 1;
 	    for (INT i = 0; i < w; ++i) {
 		c = findChrNo((*bh2->prqueue_b)[i].key);

@@ -254,8 +254,9 @@ const	Simmtx*	simmtx;
 	VTYPE	GapW3 = 0;
 	VTYPE	GapW3L = 0;
 	Premat*	pmt = 0;
-	CodePot* codepot = 0;
-	ExinPot* exinpot = 0;
+	ExinPot* codepot = 0;
+	ExinPot* intnpot = 0;
+	ExinPot* exonpot = 0;
 	EijPat*	eijpat = 0;
 	IntronPenalty*	IntPen = 0;
 
@@ -282,8 +283,8 @@ const	Simmtx*	simmtx;
 	    if (d <= codonk1) return unp;
 	    return (unp + diffu * (d - codonk1));
 	}
-	VTYPE	GapPenalty3(int i) const {return GapPenalty3(i, BasicGOP);}
 	VTYPE	GapPenalty3(int i, VTYPE bgop) const;
+	VTYPE	GapPenalty3(int i) const {return GapPenalty3(i, BasicGOP);}
 	VTYPE	UnpPenalty3(int i) const {
 	    int	d = i / 3;
 	    VTYPE	unp = d * BasicGEP;
@@ -307,7 +308,7 @@ class AlnOutModes {
 public:
 	FILE**	fds = 0;
 	void	getopt(const char* arg);
-	void	setup(const char* prefix);
+	int	setup(const char* prefix);
 	void	alnoutput(Seq** sqs, Gsinfo* GsI);
 	int	end() {return (n_out_modes);}
 	AlnOutModes() {

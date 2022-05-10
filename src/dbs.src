@@ -41,6 +41,9 @@ static	const	char	LXN_EXT[] = ".lxn";
 static	const	char	LXP_EXT[] = ".lxp";
 #if USE_ZLIB
 static	const	char	SGZ_EXT[] = ".seq.gz";
+static	const	char 	IDZ_EXT[] = ".idx.gz";
+static	const	char 	ENZ_EXT[] = ".ent.gz";
+static	const	char 	ODZ_EXT[] = ".odr.gz";
 static	const	char	AGZ_EXT[] = ".bka.gz";
 static	const	char	NGZ_EXT[] = ".bkn.gz";
 static	const	char	PGZ_EXT[] = ".bkp.gz";
@@ -58,10 +61,6 @@ static	const	char	LPZ_EXT[] = ".lup.gz";
 
 #ifndef ALN_DBS
 #define	ALN_DBS		"ALN_DBS"
-#endif
-
-#ifndef ALN_SDBS
-#define	ALN_SDBS	"ALN_SDBS"
 #endif
 
 static	const	char	DBSID = '$';
@@ -101,22 +100,6 @@ const	char*	SeqForm;	/* Format for Left Margin*/
 	long	dbnextentry(FILE* fd, char* ps) const;
 };
 
-struct DbsRec20 {
-	char	entry[ENTLEN];
-	CHAR	master;
-	CHAR	subset;
-	long	recnbr;
-	long	srcptr;
-	long	seqptr;
-	long	seqlen;
-};
-
-struct DbsRec25 {
-	long	seqptr;
-	long	seqlen;
-	size_t	entptr;
-};
-
 struct DbsRec {
 	long	seqptr;
 	long	seqlen;
@@ -125,36 +108,46 @@ struct DbsRec {
 
 struct DbsGrp {
 	long	seqptr;
-	long	recnbr;
+	INT	recnbr;
+	INT	entspc;
 };
 
 class DbsDt {
 friend	class	MakeBlk;
 friend	class	SrchBlk;
-	char*	pseq;
-	CHAR*	dbsseq;
-	Strlist*	grplbl;
-	bool	comment;
-	DbsRec*	recidx;
-	int*	gsiidx;
-	DbsRec20*	recidx20;
-	INT*	recodr;
-	char*	entry;
-	int*	gsipool;
+	char*	pseq = 0;
+	CHAR*	dbsseq = 0;
+	Strlist*	grplbl = 0;
+	bool	comment = false;
+	DbsRec*	recidx = 0;
+	int*	gsiidx = 0;
+	INT*	recodr = 0;
+	char*	entry = 0;
+	int*	gsipool = 0;
 	DbsRec*	bisearch(const char* key) const;
 	void	readseq(const char* fn);
 	size_t	readgrp(FILE* fgrp);
-	void	readidx20(FILE* fd, const char* fn);
-	DbsRec*	readidx(FILE* fidx, const char* fn);
+#if USE_ZLIB
+template <typename file_t>
+	void	readentry(file_t fent, const char* fn);
+template <typename file_t>
+	void	readodr(file_t fodr, const char* fn);
+template <typename file_t>
+	DbsRec*	readidx(file_t fidx, const char* fn);
+#else
 	void	readentry(FILE* fent, const char* fn);
 	void	readodr(FILE* fodr, const char* fn);
+	DbsRec*	readidx(FILE* fidx, const char* fn);
+#endif	// USE_ZLIB
+
 public:
-const	char*	dbsid;
-	SeqDb*  curdb;
-	FILE*	fseq;
-	DbsGrp* dbsgrp;
-	int     numgrp;
-	INT	numidx;
+const	char*	dbsid = 0;
+	SeqDb*  curdb = 0;
+	FILE*	fseq = 0;
+	DbsGrp* dbsgrp = 0;
+	int     numgrp = 0;
+	INT	numidx = 0;
+	INT	ent_space = 0;
 	void	clean();
 	DbsDt(int c = 0, int molc = UNKNOWN);
 	DbsDt(const char* form);
@@ -195,8 +188,63 @@ extern	bool	space_digit(const char* ps);
 extern	const	char*	finddbfpath(const char* fn, const char* ext = 0);
 extern	SeqDb*	whichdb(const char* ps);
 
+#if USE_ZLIB
+template <typename file_t>
+void DbsDt::readentry(file_t fent, const char* fn)
+#else
+void DbsDt::readentry(FILE* fent, const char* fn)
+#endif
+{
+	if (ent_space == 0) {
+	    fseek(fent, 0L, SEEK_END);
+	    ent_space = (INT) ftell(fent);
+	}
+	if (ent_space == 0) {
+	    int	c;
+	    while ((c = fgetc(fent)) != EOF) ++ent_space;
+	}
+	rewind(fent);
+	entry = new char[ent_space];
+	if (fread(entry, sizeof(char), ent_space, fent) != ent_space)
+	    fatal("%s: Bad entry file!", fn);
+	fclose(fent);
+}
+
+#if USE_ZLIB
+template <typename file_t>
+void DbsDt::readodr(file_t fodr, const char* fn)
+#else
+void DbsDt::readodr(FILE* fodr, const char* fn)
+#endif
+{
+	recodr = new INT[numidx];
+	rewind(fodr);
+	if (fread(recodr, sizeof(INT), numidx, fodr) != numidx)
+	    fatal("%s: Bad order file!", fn);
+	fclose(fodr);
+}
+
+#if USE_ZLIB
+template <typename file_t>
+DbsRec*	DbsDt::readidx(file_t fidx, const char* fn)
+#else
+DbsRec* DbsDt::readidx(FILE* fidx, const char* fn)
+#endif
+{
+	recidx = new DbsRec[numidx];
+	rewind(fidx);
+	if (fread(recidx, sizeof(DbsRec), numidx, fidx) != numidx)
+	    fatal("%s: Index file may be corrupted!\n", fn);
+	fclose(fidx);
+	return (recidx);
+}
+
+#if USE_ZLIB
 template <typename file_t>
 char* dbs_header(char* str, file_t fin)
+#else
+char* dbs_header(char* str, FILE* fin)
+#endif
 {
 	char*	ps = str;
 	while (*ps == _LCOMM || space_digit(ps))
@@ -207,9 +255,10 @@ char* dbs_header(char* str, file_t fin)
 
 template <typename file_t>
 SeqDb*	whichdb(char* ps, file_t fd = 0)
+#else
+SeqDb*	whichdb(char* ps, FILE* fd = 0)
+#endif
 {
 	if (fd) ps = dbs_header(ps, fd);
 	return (whichdb(ps));
 }
-
-#endif

@@ -19,7 +19,8 @@
 *	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
 *****************************************************************************/
 
-#include "aln.h"
+#include "seq.h"
+#include "eijunc.h"
 
 enum Triplet {AAA = 0, AGA = 8, AGG = 10, AUA = 12, 
 	CUA = 28, CUC, CUG, CUU,
@@ -112,7 +113,6 @@ static	int	minorf = 300;
 static	CHAR*	de_codon(CHAR* ncs, int n);
 static	int	lcomp(ORF* a, ORF* b);
 static	int	evenusage();
-static	int	kmer(const CHAR* s, int m, const CHAR* elements, int k, int* x = 0);
 
 static	int	curcode = 0;
 static	int	ChangeCodon = 1;
@@ -346,7 +346,9 @@ static int lcomp(ORF* a, ORF* b)
     return (b->len - a->len);
 }
 
-/* DFA to find ORF 
+/*************************************
+
+* DFA to find ORF 
 
 fromic == 0: Term< --- >Term
 fromic == 1: <ATG  --- >Term
@@ -355,26 +357,26 @@ fromic == 3: <ATG - AG --- >GT - Term
 fromic == 4: ATG - AG< --- GT - >Term
 fromic == 5: <ATG - AG --- GT - >Term
 
-*/
+*************************************/
 
 ORF* Seq::getorf() const
 {
 static	const	int	tm[14][4] = {
-/*       A  C  G  T */
-	{1, 0, 2, 3},	/*  0: C */
-	{1, 0, 4, 5},	/*  1: A */
-	{1, 6, 2, 7},	/*  2: G */
-	{8, 0, 9, 3},	/*  3: T */
-	{1, 6, 2, 7},	/*  4: AG */
-	{8, 0,10, 3},	/*  5: AT */ 
-	{1, 0, 2, 3},	/*  6: GC */
-	{8, 0, 9, 3},	/*  7: GT */
-	{11,0,12, 5},	/*  8: TA */
-	{13,6, 2, 7},	/*  9: TG */
-	{13,6, 2, 7},	/* 10: ATG */
-	{1, 0, 4, 5},	/* 11: TAA */
-	{1, 6, 2, 7},	/* 12: TAG */
-	{1, 0, 4, 5}};	/* 13: TGA */
+//       A  C  G  T
+	{1, 0, 2, 3},	//  0: C
+	{1, 0, 4, 5},	//  1: A
+	{1, 6, 2, 7},	//  2: G
+	{8, 0, 9, 3},	//  3: T
+	{1, 6, 2, 7},	//  4: AG
+	{8, 0,10, 3},	//  5: AT
+	{1, 0, 2, 3},	//  6: GC
+	{8, 0, 9, 3},	//  7: GT
+	{11,0,12, 5},	//  8: TA
+	{13,6, 2, 7},	//  9: TG
+	{13,6, 2, 7},	// 10: ATG
+	{1, 0, 4, 5},	// 11: TAA
+	{1, 6, 2, 7},	// 12: TAG
+	{1, 0, 4, 5}};	// 13: TGA
 
 	ORF	cur[3];
 	ORF*	orfs;
@@ -382,7 +384,7 @@ static	const	int	tm[14][4] = {
 	int	n = left;
 	for (f = 0; f < 3; ++f) {
 	    cur[f].pos = n;
-	    cur[f].frm = fromic? 0: 1;	/* close/open */
+	    cur[f].frm = fromic? 0: 1;	// close/open
 	    cur[f].len = 0;
 	}
 const	CHAR*	ts = at(right);
@@ -394,8 +396,8 @@ const	CHAR*	redctab = isdrna()? ncredctab: tnredctab;
 	    if (c < 4) {
 		state = tm[state][c];
 		switch (state) {
-		  case 4:	/* AG */
-		    if (fromic > 1) {	/* exon start */
+		  case 4:		// AG
+		    if (fromic > 1) {	// exon start
 			for (f = 0; f < 3; ++f) {
 			    if (!cur[f].frm || (fromic % 2 == 0 && cur[f].frm == 1)) {
 				cur[f].pos = n + 1;
@@ -404,30 +406,30 @@ const	CHAR*	redctab = isdrna()? ncredctab: tnredctab;
 			}
 		    }
 		    break;
-		  case 6:	/* GC */
-		  case 7:	/* GT */
-		    if (fromic > 1) {	/* exon end */
+		  case 6:		// GC
+		  case 7:		// GT
+		    if (fromic > 1) {	// exon end
 			for (f = 0; f < 3; ++f) {
 			    if (cur[f].frm) {
 				cur[f].len = n - 1 - cur[f].pos;
 				if (fromic == 2 || fromic == 3)
-				    cur[f].frm = 4;	/* mark */
+				    cur[f].frm = 4;	// mark
 			    }
 			}
 		    }
 		    break;
-		  case 10:	/* ATG */
+		  case 10:		// ATG
 		    f = (n - 2) % 3;
 		    if (!cur[f].frm) {
 			cur[f].pos = n - 2;
 			cur[f].frm = 1;
 		    }
 		    break;
-		  case 11:	/* TAA */
+		  case 11:		// TAA
 		    if (gencode[UAA] != TRM) break;
-		  case 12:	/* TAG */
+		  case 12:		// TAG
 		    if (gencode[UAG] != TRM) break;
-		  case 13:	/* TGA */
+		  case 13:		// TGA
 		    if (gencode[UGA] != TRM2) break;
 		    f = (n - 2) % 3;
 		    if (cur[f].frm == 1 || cur[f].frm == 2)
@@ -439,7 +441,7 @@ const	CHAR*	redctab = isdrna()? ncredctab: tnredctab;
 		    cur[f].pos = n + 1;
 		    cur[f].frm = fromic? 0: 1;
 		    cur[f].len = 0;
-		    if (state == 12 && fromic > 1) {	/* AG */
+		    if (state == 12 && fromic > 1) {	// AG
 			for (f = 0; f < 3; ++f) {
 			    if (!cur[f].frm || (fromic % 2 == 0 && cur[f].frm == 1)) {
 				cur[f].pos = n + 1;
@@ -450,7 +452,7 @@ const	CHAR*	redctab = isdrna()? ncredctab: tnredctab;
 		    break;
 		  default: break;
 		}
-	    } else {		/* ambiguous base */
+	    } else {			// ambiguous base
 		for (f = 0; f < 3; ++f) {
 		    cur[f].pos = n + 1;
 		    cur[f].frm = fromic? 0: 1;
@@ -706,7 +708,7 @@ static	char	errmsg[] = "Codon Usage File";
 	    sscanf(str, "%*s %*s %*s %f", CodonUsage + i++);
 	    if (i == 64) return (OK);
 	} while (fgets(str, LINE_MAX, fd));
-/* readerr */
+// readerr
 	fputs(errmsg, stderr);
 	fprintf(stderr, "%s was incomplete!\n", fname);
 	for (i = 0; i < 64; ++i) CodonUsage[i] = Human50CDU[i];
@@ -736,8 +738,6 @@ void PatMat::readPatMat(FILE* fd)
 	int	t = 0;
 	int	skip = 0;
 	char	str[MAXL];
-	double	maxval = -FLT_MAX;
-	double	minval = FLT_MAX;
 
 	vclear(&mmm);
 	do {
@@ -749,83 +749,92 @@ void PatMat::readPatMat(FILE* fd)
 	    rows <= 0 || cols <= 0) return;
 	tonic = mmm.min;
 	if (-tonic > maxtonic) tonic = -maxtonic; 
-	mtx = new double[rows * cols];
+	mtx = new float[rows * cols];
 	while (skip-- > 0) {
 	    int rc;
 	    while ((rc = fgetc(fd)) != EOF && rc != '\n') ;
 	}
-	double*	wk = mtx;
+	float*	wk = mtx;
 	for (int rc = 0; rc < rows * cols; ++rc, ++wk) {
-	    if (fscanf(fd, "%lf", wk) <= 0) {
+	    if (fscanf(fd, "%f", wk) <= 0) {
 		fputs("Insufficient data!\n", stderr);
 		delete[] mtx; mtx = 0;
 		return;
 	    }
-	    if (*wk > maxval) {maxval = *wk; maxidx = rc;}
-	    if (*wk < minval) {minval = *wk; minidx = rc;}
+	    if (*wk < min_elem) min_elem = *wk;
 	}
-	if (t) swap(rows, cols);
+	if (t) std::swap(rows, cols);
 	if (rows % 23 == 0) nalpha = 23;
 	else if (rows % 4 == 0) nalpha = 4;
 	else	nalpha = rows;
+	morder = 0;
+	for (int d = nalpha; d < rows; d = d * (d + 1))
+	    ++morder;
 	while ((skip = getc(fd)) != EOF && skip != '\n');
+}
+
+void PatMat::readBinPatMat(FILE* fd)
+{
+	if (fread(this, sizeof(PatMat), 1, fd) != 1)
+	    fatal("incompatible !\n");
+	if (transvers) std::swap(rows, cols);
+	tonic = mmm.min;
+	if (-tonic > maxtonic) tonic = -maxtonic;
+	INT	dszie = rows * cols;
+	mtx = new float[dszie];
+	if (fread(mtx, sizeof(float), dszie, fd) != dszie)
+	    fatal("incompatible !\n");
 }
 
 PatMat& PatMat::operator=(const PatMat& src)
 {
 	rows = src.rows; cols = src.cols; 
 	offset = src.offset; nalpha = src.nalpha;
-	maxidx = src.maxidx; minidx = src.minidx; nsupport = src.nsupport;
+	nsupport = src.nsupport;
 	tonic = src.tonic; mmm = src.mmm;
 	int	mtxsize = rows * cols;
 	if (mtxsize != (src.rows * src.cols)) {
 	    delete[] mtx;
-	    mtx = new double[mtxsize];
+	    mtx = new float[mtxsize];
 	}
 	vcopy(mtx, src.mtx, rows * cols);
 	return (*this);
 }
 
 PatMat::PatMat(const PatMat& src) :
-	maxidx(src.maxidx), minidx(src.minidx), nsupport(src.nsupport), 
-	nalpha(src.nalpha), rows(src.rows), cols(src.cols), offset(src.offset), 
-	tonic(src.tonic), mmm(src.mmm)
+	rows(src.rows), cols(src.cols), offset(src.offset), 
+	tonic(src.tonic), min_elem(src.min_elem), 
+	nsupport(src.nsupport), nalpha(src.nalpha), morder(src.morder), 
+	mmm(src.mmm)
 {
 	int	mtxsize = rows * cols;
-	mtx = new double[mtxsize];
+	mtx = new float[mtxsize];
 	vcopy(mtx, src.mtx, mtxsize);
 }
 
 PatMat::PatMat(const int r, const int c, const int o, float* m)
-	: maxidx(0), minidx(0), nsupport(0),
-	  rows(r), cols(c), offset(o), tonic(0), mtx(0)
+	: rows(r), cols(c), offset(o)
 {
 	if (r <= 0 || c <= 0) return;
 	mmm.min = mmm.mean = mmm.max = 0;
-	double	maxval = -FLT_MAX;
-	double	minval = FLT_MAX;
-	mtx = new double[r * c];
-	if (!m) return;
-	for (int i = 0; i < r * c; ++i) {
-	    mtx[i] = m[i];
-	    if (mtx[i] > maxval) {maxval = mtx[i]; maxidx = i;}
-	    if (mtx[i] < minval) {minval = mtx[i]; minidx = i;}
-	}
 	if (rows % 4 == 0) nalpha = 4;
 	else if (rows == 23) nalpha = 23;
-	else	nalpha = cols;
+	else	nalpha = rows;
+	for (int d = nalpha; d < rows; d = d * (d + 1))
+	    ++morder;
+	mtx = new float[r * c];
+	if (!m) return;
+	vcopy(mtx, m, r * c);
+	min_elem = *vmin(mtx, r * c);
 }
 
-PatMat::PatMat(FILE* fd) :
-	maxidx(0), minidx(0), nsupport(0),
-	rows(0), cols(0), offset(0), tonic(0), mtx(0)
+PatMat::PatMat(FILE* fd, bool binary)
 {
-	readPatMat(fd);
+	if (binary) readBinPatMat(fd);
+	else	readPatMat(fd);
 }
 
-PatMat::PatMat(const char* fname) :
-	maxidx(0), minidx(0), nsupport(0),
-	rows(0), cols(0), offset(0), tonic(0), mtx(0)
+PatMat::PatMat(const char* fname)
 {
 	char	str[LINE_MAX];
 	FILE*	fd = 0;
@@ -836,10 +845,14 @@ retry:
 	} else
 	    progets(str, "pattern file name? ");
 	if (!*str || *str == '\n') return;
-	fd = ftable.fopen(str, "r");
-	if (fd) readPatMat(fd);
-	else goto retry;
-	fclose(fd);
+const	char*	dot = strrchr(str, '.');
+const	bool	binary = dot && !strcmp(dot, patmat_ext);
+	fd = ftable.fopen(str, "rb");
+	if (fd) {
+	    if (binary) readBinPatMat(fd);
+	    else	readPatMat(fd);
+	} else goto retry;
+	if (fd) fclose(fd);
 }
 
 CHAR* PatMat::setredctab(const Seq* sd) const
@@ -860,7 +873,7 @@ void PatMat::increment(const Seq* sd, int pos, const CHAR* redctab)
 {
 const	CHAR*	ps = sd->at(pos);
 const	CHAR*	ts = sd->at(pos + cols);
-	double*	ptn = mtx;
+	float*	ptn = mtx;
 	for ( ; ps < ts; ++ps, ptn += rows) {
 	    int	k = redctab? redctab[*ps]: (*ps - sd->code->base_code);
 	    if (k >= 0 && k < rows) ++ptn[k];
@@ -869,9 +882,9 @@ const	CHAR*	ts = sd->at(pos + cols);
 
 float PatMat::pwm_score(const Seq* sd, const CHAR* ps, const CHAR* redctab) const
 {
-const	double*	ptn = mtx;
+const	float*	ptn = mtx;
 const	CHAR*	ts = min((const CHAR*) sd->at(sd->right), ps + cols);
-	double	fit = 0;
+	float	fit = 0;
 	for ( ; ps < ts; ++ps, ptn += rows) {
 	    int	k = redctab? redctab[*ps]: (*ps - sd->code->base_code);
 	    if (k >= 0 && k < rows) fit += ptn[k];
@@ -882,16 +895,13 @@ const	CHAR*	ts = min((const CHAR*) sd->at(sd->right), ps + cols);
 float* PatMat::calcPatMat(const Seq* sd) const
 {
 	int	k = sd->right - sd->left;
-	int	Mrkv = 0;
+	int	Mrkv = order();
 
 const 	CHAR*	redctab = setredctab(sd);
-	if (rows == 20) Mrkv = 1;	// 1st-order Markov/
-	else if (rows == 84) Mrkv = 2;	// 2nd-order Markov/
-	else if (rows == 67) Mrkv = 3;	// Should be MODIFIED !!!
 	float*	result = new float[k];
 	float*	rest = result;
 	float*	last = result + k;
-	double	minval = cols * mtx[minidx];
+	float	minval = cols * min_elem;
 const	CHAR*	aa = sd->at(0);			// left limit
 const	CHAR*	zz = sd->at(sd->len - Mrkv);	// right limit
 	int	n = sd->left - offset;		// start point
@@ -900,8 +910,8 @@ const	CHAR*	zz = sd->at(sd->len - Mrkv);	// right limit
 		const	CHAR*	ss = sd->at(n);
 		const	CHAR*	tt = sd->at(n + cols);
 		if (tt > zz) tt = zz;
-		double	fit = 0;
-const		double*	ptn = mtx;
+		float	fit = 0;
+const		float*	ptn = mtx;
 		if (n < 0) {ptn -= n * rows; ss = aa;}
 		int	q = n + cols >= sd->len;	// number of bad chars
 		for (int m = 0; ss < tt; ptn += rows, ++m) {
@@ -916,8 +926,8 @@ const		double*	ptn = mtx;
 			    if (j < 0 || j >= nalpha) ++q;
 			    k = nalpha * k + j + nalpha;
 			}
-			double	tabval = q? 0: ptn[k];
-//			double	tabval = q? minval: ptn[k];
+			float	tabval = q? 0: ptn[k];
+//			float	tabval = q? minval: ptn[k];
 			fit += tabval;
 		    }
 		}
@@ -928,8 +938,8 @@ const		double*	ptn = mtx;
 		const	CHAR*	ss = sd->at(n);
 		const	CHAR*	tt = sd->at(n + cols);
 		if (tt > zz) tt = zz;
-		double	fit = 0;
-const		double*	ptn = mtx;
+		float	fit = 0;
+const		float*	ptn = mtx;
 		if (n < 0) {ptn -= n * rows; ss = aa;}
 		int	q = n + cols >= sd->len;	// number of bad chars
 		for (int m = 0; ss < tt; ptn += rows, ++m) {
@@ -983,12 +993,12 @@ const		double*	ptn = mtx;
 		const	CHAR*	ss = sd->at(n);
 		const	CHAR*	tt = sd->at(n + cols);
 		if (tt > zz) tt = zz;
-const		double*	ptn = mtx;
+const		float*	ptn = mtx;
 		if (n < 0) {ptn -= n * rows; ss = aa;}
 		const	CHAR*	sss = ss;
 
 		int	flag = 0;
-		double	fit = 0;
+		float	fit = 0;
 		for (int m = 0; ss < tt; ptn += rows, ++m) {
 		    const	CHAR*	rr = ss + sd->many;
 		    for ( ; ss < rr; ++ss) {
@@ -1005,7 +1015,7 @@ const		double*	ptn = mtx;
 			fit += ptn[16 * k + nalpha * i + j + 3];
 		    }
 		    if (flag == 1) {
-			fit = 3 * ptn[minidx];
+			fit = 3 * min_elem;
 			break;
 		    } 
 		}
@@ -1015,296 +1025,405 @@ const		double*	ptn = mtx;
 	return (result);
 }
 
-// read coding potential from file
-
-CodePot::CodePot()
+int fname2exin(const char* fname, int& file_type)
 {
-	char	str[MAXL+1];
-	int	d = 0;
-	int	trows = TSIMD * TSIMD;
-	double	buf[CP_NTERM];
-	FILE*	fd = ftable.fopen(CODEPOT, "r");
-
-	if (!fd) {
-	    fatal("CodePotTab can't open!\n", stderr);
-	    return;
-	}
-	if (!fgets(str, MAXL, fd)) goto fail_to_read;
-	if (!wordcmp(str, "CodePotTab")) {	/* header line */
-	    sscanf(str, "%*s %d %d", &CodePotClmn, &d);
-	    if (!fgets(str, MAXL, fd)) goto fail_to_read;
-	    if (d % 23) {
-		CodePotType = DNA;
-		trows = d;
-	    } else
-		CodePotType = TRON;
-	}
-	if (CodePotClmn > CP_NTERM) CodePotClmn = CP_NTERM;
-	CodePotBuf = new FTYPE[CodePotClmn * trows];
-	d = 0;
-	for (int i = 0; i < CodePotClmn; d += trows)
-	    CodePotTab[i++] = CodePotBuf + d;
-	d = 0;
-	do {
-	    char*	ps = str;
-	    if (isalpha(*ps)) ps = cdr(str); 
-	    for (int i = 0; ps && i < CodePotClmn; ps = cdr(ps))
-		buf[i++] = atof(ps);
-	    if (CodePotType == TRON && isalpha(*str) && isalpha(str[1])) {
-		d = TSIMD * trccode[*str - 'A'] + trccode[str[1] - 'A'];
-		for (int i = 0; i < CodePotClmn; ++i) CodePotTab[i][d] = buf[i];
-	    } else {
-		for (int i = 0; i < CodePotClmn; ++i) CodePotTab[i][d] = buf[i];
-		++d;
+const	int	ng = static_cast<int>(Iefp::NG);
+const	int	write_mode = file_type;
+	char	str[MAXL];
+	strcpy(str, fname);
+	file_type = 0;
+	char*	dot = strrchr(str, '.');
+	if (dot) {
+	    if (!strcmp(dot, text_ext)) {
+		*dot = '\0';
+		file_type = 1;		// text
+		dot = strrchr(str, '.');
 	    }
-	} while (fgets(str, MAXL, fd));
-	fclose(fd);
-	return;
-fail_to_read:
-	delete[] CodePotBuf; CodePotBuf = 0;
-	fputs("CodePotTab can't be read in !\n", stderr);
-	fclose(fd);
-}
-
-static int kmer(const CHAR* s, int m, const CHAR* elements, int k, int* x)
-{
-	int	c = elements[*s];
-	int	d = c;
-	if (c >= 4) {
-	    d = 0;
-	    if (x) *x = 0;
-	}
-const	CHAR*	t = s + k * m;
-
-	while ((s += m) < t) {
-	    c = elements[*s];
-	    if (c < 4) {
-		d = CP_NTERM * d + c;
-		++*x;
-	    } else {
-		d = 0;
-		if (x) *x = 0;
-	    }
-	}
-	return (d);
-}
-
-/*	Calculate coding potential from DNA seq based on the 5th-order Markov model */
-
-float* CodePot::calc5MMCodePot(const Seq* sd, int phase) const
-{
-	CHAR*   redctab = sd->inex.molc == TRON? tnredctab: ncredctab;
-	CHAR*   elements = sd->inex.molc == TRON? trelements: ncelements;
-	int	k = sd->right - sd->left;
-	FTYPE	prf;
-const	CHAR*	ss = sd->at(sd->left);
-const	CHAR*	tt = sd->at(sd->right);
-
-	float*	result = new float[k];
-	float*	rest = result;
-	int	x = 0;
-	if (sd->left < 0)	*rest++ = 0;	/* fill pat */
-	else	ss -= sd->many;
-	if (sd->many == 1) {			/* in most cases */
-	    int	d = kmer(ss, 1, redctab, 6, &x);	/* dummy when phase != 0 */
-	    int	dm = d / CP_NTERM;
-	    ss += 6;
-	    while (ss < tt) {
-		int	c = redctab[*ss++];
-		FTYPE	val = 0;
-		if (phase == 0) {
-		    if (c < 4) {
-			val = CodePotTab[2][dm] + CodePotTab[0][d]; /* -1 + 0 */
-			d = (CP_NTERM * (dm = d) + c) % 4096;
-			++x;
-		    } else d = dm = x = 0;
-		    if (x >= 6) val += CodePotTab[1][d];			/* +1 */
-		    else	val = 0;
-		} else {
-		    if (x >= 6) {
-			if (phase <= CodePotClmn) {
-			    val = CodePotTab[phase - 1][d];
-			} else if (phase == CP_NTERM + 1 && CodePotClmn >= CP_NTERM) {
-			    val = CodePotTab[0][d] - CodePotTab[1][d] 
-				- CodePotTab[2][d] - CodePotTab[3][d];
-			} else {
-			    val = CodePotTab[0][d] - CodePotTab[1][d] - CodePotTab[2][d];
-			}
-		    }
-		    if (c < 4) {
-			d = (CP_NTERM * d + c) % 4096;
-			++x;
-		    } else d = x = 0;
+	    for (int exn = 0; exn < ng; ++exn) {
+		if (!strcmp(dot, iefp_ext[exn])) {
+		    if (!file_type) file_type = 2;
+		    return (exn);	// binary
 		}
-		*rest++ = val;
 	    }
-	} else {
-	    tt -= 6 * sd->many;
-	    while (ss < tt) {
-		FTYPE	val = 0;
-		for (int i = 0; i++ < sd->many; ++ss) {
-		    int	d = kmer(ss, sd->many, elements, 6);
-		    if (phase == 0) {
-			prf = CodePotTab[0][d];
-			d = (ss < sd->at(0) - sd->many)? d / CP_NTERM: 
-			    kmer(ss - sd->many, sd->many, elements, 6);
-			prf += CodePotTab[2][d];
-			d = kmer(ss + sd->many, sd->many, elements, 6);
-			prf += CodePotTab[1][d];
-		    } else if (phase <= CodePotClmn) {
-			prf = CodePotTab[phase - 1][d];
-		    } else if (phase == CP_NTERM + 1 && CodePotClmn >= CP_NTERM) {
-			prf = CodePotTab[0][d] - CodePotTab[1][d] 
-			- CodePotTab[2][d] - CodePotTab[3][d];
-		    } else {
-			prf = CodePotTab[0][d] - CodePotTab[1][d] - CodePotTab[2][d];
-		    }
-		    val += prf;
-		}
-		*rest++ = val;
+	    if (write_mode) {
+		fputs("Error: extension must be one of:\n\t", stderr);
+		for (int exn = 0; exn < ng; ++exn)
+		    fprintf(stderr, "%s ", iefp_ext[exn]);
+		fputc('\n', stderr);
+		exit (1);
 	    }
 	}
-	while (rest < result + k) *rest++ = 0.;
-	return (result);
-}
 
-/*	Calculate coding potential from DiTRON (1st-order Markov) model */
-
-float* CodePot::calcDitCodePot(Seq* sd, int phase) const
-{
-	int	i = sd->right;
-	int	k = sd->right - sd->left;
-	int	d = sd->len - 3;
-	int	n2t = 0;
-const	CHAR*	ss = sd->at(sd->left);
-const	CHAR*	uu = ss + 3 * sd->many;
-const	CHAR*	tt = sd->at(min(i, d));
-
-	if (sd->isdrna()) {sd->nuc2tron(); n2t = 1;}
-	if (sd->inex.molc != TRON) {
-	    prompt("%s must be DNA or TRON code!\n", sd->sqname());
-	    return (0);
-	}
-	float*	result = new float[k];
-	float*	rest = result;
-	if (phase == 0 && sd->left < 0) {
-	    *rest++ = 0;
-	    ss += sd->many;
-	    uu += sd->many;
-	}
-	FTYPE	val = 0;
-	while (ss < tt) {
-	    for (int i = 0; i++ < sd->many; ++ss, ++uu) {
-		FTYPE	prf;
-		d = TSIMD * *ss + *uu;
-		if (phase == 0) {
-		    prf = CodePotTab[0][d];
-		    d = TSIMD * ss[-sd->many] + uu[-sd->many];
-		    prf += CodePotTab[2][d];
-		    d = TSIMD * ss[sd->many] + uu[sd->many];
-		    prf += CodePotTab[1][d];
-		} else if (phase <= CP_NTERM) {
-		    prf = CodePotTab[phase - 1][d];
-		} else if (phase == CP_NTERM + 1) {
-		    prf = CodePotTab[0][d] - CodePotTab[1][d] 
-			- CodePotTab[2][d] - CodePotTab[3][d];
-		} else {
-		    prf = CodePotTab[0][d] - CodePotTab[1][d] - CodePotTab[2][d];
-		}
-		val += prf;
-	    }
-	    *rest++ = val;
-	}
-	for (tt = sd->at(sd->right); ss < tt; ss += sd->many)
-	    *rest++ = 0.;
-	if (n2t) sd->tron2nuc(0);
-	return (result);
-}
-
-float* CodePot::calcPrefCodePot(Seq* sd, int phase) const
-{
-	if (!CodePotBuf) return (0);
-	switch (CodePotType) {
-	    case DNA:	return calc5MMCodePot(sd, phase); 
-	    case TRON:	return calcDitCodePot(sd, phase);
-	    default:	return (0);
-	}
-}
-
-bool ExinPot::readExinPot(const char* fname)
-{
+	file_type = 0;
 	FILE*	fd = ftable.fopen(fname, "r");
 	if (!fd) {
-	    prompt("%s can't open!\n", fname);
+	    prompt(not_found, fname);
+	    return (ng);
+	}
+	if (!fgets(str, MAXL, fd)) return (ng);
+	int	exn = 0;
+	for ( ; exn < static_cast<int>(Iefp::NG); ++exn) {
+	    if (!wordcmp(str, iefp_tid[exn])) {
+		file_type = 1;
+		break;			// text
+	    }
+	}
+	fclose(fd);
+	return (exn);
+}
+
+bool ExinPot::readFile(const char* fname)
+{
+	int	file_type = 0;
+	exin = fname2exin(fname, file_type);
+	if (file_type == 2)	// binary
+	    return readBinary(fname);
+	else if (file_type == 0) {
+	    prompt(incompatible, fname);
+	    return (false);
+	}
+	FILE*	fd = ftable.fopen(fname, "r");
+	if (!fd) {
+	    prompt(not_found, fname);
 	    return false;
 	}
-	char	str[MAXL+1];
-	int	exin = -1;
+	char	str[MAXL];
 	int	sz = 1;
-	FTYPE*  pot = 0;
+	float*	pot = 0;
 	if (!fgets(str, MAXL, fd)) goto fail_to_read;
-	if (!wordcmp(str, EXONPOT)) exin = 1;	/* header line */
-	else if (!wordcmp(str, INTRONPOT)) exin = 0;
-	else goto fail_to_read;
-	if (sscanf(str, "%*s %*d %d %*f %f %*f %*d %d %d %f", 
-	     &size, &avpot, &lm, &rm, &avlen) < 1) goto fail_to_read;
+	if (sscanf(str, "%*s %d %d %*f %f %*f %*d %d %d %f", 
+	     &nphase, &ndata, &avpot, &lm, &rm, &avlen) < 1) goto fail_to_read;
+	nphase = (nphase >= 3)? 3: 1;
 	avlen -= (lm + rm);
-	pot = new FTYPE[size];
-	for (morder = 0; sz < size; sz *= CP_NTERM) ++morder;
-	if (sz != size) goto fail_to_read;
-	if (exin) ExonPot = pot;
-	else	IntronPot = pot;
+	pot = data = new float[dsize()];
+	for (morder = -1; sz < ndata; sz *= CP_NTERM) ++morder;
+	if (sz != ndata) goto fail_to_read;
 	while (fgets(str, MAXL, fd)) {
-	    char*	ps = str;
-	    if (isalpha(*ps)) ps = cdr(str); 
-	    *pot++ = atof(ps);
+	    int	i = 0;
+	    char* ps = isalpha(*str)? cdr(str): str;
+	    for ( ; i++ < 3 && ps; ps = cdr(ps))
+		*pot++ = atof(ps);
+	    if (i < 3) break;
 	}
 	fclose(fd);
-	return true;
+	if ((pot - data) == dsize()) return true;
 fail_to_read:
-	delete[] ExonPot; ExonPot = 0;
-	delete[] IntronPot; IntronPot = 0;
-	prompt("%s has wrong exinpot format !\n", fname);
 	fclose(fd);
+	prompt(incompatible, fname);
 	return false;
 }
 
-ExinPot::ExinPot(int zZ, const char* fname)
-	: morder(0), size(0), lm(0), rm(0), 
-	  avpot(0), avlen(0), ExonPot(0), IntronPot(0)
+// from wdfq file specific to nphase == 1
+
+float* ExinPot::getKmers(const char* wdfq, const bool foregrd)
 {
-	if (zZ & 1 && !readExinPot(fname? fname: EXONPOT)) return;
-	if (zZ & 2) readExinPot(fname? fname: INTRONPOT);
+	FILE*	fd = fopen(wdfq, "r");
+	if (!fd) {
+	    prompt(not_found, wdfq);
+	    return (0);
+	}
+const	int	plus = (foregrd && isfpp())? ndata: 0;
+	float*	frq = new float[ndata + plus];
+	float*	fq = frq + plus;
+	if (foregrd) data = frq;
+	char	str[MAXL];
+	char	kmer[16];
+	vclear(fq, ndata);
+	int	n = 0;
+	while (fgets(str, MAXL, fd)) {
+	    int	freq;
+	    if (sscanf(str, "%s %d", kmer, &freq) < 2) break;
+	    int	k = strlen(kmer);
+	    if (--k > morder) break;
+	    if (k < morder) continue;
+	    *fq++ = freq;
+	    if (n++ == ndata) break;
+	}
+	fclose(fd);
+	return (frq);
+}
+
+void ExinPot::count_kmers_1(const Seq* sd, float* fq)
+{
+const	CHAR*	ss = sd->at(sd->left + lm);
+const	CHAR*	tt = sd->at(sd->right - rm - morder);
+const	CHAR*   redctab = sd->istron()? tnredctab: ncredctab;
+
+	int	x = morder + 1;
+	int	w = 0;
+
+	while (ss < tt) {
+	    int	c = redctab[*ss++];
+	    if (c < 4) {
+		if (x) --x;
+	        w = (4 * w + c) % ndata;
+	    } else {
+		w = 0;
+		x = morder + 1;
+	    }
+	    if (!x) ++fq[w];
+	}
+}
+
+void ExinPot::count_kmers_3(const Seq* sd, float* fq)
+{
+const	CHAR*	ss = sd->at(sd->left);
+const	CHAR*	tt = sd->at(sd->right - 5);
+const	CHAR*   redctab = sd->istron()? tnredctab: ncredctab;
+
+	int	x = 6;
+	int	w = 0;
+
+	for (int p = 1; ss < tt; p = next_p[p]) {
+	    int	c = redctab[*ss++];
+	    if (c < 4) {
+		if (x) --x;
+	        w = (4 * w + c) % ndata;
+	    } else {
+		w = 0;
+		x = 6;
+	    }
+	    if (!x) ++fq[3 * w + p];
+	}
+}
+
+float* ExinPot::getKmers(EiJuncSeq* eijseq)
+{
+const	int	vsize = ndata * nphase;
+const	int	plus = isfpp()? vsize: 0;
+	data = new float[vsize + plus];
+	float*	fq = data + plus;
+	vclear(fq, vsize);
+	do {
+	    Seq*	sd = eijseq->nextseq();
+	    if (!sd) continue;
+	    if (nphase == 1)	count_kmers_1(sd, fq);
+	    else		count_kmers_3(sd, fq);
+	} while (eijseq->goahead());
+	return (data);
+}
+
+float* ExinPot::getKmers(int argc, const char** argv)
+{
+const	int	vsize = ndata * nphase;
+const	int	plus = isfpp()? vsize: 0;
+	data = new float[vsize + plus];
+	float*	fq = data + plus;
+	vclear(fq, vsize);
+	Seq	sd(1);
+	SeqServer	sqsvr(argc, argv, IM_SNGL);
+	InSt	inst;
+	while ((inst = sqsvr.nextseq(&sd, 0)) != IS_END) {
+	    if (inst == IS_ERR) continue;
+	    if (nphase == 1)	count_kmers_1(&sd, fq);
+	    else		count_kmers_3(&sd, fq);
+	}
+	return (data);
+}
+
+void ExinPot::reform_1(float* bkg)
+{
+	int	i = 0;
+	float	s = 0;
+	float*	frq = bkg? bkg: fbegin();
+	float*	fre = frq + ndata;
+	float*	pot = bkg? bkg: begin();
+const	bool	cpb = ispot();		// conditional probability
+const	bool	fpp = bkg? false: isfpp();
+	while (frq < fre) {
+	    if (cpb) {
+		s += ++frq[i++];	// psuedo count 1
+		if (i == 4) {
+		    for (int j = 0; j++ < 4; ++frq) {
+			*pot++ = *frq / s;
+			if (fpp) *frq /= total;
+		    }
+		    s = i = 0;
+		}
+	    } else    *frq++ /= total;
+	}
+}
+
+void ExinPot::reform_3()
+{
+	int	i = 0;
+	float	s[3];
+	vclear(s, 3);
+	float*	frq = fbegin();
+	float*	fre = fend();
+	float*	pot = begin();
+const	bool	cpb = ispot();		// conditional probability
+const	bool	fpp = isfpp();
+	for (int p = 1; frq < fre; p = next_p[p]) {
+	    if (cpb) {
+		s[p] += frq[i++] + 1;	// psuedo count 1
+		if (i == 12) {
+		    for (int j = 0, q = 1; j++ < 12; ++frq, q = next_p[q]) {
+			*pot++ = (*frq + 1)/ s[q];
+			if (fpp) *frq /= total;
+		    }
+		    i = 0;
+		    vclear(s, 3);
+		}
+	    } else    *frq++ /= total;
+	}
+}
+
+void ExinPot::reform(float* bkg)
+{
+	total = 0;
+const	float*	fw = bkg? bkg: fbegin();
+const	float*	fe = bkg? (fw + ndata): fend();
+	while (fw < fe) total += *fw++;
+	if (bkg || nphase == 1) reform_1(bkg);
+	else	reform_3();
+}
+
+bool ExinPot::makeExinPot(const float* bkg)
+{
+	if (!bkg) return (false);
+	float*	pot = begin();
+	float*	frq = fbegin();
+	float*	fed = fend();
+	int	p = 0;
+	while (frq < fed) {
+const	    float	freq = *frq++;
+	    *pot = log10(*pot / *bkg);
+	    if (isfpp()) ess += freq * *pot++;
+	    if (++p == nphase) {
+		++bkg;
+		p = 0;
+	    }
+	}
+	if (isfpp()) ess *= 1000;	// mean score per 1000 bp
+	return (true);
+}
+
+bool ExinPot::readBinary(const char* fname)
+{
+	FILE*	fd = fopen(fname, "rb");
+	if (!fd) {
+	    prompt(not_found, fname);
+	    return (false);
+	}
+	if (fread(this, sizeof(ExinPot), 1, fd) != 1) {
+	    prompt(incompatible, fname);
+	    return (false);
+	}
+	data = new float[dsize()];
+	if (fread(data, sizeof(float), dsize(), fd) != size_t(dsize())) {
+	    prompt(incompatible, fname);
+	    return (false);
+	}
+	fclose(fd);
+	return (true);
+}
+
+bool ExinPot::writeBinary(const char* oname)
+{
+	int	file_type = 0;
+	int	exn = fname2exin(oname, file_type);
+	if (file_type == 0) exn = exin;
+	else	std::swap(exn, exin);
+	char	str[MAXL];
+const	char*	fn = file_type? oname: add_ext(oname, iefp_ext[exin], str);
+	FILE*	fd = fopen(fn, "wb");
+	if (!fd) {
+	    prompt(no_file, str);
+	    return (false);
+	}
+	if (fwrite(this, sizeof(ExinPot), 1, fd) != 1) {
+	    prompt(no_file, str);
+	    return (false);
+	}
+	float*	pot = begin();
+	if (fwrite(pot, sizeof(float), dsize(), fd) != size_t(dsize())) {
+	    prompt(no_file, str);
+	    return (false);
+	}
+	fclose(fd);
+	std::swap(exn, exin);
+	return (true);
 }
 
 // calculate "instaneous" exonic or "cumulative" intronic potential
 
-float* ExinPot::calcExinPot(const Seq* sd, bool exon) const
+float* ExinPot::calcScr_1(const Seq* sd, float* scr) const
 {
-	FTYPE*	pot = exon? ExonPot: IntronPot;
-	if (!pot) return 0;
-	double	acc = 0.;
+const	float*	pot = begin();
+const	int	len = sd->right - sd->left;
 const	CHAR*	ss = sd->at(sd->left);
 const	CHAR*	tt = sd->at(sd->right);
-const	CHAR*   redctab = sd->inex.molc == TRON? tnredctab: ncredctab;
+const	CHAR*   redctab = sd->istron()? tnredctab: ncredctab;
+const	int	kk = morder + 1;
 
-	float*	result = new float[sd->right - sd->left];
-	float*	rest = result;
-	if (sd->left < 0)	*rest++ = 0;	/* fill pat */
-	else	--ss;
-	INT	c = redctab[*ss];
-	int	x = c < 4;
-	int	d = x? c: 0;
-	while (++ss < tt) {
-	    if ((c = redctab[*ss]) < 4) {
-		++x;
-	        d = (CP_NTERM * d + c) % size;
+	if (sd->left >= 0) --ss;
+	float*	result = new float[len];
+	float*	rest = result - morder;
+	int	x = kk;
+	int	w = 0;
+const	bool	epot = (exin == static_cast<int>(Iefp::EP));
+	double	acc = 0.;			// cumulative
+	for ( ; ss < tt; ++rest) {
+	    INT	c = redctab[*ss++];
+	    if (c < 4) {
+		if (x) --x;
+	        w = (4 * w + c) % ndata;
 	    } else {
-		d = x = 0;
+		w = 0;
+		x = kk;
 	    }
-	    float	pt = (x < morder)? 0: pot[d];
-	    *rest++ = exon? pt: acc += pt;
+const	    float	pt = x? 0: pot[w];
+	    if (rest >= result) {
+		acc += pt;
+		*rest = epot? pt: float(acc);
+	    }
 	}
+	vclear(rest, result + len - rest);
+	if (scr)
+	    *scr = epot? float(acc): (result[len - 1 - rm] - result[lm]);
+	return (result);
+}
+
+// Calculate coding potential from DNA seq based on the 5th-order Markov model
+
+float* ExinPot::calcScr_3(const Seq* sd, float* scr) const
+{
+	CHAR*   redctab = sd->inex.molc == TRON? tnredctab: ncredctab;
+const	int	len = sd->right - sd->left;
+const	CHAR*	ss = sd->at(sd->left);
+const	CHAR*	tt = sd->at(sd->right);
+
+const	float*	cdp = begin();
+	float*	result = new float[len];
+	float*	rest = result - 5;
+const	int	kk = morder + 1;
+	int	x = kk;
+	int	buf[3] = {0, 0, 0};
+	int	w = 0;
+double	acc = 0.;
+	for (int p = 1; ss < tt; p = next_p[p], ++rest) {
+	    int	c = redctab[*ss++];
+	    if (c < 4) {
+		buf[p] = 3 * (w = (4 * w + c) % ndata);
+		if (x) --x;
+	    } else {
+		w = 0;
+		x = kk;
+	    }
+	    float	val = 0;
+	    if (!x) {
+	 	val += cdp[buf[next_p[p]] + 2];	// -1
+		val += cdp[buf[prev_p[p]]];	// 0
+		val += cdp[buf[p] + 1];		// +1
+	    }
+	    if (rest >= result) {
+		*rest = val;
+		if (scr && p == 1) acc += val;
+	    }
+	}
+	vclear(rest, result + len - rest);
+	if (scr) *scr = float(acc);
 	return (result);
 }
 

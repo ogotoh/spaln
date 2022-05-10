@@ -21,7 +21,6 @@
 *****************************************************************************/
 
 #include "aln.h"
-#include "utilseq.h"
 #include <math.h>
 
 static	int	estimlen(int na, int nb, const SKL* skl);
@@ -91,6 +90,7 @@ int prePwd(const Seq** seqs, bool use_mdm)
 	setSimmtxes((ComPmt) dvsp, use_mdm);		// default
 	if (alprm2.sss < 0.) alprm2.sss = defSss[algmode.crs];
 	if (alprm2.z < 0) alprm2.z = dvsp? def_alprm2z: 0;
+	if (dvsp == 1) alprm2.jneibr /= 2;
 	return (dvsp);
 }
 
@@ -106,22 +106,18 @@ PwdB::PwdB(const Seq** seqs, const ALPRM* alp) :
 	LongGEP((VTYPE) (-alp->u1 * Vab)),
 	diffu(LongGEP - BasicGEP),
 	LongGOP(BasicGOP - diffu * alp->k1),
-	MaxGapL(0), ExtraGOP(0), GapE1(0), GapE2(0),
-	GapW1(0), GapW2(0), GapW3(0), GapW3L(0),
-	pmt(0), codepot(0), exinpot(0), eijpat(0), IntPen(0)
+	GOP{0, BasicGOP, LongGOP}
 {
-	GOP[0] = 0;
-	GOP[1] = BasicGOP;
-	GOP[2] = LongGOP;
 	int	step = (DvsP == 3)? 1: 3;
 	codonk1 = alp->ls == 3? step * alp->k1: LARGEN;
 	if (!seqs[0]->inex.intr && !seqs[1]->inex.intr) return;	// without splice
-	eijpat = new EijPat(DvsP);	// boundary signal
-	if (DvsP || algmode.mns == 0) codepot = new CodePot();	// coding potential
-	if (!DvsP) {	// C vs G
-	    int	zZ = (alprm2.z > 0) + 2 * (alprm2.Z > 0);
-	    if (zZ) exinpot = new ExinPot(zZ);
-	} else {	// A vs G
+	eijpat = new EijPat(DvsP);				// boundary signal
+	if (DvsP || algmode.mns == 0)
+	    codepot = new ExinPot(static_cast<int>(Iefp::CP));	// coding potential
+	if (!DvsP) {		// C vs G
+	    if (alprm2.z > 0)  exonpot = new ExinPot(static_cast<int>(Iefp::EP));
+	    if (alprm2.Z > 0)  intnpot = new ExinPot(static_cast<int>(Iefp::IP));
+	} else if (DvsP != 3) {	// A vs G
 	    ++Nrow; ++Nrwb;
 	    MaxGapL = 100;
 	    ExtraGOP = (VTYPE) (-alprm2.x * Vab);
@@ -132,18 +128,19 @@ PwdB::PwdB(const Seq** seqs, const ALPRM* alp) :
 	    GapW3 = BasicGOP + BasicGEP;
 	    GapW3L = LongGOP + LongGEP;
 	    pmt = new Premat(seqs);
-	    if (alprm2.Z > 0) exinpot = new ExinPot(2);
+	    if (alprm2.Z > 0) intnpot = new ExinPot(static_cast<int>(Iefp::IP), 4);
 	}
-	IntPen = new IntronPenalty(Vab, DvsP, eijpat, exinpot);
+	if (DvsP != 3) IntPen = new IntronPenalty(Vab, DvsP, eijpat, intnpot);
 }
 
 PwdB::~PwdB()
 {
 	delete pmt;
-	delete IntPen;
 	delete codepot;
-	delete exinpot;
+	delete intnpot;
+	delete exonpot;
 	delete eijpat;
+	delete IntPen;
 }
 
 void putvar(VTYPE x)
@@ -355,12 +352,12 @@ void Colonies::detectoverlap(COLONY* cc)
 	int	mlb = cc->mlb + OutPrm.AllowdOverlap;
 
 	while ((--cw)->mrb > mlb) {
-	    if (cw->mark > 0) continue;		/* active */
+	    if (cw->mark > 0) continue;		// active
 	    if (cc->mrb - cw->mlb > OutPrm.AllowdOverlap &&
 		cc->nrb - cw->nlb > OutPrm.AllowdOverlap &&
 		cw->nrb - cc->nlb > OutPrm.AllowdOverlap) {
 		if (cc->val < cw->val)  cc->mark = -1;
-		else    cw->mark = -1;		/* delete */
+		else    cw->mark = -1;		// delete
 	    }
 	}
 }
@@ -379,11 +376,11 @@ void Colonies::removeoverlap()
 	clny->mlb = clny->mrb = 0;
 	qsort((UPTR) (clny + 1), (INT) no_clny, sizeof(COLONY), (CMPF) bymrb);
 	for (cc = cix; cc > clny + 1; --cc)
-	    if (cc->mark == 0) detectoverlap(cc);	/* non-active */
+	    if (cc->mark == 0) detectoverlap(cc);	// non-active
 	qsort((UPTR) (clny + 1), (INT) no_clny, sizeof(COLONY), (CMPF) byclno);
 	for (COLONY* cw = cc = clny + 1; cw <= cix; ++cw) {
 	    int	nc = 0;
-	    if (cw->mark >= 0) {			/* retain */
+	    if (cw->mark >= 0) {			// retain
 		nc = cc - clny;
 		*cc++ = *cw;
 	    }
@@ -401,11 +398,11 @@ void Colonies::removelowscore()
 	clny->mlb = clny->mrb = 0;
 	qsort((UPTR) (clny + 1), (INT) no_clny, sizeof(COLONY), (CMPF) byscr);
 	for (cc = cix; cc > clny + OutPrm.NoOut; --cc)
-	    if (cc->mark == 0) cc->mark = -1;	/* non-active */
+	    if (cc->mark == 0) cc->mark = -1;		// non-active
 	qsort((UPTR) (clny + 1), (INT) no_clny, sizeof(COLONY), (CMPF) byclno);
 	for (COLONY* cw = cc = clny + 1; cw <= cix; ++cw) {
 	    int	nc = 0;
-	    if (cw->mark >= 0) {			/* retain */
+	    if (cw->mark >= 0) {			// retain
 		nc = cc - clny;
 		*cc++ = *cw;
 	    }
@@ -415,7 +412,7 @@ void Colonies::removelowscore()
 	no_clny = cc - clny;
 }
 
-Colonies::Colonies(int n) : no_clny(0)
+Colonies::Colonies(int n)
 {
 	if (n == 0) n = OutPrm.NoOut;
 	OutPrm.MaxOut = n + MAX_COLONY;

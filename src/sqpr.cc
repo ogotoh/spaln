@@ -52,8 +52,6 @@ static	int	SeqGCGCheckSum(const char* seq, int len);
 static	int	checksum(int* checks, const GAPS* gaps, const Seq* sd);
 static	void	gcg_out(const GAPS** gaps, Seq* seqs[], int seqnum, FILE* fd);
 
-		//lpw blk Nout Ncolony eij ovl fnm rm trim lg lbl dsc odr spj olr color self term
-OUTPRM	OutPrm = {60, 0, MAX_COLONY, 1, 4, 10, 5, 0, 1, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0};
 static	char	ditto = _IBID;
 static	Row_Mode	prmode = Row_Last;
 static	int	prtrc = TRON;
@@ -101,7 +99,7 @@ FILE* setup_output(int omode, const char* def_fn, bool setup_out_fd)
 	    if (!(OutPrm.out_file && *OutPrm.out_file) && def_fn)
 		OutPrm.out_file = def_fn;
 	    if (OutPrm.out_file && !is_dir(OutPrm.out_file)) {
-		if (!(out_fd = fopen(OutPrm.out_file, "w")))
+		if (!(out_fd = wfopen(OutPrm.out_file, "w")))
 		    fatal("Can't write to %s\n", OutPrm.out_file);
 	    }
 	}
@@ -862,28 +860,28 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 #if USE_ZLIB
 		if (OutPrm.gzipped) {
 		    strcat(str, gz_ext);
-		    if (!(gzfg = gzopen(str, "wb"))) fatal(efmt, str, 0);
+		    if (!(gzfg = wgzopen(str, "wb"))) fatal(efmt, str, 0);
 		} else 
 #endif
-		    if (!(fg = fopen(str, "wb"))) fatal(efmt, str, 0);
+		    if (!(fg = wfopen(str, "wb"))) fatal(efmt, str, 0);
 		strcpy(bdy, erext);
 #if USE_ZLIB
 		if (OutPrm.gzipped) {
 		    strcat(str, gz_ext);
-		    if (!(gzfe = gzopen(str, "wb"))) fatal(efmt, str, 0);
+		    if (!(gzfe = wgzopen(str, "wb"))) fatal(efmt, str, 0);
 		} else 
 #endif
-		    if (!(fe = fopen(str, "wb"))) fatal(efmt, str, 0);
+		    if (!(fe = wfopen(str, "wb"))) fatal(efmt, str, 0);
 		strcpy(bdy, qrext);
 #if USE_ZLIB
 		if (OutPrm.gzipped) {
 		    strcat(str, gz_ext);
-		    if (!(gzfq = gzopen(str, "wb"))) fatal(efmt, str, 0);
+		    if (!(gzfq = wgzopen(str, "wb"))) fatal(efmt, str, 0);
 		    if ((fputs(dbs_dt[0]->dbsid, gzfq) == EOF) || (fputc('\0', gzfq) == EOF))
 		    fatal(efmt, qrext, gr.Nrecord);
 		} else 
 #endif
-		    if (!(fq = fopen(str, "wb"))) fatal(efmt, str, 0);
+		    if (!(fq = wfopen(str, "wb"))) fatal(efmt, str, 0);
 		if (fq && ((fputs(dbs_dt[0]->dbsid, fq) == EOF) || (fputc('\0', fq) == EOF)))
 		    fatal(efmt, qrext, gr.Nrecord);
 		++qryidx;	// o-th q-recode contains the database name
@@ -1343,10 +1341,11 @@ void AlnOutModes::getopt(const char* val)
 	delete[] arg;
 }
 
-void AlnOutModes::setup(const char* spath)
+int AlnOutModes::setup(const char* spath)
 {
 	if (!n_out_modes) ++n_out_modes;
 	fds = new FILE*[n_out_modes];	// directory
+	vclear(fds, n_out_modes);
 const	char*	sl = strrchr(spath, '/');
 	if (sl) ++sl;
 	else	sl = spath;
@@ -1374,26 +1373,33 @@ const	char*	sl = strrchr(spath, '/');
 	    if (OutPrm.out_file) {
 		if (isdir) {
 		    OutPrm.out_file = 0;
-		    if (algmode.nsa == BIN_FORM) return;
+		    if (algmode.nsa == BIN_FORM) {
+		        fds[0] = stdout;
+			return (1);
+		    }
 		    sprintf(fn, ".O%d", algmode.nsa);
+		} else if (algmode.nsa == BIN_FORM) {
+		    fds[0] = stdout;
+		    return (1);
 		}
-		fds[0] = fopen(str, "w");
-		if (!fds[0]) fatal(write_error, str);
+		fds[0] = wfopen(str, "w");
+		if (!fds[0]) return (0);
 	    } else
 		fds[0] = stdout;
-	    return;
+	    return (1);
 	}
 	OutPrm.out_file = 0;
-	for (int i = 0, n = 0; i < N_Out_Modes; ++i) {
+	int	n = 0;
+	for (int i = 0; i < N_Out_Modes; ++i) {
 	    if (out_mode[i] < 0) continue;
 	    if (out_mode[i] == BIN_FORM) fds[n] = 0;
 	    else {
 		sprintf(fn, ".O%d", i);
-		fds[n] = fopen(str, "w");
-		if (!fds[n]) fatal(write_error, str);
+		fds[n] = wfopen(str, "w");
 	    }
-	    out_mode[n++] = out_mode[i];
+	    if (fds[n]) out_mode[n++] = out_mode[i];
 	}
+	return (n);
 }
 
 enum AaProp {GAP, SML, PLS, MNS, HPO, ARO = 6, NEU, PHI, PHO};

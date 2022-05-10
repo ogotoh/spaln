@@ -184,13 +184,19 @@ template <class key_t, class val_t>
 class Dhash {
 protected:
 	INT	size1 = 0;
-	INT	size2 = 0;
+	INT	size2 = SecondHS;
 	KVpair<key_t, val_t>*	hash = 0;
 	KVpair<key_t, val_t>*	hz = 0;
-	val_t	un_def;
+	val_t	un_def = 0;
 public:
-	Dhash(int n = 0, val_t ud = 0, float hf = DefHashFact);
+	Dhash() {}
+	Dhash(int n, val_t ud, float hf = DefHashFact);
+#if USE_ZLIB
+template <typename file_t>
+	Dhash(file_t fd);
+#else
 	Dhash(FILE* fd);
+#endif
 	~Dhash() {delete[] hash;}
 	KVpair<key_t, val_t>*	begin() const {return hash;}
 	KVpair<key_t, val_t>*	end() const {return hz;}
@@ -235,16 +241,12 @@ public:
 	    return (hash[pos]);
 	}
 	val_t	undef() {return (un_def);}
-	void	fatal(const char* f, const char* a) {
-	    fprintf(stderr, f, a);
-	    exit (1);
-	}
 	void	write_binary(FILE* fd);
 };
 
 template <class key_t, class val_t>
 Dhash<key_t, val_t>::Dhash(int n, val_t ud, float hf) 
-	: size2(SecondHS), un_def(ud)
+	: un_def(ud)
 {
 	if (n) {
 	    n = int(hf * n);
@@ -256,7 +258,12 @@ Dhash<key_t, val_t>::Dhash(int n, val_t ud, float hf)
 }
 
 template <class key_t, class val_t>
+#if USE_ZLIB
+template <typename file_t>
+Dhash<key_t, val_t>::Dhash(file_t fd)
+#else
 Dhash<key_t, val_t>::Dhash(FILE* fd)
+#endif
 {
 	if (fread(this, sizeof(*this), 1, fd) != 1)
 	    fatal(fread_error, "Dhash");
@@ -869,18 +876,21 @@ protected:
 public:
 	Strlist(int m = 1, int len = defsunit);
 	Strlist(const Strlist& src);
-	Strlist(const char* str);
 	Strlist(const char* str, const char* delim);
-	Strlist(FILE* fd);	// read binary
-	Strlist(FILE* fd, int m);
 #if USE_ZLIB
+template <typename file_t>
+	Strlist(file_t fd);	// read binary
 	Strlist(gzFile gzfd, int m);
+#else
+	Strlist(FILE* fd);
 #endif
+	Strlist(FILE* fd, int m);
 	~Strlist() {delete[] strbuf; delete[] idxlst;}
 	char*	operator[](INT n) const {
 	    return ((idxlst && n < many)? strbuf + idxlst[n]: strbuf);
 	}
 	INT	size() const {return (many);}
+	INT	space() const {return (totallen);}
 	char*	assign(const Strlist& src);
 	char*	assign(const char* str);
 	char*	push(const char* str);
@@ -893,6 +903,23 @@ public:
 	INT	longest() const {return (maxlen? maxlen - 1: 0);}
 	void	write_binary(FILE* fd);
 };
+
+#if USE_ZLIB
+template <class file_t>
+Strlist::Strlist(file_t fd)
+#else
+Strlist::Strlist(FILE* fd)
+#endif
+{
+	if (fread(this, sizeof(Strlist), 1, fd) != 1)
+	    fatal(fread_error, "Strlist");
+	strbuf = new char[totallen];
+	idxlst = new INT[many];
+	if (fread(strbuf, sizeof(char), totallen, fd) != totallen)
+	    fatal(fread_error, "Strlist");
+	if (fread(idxlst, sizeof(int), many, fd) != many)
+	    fatal(fread_error, "Strlist");
+}
 
 // hash for string key
 
@@ -907,8 +934,13 @@ protected:
 public:
 	Strlist*	sl = 0;
 	StrHash(int n = 0, val_t udf = def_un_def, 
-	    float hf = DefHashFact, int strbufsize = 0);
+	    float hf = DefHashFact, int strbufsize = defsunit);
+#if USE_ZLIB
+template <typename file_t>
+	StrHash(file_t fd);
+#else
 	StrHash(FILE* fd);
+#endif
 //	StrHash(const char* fname);
 	StrHash(const StrHash<val_t>& src);
 	~StrHash() {delete sl; delete[] hash;}
@@ -960,10 +992,6 @@ public:
 	char*	squeeze() {return (sl->squeeze());}
 	val_t	undef() {return (un_def);}
 	void	write_binary(FILE* fd);
-	void	fatal(const char* f, const char* a) {
-	    fprintf(stderr, f, a);
-	    exit (1);
-	}
 };
 
 template <class val_t>
@@ -973,6 +1001,7 @@ StrHash<val_t>::StrHash(int n, val_t udf, float hf, int strbufsize)
 	if (n) {
 	    size1 = supprime(int(hf * n));
 	    sl = new Strlist(size1, strbufsize);
+	    sl->push("");
 	    hash = new KVpair<INT, val_t>[size1];
 	    hz = hash + size1;
 	    if (un_def) {
@@ -984,7 +1013,12 @@ StrHash<val_t>::StrHash(int n, val_t udf, float hf, int strbufsize)
 }
 
 template <class val_t>
+#if USE_ZLIB
+template <typename file_t>
+StrHash<val_t>::StrHash(file_t fd)
+#else
 StrHash<val_t>::StrHash(FILE* fd)
+#endif
 {
 	if (fread(this, sizeof(*this), 1, fd) != 1)
 	    fatal(fread_error, "StrHash");
@@ -994,6 +1028,7 @@ StrHash<val_t>::StrHash(FILE* fd)
 	    fatal(fread_error, "StrHash");
 	hz = hash + n;
 	sl = new Strlist(fd);
+	sl->push("");	// dummy to skip 0-th entry
 }
 
 template <class val_t>
@@ -1015,8 +1050,9 @@ KVpair<INT, val_t>* StrHash<val_t>::map(const char* skey, int record)
 	INT	u = size2 - key % size2;
 	INT	v0 = v;
 	KVpair<INT, val_t>*	sh = hash + v;
+	int	ne_key = 1;
 
-	while (sh->key && strcmp(strkey(sh->key), skey)) {
+	while (sh->key && (ne_key = strcmp(strkey(sh->key), skey))) {
 	    v = (v + u) % size1;
 	    if (v == v0) {
 		resize();
@@ -1030,7 +1066,7 @@ KVpair<INT, val_t>* StrHash<val_t>::map(const char* skey, int record)
 		sl->push(skey);
 	    } else if (!record)
 		sh = 0;
-	}
+	} else if (ne_key) sh = 0;
 	return (sh);
 }
 
@@ -1066,6 +1102,7 @@ void StrHash<val_t>::resize(int s)
 	size1 = supprime(s? s: 2 * size1);
 	if (!size2)
 	    for (size2 = SecondHS; size2 > size1; size2 /= 2) ;
+	delete[] hash;
 	hash = new KVpair<INT, val_t>[size1];
 	hz = hash + size1;
 	clear();
@@ -1075,7 +1112,6 @@ void StrHash<val_t>::resize(int s)
 		*kv = *hw;
 	    }
 	}
-	org.erase_sl();
 }
 
 template <class val_t>

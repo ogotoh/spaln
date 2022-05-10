@@ -86,43 +86,57 @@ struct Targ {
 
 class MakeDbs {
 	DbsRec	rec;
-	size_t	recnbr;
-	bool	cridxf;
+	size_t	recnbr = 0;
+	bool	cridxf = false;
 const	bool	isaa;
-	int	b;
+	int	b = 0;
 	INT	maxlen;
 	char	entrystr[MAXL];
 	char	entryprv[MAXL];
-	FILE*	fgrp;
-	FILE*	fseq;
-	FILE*	fidx;
-	FILE*	fent;
+	FILE*	fgrp = 0;
+	FILE*	fseq = 0;
+	FILE*	fidx = 0;
+	FILE*	fent = 0;
 #if USE_ZLIB
-	gzFile	gzseq;
+	gzFile	gzseq = 0;
+	gzFile	gzidx = 0;
+	gzFile	gzent = 0;
+#else
+	bool	gzseq = false;
+	bool	gzidx = false;
+	bool	gzent = false;
 #endif
-	char*	dbname;
+	char*	dbname = 0;
 	void	putsq(int c) {
-		if (fseq)	fputc(c, fseq);
-#if USE_ZLIB
-		else	 fputc(c, gzseq);
-#endif
+		if (gzseq)	fputc(c, gzseq);
+		else	 	fputc(c, fseq);
 	}
 public:
 	MakeDbs(const char* dbname, int molc);
 	~MakeDbs() {
 		fclose(fgrp);
 		if (fseq) fclose(fseq);
+		if (fidx) fclose(fidx);
+		if (fent) fclose(fent);
 #if USE_ZLIB
 		if (gzseq) fclose(gzseq);
+		if (gzidx) fclose(gzidx);
+		if (gzent) fclose(gzent);
 #endif
-		fclose(fidx);
-		fclose(fent);
 		delete[] dbname;
 	}
 	INT	max_dbseq_len() {return maxlen;}
 	void	mkidx();
 template <typename file_t>
 	int	write_recrd(file_t fd, int c = 0);
+template <typename file_t>
+	void	read_ent(file_t fd);
+template <typename file_t>
+	void	read_idx(file_t fd);
+template <typename file_t>
+	void	write_idx(file_t fd);
+template <typename file_t>
+	void	write_odr(file_t fd, const INT* order, const char* str);
 	void	putseq(int c) {
 		if (isaa) putsq(c);
 		else if (rec.seqlen & 1) putsq(c + b);
@@ -134,15 +148,18 @@ template <typename file_t>
 	}
 	void	wrtgrp(const char* ps) {
 		long	 fpos = 0L;
-		if (fseq)	fpos = ftell(fseq);
-#if USE_ZLIB
-		else	 fpos = ftell(gzseq);
-#endif
-		fprintf(fgrp, "%8ld %u %s\n", fpos, (INT) recnbr, ps);
+		if (gzseq)	fpos = ftell(gzseq);
+		else	 	fpos = ftell(fseq);
+		long	epos = 0L;
+		if (gzent)	epos = ftell(gzent);
+		else		epos = ftell(fent);
+		fprintf(fgrp, "%8ld %u %u %s\n", 
+		    fpos, (INT) recnbr, (INT) epos, ps);
 	}
 	void stamp21() {
 		DbsRec	rec21 = {magicver21, false, 0};
-		fwrite(&rec21, sizeof(DbsRec), 1, fidx);	// header record
+		if (fidx) fwrite(&rec21, sizeof(DbsRec), 1, fidx);	// header record
+		else	fwrite(&rec21, sizeof(DbsRec), 1, gzidx);
 	}
 
 };
@@ -209,8 +226,7 @@ struct ContBlk {
 
 class Chash : public Dhash<INT, int> {
 public:
-	Chash(int n) 
-	  : Dhash<INT, int>(n)  {}
+	Chash(int n) : Dhash<INT, int>(n, 0)  {}
 	~Chash() {}
 	void	countBlk(ContBlk& cntblk);
 	void	registBlk(INT m, ContBlk& cntblk);

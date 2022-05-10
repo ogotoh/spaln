@@ -184,37 +184,6 @@ static	const	char	SensChar[] = {NM, CM, RV, CR, '\0'};
 extern	int	cmpPfqPos(const PFQ* a, const PFQ* b);
 extern	int	en_code(int c, const SEQ_CODE* code);
 
-struct OUTPRM {
-	int	lpw;
-	INT	BlkSz;
-	int	NoOut;
-	INT	MaxOut;
-	INT	MaxOut2;		// intermediate state
-	int	EijMergin;
-	int	AllowdOverlap;
-const	char*	out_file;
-	INT	RemoveTmp:	1;
-	INT	trimend:	1;
-	INT	SkipLongGap:	2;	// 0: don't skip, 1: skip, 3: run time
-	INT	deflbl:		2;	// 0: sname, 1: fname, 2: tally, 3: new
-	INT	fastanno:	1;	// 0: add annotation in fasta output
-	INT	descrp:		1;	// output description
-	INT	sortodr:	2;	// 0: input, 1: bytree, 2: shorter, 3: longer
-	INT	spjinf:		1;
-	INT	olrsum:		1;
-	INT	ColorEij:	2;	// color mark intron position
-	INT	supself:	2;	// suppress result of self comparison
-	INT	noseqline:	1;	// additional prefix line in m-fasta
-	INT	asterisk:	1;	// add asterisk as the eos mark
-	INT	trimendgap:	1;	// suppress tail gap characters
-	INT	taxoncode:	3;	// add taxinomic code field X in gnm2tab
-	INT	printweight:	1;	// output seq weights in MSA
-	INT	gzipped:	1;	// gzipped output for spaln
-	INT	debug:		1;	// print debug lines
-	INT	supTcodon:	1;	// don't show termination codon
-};
-
-extern	OUTPRM	OutPrm;
 extern	DefSetup def_setup;
 extern	SEQ_CODE* setSeqCode(Seq* sd, const int& molc);
 
@@ -599,7 +568,7 @@ const   char*   attrs[3] = {attr, attr2, 0};
 	    if (dm < right) right = dm;
 	}
 	if (spath) {
-	    if (!sname)  sname = new Strlist(path2fn(spath));
+	    if (!sname)  sname = new Strlist(path2fn(spath), 0);
 	    else if (sname->empty()) sname->assign(path2fn(spath));
 	}
 	return attrseq(attr);

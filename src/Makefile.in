@@ -103,6 +103,7 @@ gsinfo.o:	gsinfo.cc	seq.h
 vmf.o:	vmf.cc vmf.h $(STDH)
 dbs.o:	dbs.cc dbs.h $(STDH)
 gaps.o:	    gaps.cc  gaps.h  seq.h
+eijunc.o:	eijunc.cc	eijunc.h	seq.h
 divseq.o:	divseq.cc	aln.h
 fwd2b1.o:	fwd2b1.cc	aln.h	seq.h	codepot.h
 fwd2h1.o:	fwd2h1.cc	aln.h	seq.h	codepot.h
@@ -111,10 +112,10 @@ fwd2d1.o:	fwd2d1.cc	aln.h	seq.h
 boyer_moore.o: boyer_moore.h boyer_moore.cc
 
 sblib.a: aln2.o dbs.o gaps.o  codepot.o divseq.o gsinfo.o \
-	fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o \
+	fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o eijunc.o \
 	seq.o simmtx.o sqpr.o utilseq.o vmf.o wln.o boyer_moore.o
 	$(AR) sblib.a aln2.o dbs.o gaps.o  codepot.o divseq.o gsinfo.o \
-	fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o \
+	fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o eijunc.o \
 	seq.o simmtx.o sqpr.o utilseq.o vmf.o wln.o boyer_moore.o
 	$(RANLIB) sblib.a
 

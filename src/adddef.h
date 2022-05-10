@@ -28,6 +28,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 typedef unsigned char CHAR;
 typedef	unsigned short SHORT;
@@ -170,6 +171,16 @@ extern	const	char*	no_file;
 extern	const	char*	not_found;
 extern	const	char*	read_error;
 extern	const	char*	write_error;
+inline	void fatal(const char* format,...)
+{
+	va_list	args;
+
+	va_start(args, format);
+	(void) vfprintf(stderr, format, args);
+	putc('\n', stderr);
+	va_end(args);
+	exit(1);
+}
 
 /*	etc.	*/
 

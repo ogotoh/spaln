@@ -68,7 +68,8 @@ const	bool&	both_ori;
 	INT53*	int53 = 0;
 	STYPE**	sig53tab = 0;
 	bool	statictab;
-	ExinPot* exinpot = 0;
+	ExinPot* intnpot = 0;
+	ExinPot* exonpot = 0;
 public:
 	FTYPE	fact;
 	FTYPE	fS;
@@ -228,7 +229,6 @@ static	const	char	INT5PAT[]	= "Intron5";
 static	const	char	INT3PAT[]	= "Intron3";
 static	const	char	INT53PAT[]	= "Intron53";
 static	const	char	INT35PAT[]	= "Intron35";
-static	const	char	GNM2TAB[]	= "gnm2tab";
 static	const	int	BoundRng = 20;
 static	const	int	Ip_equ_k = 3;	// gap length equivalen to Intron Penalty
 static	const	char	ipstat[] = "IldModel.txt";

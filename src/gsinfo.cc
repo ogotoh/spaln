@@ -65,7 +65,7 @@ Cip_score::Cip_score(const Seq* sd)
 {
 	PfqItr	api(sd, sd->left);
 	if (api.size()) {
-	    cip_hash = new Dhash<int, VTYPE>(api.pfqnum);
+	    cip_hash = new Dhash<int, VTYPE>(api.pfqnum, 0);
 	    for ( ; !api.end(); ++api) {
 #if USE_WEIGHT
 		VTYPE	val = SpbFact * api.wfq->dns;

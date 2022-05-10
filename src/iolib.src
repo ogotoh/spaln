@@ -29,7 +29,6 @@
 #define  _IOLIB_
 
 #include "adddef.h"
-#include <stdarg.h>
 #include <dirent.h>
 #include <sys/stat.h>
 
@@ -88,6 +87,37 @@ enum CharAttrCode {
 struct INTERACT {
 	INT prompt	: 1;
 	INT echo	: 1;
+};
+
+struct OUTPRM {
+	int	lpw;
+	INT	BlkSz;
+	int	NoOut;
+	INT	MaxOut;
+	INT	MaxOut2;		// intermediate state
+	int	EijMergin;
+	int	AllowdOverlap;
+const	char*	out_file;
+	INT	RemoveTmp:	1;
+	INT	trimend:	1;
+	INT	SkipLongGap:	2;	// 0: don't skip, 1: skip, 3: run time
+	INT	deflbl:		2;	// 0: sname, 1: fname, 2: tally, 3: new
+	INT	fastanno:	1;	// 0: add annotation in fasta output
+	INT	descrp:		1;	// output description
+	INT	sortodr:	2;	// 0: input, 1: bytree, 2: shorter, 3: longer
+	INT	spjinf:		1;
+	INT	olrsum:		1;
+	INT	ColorEij:	2;	// color mark intron position
+	INT	supself:	2;	// suppress result of self comparison
+	INT	noseqline:	1;	// additional prefix line in m-fasta
+	INT	asterisk:	1;	// add asterisk as the eos mark
+	INT	trimendgap:	1;	// suppress tail gap characters
+	INT	taxoncode:	3;	// add taxinomic code field X in gnm2tab
+	INT	printweight:	1;	// output seq weights in MSA
+	INT	gzipped:	1;	// gzipped output for spaln
+	INT	debug:		1;	// print debug lines
+	INT	supTcodon:	1;	// don't show termination codon
+	INT	overwrite:	2;	// overwrite existing file
 };
 
 class EscCharCtl {
@@ -159,6 +189,10 @@ public:
 	    if (!g2t) g2t = new Gnm2tab(field);
 	    return (g2t);
 	}
+#if USE_ZLIB
+	gzFile	gzopen(const char* fname, const char* mode);
+	gzFile	gzopen(const char* fname, const char* envpath, const char* defpath);
+#endif
 };
 
 #ifdef  BSD
@@ -167,6 +201,7 @@ enum {SEEK_SET, SEEK_CUR, SEEK_END};
 #endif
 #endif
 
+extern	OUTPRM	OutPrm;
 extern	Ftable	ftable;
 extern	char*	fgets_wocr(char* str, INT maxl, FILE* fd);
 extern	char*	topath( char* res, const char* org);
@@ -174,6 +209,7 @@ extern	char*	makefnam(const char* fnam, const char* defn, char* result);
 extern	char*	partfnam( char* part, const char* fname, const char* where);
 extern	FILE*	fopenpbe(const char* path, const char* name, const char* extent, 
 			const char* opt, int lvl = 0, char* buf = 0);
+extern	FILE*	wfopen(const char* name, const char* mode);
 extern	FILE*	qopen(const char* dfname, const char* mode);
 extern	FILE*	qout(const char* dfn);
 extern	void	qclose();
@@ -182,7 +218,6 @@ extern	void	setdblval(const char* mssg, double* pval, double* back, const double
 extern	long	diskspc(char* drive);
 extern	void	setprompt(int prom, int ech);
 extern	int	getprompt();
-extern	void	fatal(const char* format,...);
 extern	void	prompt(const char* s,...);
 extern	int	progetc(const char* frmt,...);
 extern	char*	progets(char* str, const char* frmt,...);
@@ -229,13 +264,14 @@ inline	bool	is_dir(const char* fn) {
 }
 
 #if USE_ZLIB
+extern	gzFile	wgzopen(const char* name, const char* mode);
 extern	gzFile	gzopenpbe(const char* path, const char* name, const char* extent, 
 			const char* opt, int lvl = 0, char* buf = 0);
 #endif
 
 inline	FILE* outfd(const char* fn)
 {
-	if (!fn || !(out_fd = fopen(fn, "w"))) out_fd = stdout;
+	if (!fn || !(out_fd = wfopen(fn, "w"))) out_fd = stdout;
 	return (out_fd);
 }
 

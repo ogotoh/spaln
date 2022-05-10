@@ -1643,7 +1643,7 @@ Seq* Seq::getseq(const char* str, DbsDt* dbf)
 		sprintf(input, "std%d", sid);
 		spath = strrealloc(spath, input);
 		if (sname) sname->assign(input);
-		else	sname = new Strlist(input);
+		else	sname = new Strlist(input, 0);
 	    } else {
 #if USE_ZLIB
 		fd = openseq(str, &gzfd);
@@ -2037,7 +2037,7 @@ Seq* Seq::randseq(double* pcmp)
 	inex.molc = molc;
 	sprintf(name, "RAND%d", sid);
 	if (sname) sname->assign(name);
-	else	sname = new Strlist(name);
+	else	sname = new Strlist(name, 0);
 	CHAR*	s = at(0);
 	RandNumGen	rn(pcmp, isprotein()? 20: 4);
 	for (int n = 0; n < len; ++n)

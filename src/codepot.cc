@@ -339,7 +339,8 @@ void makeStdSig53()
 Exinon::Exinon(Seq* sd_, const PwdB* pwd_, bool bo) :
 	sd(sd_), pwd(pwd_), both_ori(bo),
 	size(sd->right - sd->left + 2), bias(sd->left - 1), 
-	exinpot(pwd? pwd->exinpot: 0), 
+	intnpot(pwd? pwd->intnpot: 0), 
+	exonpot(pwd? pwd->exonpot: 0),
 	fact((FTYPE) (pwd->Vab / sd->many)),
 	fS(alprm2.y * fact)
 {
@@ -374,7 +375,7 @@ Exinon::~Exinon()
 STYPE Exinon::sig53(int m, int n, INTENDS c) const
 {
 	STYPE	sig = 0;
-	switch (c) {		// canonical signal
+	switch (c) {		// acanonical signal
 	    case IE5:	sig = data[m].sig5; break;
 	    case IE3:	sig = data[n].sig3; break;
 	    case IE53:	sig = data[n].sig3 + (1. - alprm2.sss) * 
@@ -391,8 +392,8 @@ STYPE Exinon::sig53(int m, int n, INTENDS c) const
 		break;
 	}
 	if (alprm2.Z > 0) {
-	    if (c == IE53 || c == IE5P3) sig += exinpot->intpot(data + m, data + n);
-	    else if (c == IE35) sig += exinpot->intpot(data + n, data + m);
+	    if (c == IE53 || c == IE5P3) sig += intnpot->intpot(data + m, data + n);
+	    else if (c == IE35) sig += intnpot->intpot(data + n, data + m);
 	}
 	return (sig);
 }
@@ -456,9 +457,9 @@ void Exinon::intron53()
 	float*	prefS = pwd->eijpat->patternI? pwd->eijpat->patternI->calcPatMat(sd): 0;
 	float*	prefT = pwd->eijpat->patternT? pwd->eijpat->patternT->calcPatMat(sd): 0;
 	float*	prefB = pwd->eijpat->patternB? pwd->eijpat->patternB->calcPatMat(sd): 0;
-	float*	prefE = pwd->codepot? pwd->codepot->calcPrefCodePot(sd, 0): 0;
-	float*	prefI = pwd->exinpot? pwd->exinpot->calcExinPot(sd, false): 0;
-	if (!prefE && pwd->exinpot) prefE = pwd->exinpot->calcExinPot(sd, true);
+	float*	prefE = pwd->codepot? pwd->codepot->calcScr(sd): 0;
+	float*	prefI = pwd->intnpot? pwd->intnpot->calcScr(sd): 0;
+	if (!prefE && pwd->exonpot) prefE = pwd->exonpot->calcScr(sd);
 	float*	prf5 = pref5;	// 5'ss signal
 	float*	prf3 = pref3;	// 3'ss signal
 	float*	prfS = prefS;	// start codon

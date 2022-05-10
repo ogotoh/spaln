@@ -356,17 +356,17 @@ Strlist::Strlist(const Strlist& src)
 	vcopy(idxlst, src.idxlst, many);
 }
 
-Strlist::Strlist(const char* str) : many(1), filled(true)
+Strlist::Strlist(const char* str, const char* delim)
 {
-	totallen = lastlen = maxlen = strlen(str) + 1;
-	sunitsize = (totallen + defsunit - 1) / defsunit * defsunit;
-	strbuf = new char[sunitsize];
-	strcpy(strbuf, str);
-}
-
-Strlist::Strlist(const char* str, const char* indelim)
-{
-const	char*	delim = (indelim && *indelim)? indelim: stddelim;
+	if (!delim) {			// single member
+	    totallen = lastlen = maxlen = strlen(str) + 1;
+	    sunitsize = (totallen + defsunit - 1) / defsunit * defsunit;
+	    strbuf = new char[sunitsize];
+	    strcpy(strbuf, str);
+	    many = 1;
+	    filled = true;
+	    return;
+	}
 	bool	spc = false;		// space is a delim
 	for (const char* ps = delim; *ps; ++ps)
 	    if (*ps == ' ') spc = true;
@@ -411,18 +411,6 @@ const	char	dchar = *delim;
 	    } else	++ps;
 	}
 	filled = true;
-}
-
-Strlist::Strlist(FILE* fd)
-{
-	if (fread(this, sizeof(Strlist), 1, fd) != 1)
-	    fatal(fread_error, "Strlist");
-	strbuf = new char[totallen];
-	idxlst = new INT[many];
-	if (fread(strbuf, sizeof(char), totallen, fd) != totallen)
-	    fatal(fread_error, "Strlist");
-	if (fread(idxlst, sizeof(int), many, fd) != many)
-	    fatal(fread_error, "Strlist");
 }
 
 Strlist::Strlist(FILE* fd, int m) : many(m)

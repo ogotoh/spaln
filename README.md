@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.8
-#### Last updated: 2022-04-14
+#### Present Version 2.4.9
+#### Last updated: 2022-05-10
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -108,7 +108,7 @@ genome size unless explicitly specified (see below).
 not specified, *MAX_GENE* is also estimated from the genome size.
   <u>Don't forget to specify *MAX_GENE* if xxxgnm.gf represents only a part of the genome!!</u>  Otherwise, *MAX_GENE* may be seriously underestimated.  
  * Options : (default value)
-   * -g: The outputs are gzipped.
+   * -g: The outputs except for X.grp are gzipped.
    * -t*N*: Number of threads. (1)
    * ~~-E: Generate local lookup table.~~
    * -yX:    Format for remote queries (more sensitive but less economic than default)
@@ -218,6 +218,8 @@ or more comment lines starting with ';C', such as
       
      * -pa*N*:	Terminal polyA or polyT sequence longer than *N* (12) is trimmed off and the orientation is fixed accordingly. If *N* = 0 or empty, these functionalities are disabled.
      * -pi:	Mark exon-intron junctions by color in the alignment (-O1).
+     * -pn:	Prohibit ovewrite of existing output files (ask).
+     * -po:	Allow ovewrite of existing output files (ask).
      * -pq:	Suppress warning messages sent to *stderr*.
      * -pw:	Report result even if alignment score is below threshold value.
      * -px:	Suppress self-comparisons in the execution mode (C) or (D).
@@ -310,6 +312,11 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.9
+1. The -g option at the format time compresses all output files except for X.grp. According to this change, the format of X.grp is slightly modified, which does not necessitate reformat of existing files.
+2. To guard existing files from accidental loss, the propriety of overwrite of each existing file is asked by default. The -pn (always skip) or -po (always overwrite) option evades this inquiry.
+3. The default memory size used for core sort in *sortgrcd* has been changed from 1MB to 16MB.
+
 ## Changes in version 2.4.8
 1. By default, termination codon is included in the output of any form with a protein query. Use -pT option to get the previous forms (without termination codon) of outputs.
 2. Enable to read long (>= 2**31B) gzipped files by *spaln* and *sortgrcd*.
@@ -408,4 +415,4 @@ Cooperation of Spaln and Prrn5 for construction of gene-structure-aware multiple
 
 * * *
 
-Copyright (c) 1997-2021 Osamu Gotoh (o.gotoh@aist.go.jp) All Rights Reserved.
+Copyright (c) 1997-2022 Osamu Gotoh (o.gotoh@aist.go.jp) All Rights Reserved.

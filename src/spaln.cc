@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.8";
-static	const	int	date = 220414;
+static	const	char*	version = "2.4.9";
+static	const	int	date = 220510;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -198,6 +198,8 @@ static void usage(const char* messg)
 	fputs("\t-l#\tNumber of characters per line in alignment (60)\n", stderr);
 	fputs("\t-o$\tFile/directory/prefix where results are written (stdout)\n", stderr);
 	fputs("\t-pa#\tRemove 3' poly A >= # (0: don't remove)\n", stderr);
+	fputs("\t-pn\tRetain existing output file\n", stderr);
+	fputs("\t-po\tOverwrite existing output file\n", stderr);
 	fputs("\t-pw\tReport results even if the score is below the threshold\n", stderr);
 	fputs("\t-pT\tExclude termination codon from CDS\n", stderr);
 	fputs("\t-r$\tReport information about block data file\n", stderr);
@@ -238,10 +240,10 @@ const	char**	argbs = argv;
 	DbsDt**	dbs = dbs_dt;
 
 	while (--argc > 0 && **++argv == OPTCHAR) {
-	    const char*	opt = argv[0] + 1;
+const	    char*	opt = argv[0] + 1;
 	    int	c = *opt;
 	    if (!c) break;
-	    const char*	val = argv[0] + 2;
+const	    char*	val = argv[0] + 2;
 	    int	k = 0;
 	    int	rv = 0;
 	    switch (c) {
@@ -398,6 +400,8 @@ const	char**	argbs = argv;
 			case 'f': OutPrm.deflbl = 1; break;
 			case 'i': OutPrm.ColorEij = 1; break;
 			case 'j': OutPrm.spjinf = 1 - OutPrm.spjinf; break;
+			case 'n': OutPrm.overwrite = 2; break;
+			case 'o': OutPrm.overwrite = 1; break;
 			case 'q': setprompt(0, 0); break;
 			case 'Q': setprompt(0, 1);  break;
 			case 'r': algmode.mlt = 1; break;
@@ -549,6 +553,7 @@ const	bool	swp = sqs[1]->inex.intr;
 		    gene->inex.sens? '<': ' ', sqs[1]->sqname());
 	}
 	for (int n = 0; n < n_out_modes; ++n) {
+	  if (!fds[n]) continue;
 	  if (QRYvsDB == AvsG || QRYvsDB == GvsA) { // DNA vs protein 
 	    if (out_mode[n] == ALN_FORM) {
 		if (gene) {
@@ -1481,11 +1486,12 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 	    set_max_extend_gene_rng(def_max_extend_gene_rng);
 	    if (bprm->pwd->DvsP == 3) OutPrm.SkipLongGap = 0;
 	    if (algmode.nsa == SAM_FORM) put_genome_entries();
-	    outputs.setup(a->spath);
+	    if (outputs.setup(a->spath)) {
 #if M_THREAD
-	    if (thread_num) MasterWorker(seqs, &svr, (void*) bprm); else
+		if (thread_num) MasterWorker(seqs, &svr, (void*) bprm); else
 #endif
-	    all_in_func(seqs, &svr, (void*) bprm);
+		all_in_func(seqs, &svr, (void*) bprm);
+	    }
 	    delete bprm;
 	} else {
 	    if (svr.nextseq(b, 1) == IS_END) {
@@ -1500,11 +1506,12 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 	    if (pwd->DvsP == 3) OutPrm.SkipLongGap = 0;
 	    if (a->inex.intr || b->inex.intr) makeStdSig53();
 	    set_max_extend_gene_rng(0);
-	    outputs.setup(a->spath);
+	    if (outputs.setup(a->spath)) {
 #if M_THREAD
-	    if (thread_num) MasterWorker(seqs, &svr, (void*) pwd); else
+		if (thread_num) MasterWorker(seqs, &svr, (void*) pwd); else
 #endif
-	    all_in_func(seqs, &svr, (void*) pwd);
+		all_in_func(seqs, &svr, (void*) pwd);
+	    }
 	    delete pwd;
 	}
 
