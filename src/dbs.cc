@@ -762,7 +762,7 @@ Seq* Seq::getdbseq(DbsDt* dbf, const char* code, int c, bool readin)
 	    char	token[MAXL];
 	    car(token, code);
 	    if (sname)	sname->assign(token);
-	    else	sname = new Strlist(token, 0);
+	    else	sname = new Strlist(&token[0], "");
 	    record = dbf->findcode(token);
 	    if (!record) return(0);
 	}

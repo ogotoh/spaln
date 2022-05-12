@@ -568,7 +568,7 @@ const   char*   attrs[3] = {attr, attr2, 0};
 	    if (dm < right) right = dm;
 	}
 	if (spath) {
-	    if (!sname)  sname = new Strlist(path2fn(spath), 0);
+	    if (!sname)  sname = new Strlist(path2fn(spath), "");
 	    else if (sname->empty()) sname->assign(path2fn(spath));
 	}
 	return attrseq(attr);

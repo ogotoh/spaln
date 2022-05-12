@@ -358,7 +358,7 @@ Strlist::Strlist(const Strlist& src)
 
 Strlist::Strlist(const char* str, const char* delim)
 {
-	if (!delim) {			// single member
+	if (!delim || !*delim) {		// single member
 	    totallen = lastlen = maxlen = strlen(str) + 1;
 	    sunitsize = (totallen + defsunit - 1) / defsunit * defsunit;
 	    strbuf = new char[sunitsize];

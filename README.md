@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.9
-#### Last updated: 2022-05-10
+#### Present Version 2.4.9a
+#### Last updated: 2022-05-12
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -312,6 +312,9 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.9a
+1. Change several codes which might cause compiler-dependent compilation errors.
+
 ## Changes in version 2.4.9
 1. The -g option at the format time compresses all output files except for X.grp. According to this change, the format of X.grp is slightly modified, which does not necessitate reformat of existing files.
 2. To guard existing files from accidental loss, the propriety of overwrite of each existing file is asked by default. The -pn (always skip) or -po (always overwrite) option evades this inquiry.
