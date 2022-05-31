@@ -50,8 +50,8 @@ typedef	float	FTYPE;
 typedef	FTYPE	VTYPE;
 typedef	FTYPE	STYPE;
 typedef	float	PVTYPE;	// printf
-static	const	FTYPE	VABORT = -1.e127;
-static	const	FTYPE	fepsilon = 1.e-7;
+static	const	FTYPE	VABORT = -1.e127f;
+static	const	FTYPE	fepsilon = 1.e-7f;
 static	const	VTYPE	fInfinit = FLT_MAX;
 #if DVAL
 static	const	VTYPE	NEVSEL = -(DBL_MAX / 16 * 7);

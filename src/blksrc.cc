@@ -190,18 +190,18 @@ MakeDbs::MakeDbs(const char* dbn, int molc)
 	dbname = strrealloc(0, dbn);
 #if USE_ZLIB
 	if (OutPrm.gzipped) {
-	    gzseq = gzopenpbe("", dbname, SGZ_EXT, "w", 2);
-	    gzidx = gzopenpbe("", dbname, IDZ_EXT, "w", 2);
-	    gzent = gzopenpbe("", dbname, ENZ_EXT, "w", 2);
+	    gzseq = gzopenpbe(OutPrm.out_file, dbname, SGZ_EXT, "w", 2);
+	    gzidx = gzopenpbe(OutPrm.out_file, dbname, IDZ_EXT, "w", 2);
+	    gzent = gzopenpbe(OutPrm.out_file, dbname, ENZ_EXT, "w", 2);
 	} else
 #endif
 	{
-	    fseq = fopenpbe("", dbname, SEQ_EXT, "w", 2);
-	    fidx = fopenpbe("", dbname, IDX_EXT, "w+", 2);
-	    fent = fopenpbe("", dbname, ENT_EXT, "w+", 2);
+	    fseq = fopenpbe(OutPrm.out_file, dbname, SEQ_EXT, "w", 2);
+	    fidx = fopenpbe(OutPrm.out_file, dbname, IDX_EXT, "w+", 2);
+	    fent = fopenpbe(OutPrm.out_file, dbname, ENT_EXT, "w+", 2);
 	}
 	vclear(&rec);
-	fgrp = fopenpbe("", dbname, GRP_EXT, "w", 2);
+	fgrp = fopenpbe(OutPrm.out_file, dbname, GRP_EXT, "w", 2);
 }
 
 static	DbsRec*	rbuf;
@@ -219,10 +219,14 @@ void MakeDbs::read_ent(file_t fd)
 	cbuf = new char[flen];
 	if (gzent) {
 	    fclose(fd);
-	    gzent = gzopenpbe("", dbname, ENZ_EXT, "r", 2);
-	} else	rewind(fd);
-	if (fread(cbuf, sizeof(char), flen, fd) != flen)
-	    fatal("Corrupted entry file !\n");
+	    gzent = gzopenpbe(OutPrm.out_file, dbname, ENZ_EXT, "r", 2);
+	    if (fread(cbuf, sizeof(char), flen, gzent) != flen)
+		fatal("Corrupted entry file !\n");
+	} else {
+	    rewind(fd);
+	    if (fread(cbuf, sizeof(char), flen, fd) != flen)
+		fatal("Corrupted entry file !\n");
+	}
 }
 
 template <typename file_t>
@@ -230,11 +234,14 @@ void MakeDbs::read_idx(file_t fd)
 {
 	if (gzidx) {
 	    fclose(fd);
-	    gzidx = gzopenpbe("", dbname, IDZ_EXT, "r", 2);
-	} else
+	    gzidx = gzopenpbe(OutPrm.out_file, dbname, IDZ_EXT, "r", 2);
+	    if (fread(rbuf, sizeof(DbsRec), recnbr, gzidx) != recnbr)
+		fatal("Corrupted index file !\n");
+	} else {
 	    rewind(fd);
-	if (fread(rbuf, sizeof(DbsRec), recnbr, fd) != recnbr)
-	    fatal("Corrupted index file !\n");
+	    if (fread(rbuf, sizeof(DbsRec), recnbr, fd) != recnbr)
+		fatal("Corrupted index file !\n");
+	}
 }
 
 template <typename file_t>
@@ -269,13 +276,13 @@ void MakeDbs::mkidx()
 #if USE_ZLIB
 	gzFile	gzodr = 0;
 	if (OutPrm.gzipped)
-	    gzodr = gzopenpbe("", dbname, ODZ_EXT, "w", 2, str);
+	    gzodr = gzopenpbe(OutPrm.out_file, dbname, ODZ_EXT, "w", 2, str);
 	else
-	    fodr = fopenpbe("", dbname, ODR_EXT, "w", 2, str);
+	    fodr = fopenpbe(OutPrm.out_file, dbname, ODR_EXT, "w", 2, str);
 	if (fodr)	write_odr(fodr, order, str);
 	else		write_odr(gzodr, order, str);
 #else
-	fodr = fopenpbe("", dbname, ODR_EXT, "w", 2, str);
+	fodr = fopenpbe(OutPrm.out_file, dbname, ODR_EXT, "w", 2, str);
 	write_odr(fodr, str);
 #endif
 	delete[] cbuf;

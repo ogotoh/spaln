@@ -1381,8 +1381,8 @@ const	char*	sl = strrchr(spath, '/');
 		} else if (algmode.nsa == BIN_FORM) {
 		    fds[0] = stdout;
 		    return (1);
-		}
-		fds[0] = wfopen(str, "w");
+		} else 
+		    fds[0] = wfopen(OutPrm.out_file, "w");
 		if (!fds[0]) return (0);
 	    } else
 		fds[0] = stdout;

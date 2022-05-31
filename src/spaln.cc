@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.9a";
-static	const	int	date = 220512;
+static	const	char*	version = "2.4.9b";
+static	const	int	date = 220531;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -1428,7 +1428,8 @@ const	char*	insuf = "No input seq file !\n";
 	    if (TgtMolc == PROTEIN && alprm2.spb > 0.) {
 		SeqServer	svr(argc, argv, IM_SNGL, 0, TgtMolc);
 		mb = makeblock(&svr);
-	    } else	mb = makeblock(argc, argv, molc, TgtMolc);
+	    } else
+		mb = makeblock(argc, argv, molc, TgtMolc);
 	    if (mb) {
 		mb->WriteBlkInfo();
 		mb->delete_dbf();
@@ -1479,20 +1480,20 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 		messg = "Can't open query !\n";
 		goto postproc;
 	    }
-	    SrchBlk*	bprm = getblkinf(seqs, dbs, mb);
-	    delete mb;
-	    no_seqs = OutPrm.MaxOut2 + bprm->NoWorkSeq + 2;	// query + last
-	    if (a->inex.intr || b->inex.intr) makeStdSig53();
-	    set_max_extend_gene_rng(def_max_extend_gene_rng);
-	    if (bprm->pwd->DvsP == 3) OutPrm.SkipLongGap = 0;
-	    if (algmode.nsa == SAM_FORM) put_genome_entries();
 	    if (outputs.setup(a->spath)) {
+		SrchBlk*	bprm = getblkinf(seqs, dbs, mb);
+		delete mb;
+		no_seqs = OutPrm.MaxOut2 + bprm->NoWorkSeq + 2;	// query + last
+		if (a->inex.intr || b->inex.intr) makeStdSig53();
+		set_max_extend_gene_rng(def_max_extend_gene_rng);
+		if (bprm->pwd->DvsP == 3) OutPrm.SkipLongGap = 0;
+		if (algmode.nsa == SAM_FORM) put_genome_entries();
 #if M_THREAD
 		if (thread_num) MasterWorker(seqs, &svr, (void*) bprm); else
 #endif
 		all_in_func(seqs, &svr, (void*) bprm);
+		delete bprm;
 	    }
-	    delete bprm;
 	} else {
 	    if (svr.nextseq(b, 1) == IS_END) {
 		messg = "Can't open genomic sequence !\n";

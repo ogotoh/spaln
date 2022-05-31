@@ -1028,7 +1028,6 @@ StrHash<val_t>::StrHash(FILE* fd)
 	    fatal(fread_error, "StrHash");
 	hz = hash + n;
 	sl = new Strlist(fd);
-	sl->push("");	// dummy to skip 0-th entry
 }
 
 template <class val_t>

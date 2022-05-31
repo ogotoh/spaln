@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.9a
-#### Last updated: 2022-05-12
+#### Present Version 2.4.9b
+#### Last updated: 2022-05-31
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -109,6 +109,7 @@ not specified, *MAX_GENE* is also estimated from the genome size.
   <u>Don't forget to specify *MAX_GENE* if xxxgnm.gf represents only a part of the genome!!</u>  Otherwise, *MAX_GENE* may be seriously underestimated.  
  * Options : (default value)
    * -g: The outputs except for X.grp are gzipped.
+   * -o*S*: The outputs are written into directory *S* (current directory).
    * -t*N*: Number of threads. (1)
    * ~~-E: Generate local lookup table.~~
    * -yX:    Format for remote queries (more sensitive but less economic than default)
@@ -312,6 +313,10 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.9b
+1. Fix a small bug concerning with overwrite of existing file(s).
+2. In the format mode, -o*S* option specifies the directory into which the results are written (default is current directory).
+
 ## Changes in version 2.4.9a
 1. Change several codes which might cause compiler-dependent compilation errors.
 

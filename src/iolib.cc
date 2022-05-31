@@ -214,12 +214,12 @@ const 	char*	pt = path? path: "";
 	    if (ps > str && ps[-1] != PATHDELM)
 		*ps++ = PATHDELM;
 	    *ps = '\0';
-	    if (extent) {
+	    if (extent && *extent) {
 		partfnam(str + strlen(str), name, "b");
-		if (*extent && *extent != '.') strcat(str, ".");
+		if (*extent != '.') strcat(str, ".");
 		strcat(str, extent);
 	    } else
-		strcat(str, name);
+		partfnam(str + strlen(str), name, "be");
 	    if ((fd = fopen(str, opt))) return (fd);
 	} while (*pt);
 
@@ -887,11 +887,12 @@ const 	char*	pt = path? path: "";
 	    if (ps > str && ps[-1] != PATHDELM)
 		*ps++ = PATHDELM;
 	    *ps = '\0';
-	    strcat(str, name);
-	    if (extent) {
-		if (*extent && *extent != '.') strcat(str, ".");
+	    if (extent && *extent) {
+		partfnam(str + strlen(str), name, "b");
+		if (*extent != '.') strcat(str, ".");
 		strcat(str, extent);
-	    }
+	    } else
+		partfnam(str + strlen(str), name, "be");
 	    if ((fd = gzopen(str, opt))) return (fd);
 	} while (*pt);
 

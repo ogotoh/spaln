@@ -292,7 +292,7 @@ mutable	int	right;		// right boundary to be operated
 	bool	empty()	const {return left == right;}
 	INT	r2s(const INT& r) const {return (isprotein()? r + ALA: ((1 << r) + _));}
 	void	setmolc(const int& molc) {inex.molc = molc;}
-const	char	Strand() const {return inex.sens? '-': '+';}
+	char	Strand() const {return inex.sens? '-': '+';}
 const	char*	path2fn(const char* pname) const;
 const	char*	sqname(bool fpri = false) const {
 		if (!fpri) fpri = many > 1;
