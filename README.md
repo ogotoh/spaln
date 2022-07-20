@@ -1,7 +1,7 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.10
+#### Present Version 2.4.12
 #### Last updated: 2022-07-20
 
 - [Overview](#Ov)
