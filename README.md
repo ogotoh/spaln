@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.9b
-#### Last updated: 2022-05-31
+#### Present Version 2.4.10
+#### Last updated: 2022-07-20
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -284,7 +284,7 @@ or more comment lines starting with ';C', such as
   * By default, no filter listed above is applied.
   * When the output of **spaln** is separated into several files, the combined
 results are subjected to the sorting. Although xxx.grd (or xxx.grd.gz) files are assigned as the
-argument, there must be corresponding xxx.erd and xxx.qrd (or xxx.efd.gz and
+argument, there must be corresponding xxx.erd and xxx.qrd (or xxx.erd.gz and
 xxx.qrd.gz) files in the same directory.
   * In the default output format, the gene structure corresponding to each
 transcript is delimited by a line starting with '@', whereas each gene locus is
@@ -313,6 +313,10 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.5.0.
+1. Fix a serious bug concerning with unidirectional Hirschberg method.
+2. Reexamine various heuristic procedures and their combinations together with readjustment of default parameter values for better performance.
+
 ## Changes in version 2.4.9b
 1. Fix a small bug concerning with overwrite of existing file(s).
 2. In the format mode, -o*S* option specifies the directory into which the results are written (default is current directory).

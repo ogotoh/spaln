@@ -1458,7 +1458,7 @@ const	    Rvdwml*	mx = hlastH_ng(hhg, wdw);
 	    cpos[c++] = r + mm3;
 	    cpos[c] = end_of_ulk;
 	    wdwf.up = center_upr[d][r];
-	    wdwf.lw = center_lwr[0][r];
+	    r = wdwf.lw = center_lwr[0][r];
 	} else	cpos[0] = end_of_ulk;		// don't cross center
 	if (LocalL) {
 	    a->left = maxh.ml;
@@ -2070,7 +2070,7 @@ const	float	q = b->right - 3 * a->left - wdw.up;
 	    scr = hb1.hirschbergH1(cpos, upf, upb, exgl);
 	}
 #endif	// !__SSE4_1__
-	a->inex.exgl = a->inex.exgr = b->inex.exgl = b->inex.exgr = 0;
+	a->inex.exgr = b->inex.exgr = 0;
 	SKL	wskl = {cpos[0], 0};
 	int	c = 0;
 	if (cpos[c] < end_of_ulk) {	// cross center
@@ -2092,7 +2092,10 @@ const	    int	bright = b->right;
 	    b->left = cpos[1];
 	    a->right = aright;		// restore
 	    b->right = bright;
+	    a->inex.exgl = 0;
 	    b->inex.exgl = bexgl;	//
+	    a->inex.exgr = aexgr;
+	    b->inex.exgr = bexgr;
 	}
 	if (upb < INT_MAX || wdwb.lw == INT_MAX) {	// local
 	    stripe31(seqs, &wdwb, alprm.sh);
@@ -2102,9 +2105,7 @@ const	    int	bright = b->right;
 	lspH_ng(wdwb);		// second half
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = aexgl;
-	a->inex.exgr = aexgr;
 	b->inex.exgl = bexgl;
-	b->inex.exgr = bexgr;
 	return scr;
 }
 
@@ -2117,8 +2118,8 @@ const	int&	margin = IntronPrm.minl;
 
 	VTYPE	scr = 0;
 	ovr = (ovr > 0? 0: ovr) - 3;
-	scr -= creepback(ovr, 0, bab);
-	scr -= creepfwrd(ovr, 0, bab);
+	scr -= creepback(ovr, slmt, bab);
+	scr -= creepfwrd(ovr, slmt, bab);
 const	int	alen = a->right - a->left;
 	int	sh = alen / 2;
 	if (alprm.sh < 0) {
@@ -2208,23 +2209,32 @@ const	EXIN*	bb = b->exin->score(b->left + 1);
 
 VTYPE Aln2h1::cds5end(const SKL* pskl, const bool write_skl)
 {
-const	EXIN*	bb = b->exin->score(pskl->n + 1);
+	int	y = pskl->n + 3 * pskl->m;
+const	EXIN*	bb = b->exin->score(y + 1);
 	VTYPE	scr = 0;
 	SKL	skl = *pskl;
 	VTYPE	maxscr = 0;
-	if (write_skl) mfd->write(pskl);
+	if (write_skl && pskl->m == 0) mfd->write(pskl);
 
-	for (int y = pskl->n; y > b->left; y -= 3) {
+	for ( ; y > b->left; y -= 3) {
 	    if (bb->sigS > 0) scr += bb->sigS;
 	    if (scr > maxscr) {
 		maxscr = scr;
-		skl.m = y;
+		skl.m = 0;
+		skl.n = y;
 	    }
 	    if (bb->sigS > 0 || scr + pwd->Vthr < 0) break;
 	    bb -= 3;
 	    scr += bb->sigE + pwd->BasicGEP;
 	}
-	if (write_skl && skl.n != pskl->n) mfd->write(&skl);
+	if (write_skl && skl.n != pskl->n) {
+	    mfd->write(&skl);
+	    if (pskl->m) {
+		++skl.m;
+		skl.n += 3;
+		mfd->write(&skl);
+	    }
+	}
 	return (maxscr);
 }
 
@@ -2269,7 +2279,7 @@ const	CHAR*	bs = b->at(b->left + 1);
 const	EXIN*	bb = b->exin->score(b->left + 1);
 	VTYPE	dscr = 0;
 	while (a->left > lub.la && b->left > lub.lb
-		&& (ovr < 0 || vabs(dscr) < bscr)) {
+		&& (ovr < 0 || vabs(dscr) <= bscr)) {
 	    --as; bs -= 3; bb -= 3;
 	    dscr += pwd->sim2(as, bs) + bb->sigE;
 	    a->left--; b->left -= 3;
@@ -2285,7 +2295,7 @@ const	CHAR*	bs = b->at(b->right + 1);
 const	EXIN*	bb = b->exin->score(b->right + 1);
 	VTYPE	dscr = 0;
 	while (a->right < lub.ua && b->right < lub.ub
-		&& (ovr < 0 || vabs(dscr) < bscr)) {
+		&& (ovr < 0 || vabs(dscr) <= bscr)) {
 	    dscr += pwd->sim2(as, bs) + bb->sigE;
 	    ++as; bs += 3; bb += 3;
 	    a->right++; b->right += 3;
@@ -2305,6 +2315,7 @@ const	int	dgap = b->right - b->left - 3 * agap;
 const	int	d5 = b->left + 3 * agap - 2;	// donor 5' end
 const	int	d3 = b->left + 2;		// donor 3' end
 const	int	a5 = b->right - 2;		// accpt 5' end
+const	int	ntry = (algmode.crs || agap)? 1: 2;
 	agap = 2 - agap;
 	int	n = min3(a->left, b->left / 3, agap + expected_overlap_ext);
 	VTYPE*	bw = (n + 1 > expected_max_overlap)? new VTYPE[n + 1]: backward;
@@ -2321,7 +2332,7 @@ const	CHAR*	ds = bs + dgap;
 	iscr = NEVSEL;
 
 	bool	all_mch = true;
-	for (int nt = 0; nt < 2 && iscr == NEVSEL; ++nt) {
+	for (int nt = 0; nt < ntry && iscr == NEVSEL; ++nt) {
 	  int	phs = 1;
 	  int	m = a->right - 1;
 	  as = a->at(m);
@@ -2358,7 +2369,7 @@ const		    CHAR*	cs = spjcs->spjseq(n, n + dgap);
 	  }
 	}
 	if (bw != backward) delete[] bw;
-	if (!(algmode.crs || (all_mch && iscr > NEVSEL))) return (false);
+	if (!all_mch || iscr <= NEVSEL) return (false);
 	if (write_skl) {
 	    mfd->write(&skl);
 	    bd = b->exin->score(skl.n);
@@ -2879,7 +2890,8 @@ VTYPE Aln2h1::interpolateH(INT level, const int cmode,
 	int	ovr = std::min(3 * agap, bgap);
 const	int	dgap = bgap - 3 * agap;
 const	int	wlmt = setwlprm(level++)->width;
-const	bool	no_rec = ovr <= (cmode == 3? wlmt: 3 * wlmt);	// no recurrsion
+//const	bool	no_rec = ovr <= (cmode == 3? wlmt: 3 * wlmt);	// no recurrsion
+const	bool	no_rec = ovr <= wlmt;	// no recurrsion
 	VTYPE	iscore = NEVSEL;
 	VTYPE	scr = 0;
 	Mfile*	save_mfd = 0;
@@ -2893,31 +2905,35 @@ const	bool	no_rec = ovr <= (cmode == 3? wlmt: 3 * wlmt);	// no recurrsion
 		mfd->write((UPTR) &skl);
 		iscore = 0;
 	    } else {
-		iscore = (wjxt && agap <= 0)?
-		    cds5end((SKL*) wjxt): first_exon(bab);
+		if (wjxt) iscore = cds5end((SKL*) wjxt);
+		if (iscore < 0) {
+		    Mfile*	tmp_mfd = new Mfile(*mfd);
+		    VTYPE	kscore = first_exon(bab);
+		    if (kscore > iscore) iscore = kscore;
+		    else	std::swap(mfd, tmp_mfd);
+		    delete tmp_mfd;
+		}
 	    }
 	} else if (cmode == 2 && no_rec) {
-	    SKL	skl = {a->left, b->left};
-	    if (agap <= 0) {
-		mfd->write(&skl);
-const		EXIN*	bb = b->exin->score(b->left + 1);
-		if (bb->sigT > 0) {
-		    skl.n += 3;
-		    mfd->write(&skl);
-		}
-		iscore = 0;
-	    } else if (bgap <= 0) {
+	    if (bgap <= 0) {
 		SKL	skl = {a->left -= (bgap / 3), b->left -= bgap};
 		mfd->write((UPTR) &skl);
 		iscore = 0;
 	    } else {
-		iscore = algmode.crs > 1? 
-		    cds3end(&skl): last_exon(bab, &skl);
+		SKL	skl = {a->left, b->left};
+		iscore = cds3end(&skl);
+		if (iscore < 0) {
+		    Mfile*	tmp_mfd = new Mfile(*mfd);
+		    VTYPE	kscore = last_exon(bab, &skl);
+		    if (kscore > iscore) iscore = kscore;
+		    else	std::swap(mfd, tmp_mfd);
+		    delete tmp_mfd;
+		}
 	    }
 	} else if (cmode == 3 && agap <= 1 && dgap >= IntronPrm.minl &&
 	    indelfreespjH(agap, iscore)) {		// indel-free spj
 	} else if (cmode == 3 && no_rec && dgap >= IntronPrm.minl) {
-	    iscore = micro_exon(bab);
+	    if (algmode.crs == 0) iscore = micro_exon(bab);
 	    if (iscore == NEVSEL && agap < IntronPrm.elmt)
 		iscore = shortcutH_ng(ovr, bab);	// shortcut
 	} else if (ovr <= 0 && dgap < IntronPrm.minl) {
@@ -2947,9 +2963,9 @@ const		EXIN*	bb = b->exin->score(b->left + 1);
 		if (save_mfd) *mfd = *save_mfd;
 		else	save_mfd = new Mfile(*mfd);
 const		float	dpspace = (float) agap * (float) bgap / MEGA;
-		try_dp = fabs(dpspace) < alprm.maxsp;
+		try_dp = algmode.crs || fabs(dpspace) < alprm.maxsp;
 		if (!try_dp && cmode < 3) {
-		    bgap = int(alprm.maxsp * MEGA / agap);
+		    bgap = IntronPrm.maxl;
 		    if (cmode == 1) b->left = std::max(b->right - bgap, 0);
 		    else	b->right = std::min(b->left + bgap, b->len);
 		    if (b->exin) b->exin->resize();
@@ -3132,7 +3148,7 @@ SKL* Aln2h1::globalH_ng(VTYPE* scr, const WINDOW& wdw)
 	SKL*	skl = (SKL*) mfd->flush();
 	skl->n = wsk.n - 1;
 	skl->m = 1;
-	if (skl->n == 0) {
+	if (skl->n < 2) {
 	    delete[] skl;
 	    return (0);
 	}

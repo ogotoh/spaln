@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.9b";
-static	const	int	date = 220531;
+static	const	char*	version = "2.4.10";
+static	const	int	date = 220720;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -1505,7 +1505,10 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 	    }
 	    PwdB*	pwd = SetUpPwd(seqs);
 	    if (pwd->DvsP == 3) OutPrm.SkipLongGap = 0;
-	    if (a->inex.intr || b->inex.intr) makeStdSig53();
+	    if (a->inex.intr || b->inex.intr) {
+		makeStdSig53();
+		genomicseq(seqs + 1, pwd, true);
+	    }
 	    set_max_extend_gene_rng(0);
 	    if (outputs.setup(a->spath)) {
 #if M_THREAD

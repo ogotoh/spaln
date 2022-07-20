@@ -52,7 +52,7 @@ ALPRM3	alprm3 = {0., 0., 0., 3, 0};
 BPPRM	bpprm = {0., 1., 1., 100};
 
 static	int	glocal = GLOBAL;
-static	float	smn[] = {2., 1., 0., -1., -2.};
+static	float	smn[] = {2, 1., 0., -1., FQUERY};
 static	DefPrm	defNprm[max_simmtxes+1] = 
 {{3., 8., -6., 0., 1}, {2., 6., -4., 0., 1}, {2., 4., -2., 0., 1}, {0}};
 static	DefPrm	defPprm[max_simmtxes+1] = 
@@ -145,7 +145,7 @@ void Simmtx::Nmtx()
 	dim = rows = NSIMD;
 	mtx = SquareMtx();
 	VTYPE	ntsunp = (VTYPE) -(alprm.scale * param->u);
-	setNpam(4, param->n);
+	setNpam(4, smn[4]);
 	for (int i = 1; i < NTS; ++i) {
 	    int	ii = i + gap_code;
 	    for (int j = 1; j < i; ++j) {
@@ -645,9 +645,10 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	    case 'k': alprm.k1 = atoi(vl); break;	// flex point
 	    case 'l': setlsegs(atoi(vl)); break;	// # linear pieces
 	    case 'm': smn[0] = atof(vl); break;		// match
-	    case 'n': smn[4] = atof(vl);		// mismatch
+	    case 'n':
+		smn[4] = atof(vl);			// mismatch
 		if (smn[4] > 0) smn[4] = -smn[4];
-		defPprm[k].n = smn[4]; break;
+		break;
 	    case 'o': alprm2.o = atof(vl); break;	// premature termination
 	    case 'p': defPprm[algmode.crs].p = atoi(vl); break;	// 1st pam
 	    case 'q': defPprm[WlnPamNo].p = atoi(vl); break;	// 2nd pam
@@ -716,8 +717,12 @@ void setSimmtxes(ComPmt ab, bool mdm, DefPrm* dp)
 	int	odr[3] = {0, 1, 2};
 	if (algmode.crs) swap(odr[0], odr[1]);
 	DefPrm*	ddp = upto == 1? dp: dp + odr[0];
+	if (smn[4] == FQUERY) smn[4] = ddp->n;
+	else	ddp->n = smn[4];
 	if (alprm.v == FQUERY) alprm.v = ddp->v;
+	else	ddp->v = alprm.v;
 	if (alprm.u == FQUERY) alprm.u = ddp->u;
+	else	ddp->u = alprm.u;
 	Simmtx**	psm = simmtxes.storedSimmtx;
 	for (int mid = 0; mid < upto; ++mid, ++psm) {
 	    ddp = dp + odr[mid];

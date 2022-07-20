@@ -37,10 +37,11 @@ static	const	int	STOP = INT_MAX;
 static	const	float	maxtonic = 5.;
 static	const	CHAR	max_add_size = 24;	// capacity of additional bytes
 static	const	char	text_ext[] = ".txt";	// text file
+static	const	char	data_ext[] = ".dat";	// binary data file
 static	const	char	patmat_ext[] = ".psm";	// extension to binary pssm file
 static	const	char	iefp_ext[11][8] = 
 	{".ifq", ".ipt", ".ifp", ".efq", ".ept", ".efp", 
-	 ".cfq", ".cpt", ".cfp", ".gfq", ""};
+	 ".cfq", ".cdp", ".cfp", ".gfq", ""};
 static	const	char	iefp_tid[11][16] = 
 	{"IntronFrqTab", "IntronPotTab", "IntronFpPTab", 
 	 "ExonFrqTab", "ExonPotTab", "ExonFpPTab", 
@@ -109,7 +110,12 @@ protected:
 public:
 	ExinPot(const int& ein, const int& mo, const int& nf = 1) :
 	    exin(ein), morder(mo), nphase(nf), ndata(ipower(4, mo + 1)), 
-	    lm(ein / 3? 0: itn_lm), rm(ein / 3? 0: itn_rm) {}
+	    lm(ein / 3? 0: itn_lm), rm(ein / 3? 0: itn_rm) {
+	    if (static_cast<Iefp>(exin) != Iefp::NG)
+		readFile(iefp_tid[exin]);
+	    else
+		fatal("Invalid exin code (%d) !\n", exin);
+	}
 	ExinPot(const char*& fname) {
 	    readFile(fname);
 	}
@@ -141,7 +147,7 @@ const	    Iefp	iefp = static_cast<Iefp>(exin);
 	float*	getKmers(int argc, const char** argv);
 	void	reform(float* background = 0);
 	bool	makeExinPot(const float* gfq);
-	bool	readBinary(const char* fname);
+	bool	readBinary(const char* fname, FILE* fd = 0);
 	bool	writeBinary(const char* oname);
 	float*	begin() const {return (data);}
 	float*	end() const {return (data + nphase * ndata);}

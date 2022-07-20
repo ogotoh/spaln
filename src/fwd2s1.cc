@@ -1037,7 +1037,7 @@ const	    Rvwml*	mx = hlastS_ng(hh, wdw);
 	    cpos[c++] = r + mm;
 	    cpos[c] = end_of_ulk;
 	    wdwf.up = center_upr[d][r];
-	    wdwf.lw = center_lwr[0][r];
+	    r = wdwf.lw = center_lwr[0][r];
 	} else	cpos[0] = end_of_ulk;		// don't cross center
 	if (LocalL) {
 	    a->left = maxh.ml;
@@ -1734,7 +1734,7 @@ const	float	q = b->right - a->left - wdw.up;
 	}
 #endif	// !__SSE4_1__
 	SKL	wskl = {cpos[0], 0};
-	a->inex.exgl = a->inex.exgr = b->inex.exgl = b->inex.exgr = 0;
+	a->inex.exgr = b->inex.exgr = 0;
 	int	c = 0;
 	if (cpos[c] < end_of_ulk) {	// cross center
 	    while (cpos[++c] < end_of_ulk) {
@@ -1755,7 +1755,10 @@ const	    int	bright = b->right;
 	    b->left = cpos[1];
 	    a->right = aright;		// recover
 	    b->right = bright;
+	    a->inex.exgl = 0;
 	    b->inex.exgl = exgl;
+	    a->inex.exgr = aexgr;
+	    b->inex.exgr = bexgr;
 	}
 	if (upb < INT_MAX || wdwb.lw == INT_MAX) {	// local
 	    stripe(seqs, &wdwb, alprm.sh);
@@ -1765,9 +1768,7 @@ const	    int	bright = b->right;
 	lspS_ng(wdwb);			// second half
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = aexgl;
-	a->inex.exgr = aexgr;
 	b->inex.exgl = bexgl;
-	b->inex.exgr = bexgr;
 	return scr;
 }
 
@@ -1776,8 +1777,8 @@ VTYPE Aln2s1::shortcutS_ng(int ovr, const BOUND& bab)
 	int	margin = IntronPrm.minl;
 	VTYPE	scr = 0;
 	ovr = (ovr > 0? 0: ovr) - 3;
-	scr -= creepback(ovr, 0, bab);
-	scr -= creepfwrd(ovr, 0, bab);
+	scr -= creepback(ovr, slmt, bab);
+	scr -= creepfwrd(ovr, slmt, bab);
 const	int	alen = a->right - a->left;
 	int	sh = alen / 2;
 	if (alprm.sh < 0) {
@@ -2364,9 +2365,9 @@ const	bool	no_rec = ovr < wlmt;			// no recurrsion
 		if (save_mfd) *mfd = *save_mfd;
 		else	save_mfd = new Mfile(*mfd);
 const		float	dpspace = (float) agap * (float) bgap / MEGA;
-		try_dp = fabs(dpspace) < alprm.maxsp;
+		try_dp = algmode.crs || fabs(dpspace) < alprm.maxsp;
 		if (!try_dp && cmode < 3) {
-		    bgap = int(alprm.maxsp * MEGA / agap);
+		    bgap = IntronPrm.maxl;
 		    if (cmode == 1) b->left = std::max(b->right - bgap, 0);
 		    else	b->right = std::min(b->left + bgap, b->len);
 		    if (b->exin) b->exin->resize();
@@ -2546,7 +2547,7 @@ SKL* Aln2s1::globalS_ng(const WINDOW& wdw, VTYPE* scr)
 	wsk.n = (int) mfd->size();
 	SKL*	skl = (SKL*) mfd->flush();
 	skl->n = wsk.n - 1;
-	if (skl->n == 0) {
+	if (skl->n < 2) {
 	    delete[] skl;
 	    return (0);
 	}

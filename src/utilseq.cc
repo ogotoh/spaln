@@ -748,14 +748,15 @@ void PatMat::readPatMat(FILE* fd)
 	    &mmm.min, &mmm.mean, &mmm.max, &nsupport) < 3 ||
 	    rows <= 0 || cols <= 0) return;
 	tonic = mmm.min;
-	if (-tonic > maxtonic) tonic = -maxtonic; 
-	mtx = new float[rows * cols];
+	if (-tonic > maxtonic) tonic = -maxtonic;
+const	size_t	mtxsize = rows * cols;
+	mtx = new float[mtxsize];
 	while (skip-- > 0) {
 	    int rc;
 	    while ((rc = fgetc(fd)) != EOF && rc != '\n') ;
 	}
 	float*	wk = mtx;
-	for (int rc = 0; rc < rows * cols; ++rc, ++wk) {
+	for (INT rc = 0; rc < mtxsize; ++rc, ++wk) {
 	    if (fscanf(fd, "%f", wk) <= 0) {
 		fputs("Insufficient data!\n", stderr);
 		delete[] mtx; mtx = 0;
@@ -780,9 +781,9 @@ void PatMat::readBinPatMat(FILE* fd)
 	if (transvers) std::swap(rows, cols);
 	tonic = mmm.min;
 	if (-tonic > maxtonic) tonic = -maxtonic;
-	INT	dszie = rows * cols;
-	mtx = new float[dszie];
-	if (fread(mtx, sizeof(float), dszie, fd) != dszie)
+const	size_t	mtxsize = rows * cols;
+	mtx = new float[mtxsize];
+	if (fread(mtx, sizeof(float), mtxsize, fd) != mtxsize)
 	    fatal("incompatible !\n");
 }
 
@@ -792,12 +793,12 @@ PatMat& PatMat::operator=(const PatMat& src)
 	offset = src.offset; nalpha = src.nalpha;
 	nsupport = src.nsupport;
 	tonic = src.tonic; mmm = src.mmm;
-	int	mtxsize = rows * cols;
-	if (mtxsize != (src.rows * src.cols)) {
+const	size_t	mtxsize = rows * cols;
+	if (mtxsize != size_t(src.rows * src.cols)) {
 	    delete[] mtx;
 	    mtx = new float[mtxsize];
 	}
-	vcopy(mtx, src.mtx, rows * cols);
+	vcopy(mtx, src.mtx, mtxsize);
 	return (*this);
 }
 
@@ -807,7 +808,7 @@ PatMat::PatMat(const PatMat& src) :
 	nsupport(src.nsupport), nalpha(src.nalpha), morder(src.morder), 
 	mmm(src.mmm)
 {
-	int	mtxsize = rows * cols;
+const	size_t	mtxsize = rows * cols;
 	mtx = new float[mtxsize];
 	vcopy(mtx, src.mtx, mtxsize);
 }
@@ -822,10 +823,11 @@ PatMat::PatMat(const int r, const int c, const int o, float* m)
 	else	nalpha = rows;
 	for (int d = nalpha; d < rows; d = d * (d + 1))
 	    ++morder;
-	mtx = new float[r * c];
+const	size_t	mtx_size = r * c;
+	mtx = new float[mtx_size];
 	if (!m) return;
-	vcopy(mtx, m, r * c);
-	min_elem = *vmin(mtx, r * c);
+	vcopy(mtx, m, mtx_size);
+	min_elem = *vmin(mtx, mtx_size);
 }
 
 PatMat::PatMat(FILE* fd, bool binary)
@@ -845,14 +847,21 @@ retry:
 	} else
 	    progets(str, "pattern file name? ");
 	if (!*str || *str == '\n') return;
-const	char*	dot = strrchr(str, '.');
-const	bool	binary = dot && !strcmp(dot, patmat_ext);
+
+	char*	dot = strrchr(str, '.');
+const	bool	binary = dot && 
+		(!strcmp(dot, patmat_ext) || !strcmp(dot, data_ext));
+	if (!binary) strcat(str, data_ext);
 	fd = ftable.fopen(str, "rb");
-	if (fd) {
-	    if (binary) readBinPatMat(fd);
-	    else	readPatMat(fd);
-	} else goto retry;
+	if (fd) readBinPatMat(fd);	// binary
+	else {				// text
+	    dot = strrchr(str, '.');
+	    *dot = '\0';
+	    fd = ftable.fopen(str, "r");
+	    if (fd) readPatMat(fd);
+	}
 	if (fd) fclose(fd);
+	else goto retry;
 }
 
 CHAR* PatMat::setredctab(const Seq* sd) const
@@ -1075,19 +1084,33 @@ const	int	write_mode = file_type;
 bool ExinPot::readFile(const char* fname)
 {
 	int	file_type = 0;
-	exin = fname2exin(fname, file_type);
-	if (file_type == 2)	// binary
-	    return readBinary(fname);
+	FILE*	fd = 0;
+	char	str[MAXL];
+	strcpy(str, fname);
+	char*	dot = strrchr(str, '.');
+	if (dot && !strcmp(dot, iefp_ext[exin])) file_type = 2;
+	else {
+	    strcat(str, data_ext);
+	    fd = ftable.fopen(str, "rb");
+	    if (fd) {
+		file_type = 2;
+	    } else if (exin == fname2exin(fname, file_type)) {
+		strcpy(str, fname);
+	    } else {
+		file_type = 0;
+	    }
+	}
+	if (file_type == 2) return readBinary(str, fd);	// binary
 	else if (file_type == 0) {
 	    prompt(incompatible, fname);
 	    return (false);
 	}
-	FILE*	fd = ftable.fopen(fname, "r");
+	fd = ftable.fopen(fname, "r");
 	if (!fd) {
 	    prompt(not_found, fname);
 	    return false;
 	}
-	char	str[MAXL];
+
 	int	sz = 1;
 	float*	pot = 0;
 	if (!fgets(str, MAXL, fd)) goto fail_to_read;
@@ -1101,14 +1124,13 @@ bool ExinPot::readFile(const char* fname)
 	while (fgets(str, MAXL, fd)) {
 	    int	i = 0;
 	    char* ps = isalpha(*str)? cdr(str): str;
-	    for ( ; i++ < 3 && ps; ps = cdr(ps))
+	    for ( ; i++ < nphase && ps; ps = cdr(ps))
 		*pot++ = atof(ps);
-	    if (i < 3) break;
+	    if (i < nphase) break;
 	}
-	fclose(fd);
-	if ((pot - data) == dsize()) return true;
 fail_to_read:
 	fclose(fd);
+	if (pot && (pot - data) == dsize()) return true;
 	prompt(incompatible, fname);
 	return false;
 }
@@ -1167,6 +1189,13 @@ const	CHAR*   redctab = sd->istron()? tnredctab: ncredctab;
 
 void ExinPot::count_kmers_3(const Seq* sd, float* fq)
 {
+	if (minorf) {
+	    ORF*	orfs = sd->getorf();
+	    if (!orfs) return;
+	    sd->left = orfs->pos;
+	    sd->right = sd->left + orfs->len;
+	    delete[] orfs;
+	}
 const	CHAR*	ss = sd->at(sd->left);
 const	CHAR*	tt = sd->at(sd->right - 5);
 const	CHAR*   redctab = sd->istron()? tnredctab: ncredctab;
@@ -1288,8 +1317,9 @@ bool ExinPot::makeExinPot(const float* bkg)
 	int	p = 0;
 	while (frq < fed) {
 const	    float	freq = *frq++;
-	    *pot = log10(*pot / *bkg);
-	    if (isfpp()) ess += freq * *pot++;
+const	    float	potl = log10(freq / *bkg);
+	    *pot++ = potl;
+	    if (isfpp()) ess += freq * potl;
 	    if (++p == nphase) {
 		++bkg;
 		p = 0;
@@ -1299,12 +1329,14 @@ const	    float	freq = *frq++;
 	return (true);
 }
 
-bool ExinPot::readBinary(const char* fname)
+bool ExinPot::readBinary(const char* fname, FILE* fd)
 {
-	FILE*	fd = fopen(fname, "rb");
 	if (!fd) {
-	    prompt(not_found, fname);
-	    return (false);
+	    fd = ftable.fopen(fname, "rb");
+	    if (!fd) {
+		prompt(not_found, fname);
+		return (false);
+	    }
 	}
 	if (fread(this, sizeof(ExinPot), 1, fd) != 1) {
 	    prompt(incompatible, fname);

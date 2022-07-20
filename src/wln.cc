@@ -102,7 +102,7 @@ static	WLPRM	aaprm[] =
 	 {"", DefConvPat[DefConvPatNo[12]], 14, 3, 1728, 4, 4, 8, 30, -1, 0, 0, 0}};
 //	 {0,  20, 20, 2, 400, 2, 4, 4, 30, -1, 0, 0, 0}};
 static	WLPRM	trprm[] = 
-	{{"", DefConvPat[DefConvPatNo[20]], 20, 4, 279841, 5, 4, 8, 50, -1, 0, 0, 0},
+	{{"", DefConvPat[DefConvPatNo[20]], 20, 4, 279841, 5, 4, 8, 60, -1, 0, 0, 0},
 	 {"", DefConvPat[DefConvPatNo[14]], 14, 4, 38416, 5, 4, 8, 40, -1, 0, 0, 0},
 	 {"", DefConvPat[DefConvPatNo[12]], 12, 3, 1728, 4, 4, 8, 30, -1, 0, 0, 0}};
 
@@ -114,8 +114,8 @@ void Wlprms::initilize(INT level)
 	WLPRM*	wlpr;
 
 	switch (DvsP) {
-	    case 3:	wlpr = aaprm + level; break;
 	    case 1:	wlpr = trprm + level; break;
+	    case 3:	wlpr = aaprm + level; break;
 	    default:	wlpr = ncprm + level; break;
 	}
 	if (wlprm->elem == 0) {
@@ -133,7 +133,7 @@ void Wlprms::initilize(INT level)
 Wlprms::Wlprms(int dvsp) : DvsP(dvsp), 
 	Vab((VTYPE) alprm.scale),
 	simmtx(getSimmtx(WlnPamNo)), 
-	EndBonus((VTYPE) simmtx->AvTrc()), 
+	EndBonus((VTYPE) simmtx->AvTrc() / 2), 
 	RepPen((VTYPE) (Vab * hspprm.RepPen))
 {
 	if (DvsP == 2) fatal("Ilegal combination of seq types !i\n");
@@ -284,12 +284,13 @@ const	EXIN*	bb = 0;
 	    ++bs;
 	    if (b->exin) {
 		bb = (const EXIN*) b->exin->score(jxt->jy + 1);
-		if (jxt->jx == 0 && *as == MET) scr = wlprm->vthr / 2;
+		if (bb && jxt->jx == 0 && *as == MET && bb->sigS > 0)
+		    scr = wlprm->vthr / 2;
 	    }
 	}
 	if (scr <= 0) {
-	    int	lend = a->left + wlprm->tpl - jxt->jx;
-	    if (lend > 0)
+	    int	lend = wlprm->tpl - jxt->jx;
+	    if (a->inex.exgl && lend > 0)
 		scr += wlparams->EndBonus * std::min(lend, int(wlprm->tpl));
 	}
 	while (--as >= ax && (bs -= bbt) >= bx) {
@@ -301,27 +302,52 @@ const	EXIN*	bb = 0;
 	    if (bb) bb -= bbt;
 	}
 	if (as < ax) bs -= bbt;
-	at = a->at(min(jxt->jx + jxt->jlen, a->right));
-	bt = b->at(min(jxt->jy + bbt * jxt->jlen, b->right));
+	at = a->at(std::min(jxt->jx + jxt->jlen, a->right));
+	bt = b->at(std::min(jxt->jy + bbt * jxt->jlen, b->right));
 	ax = a->at(a->tlen);
 	bx = b->at(b->len);
 	if (bbt == 3) --bx;
 	jxt->jlen = jxt->nid = 0;
+	VTYPE	maxscr = scr;
+const	CHAR*	al = as;
+	int	start = 0;
+	int	end = 0;
+	int	nid = 0;
 	while (++as < ax && (bs += bbt) < bx) {
 	    if ((as >= at || bs >= bt) && 	// forward extension
 		wlprm->ConvTab[*as] != wlprm->ConvTab[*bs]) break;
 	    ++jxt->jlen;
 	    scr += wlparams->sim2(as, bs);
 	    if (*as == *bs || (*as == SER && *bs == SER2)) ++jxt->nid;
-	    if (bb) bb += bbt;
+	    if (bb) {
+		scr += bb->sigE;
+		bb += bbt;
+	    }
+// Kadane-Gries algorithm
+	    if (scr < 0) {
+		scr = 0;
+		start = as - al;
+		jxt->jlen = jxt->nid = 0;
+	    }
+	    if (scr > maxscr) {
+		maxscr = scr;
+		end = jxt->jlen;
+		nid = jxt->nid;
+	    }
 	}
+	jxt->jx += start;
+	jxt->jy += bbt * start;
+	jxt->jlen = end;
+	jxt->nid = nid;
+// end of Kadane-Gries algorithm
+
 	int	nmmc = std::min(jxt->jlen - jxt->nid, 3);
 	if (algmode.crs == 0 && bbt == 3 && nmmc)
 	    scr -= nmmc * wlprm->vthr;
 	if (as == az && bb && bb->sigT > 0) scr += wlprm->vthr / 2;
 	else {
 const	    int	rend = wlprm->tpl - a->right + jxt->jx + jxt->jlen;
-	    if (rend > 0)
+	    if (a->inex.exgr && rend > 0)
 		scr += wlparams->EndBonus * std::min(rend, int(wlprm->tpl));
 	}
 	return (scr);
@@ -551,7 +577,7 @@ HSP* Wlp::mkhsps(const JUXT* jxt, int& n)
 		pcl = wcl++;
 		continue;
 	    }
-const	    int	aovr = wcl->rx - max(wcl->lx, pcl->lx);
+const	    int	aovr = wcl->rx - std::max(wcl->lx, pcl->lx);
 	    HSP*	mcl = wcl->jscr * pcl->len > pcl->jscr * wcl->len? wcl: pcl;
 const	    VTYPE	ovrscr = mcl->jscr * aovr / mcl->len +
 		pwd->GapPenalty(abs(pcl->rr - wcl->rr));
@@ -760,7 +786,9 @@ nextchain:
 
 JUXT* Wlp::run_dmsnno(int& njxt)
 {
-	if (!mfd || b->right - b->left <= (int) (bbt * wlprm->width)) {
+	if (!mfd || 
+	    a->right - a->left <= (int) wlprm->width ||
+	    b->right - b->left <= (int) (bbt * wlprm->width)) {
 	    njxt = 0;
 	    return (0);
 	}
@@ -895,7 +923,7 @@ int geneorient(Seq* seqs[], const PwdB* pwd, int max_n)
 	}
 	WLUNIT*	wlu0 = wl[0]->begin();
 	WLUNIT*	wlu1 = wl[1]->begin();
-	max_n = min(max_n, wl[0]->size() + wl[1]->size());
+	max_n = std::min(max_n, wl[0]->size() + wl[1]->size());
 	for (int k = 1; k <= max_n + 1; ++k) {
 	    delete[] seqs[k]->jxt;
 	    WLUNIT*&	wlu = (!wlu1 || (wlu0 && wlu0->scr >= wlu1->scr))?
