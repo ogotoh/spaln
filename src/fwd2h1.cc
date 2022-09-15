@@ -203,7 +203,7 @@ const	EXIN*	bb = b->exin->score(n);
 RVPD* Aln2h1::lastH_ng(RVPD* hh[], const WINDOW& wdw, const RANGE* cutrng)
 {
 const	int	cutlen = cutrng? cutrng->right - cutrng->left: 0;
-	int	glen[3];
+	int	glen[3] = {0, 0, 0};
 	int	rw = wdw.lw;
 const	int	m3 = 3 * a->right;
 	int	rf = (cutrng? cutrng->left: b->left) - m3;
@@ -215,10 +215,9 @@ const	int	m3 = 3 * a->right;
 	VTYPE	mxv = h9->val;
 const	EXIN*	bb = b->exin->score(rw + m3);
 
-	vclear(glen, 3);
 	if (a->inex.exgr) {
-	    for (int p = 0; h <= h9; ++h, ++bb, ++rf, ++p) {
-		if (p == 3) p = 0;
+	    for (int p = 0; h <= h9; ++h, ++bb, ++rf, p = next_p[p]) {
+		if (glen[0] == INT_MIN) continue;
 		VTYPE	y = NEVSEL;
 		glen[p] += 3;
 		if (rf - rw >= 3 && h[-3].dir != DEAD) {
@@ -1003,7 +1002,7 @@ const	EXIN*	bb = b->exin->score(n);
 
 Rvdwml* Aln2h1::hlastH_ng(Rvdwml* hhg[], const WINDOW& wdw)
 {
-	int	glen[3];
+	int	glen[3] = {0, 0, 0};
 	int	m3 = 3 * a->right;
 	int	rw = wdw.lw;
 	int	rf = b->left - m3;
@@ -1015,10 +1014,8 @@ Rvdwml* Aln2h1::hlastH_ng(Rvdwml* hhg[], const WINDOW& wdw)
 	VTYPE	mxv = mx->val;
 const	EXIN*	bb = b->exin->score(rw + m3);
 
-	vclear(glen, 3);
 	if (a->inex.exgr) {
-	    for (int p = 0; h <= h9; ++h, ++bb, ++rf, ++p) {
-		if (p == 3) p = 0;
+	    for (int p = 0; h <= h9; ++h, ++bb, ++rf, p = next_p[p]) {
 		VTYPE	y = NEVSEL;
 		glen[p] += 3;
 		if (rf - rw >= 3 && h[-3].dir != DEAD) {
@@ -1081,7 +1078,7 @@ const	Rvdwmlj*	maxphl[NOD];
 	Rvwmrmn	maxh = {NEVSEL, 0, 0, 0, 0};
 	int     LocalL = Local && a->inex.exgl && b->inex.exgl;
 	int     LocalR = Local && a->inex.exgr && b->inex.exgr;
-	int	rlst = INT_MAX;
+	int	rlst[3] = {INT_MAX, INT_MAX, INT_MAX};
 
 const	size_t	bufsiz = pwd->Noll * wdw.width;
 	Rvdwml*	wbuf = new Rvdwml[bufsiz];
@@ -1308,7 +1305,7 @@ const			Rvdwmlj*	phl = maxphl[k];
 		    if (m == mm && maxk < Nod) {
 const			Rvdwmlj*	phl = maxphl[maxk];
 			center_lnk[0][r] = phl->ulk;
-			mx->ulk = rlst = r;
+			mx->ulk = rlst[q] = r;
 			if (maxk == 0) {
 			  for (int c = 1, d = 1; c < pwd->Noll; ++c, d += 2) {
 			    if ((phl = maxphl[d]) &&
@@ -1416,8 +1413,8 @@ const			bool	crossspj = phs == 1 && k == 0;
 
 // center low
 		if (m == mm) {
-		    if (hd == 0) rlst = r;
-		    if (hd % 2 == 1) center_lnk[0][r] = rlst;
+		    if (hd == 0) rlst[q] = r;
+		    if (hd % 2 == 1) center_lnk[0][r] = rlst[q];
 		    for (int k = 0; k < pwd->Noll; ++k) {
 const			int	kk = k + k;
 			center_lwr[k][r] = hf[kk]->lwr;
@@ -1458,7 +1455,8 @@ const	    Rvdwml*	mx = hlastH_ng(hhg, wdw);
 	    cpos[c++] = r + mm3;
 	    cpos[c] = end_of_ulk;
 	    wdwf.up = center_upr[d][r];
-	    r = wdwf.lw = center_lwr[0][r];
+	    wdwf.lw = center_lwr[0][r];
+	    r = center_end[d][r];
 	} else	cpos[0] = end_of_ulk;		// don't cross center
 	if (LocalL) {
 	    a->left = maxh.ml;
@@ -1970,7 +1968,7 @@ const	int	m = a->right - a->left;
 	if (m < nelem || mc) scr = forwardH_ng(&ptr, wdw, spj, mc);
 	else {
 	    float	cvol = wdw.lw - b->left + 3 * a->right;
-	    cvol =  (float) (a->right - a->left) * (b->right - b->left)
+	    cvol = float(m) * float(b->right - b->left)
 		 - cvol * cvol / 3;
 	    int	mode = 3 + (cvol < USHRT_MAX? 0: 4);
 #if _SIMD_PP_	// vectorized forward DP 
@@ -2031,7 +2029,7 @@ const	INT	bexgr = b->inex.exgr;	// reserve
 	if (wdw.up == wdw.lw) return(diagonalH_ng());
 const	float	k = wdw.lw - b->left + 3 * a->right;
 const	float	q = b->right - 3 * a->left - wdw.up;
-	float	cvol = (float) m * n - (k * k + q * q) / 6;
+	float	cvol = float(m) * float(n) - (k * k + q * q) / 6;
 	if (cvol < MaxVmfSpace || m == 1 || 3 * m + 3 >= n)
 	    return (trcbkalignH_ng(wdw));
 
@@ -2041,8 +2039,6 @@ const	float	q = b->right - 3 * a->left - wdw.up;
 	VTYPE	scr;
 	WINDOW	wdwf = {INT_MAX};
 	WINDOW	wdwb = {INT_MAX};
-	int	upf = INT_MAX; 
-	int	upb = INT_MAX;
 	INT	exgl = bexgl;
 
 #if !__SSE4_1__	// scalar version of unidirectional Hirschberg method
@@ -2050,7 +2046,8 @@ const	float	q = b->right - 3 * a->left - wdw.up;
 #else
 	if (m < 4) scr = hirschbergH_ng(cpos, wdw, wdwf, wdwb, exgl);
 	else {
-	    int	mode = 1 + ((std::max(abs(wdw.lw), wdw.up) < SHRT_MAX)? 0: 4);
+	    int	mode = 
+	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 1: 5;
 #if _SIMD_PP_	// 2B int vectorized unidirectional Hirschberg method
 #if __AVX2__
 	    SimdAln2h1<short, 16, 
@@ -2067,9 +2064,10 @@ const	float	q = b->right - 3 * a->left - wdw.up;
 	    SimdAln2h1<short, 8, __m128i, __m128i> 
 #endif	// _SIMD_PP_
 		hb1(seqs, pwd, wdw, spjcs, cip, mode);
-	    scr = hb1.hirschbergH1(cpos, upf, upb, exgl);
+	    scr = hb1.hirschbergH1(cpos, exgl);
 	}
 #endif	// !__SSE4_1__
+	a->inex.exgl = b->inex.exgl = 
 	a->inex.exgr = b->inex.exgr = 0;
 	SKL	wskl = {cpos[0], 0};
 	int	c = 0;
@@ -2082,30 +2080,27 @@ const	    int	aright = a->right;	// reserve
 const	    int	bright = b->right;
 	    a->right = cpos[0];
 	    b->right = cpos[c - 1];
-	    if (upf < INT_MAX || wdwf.lw == INT_MAX) {
+	    if (wdwf.lw == INT_MAX)
 		stripe31(seqs, &wdwf, alprm.sh);
-		if (upf < INT_MAX) wdwf.up = upf;
-	    }
-	    wdwf.width = wdwf.up - wdwf.lw + 7;
+	    else
+		wdwf.width = wdwf.up - wdwf.lw + 7;
 	    lspH_ng(wdwf);		// first half
 	    a->left = cpos[0];
 	    b->left = cpos[1];
 	    a->right = aright;		// restore
 	    b->right = bright;
-	    a->inex.exgl = 0;
-	    b->inex.exgl = bexgl;	//
-	    a->inex.exgr = aexgr;
-	    b->inex.exgr = bexgr;
+	    b->inex.exgl = exgl;	//
 	}
-	if (upb < INT_MAX || wdwb.lw == INT_MAX) {	// local
+	if (wdwb.lw == INT_MAX)
 	    stripe31(seqs, &wdwb, alprm.sh);
-	    if (upb < INT_MAX) wdwb.up = upb;
-	}
-	wdwb.width = wdwb.up - wdwb.lw + 7;
+	else
+	    wdwb.width = wdwb.up - wdwb.lw + 7;
 	lspH_ng(wdwb);		// second half
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = aexgl;
 	b->inex.exgl = bexgl;
+	a->inex.exgr = aexgr;
+	b->inex.exgr = bexgr;
 	return scr;
 }
 

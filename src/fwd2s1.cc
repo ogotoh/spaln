@@ -85,9 +85,9 @@ public:
 	VTYPE	scorealoneS_ng(const WINDOW& wdw);
 	void	pfinitS_ng(RVP* hh[], const WINDOW& wdw);
 	void	pbinitS_ng(RVP* hh[], const WINDOW& wdw);
-	VTYPE	back2ward5endS_ng(int* ptr, const WINDOW& wdw);
-	VTYPE	for2ward3endS_ng(int* ptr, const WINDOW& wdw);
-	VTYPE	openendS_ng(int cmode);
+	VTYPE	back2ward5endS_ng(int* ptr, const WINDOW& wdw, bool lcl);
+	VTYPE	for2ward3endS_ng(int* ptr, const WINDOW& wdw, bool lcl);
+	VTYPE	openendS_ng(int cmode, bool lcl = true);
 	bool	indelfreespjS(int agap, VTYPE& iscr, const bool write_skl = true);
 	VTYPE	diagonalS_ng(bool r_justt = false);
 	VTYPE	trcbkalignS_ng(const WINDOW& wdw, bool spj = true,
@@ -679,7 +679,7 @@ const		int	n3 = n + (i = -i);
 	}
 	if (vlgar) vlgar->flush();
 	delete spjcs;
-	fst->val += pwd->BasicGOP * fst->gap + pwd->BasicGEP * fst->unp;;
+	fst->val += pwd->BasicGOP * fst->gap + pwd->BasicGEP * fst->unp;
 	return (h);
 }
 
@@ -758,7 +758,7 @@ VTYPE Aln2s1::hirschbergS_ng(int cpos[],
 const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 	Rvwml*	hh[NOL];
 	Rvwml*	hf[NOD];
-	Rvdwmlj	rcd[NCAND + 1];;		// [candidates]
+	Rvdwmlj	rcd[NCAND + 1];		// [candidates]
 	int	idx[NCAND + 1];		// [candidates]
 const	Rvdwmlj*	maxphl[NOD];
 	Rvwml	e[2];
@@ -1037,7 +1037,8 @@ const	    Rvwml*	mx = hlastS_ng(hh, wdw);
 	    cpos[c++] = r + mm;
 	    cpos[c] = end_of_ulk;
 	    wdwf.up = center_upr[d][r];
-	    r = wdwf.lw = center_lwr[0][r];
+	    wdwf.lw = center_lwr[0][r];
+	    r = center_end[d][r];
 	} else	cpos[0] = end_of_ulk;		// don't cross center
 	if (LocalL) {
 	    a->left = maxh.ml;
@@ -1045,9 +1046,6 @@ const	    Rvwml*	mx = hlastS_ng(hh, wdw);
 	} else {
 	    if (a->inex.exgl && rl > r) a->left = b->left - r;
 	    if (b->inex.exgl && rl < r) b->left = a->left + r;
-	    r = b->left - a->left;
-	    if (r < wdwf.lw) wdwf.lw = r;
-	    if (r > wdwf.up) wdwf.up = r;
 	}
 	bexgl = (d > 0)? 1: 0;
 	delete[] wbuf;
@@ -1333,7 +1331,7 @@ void Aln2s1::pbinitS_ng(RVP* hh[], const WINDOW& wdw)
 
 // intron-less backward extension
 
-VTYPE Aln2s1::back2ward5endS_ng(int *ptr, const WINDOW& wdw)
+VTYPE Aln2s1::back2ward5endS_ng(int *ptr, const WINDOW& wdw, bool lcl)
 {
 	RVP*	hh[2];			// H matrix
 	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
@@ -1362,6 +1360,7 @@ const	CHAR*	as = a->at(m);
 	int	n1 = m + wdw.lw;
 	int	n2 = m + wdw.up + 1;
 	while (--m >= a->left) {
+	    lcl = lcl || m == a->left;
 	    --as; --n1; --n2;
 	    n = std::min(n2, b->right);
 	    n9 = std::max(n1, b->left);
@@ -1417,7 +1416,7 @@ HorizonB:
 #endif
 		if ((*dir & Newd) && vmf)
 		    mx->ptr = vmf->add(m + 1, n + 1, mx->ptr);
-		if (mx->val > maxh.val) {
+		if (lcl && mx->val > maxh.val) {
 		    maxh.val = mx->val;
 		    maxh.p = mx->ptr;
 		    maxh.m = m;
@@ -1429,6 +1428,7 @@ HorizonB:
 			peak = 0;
 		    }
 		    nr = n;				// before block
+		    break;
 		} else if ((*dir % Newd == 0) && mx->val >= mxd->val) {
 		    mxd = mx;
 		    if (nr < n2) n2 = nr;
@@ -1446,7 +1446,6 @@ HorizonB:
 	}
 #endif
 	    } // end of n loop
-	    if (mxd->val <= NEVSEL) break;	// no peak
 	    if (peak) n1 = n;
 	} // end of m loop
 
@@ -1458,7 +1457,7 @@ HorizonB:
 
 // intron-less forward extension
 
-VTYPE Aln2s1::for2ward3endS_ng(int *ptr, const WINDOW& wdw)
+VTYPE Aln2s1::for2ward3endS_ng(int *ptr, const WINDOW& wdw, bool lcl)
 {
 	RVP*	hh[2];		// H matrix
 	VSKLP	maxh = {NEVSEL, a->left, b->left, 0};
@@ -1487,13 +1486,14 @@ const	size_t	bufsiz = 2 * wdw.width;
 	int	n9 = 0;
 const	CHAR*	as = a->at(m);
 	for ( ; ++m <= a->right; ++as, ++n1, ++n2) {
+	    lcl = lcl || m == a->right;
 	    n = std::max(n1, b->left);
 	    n9 = std::min(n2, b->right);
 	    int	nr = n - 1;
 	    int	peak = 0;
 	    int	r = n - m;
 const	    CHAR*	bs = b->at(n);
-	    h = hh[0] + r;;
+	    h = hh[0] + r;
 	    f = hh[1] + r;
 	    CHAR*	dir = hdir + r;
 	    RVP*	mxd = ((h->val + pwd->Vthr) < maxh.val)? blackvp: h;
@@ -1540,7 +1540,7 @@ HorizonP:
 #endif
 		if (*dir & Newd)
 		    mx->ptr = vmf->add(m - 1, n - 1, mx->ptr);
-		if (mx->val > maxh.val) {
+		if (lcl && mx->val > maxh.val) {
 		    maxh.val = mx->val;
 		    maxh.m = m;
 		    maxh.n = n;
@@ -1552,6 +1552,7 @@ HorizonP:
 			peak = 0;
 		    }
 		    nr = n;
+		    break;
 		} else if ((*dir % Newd == 0) && mx->val >= mxd->val) {
 		    mxd = mx;
 		    if (nr > n1) n1 = nr;
@@ -1570,7 +1571,6 @@ HorizonP:
 #endif
 	    } // end of n-loop
 	    if (peak) n2 = n;
-	    if (mxd->val <= NEVSEL) break;
 	} // end of m-loop
 
 	*ptr = vmf->add(maxh.m, maxh.n, maxh.p);
@@ -1632,7 +1632,7 @@ const	int	m = a->right - a->left;
 	if (m < nelem || mc) scr = forwardS_ng(wdw, &ptr, mc);
 	else {
 	    float	cvol = wdw.lw - b->left + a->right;
-	    cvol =  (float) (a->right - a->left) * (b->right - b->left)
+	    cvol = float(m) * float(b->right - b->left)
 		 - cvol * cvol / 2;
 const	    int	mode = 2 + (cvol < USHRT_MAX? 0: 4);
 #if _SIMD_PP_	// vectorized forward DP 
@@ -1694,7 +1694,7 @@ const	INT	bexgr = b->inex.exgr;	// reserve
 	if (wdw.up == wdw.lw) return(diagonalS_ng());
 const	float	k = wdw.lw - b->left + a->right;
 const	float	q = b->right - a->left - wdw.up;
-	float	cvol =  m * n - (k * k + q * q) / 2;
+	float	cvol =  float(m) * float(n) - (k * k + q * q) / 2;
 	if (cvol < MaxVmfSpace || m == 1 || n <= 1)
 	    return (trcbkalignS_ng(wdw, b->inex.intr));
 
@@ -1704,8 +1704,6 @@ const	float	q = b->right - a->left - wdw.up;
 	VTYPE	scr;
 	WINDOW	wdwf = {INT_MAX};
 	WINDOW	wdwb = {INT_MAX};
-	int	upf = INT_MAX; 
-	int	upb = INT_MAX;
 	INT	exgl = bexgl;
 
 #if !__SSE4_1__	// scalar version of unidirectional Hirschberg method
@@ -1713,7 +1711,8 @@ const	float	q = b->right - a->left - wdw.up;
 #else
 	if (m < 4) scr = hirschbergS_ng(cpos, wdw, wdwf, wdwb, exgl);
 	else {
-	    int	mode = 1 + ((std::max(abs(wdw.lw), wdw.up) < SHRT_MAX)? 0: 4);
+	    int	mode = 
+	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 1: 5;
 #if _SIMD_PP_	// 2B int vectorized unidirectional Hirschberg method
 #if __AVX2__
 	    SimdAln2s1<short, 16, 
@@ -1730,10 +1729,11 @@ const	float	q = b->right - a->left - wdw.up;
 	    SimdAln2s1<short, 8, __m128i, __m128i> 
 #endif	// _SIMD_PP_
 		sb1(seqs, pwd, wdw, spjcs, cip, mode);
-	    scr = sb1.hirschbergS1(cpos, upf, upb, exgl);
+	    scr = sb1.hirschbergS1(cpos, exgl);
 	}
 #endif	// !__SSE4_1__
 	SKL	wskl = {cpos[0], 0};
+	a->inex.exgl = b->inex.exgl = 
 	a->inex.exgr = b->inex.exgr = 0;
 	int	c = 0;
 	if (cpos[c] < end_of_ulk) {	// cross center
@@ -1745,30 +1745,27 @@ const	    int	aright = a->right;	// reserve
 const	    int	bright = b->right;
 	    a->right = cpos[0];
 	    b->right = cpos[c - 1];
-	    if (upf < INT_MAX || wdwf.lw == INT_MAX) {
+	    if (wdwf.lw == INT_MAX)
 		stripe(seqs, &wdwf, alprm.sh);
-		if (upf < INT_MAX) wdwf.up = upf;
-	    }
-	    wdwf.width = wdwf.up - wdwf.lw + 3;
+	    else
+	        wdwf.width = wdwf.up - wdwf.lw + 3;
 	    lspS_ng(wdwf);		// first half
 	    a->left = cpos[0];
 	    b->left = cpos[1];
 	    a->right = aright;		// recover
 	    b->right = bright;
-	    a->inex.exgl = 0;
 	    b->inex.exgl = exgl;
-	    a->inex.exgr = aexgr;
-	    b->inex.exgr = bexgr;
 	}
-	if (upb < INT_MAX || wdwb.lw == INT_MAX) {	// local
+	if (wdwb.lw == INT_MAX)
 	    stripe(seqs, &wdwb, alprm.sh);
-	    if (upb < INT_MAX) wdwb.up = upb;
-	}
-	wdwb.width = wdwb.up - wdwb.lw + 3;
+	else
+	    wdwb.width = wdwb.up - wdwb.lw + 3;
 	lspS_ng(wdwb);			// second half
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = aexgl;
 	b->inex.exgl = bexgl;
+	a->inex.exgr = aexgr;
+	b->inex.exgr = bexgr;
 	return scr;
 }
 
@@ -1777,6 +1774,8 @@ VTYPE Aln2s1::shortcutS_ng(int ovr, const BOUND& bab)
 	int	margin = IntronPrm.minl;
 	VTYPE	scr = 0;
 	ovr = (ovr > 0? 0: ovr) - 3;
+const	int	interval = b->right - b->left - 2 * margin;
+	RANGE	rng = {b->left + margin, b->right - margin};
 	scr -= creepback(ovr, slmt, bab);
 	scr -= creepfwrd(ovr, slmt, bab);
 const	int	alen = a->right - a->left;
@@ -1792,9 +1791,6 @@ const	int	alen = a->right - a->left;
 	WINDOW	wdw;
 	stripe(seqs, &wdw, sh);
 
-const	int	interval = b->right - b->left - 2 * margin;
-	RANGE	rng = {b->left + margin, b->right - margin};
-
 const	int	aexg = a->inex.exgl;
 const	int	bexg = b->inex.exgl;
 	a->inex.exgl = b->inex.exgl = 0;	// global
@@ -1804,7 +1800,7 @@ const	int	bexg = b->inex.exgl;
 	return (scr);
 }
 
-VTYPE Aln2s1::openendS_ng(int cmode)
+VTYPE Aln2s1::openendS_ng(int cmode, bool lcl)
 {
 	vmf = new Vmf();
 	int	ptr;
@@ -1822,8 +1818,8 @@ VTYPE Aln2s1::openendS_ng(int cmode)
 	}
 	stripe(seqs, &wdw, alprm.sh);
 	VTYPE scr = (cmode == 1)? 
-	    back2ward5endS_ng(&ptr, wdw):
-	    for2ward3endS_ng(&ptr, wdw);
+	    back2ward5endS_ng(&ptr, wdw, lcl):
+	    for2ward3endS_ng(&ptr, wdw, lcl);
 
 	SKLP    sv = {0, 0, ptr};
 	while (sv.p) {
@@ -1891,6 +1887,7 @@ const	int	ilen = b->right - b->left - agap;	// intron length
 const	CHAR*	as = a->at(a->left);	// cancel score of
 const	CHAR*	bs = b->at(b->left);	// donor side overlap
 const	CHAR*	ds = bs + ilen;		// bl + ilen
+const	int	ntry = algmode.crs? 1: 2;
 	bw[0] = 0;
 	for (VTYPE v = 0; i < n && (*--bs == *--ds || i < agap); )
 	    bw[++i] = v += pwd->sim2(--as, bs);
@@ -1898,7 +1895,7 @@ const	CHAR*	ds = bs + ilen;		// bl + ilen
 	SKL	skl = {a->left - i, b->left - i};
 	iscr = NEVSEL;
 
-	for (int retry = 0; retry < 2 && iscr == NEVSEL; ++retry) {
+	for (int retry = 0; retry < ntry && iscr == NEVSEL; ++retry) {
 	  int	m = skl.m;
 	  int	n = skl.n;
 	  as = a->at(m);
@@ -2313,8 +2310,17 @@ const	bool	no_rec = ovr < wlmt;			// no recurrsion
 		SKL	skl = {a->left = a->right, b->left = b->right};
 		mfd->write((UPTR) &skl);
 		iscore = 0;
-	    } else
-		iscore = first_exon(bab);
+	    } else {
+		Mfile*	tmp_mfd = new Mfile(*mfd);
+		VTYPE	kscore = first_exon(bab);
+		std::swap(mfd, tmp_mfd);
+		iscore = openendS_ng(cmode, false);
+		if (kscore > iscore) {
+		    iscore = kscore;
+		    std::swap(mfd, tmp_mfd);
+		}
+		delete tmp_mfd;
+	    }
 	} else if (cmode == 2 && no_rec) {
 	    if  (agap < IntronPrm.elmt) {
 		SKL	skl = {a->left, b->left};	// 3' end
@@ -2324,15 +2330,23 @@ const	bool	no_rec = ovr < wlmt;			// no recurrsion
 		if (agap) {
 		    skl.m += agap;
 		    skl.n += agap;
-		    if (skl.m < a->right && skl.n < b->right)
-			mfd->write(&skl);
+		    mfd->write(&skl);
 		}
 	    } else if (bgap <= 0) {
 		SKL	skl = {a->left = b->right, b->left = b->right};
 		mfd->write((UPTR) &skl);
 		iscore = 0;
-	    } else
-		iscore = last_exon(bab);
+	    } else {
+		Mfile*	tmp_mfd = new Mfile(*mfd);
+		VTYPE	kscore = last_exon(bab);
+		std::swap(mfd, tmp_mfd);
+		iscore = openendS_ng(cmode, false);
+		if (kscore > iscore) {
+		    iscore = kscore;
+		    std::swap(mfd, tmp_mfd);
+		}
+		delete tmp_mfd;
+	    }
 	} else if (cmode == 3 && cont && dgap >= IntronPrm.minl && 
 	    indelfreespjS(agap, iscore)) {		// indel-free spj
 	    scr += iscore;
@@ -2353,7 +2367,7 @@ const	bool	no_rec = ovr < wlmt;			// no recurrsion
 	    save_mfd = new Mfile(*mfd);
 	    iscore = seededS_ng(level, cmode, bab);
 	}
-	if (iscore == NEVSEL && (no_rec || level == algmode.qck)) {
+	if (iscore == NEVSEL && (no_rec || level >= algmode.qck)) {
 	    RANGE	rng[2];
 	    save_range(seqs, rng, 2);
 	    if (cmode & 1) scr -= creepfwrd(ovr, slmt, bab);

@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.12
-#### Last updated: 2022-07-20
+#### Present Version 2.4.13
+#### Last updated: 2022-09-15
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -313,7 +313,11 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
-## Changes in version 2.5.0.
+## Changes in version 2.4.13.
+1. Fix a few bugs concerning with unidirectional Hirschberg method.
+2. Improve heuristic procedures and their combinations for DNA queries.
+
+## Changes in version 2.4.12.
 1. Fix a serious bug concerning with unidirectional Hirschberg method.
 2. Reexamine various heuristic procedures and their combinations together with readjustment of default parameter values for better performance.
 

@@ -1168,8 +1168,6 @@ const	float	q = b->right - a->left - wdw.up;
 	VTYPE	scr;
 	WINDOW	wdwf = {INT_MAX};
 	WINDOW	wdwb = {INT_MAX};
-	int	upf = INT_MAX; 
-	int	upb = INT_MAX;
 	INT	exgl = bexgl;
 
 #if !__SSE4_1__	// scalar version of unidirectional Hirschberg method
@@ -1194,7 +1192,7 @@ const	float	q = b->right - a->left - wdw.up;
 	    SimdAln2s1<short, 8, __m128i, __m128i> 
 #endif	// _SIMD_PP_
 		sb1(seqs, pwd, wdw, 0, 0, mode);
-	    scr = sb1.hirschbergS1(cpos, upf, upb, exgl);
+	    scr = sb1.hirschbergS1(cpos, exgl);
 	}
 #endif	// !__SSE4_1__
 	a->inex.exgl = a->inex.exgr = b->inex.exgl = b->inex.exgr = 0;
@@ -1209,10 +1207,7 @@ const	    int	aright = a->right;	// reserve
 const	    int	bright = b->right;
 	    a->right = cpos[0];
 	    b->right = cpos[c - 1];
-	    if (upf < INT_MAX || wdwf.lw == INT_MAX) {
-		stripe(seqs, &wdwf, alprm.sh);
-		if (upf < INT_MAX) wdwf.up = upf;
-	    }
+	    stripe(seqs, &wdwf, alprm.sh);
 	    wdwf.width = wdwf.up - wdwf.lw + 3;
 	    lspB_ng(wdwf);		// first half
 	    a->left = cpos[0];
@@ -1221,10 +1216,7 @@ const	    int	bright = b->right;
 	    b->right = bright;
 	    b->inex.exgl = exgl;
 	}
-	if (upb < INT_MAX || wdwb.lw == INT_MAX) {		// local
-	    stripe(seqs, &wdwb, alprm.sh);
-	    if (upb < INT_MAX) wdwb.up = upb;
-	}
+	stripe(seqs, &wdwb, alprm.sh);
 	wdwb.width = wdwb.up - wdwb.lw + 3;
 	lspB_ng(wdwb);			// second half
 	rest_range(seqs, rng, 2);

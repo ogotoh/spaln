@@ -91,6 +91,7 @@ int prePwd(const Seq** seqs, bool use_mdm)
 	if (alprm2.sss < 0.) alprm2.sss = defSss[algmode.crs];
 	if (alprm2.z < 0) alprm2.z = dvsp? def_alprm2z: 0;
 	if (dvsp == 1) alprm2.jneibr /= 2;
+	if (algmode.crs) alprm2.w = 1.;
 	return (dvsp);
 }
 

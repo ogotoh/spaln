@@ -267,6 +267,7 @@ Sig53::Sig53(const FTYPE fS, const char* fname)
 	sig53tab[2] = sig53tab[1] + 16;
 	sig53tab[3] = sig53tab[2] + 256;
 	PatMat*	ptmt = 0;
+const	float	fs = fS * (1. - alprm2.sss);
 
 	FILE*	fd = ftable.fopen(fname, "r");
 	if (!fd) goto abort;
@@ -274,25 +275,25 @@ Sig53::Sig53(const FTYPE fS, const char* fname)
 	ptmt = new PatMat(fd);	/* INT5PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 16; ++i)
-	    sig53tab[0][i] = (STYPE) (fS * ptmt->mtx[i]);
+	    sig53tab[0][i] = (STYPE) (fs * ptmt->mtx[i]);
 	delete ptmt;
 
 	ptmt = new PatMat(fd);	/* INT3PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 16; ++i)
-	    sig53tab[1][i] = (STYPE) (fS * ptmt->mtx[i]);
+	    sig53tab[1][i] = (STYPE) (fs * ptmt->mtx[i]);
 	delete ptmt;
 
 	ptmt = new PatMat(fd);	/* INT53PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 256; ++i)
-	    sig53tab[2][i] = (STYPE) (fS * ptmt->mtx[i]);
+	    sig53tab[2][i] = (STYPE) (fs * ptmt->mtx[i]);
 	delete ptmt;
 
 	ptmt = new PatMat(fd);	/* INT35PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 256; ++i)
-	    sig53tab[3][i] = (STYPE) (fS * ptmt->mtx[i]);
+	    sig53tab[3][i] = (STYPE) (fs * ptmt->mtx[i]);
 	delete ptmt;
 	fclose(fd);
 	return;
@@ -378,17 +379,14 @@ STYPE Exinon::sig53(int m, int n, INTENDS c) const
 	switch (c) {		// acanonical signal
 	    case IE5:	sig = data[m].sig5; break;
 	    case IE3:	sig = data[n].sig3; break;
-	    case IE53:	sig = data[n].sig3 + (1. - alprm2.sss) * 
-		(sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3] -
-		 sig53tab[1][int53[n].dinc3]);
+	    case IE53:	sig = data[n].sig3 - sig53tab[1][int53[n].dinc3]
+		+ sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3];
 		break;
-	    case IE35:	sig = data[m].sig5 + (1. - alprm2.sss) * 
-		(sig53tab[3][16 * int53[m].dinc5 + int53[n].dinc3] -
-		 sig53tab[0][int53[m].dinc5]);
+	    case IE35:	sig = data[m].sig5 -  sig53tab[0][int53[m].dinc5]
+		+ sig53tab[3][16 * int53[m].dinc5 + int53[n].dinc3];
 		break;
-	    case IE5P3: sig = data[m].sig5 + data[n].sig3 + (1. - alprm2.sss) * 
-		(sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3] - 
-		 sig53tab[1][int53[n].dinc3]);
+	    case IE5P3: sig = data[m].sig5 + data[n].sig3 - sig53tab[1][int53[n].dinc3]
+		+ sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3];
 		break;
 	}
 	if (alprm2.Z > 0) {
@@ -477,13 +475,14 @@ void Exinon::intron53()
 	if (prefI)	++prfI;
 
 	vset(data + bias, ZeroExin, size + 1);
-	at_sig5 = (1 - alprm2.sss) * sig53tab[0][3];
-	gc_sig5 = (1 - alprm2.sss) * sig53tab[0][9];
+	at_sig5 = sig53tab[0][3];
+	gc_sig5 = sig53tab[0][9];
 	CHAR*	ss = sd->at(sd->left);
 	STYPE	sigB = 0;
 	CHAR*	posB = 0;
 	EXIN*	last = end();
 	INT53*	wk53 = int53 + bias + 1;
+const	float	fs = fS * alprm2.sss;
 	for (EXIN* wkb = begin(); ++wkb < last; ++ss, ++wk53) {
 	    wkb->sigS = prefS? (STYPE) (fT * *prfS++): 0;
 	    wkb->sigT = prefT? (STYPE) (fT * *prfT++): 0;
@@ -494,10 +493,10 @@ void Exinon::intron53()
 		else if (wkb + 3 < last && (ss[3] == TRM || ss[3] == TRM2)) sigE = 0;
 		wkb->sigE = (STYPE) sigE;
 	    } else	wkb->sigE = 0;
-	    STYPE	sig5 = pref5? (STYPE) (fS * alprm2.sss * *prf5++): 0;
-	    STYPE	sig3 = pref3? (STYPE) (fS * alprm2.sss * *prf3++): 0;
-	    sig5 += (1 - alprm2.sss) * sig53tab[0][wk53->dinc5];
-	    sig3 += (1 - alprm2.sss) * sig53tab[1][wk53->dinc3];
+	    STYPE	sig5 = pref5? (STYPE) (fs * *prf5++): 0;
+	    STYPE	sig3 = pref3? (STYPE) (fs * *prf3++): 0;
+	    sig5 += sig53tab[0][wk53->dinc5];
+	    sig3 += sig53tab[1][wk53->dinc3];
 	    if (prefB) {
 		sig3 += sigB;
 		FTYPE	sigb = *prfB++;
