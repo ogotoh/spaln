@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.13";
-static	const	int	date = 220915;
+static	const	char*	version = "2.4.13a";
+static	const	int	date = 220930;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -265,12 +265,6 @@ const	    char*	val = argv[0] + 2;
 		case 'C':
 		    if ((val = getarg(argc, argv, true)))
 			initcodon(atoi(val));
-		    break;
-		case 'E': 	// use lookup tabble
-		    if ((val = getarg(argc, argv, true)))
-			algmode.alg = atoi(val);
-		    else
-			algmode.alg |= 1;
 		    break;
 		case 'f':
 		    if ((val = getarg(argc, argv))) catalog = val;

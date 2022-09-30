@@ -832,10 +832,6 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 		for (int k = 0; k < pwd->Noll; ++k) {
 const		    int	kk = k + k;
 		    ++hf[kk];
-		    if (m == mm) {
-			center_end[k][r] = hf[kk]->ulk;
-			hf[kk]->ulk = k? end_of_ulk: r;
-		    }
 		}
 
 //	Diagonal
@@ -994,8 +990,9 @@ const		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 const		    int	vk = (hd == 2 || hd == 4)? hd / 2: 0;
 		    for (int k = 0; k < pwd->Noll; ++k) {
 const			int	kk = k + k;
-			center_lwr[k][r] = hf[kk]->lwr;
-		        center_upr[k][r] = hf[kk]->upr;
+			center_end[k][r] = hf[kk]->ulk;
+			center_lwr[k][r] = std::min(r, hf[kk]->lwr);
+		        center_upr[k][r] = std::max(r, hf[kk]->upr);
 			hf[kk]->upr = r;
 			if (!(hd % 2)) hf[kk]->lwr = r;
 			if (k) hf[kk]->ulk = r + k * wdw.width;
@@ -1037,7 +1034,7 @@ const	    Rvwml*	mx = hlastS_ng(hh, wdw);
 	    cpos[c++] = r + mm;
 	    cpos[c] = end_of_ulk;
 	    wdwf.up = center_upr[d][r];
-	    wdwf.lw = center_lwr[0][r];
+	    wdwf.lw = center_lwr[d][r];
 	    r = center_end[d][r];
 	} else	cpos[0] = end_of_ulk;		// don't cross center
 	if (LocalL) {
@@ -1629,8 +1626,9 @@ VTYPE Aln2s1::trcbkalignS_ng(const WINDOW& wdw, bool spj, const RANGE* mc)
 #else
 const	int	nelem = 8;
 const	int	m = a->right - a->left;
-	if (m < nelem || mc) scr = forwardS_ng(wdw, &ptr, mc);
-	else {
+	if (m < nelem || mc) {
+	    scr = forwardS_ng(wdw, &ptr, mc);
+	} else {
 	    float	cvol = wdw.lw - b->left + a->right;
 	    cvol = float(m) * float(b->right - b->left)
 		 - cvol * cvol / 2;
@@ -1709,8 +1707,9 @@ const	float	q = b->right - a->left - wdw.up;
 #if !__SSE4_1__	// scalar version of unidirectional Hirschberg method
 	scr = hirschbergS_ng(cpos, wdw, wdwf, wdwb, exgl);
 #else
-	if (m < 4) scr = hirschbergS_ng(cpos, wdw, wdwf, wdwb, exgl);
-	else {
+	if (m < 4) {
+	    scr = hirschbergS_ng(cpos, wdw, wdwf, wdwb, exgl);
+	} else {
 	    int	mode = 
 	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 1: 5;
 #if _SIMD_PP_	// 2B int vectorized unidirectional Hirschberg method

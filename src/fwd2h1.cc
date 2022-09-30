@@ -945,7 +945,7 @@ const	EXIN*	bb = b->exin->score(n);
 		if (i < 3) {
  		    h->val = (bb[1].sigS > 0)? bb[1].sigS: 0;
 		    h->dir = dir;
-		    h->ulk = r;
+		    h->lwr = h->ulk = r;
 		} else {
 		    *h = h[-3];
 		    int	d = n - jnc;
@@ -958,14 +958,14 @@ const	EXIN*	bb = b->exin->score(n);
 		    x = h[-2].val + pwd->GapW2;
 		    if (x > h->val) {*h = h[-2]; h->val = x; h->dir = HOR2;}
 		}
-		h->lwr = h->upr = r;
 		VTYPE	x = (bb[1].sigS > 0)? bb[1].sigS: 0;
-		if (h->val < x) {
+		if (h->val < x) {	// start codon
 		    h->val = x;
 		    h->dir = DEAD;
 		    jnc = n;
-		    h->ulk = r;
+		    h->lwr = h->ulk = r;
 		}
+		h->upr = r;
 	    }
 	}
 
@@ -1041,9 +1041,9 @@ const	EXIN*	bb = b->exin->score(rw + m3);
 		    mx = h;
 		    mxv = y;
 		    *h = h[-3];
-		    mx->upr = std::max(rf, h->upr);
 		    mx->dir = DEAD;
 		}
+		mx->upr = std::max(rf, h->upr);
 	    }
 	}
 	if (b->inex.exgr == 1) {
@@ -1151,10 +1151,6 @@ const		VTYPE&	sigE = bb[-2].sigE;
 		for (int k = 0; k < pwd->Noll; ++k) {
 const		    int	kk = k + k;
 		    ++hf[kk];
-		    if (m == mm) {
-			center_end[k][r] = hf[kk]->ulk;
-			hf[kk]->ulk = k? end_of_ulk: r;
-		    }
 		}
 		Rvdwml*&	eq1 = hf[1] = e1 + q;
 		Rvdwml*&	eq2 = hf[3] = dagp? e2 + q: 0;
@@ -1417,8 +1413,9 @@ const			bool	crossspj = phs == 1 && k == 0;
 		    if (hd % 2 == 1) center_lnk[0][r] = rlst[q];
 		    for (int k = 0; k < pwd->Noll; ++k) {
 const			int	kk = k + k;
-			center_lwr[k][r] = hf[kk]->lwr;
-			center_upr[k][r] = hf[kk]->upr;
+			center_end[k][r] = hf[kk]->ulk;
+			center_lwr[k][r] = std::min(r, hf[kk]->lwr);
+			center_upr[k][r] = std::max(r, hf[kk]->upr);
 			hf[kk]->lwr = hf[kk]->upr = r;
 			hf[kk]->ulk = r + k * wdw.width;
 		    }
@@ -1435,13 +1432,14 @@ const	int	rl = b->left - 3 * a->left;
 	} else {	// global or semi-global
 const	    int	rr = b->right - 3 * a->right;
 const	    Rvdwml*	mx = hlastH_ng(hhg, wdw);
+	    r = mx - hhg[0];
 	    maxh.val = mx->val;
 	    maxh.ulk = mx->ulk;
-	    wdwb.up = mx->upr;
-	    wdwb.lw = mx->lwr;
-	    r = mx - hhg[0];
 	    if (a->inex.exgr && rr < r) a->right = (b->right - r) / 3;
 	    if (b->inex.exgr && rr > r) b->right = 3 * a->right + r;
+	    r = b->right - 3 * a->right;
+	    wdwb.up = std::max(r, mx->upr);
+	    wdwb.lw = std::min(r, mx->lwr);
 	}
 	int	c = 0;
 	int	d = 0;
@@ -1455,7 +1453,7 @@ const	    Rvdwml*	mx = hlastH_ng(hhg, wdw);
 	    cpos[c++] = r + mm3;
 	    cpos[c] = end_of_ulk;
 	    wdwf.up = center_upr[d][r];
-	    wdwf.lw = center_lwr[0][r];
+	    wdwf.lw = center_lwr[d][r];
 	    r = center_end[d][r];
 	} else	cpos[0] = end_of_ulk;		// don't cross center
 	if (LocalL) {
@@ -1965,8 +1963,9 @@ VTYPE Aln2h1::trcbkalignH_ng(const WINDOW& wdw, bool spj, const RANGE* mc)
 #else
 const	int	nelem = 8;
 const	int	m = a->right - a->left;
-	if (m < nelem || mc) scr = forwardH_ng(&ptr, wdw, spj, mc);
-	else {
+	if (m < nelem || mc) {
+	    scr = forwardH_ng(&ptr, wdw, spj, mc);
+	} else {
 	    float	cvol = wdw.lw - b->left + 3 * a->right;
 	    cvol = float(m) * float(b->right - b->left)
 		 - cvol * cvol / 3;
@@ -2026,6 +2025,7 @@ const	INT	bexgr = b->inex.exgr;	// reserve
 		return (bexgl || bexgr)?
 		    pwd->GapExtPen3(n): pwd->UnpPenalty3(n);
 	}
+
 	if (wdw.up == wdw.lw) return(diagonalH_ng());
 const	float	k = wdw.lw - b->left + 3 * a->right;
 const	float	q = b->right - 3 * a->left - wdw.up;
@@ -2044,8 +2044,9 @@ const	float	q = b->right - 3 * a->left - wdw.up;
 #if !__SSE4_1__	// scalar version of unidirectional Hirschberg method
 	scr = hirschbergH_ng(cpos, wdw, wdwf, wdwb, exgl);
 #else
-	if (m < 4) scr = hirschbergH_ng(cpos, wdw, wdwf, wdwb, exgl);
-	else {
+	if (m < 4) {
+	    scr = hirschbergH_ng(cpos, wdw, wdwf, wdwb, exgl);
+	} else {
 	    int	mode = 
 	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 1: 5;
 #if _SIMD_PP_	// 2B int vectorized unidirectional Hirschberg method
