@@ -174,10 +174,10 @@ const	EXIN*	bb = b->exin->score(n);
 	r = b->left - 3 * a->left;
 	rr = b->left - 3 * a->right;
 	h = hh[0] + r;
-	RVPD*	g = hh[1] + r;
+	RVPD*	f = hh[1] + r;
 	if (wdw.lw > rr) rr = wdw.lw;
 	for (int i = 1; --r >= rr; ++i) {
-	    --h; --g;
+	    --h; --f;
 	    if (b->inex.exgl == 1) {		// no terminal gap penalty
 		h->val = 0;
 		h->dir = DEAD;
@@ -188,13 +188,13 @@ const	EXIN*	bb = b->exin->score(n);
 		if (!(b->inex.exgl & 1)) h->val += pwd->BasicGOP;
 		if (i < 3) h->val += pwd->ExtraGOP;
 		h->dir = VERT;
-		*g = *h;
+		*f = *h;
 	    } else {
 		*h = h[3];
-		*g = g[3];
+		*f = f[3];
 		if (!(b->inex.exgl & 2)) {
 		    h->val += pwd->GapExtPen3(i);
-		    g->val += pwd->BasicGEP;
+		    f->val += pwd->BasicGEP;
 		}
 	    }
 	}
@@ -326,8 +326,8 @@ const	    CHAR*	bs = b->at(n - 1);
 const	    EXIN*	bb = b->exin->score(n);
 	    int		k = 0;
 	    RVPD*&	h = hf[0] = hh[k++] + r;
-	    RVPD*&	g = hf[2] = hh[k++] + r;
-	    RVPD*&	g2 = hf[4] = dagp? hh[k++] + r: 0;
+	    RVPD*&	f = hf[2] = hh[k++] + r;
+	    RVPD*&	f2 = hf[4] = dagp? hh[k++] + r: 0;
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 	    vset((RVPDJ*) &hl, black_vpdj, 3 * (NCAND + 1));
 	    for (int p = 0; p < 3; ++p)
@@ -345,7 +345,7 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #endif
 	    for (int q = 0; ++n <= n9; ++bs) {
 		VTYPE	x, y;
-		++bb; ++h; ++g; if (g2) ++g2;
+		++bb; ++h; ++f; if (f2) ++f2;
 const		VTYPE&	sigE = bb[-2].sigE;
 		RVPD*&	eq1 = hf[1] = e1 + q;
 		RVPD*&	eq2 = hf[3] = dagp? e2 + q: 0;
@@ -361,52 +361,52 @@ const		VTYPE&	sigE = bb[-2].sigE;
 		} else	*h = black_vpd;
 
 //	vertical gap extention
-		y = g[3].val + pwd->BasicGEP;
+		y = f[3].val + pwd->BasicGEP;
 
 //	1 nt deletion
 		++from;
 		x = from->val + (isvert(from)? pwd->GapE1: pwd->GapW1);
 		if (x > y) {
-		    g->val = x;
-		    g->dir = SLA2;
-		    g->ptr = from->ptr;
-		} else	g->val = y;
+		    f->val = x;
+		    f->dir = SLA2;
+		    f->ptr = from->ptr;
+		} else	f->val = y;
 
 //	2 nt deletion
 		++from;
 		x = from->val + (isvert(from)? pwd->GapE2: pwd->GapW2);
-		if (x > g->val) {
-		    g->val = x;
-		    g->dir = SLA1;
-		    g->ptr = from->ptr;
+		if (x > f->val) {
+		    f->val = x;
+		    f->dir = SLA1;
+		    f->ptr = from->ptr;
 		}
 
 //	normal deletion
 		x = (++from)->val + pwd->GapW3;
-		if (x >= g->val) {
-		    g->val = x;
-		    g->dir = VERT;
-		    g->ptr = from->ptr;
-		} else if (y >= g->val) {
-		    g->val = y;
-		    g->dir = VERT;
-		    g->ptr = g[3].ptr;
+		if (x >= f->val) {
+		    f->val = x;
+		    f->dir = VERT;
+		    f->ptr = from->ptr;
+		} else if (y >= f->val) {
+		    f->val = y;
+		    f->dir = VERT;
+		    f->ptr = f[3].ptr;
 		}
-		if (g->val > mx->val) mx = g;
+		if (f->val > mx->val) mx = f;
 
 //	long deletion
 		if (dagp) {
 		  x = from->val + pwd->GapW3L;
-		  y = g2[3].val + pwd->LongGEP;
+		  y = f2[3].val + pwd->LongGEP;
 		  if (x >= y) {
-		    g2->val = x;
-		    g2->dir = VERL;
-		    g2->ptr = from->ptr;
+		    f2->val = x;
+		    f2->dir = VERL;
+		    f2->ptr = from->ptr;
 		  } else {
-		    *g2 = g2[3];
-		    g2->val = y;
+		    *f2 = f2[3];
+		    f2->val = y;
 		  }
-		  if (g2->val > mx->val) mx = g2;
+		  if (f2->val > mx->val) mx = f2;
 		}
 Horizon:
 //	nomal insertion
@@ -557,9 +557,9 @@ const			bool	crossspj = phs == 1 && k == 0;
 	if (OutPrm.debug) {
 		printf("%2d %2d %2d ", a->SiteNz(m), b->SiteNz(n), mx->dir);
 		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(eq1->val);
+		putvar(f->val); putvar(eq1->val);
 		if (dagp) {
-		    putvar(g2->val); putvar(eq2->val);
+		    putvar(f2->val); putvar(eq2->val);
 		}
 		putvar(hl[2][nx[2][0]].val); 
 		putvar(hl[1][nx[1][0]].val);
@@ -571,15 +571,15 @@ const			bool	crossspj = phs == 1 && k == 0;
 #endif
 
 		if (cutrng && n == cutrng->left) {	// shortcut
-		    h -= 3; g -= 3;
-		    if (dagp) g2 -= 3;
+		    h -= 3; f -= 3;
+		    if (dagp) f2 -= 3;
 		    for (int p = 0; p < 3; ++p) {
 			if (++q == 3) q = 0;
 			e1[q].val += longgep;
 			if (dagp) e2[q].val += longgep2;
 			*++h = dagp? e2[q]: e1[q];
-			*++g = black_vpd;
-			if (dagp) *++g2 = black_vpd;
+			*++f = black_vpd;
+			if (dagp) *++f2 = black_vpd;
 		    }
 		    n += cutlen;
 		    bs += cutlen;
@@ -973,9 +973,9 @@ const	EXIN*	bb = b->exin->score(n);
 	rr = b->left - 3 * a->right;
 	if (wdw.lw > rr) rr = wdw.lw;
 	h = hhg[0] + r;
-	Rvdwml*	g = hhg[1] + r;
+	Rvdwml*	f = hhg[1] + r;
 	for (int i = 1; --r >= rr; ++i) {
-	    --h; --g;
+	    --h; --f;
 	    if (b->inex.exgl == 1) {		// no terminal gap penalty
 		h->val = 0;
 		h->dir = DEAD;
@@ -986,16 +986,16 @@ const	EXIN*	bb = b->exin->score(n);
 		if (!(b->inex.exgl & 1)) h->val += pwd->BasicGOP;
 		if (i < 3) h->val += pwd->ExtraGOP;
 		h->dir = VERT;
-		*g = *h;
-		h->lwr = g->lwr = h->ulk = r;
+		*f = *h;
+		h->lwr = f->lwr = h->ulk = r;
 	    } else {
 		*h = h[3];
-		*g = g[3];
+		*f = f[3];
 		if (!(b->inex.exgl & 2)) {
 		    h->val += pwd->GapExtPen3(i);
-		    g->val += pwd->BasicGEP;
+		    f->val += pwd->BasicGEP;
 		}
-		h->lwr = g->lwr = h->ulk = r;
+		h->lwr = f->lwr = h->ulk = r;
 	    }
 	}
 }
@@ -1127,8 +1127,8 @@ const	    CHAR*	bs = b->at(n - 1);
 const	    EXIN*	bb = b->exin->score(n);
 	    int		k = 0;
 	    Rvdwml*&	h = hf[0] = hhg[k++] + r;
-	    Rvdwml*&	g = hf[2] = hhg[k++] + r;
-	    Rvdwml*&	g2 = hf[4] = dagp? hhg[k++] + r: blackvdwuj;
+	    Rvdwml*&	f = hf[2] = hhg[k++] + r;
+	    Rvdwml*&	f2 = hf[4] = dagp? hhg[k++] + r: blackvdwuj;
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 	    vset((Rvdwmlj*) &hl, black_vdwmlj, 3 * (NCAND + 1));
 	    for (int p = 0; p < 3; ++p)
@@ -1167,52 +1167,52 @@ const		    int	kk = k + k;
 		} else	*h = black_vdwml;
 
 //	vertical gap extention
-		y = g[3].val + pwd->BasicGEP;
+		y = f[3].val + pwd->BasicGEP;
 
 //	1 nt deletion
 		++from;
 		x = from->val + (isvert(from)? pwd->GapE1: pwd->GapW1);
 		if (x > y) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = SLA2;
-		} else	g->val = y;
+		    *f = *from;
+		    f->val = x;
+		    f->dir = SLA2;
+		} else	f->val = y;
 
 //	2 nt deletion
 		++from;
 		x = from->val + (isvert(from)? pwd->GapE2: pwd->GapW2);
-		if (x > g->val) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = SLA1;
+		if (x > f->val) {
+		    *f = *from;
+		    f->val = x;
+		    f->dir = SLA1;
 		}
 
 //	nomal deletion
 		x = (++from)->val + pwd->GapW3;
-		if (x >= g->val) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = VERT;
-		} else if (y >= g->val) {
-		    *g = g[3];
-		    g->val = y;
-		    g->dir = VERT;
+		if (x >= f->val) {
+		    *f = *from;
+		    f->val = x;
+		    f->dir = VERT;
+		} else if (y >= f->val) {
+		    *f = f[3];
+		    f->val = y;
+		    f->dir = VERT;
 		}
-		if (g->val >= mx->val) mx = g;
+		if (f->val >= mx->val) mx = f;
 
 //	long deletion
 		if (dagp) {
 		  x = from->val + pwd->GapW3L;
-		  y = g2[3].val + pwd->LongGEP;
+		  y = f2[3].val + pwd->LongGEP;
 		  if (x >= y) {
-		    *g2 = *from;
-		    g2->val = x;
-		    g2->dir = VERL;
+		    *f2 = *from;
+		    f2->val = x;
+		    f2->dir = VERL;
 		  } else {
-		    *g2 = g2[3];
-		    g2->val = y;
+		    *f2 = f2[3];
+		    f2->val = y;
 		  }
-		  if (g2->val >= mx->val) mx = g2;
+		  if (f2->val >= mx->val) mx = f2;
 		}
 HorizonF:
 //	nomal insertion
@@ -1394,9 +1394,9 @@ const			bool	crossspj = phs == 1 && k == 0;
 #if DEBUG
 	if (OutPrm.debug) {
 		printf("%2d %2d %2d ", m, n, mx->dir);
-		putvar(mx->val); putvar(y); putvar(g->val); putvar(eq1->val);
+		putvar(mx->val); putvar(y); putvar(f->val); putvar(eq1->val);
 		if (dagp) {
-		    putvar(g2->val); putvar(eq2->val);
+		    putvar(f2->val); putvar(eq2->val);
 		}
 		putvar(hl[2][nx[2][0]].val); 
 		putvar(hl[1][nx[1][0]].val);
@@ -1432,9 +1432,10 @@ const	int	rl = b->left - 3 * a->left;
 	} else {	// global or semi-global
 const	    int	rr = b->right - 3 * a->right;
 const	    Rvdwml*	mx = hlastH_ng(hhg, wdw);
-	    r = mx - hhg[0];
 	    maxh.val = mx->val;
 	    maxh.ulk = mx->ulk;
+	    maxh.ml = mx->ml;
+	    r = mx - hhg[0];
 	    if (a->inex.exgr && rr < r) a->right = (b->right - r) / 3;
 	    if (b->inex.exgr && rr > r) b->right = 3 * a->right + r;
 	    r = b->right - 3 * a->right;
@@ -1462,6 +1463,9 @@ const	    Rvdwml*	mx = hlastH_ng(hhg, wdw);
 	} else {
 	    if (a->inex.exgl && rl > r) a->left = (b->left - r) / 3;
 	    if (b->inex.exgl && rl < r) b->left = 3 * a->left + r;
+	    r = b->right - 3 * a->right;
+	    wdwf.up = std::max(r, wdwf.up);
+	    wdwf.lw = std::min(r, wdwf.lw);
 	}
 	bexgl = (d > 0)? 2: 0;
 	delete[] wbuf;
@@ -1475,7 +1479,7 @@ void Aln2h1::pfinitH_ng(RVPD* hh[], const WINDOW& wdw)
 	int	rr = b->right - 3 * a->left;
 
 	RVPD*	h = hh[0] + r;
-	RVPD*	g = hh[1] + r;
+	RVPD*	f = hh[1] + r;
 	h->val = 0;
 	h->dir = DIAG;
 	h->ptr = vmf->add(a->left, b->left, 0);
@@ -1484,18 +1488,18 @@ void Aln2h1::pfinitH_ng(RVPD* hh[], const WINDOW& wdw)
 	rr = b->left - 3 * a->right;
 	if (wdw.lw > rr) rr = wdw.lw;
 	for (int i = 1; --r >= rr; ++i) {
-	    --h; --g;
+	    --h; --f;
 	    if (i <= 3) {
 		*h = h[i];
 		h->val += pwd->GapPenalty(i);
 		if (i < 3) h->val += pwd->ExtraGOP;
 		h->dir = VERT;
-		*g = *h;
+		*f = *h;
 	    } else {
 		*h = h[3];
-		*g = g[3];
+		*f = f[3];
 		h->val += pwd->GapExtPen3(i);
-		g->val += pwd->BasicGEP;
+		f->val += pwd->BasicGEP;
 	    }
 	}
 }
@@ -1506,7 +1510,7 @@ void Aln2h1::pbinitH_ng(RVPD* hh[], const WINDOW& wdw)
 	int	rr = b->left - 3 * a->right;
 
 	RVPD*	h = hh[0] + r;
-	RVPD*	g = hh[1] + r;
+	RVPD*	f = hh[1] + r;
 	h->val = 0;
 	h->dir = DIAG;
 	h->ptr = vmf->add(a->right, b->right, 0);
@@ -1515,18 +1519,18 @@ void Aln2h1::pbinitH_ng(RVPD* hh[], const WINDOW& wdw)
 	rr = b->right - 3 * a->left;
 	if (wdw.up < rr) rr = wdw.up;
 	for (int i = 1; ++r <= rr; ++i) {
-	    ++h; ++g;
+	    ++h; ++f;
 	    if (i <= 3) {
 		*h = h[-i];
 		h->val += pwd->GapPenalty(i);
 		if (i < 3) h->val += pwd->ExtraGOP;
 		h->dir = VERT;
-		*g = *h;
+		*f = *h;
 	    } else {
 		*h = h[-3];
-		*g = g[-3];
+		*f = f[-3];
 		h->val += pwd->GapExtPen3(i);
-		g->val += pwd->BasicGEP;
+		f->val += pwd->BasicGEP;
 	    }
 	}
 }
@@ -1570,7 +1574,7 @@ const	    EXIN*	bb = b->exin->score(n);
 		e1[2].val = pwd->GapW3;
 	    }
 	    RVPD*	h = hh[0] + r;
-	    RVPD*	g = hh[1] + r;
+	    RVPD*	f = hh[1] + r;
 	    RVPD*	mxd = ((h->val + pwd->Vthr) < maxval)? blackvpd: h;
 	    int		count3 = 0;
 	    for (int p = 0; p < 3; ++p) nr[(n + p) % 3] = n + p;
@@ -1587,7 +1591,7 @@ const	    EXIN*	bb = b->exin->score(n);
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 	    while (--n >= n9) {
 		VTYPE	x, y;
-		--bs; --r; --h; --g;
+		--bs; --r; --h; --f;
 		RVPD*	eq1 = e1 + q;
 const		VTYPE	sigE = (bb--)->sigE;
 
@@ -1601,38 +1605,38 @@ const		VTYPE	sigE = (bb--)->sigE;
 		} else	*h = black_vpd;
 
 //	vertical gap extension
-		y = g[-3].val + pwd->BasicGEP;
+		y = f[-3].val + pwd->BasicGEP;
 
 //	1 nt deletion
 		--from;
 		x = from->val + (isvert(from)? pwd->GapE1: pwd->GapW1);
 		if (x > y) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = SLA2;
-		} else	g->val = y;
+		    *f = *from;
+		    f->val = x;
+		    f->dir = SLA2;
+		} else	f->val = y;
 
 //	2 nt deletion
 		--from;
 		x = from->val + (isvert(from)? pwd->GapE2: pwd->GapW2);
-		if (x > g->val)	{
-		    *g = *from;
-		    g->val = x;
-		    g->dir = SLA1;
+		if (x > f->val)	{
+		    *f = *from;
+		    f->val = x;
+		    f->dir = SLA1;
 		}
 
 //	normal deletion
 		x = (--from)->val + pwd->GapW3;
-		if (x >= g->val) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = VERT;
-		} else if (y >= g->val) {
-		    *g = g[-3];
-		    g->val = y;
-		    g->dir = VERT;
+		if (x >= f->val) {
+		    *f = *from;
+		    f->val = x;
+		    f->dir = VERT;
+		} else if (y >= f->val) {
+		    *f = f[-3];
+		    f->val = y;
+		    f->dir = VERT;
 		}
-		if (g->val >= mx->val) mx = g;
+		if (f->val >= mx->val) mx = f;
 
 HorizonB:
 //	normal insertion
@@ -1702,7 +1706,7 @@ HorizonB:
 	if (OutPrm.debug) {
 		printf("%2d %2d %2d ", m, n, mx->dir);
 		putvar(mx->val); putvar(y); 
-		putvar(g->val); putvar(eq1->val);
+		putvar(f->val); putvar(eq1->val);
 		printf(" %6.2f %6.2f", (float) sigE, (float) bb[1].sigS);
 		putchar('\n');
 	}
@@ -1759,7 +1763,7 @@ const	    int		n9 = std::min(n2, b->right);
 const	    CHAR*	bs = b->at(n);
 const	    EXIN*	bb = b->exin->score(n);
 	    RVPD*	h = hh[0] + r;
-	    RVPD*	g = hh[1] + r;
+	    RVPD*	f = hh[1] + r;
 	    for (int p = 0; p < 3; ++p) nr[(n - p) % 3] = n - p;
 	    RVPD*	mxd = ((h->val + pwd->Vthr) < maxval)? blackvpd: h;
 	    nr[n % 3] = n - 3;
@@ -1776,7 +1780,7 @@ const	    EXIN*	bb = b->exin->score(n);
 const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 	    for ( ; ++n <= n9; ++bs) {
 		VTYPE	x, y;
-		++r; ++bb; ++h; ++g;
+		++r; ++bb; ++h; ++f;
 		RVPD*	eq1 = e1 + q;
 
 //	diagonal match
@@ -1790,38 +1794,38 @@ const		VTYPE&	sigE = bb[-2].sigE;
 		} else	*h = black_vpd;
 
 //	vertical gap extention
-		y = g[3].val + pwd->BasicGEP;
+		y = f[3].val + pwd->BasicGEP;
 
 //	1 nt deletion
 		++from;
 		x = from->val + (isvert(from)? pwd->GapE1: pwd->GapW1);
 		if (x > y) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = SLA2;
-		} else	g->val = y;
+		    *f = *from;
+		    f->val = x;
+		    f->dir = SLA2;
+		} else	f->val = y;
 
 //	2 nt deletion
 		++from;
 		x = from->val + (isvert(from)? pwd->GapE2: pwd->GapW2);
-		if (x > g->val) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = SLA1;
+		if (x > f->val) {
+		    *f = *from;
+		    f->val = x;
+		    f->dir = SLA1;
 		}
 
 //	normal deletion
 		x = (++from)->val + pwd->GapW3;
-		if (x >= g->val) {
-		    *g = *from;
-		    g->val = x;
-		    g->dir = VERT;
-		} else	if (y >= g->val) {
-		    *g = g[3];
-		    g->val = y;
-		    g->dir = VERT;
+		if (x >= f->val) {
+		    *f = *from;
+		    f->val = x;
+		    f->dir = VERT;
+		} else	if (y >= f->val) {
+		    *f = f[3];
+		    f->val = y;
+		    f->dir = VERT;
 		}
-		if (g->val >= mx->val) mx = g;
+		if (f->val >= mx->val) mx = f;
 
 HorizonP:
 //	normal insertion
@@ -1899,7 +1903,7 @@ HorizonP:
 	if (OutPrm.debug) {
 		printf("%2d %2d %2d ", m, n, mx->dir);
 		putvar(mx->val); putvar(y);
-		putvar(g->val); putvar(eq1->val);
+		putvar(f->val); putvar(eq1->val);
 		printf(" %2d %2d %6.2f", bb->phs5, bb->phs3, (double) sigE);
 		printf(" %6.1f %6.1f", (double) bb->sig5, (double) bb->sig3);
 		putchar('\n');
@@ -1963,7 +1967,7 @@ VTYPE Aln2h1::trcbkalignH_ng(const WINDOW& wdw, bool spj, const RANGE* mc)
 #else
 const	int	nelem = 8;
 const	int	m = a->right - a->left;
-	if (m < nelem || mc) {
+	if (algmode.alg == 0 || m < nelem || mc) {
 	    scr = forwardH_ng(&ptr, wdw, spj, mc);
 	} else {
 	    float	cvol = wdw.lw - b->left + 3 * a->right;
@@ -2044,7 +2048,7 @@ const	float	q = b->right - 3 * a->left - wdw.up;
 #if !__SSE4_1__	// scalar version of unidirectional Hirschberg method
 	scr = hirschbergH_ng(cpos, wdw, wdwf, wdwb, exgl);
 #else
-	if (m < 4) {
+	if (algmode.alg == 0 || m < 4) {
 	    scr = hirschbergH_ng(cpos, wdw, wdwf, wdwb, exgl);
 	} else {
 	    int	mode = 

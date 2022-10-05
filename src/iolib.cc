@@ -64,6 +64,8 @@ static	int	frmtc(const char** ss, char* pb);
 static	void	frmts(char* ps);
 static	int	raw_scn(char* str, char* format, va_list args);
 static	void	display(const char* s, va_list args);
+static	INTERACT	crt = {1, 0};
+
 
 #if LEAKTRACE
 //leaktracer::LeakTrace	leak_trace;
@@ -233,9 +235,12 @@ FILE* wfopen(const char* name, const char* mode)
 {
 	if (is_file(name)) {
 	    int	c = 'y';
-	    if (OutPrm.overwrite == 0)
+	    if (OutPrm.overwrite == 0) {
+		INT	p = crt.prompt;
+		crt.prompt = 1;
 		c = progetc("Overwrite existing file \"%s\"? [y/n] ", name);
-	    else if (OutPrm.overwrite > 1)
+		crt.prompt = p;
+	    } else if (OutPrm.overwrite > 1)
 		c = 'n';
 	    if (tolower(c) != 'y') return (0);
 	}
@@ -437,8 +442,6 @@ Ftable ftable;
 *	Non-portable codes for getting a variable number of data 
 *
 *********************************************************************/
-
-static INTERACT crt = {1, 0};
 
 void setprompt(int prom, int ech)
 {
@@ -858,9 +861,12 @@ gzFile wgzopen(const char* name, const char* mode)
 	if (!is_gz(name)) strcat(str, gz_ext);
 	if (is_file(str)) {
 	    int	c = 'y';
-	    if (OutPrm.overwrite == 0)
+	    if (OutPrm.overwrite == 0) {
+		INT	p = crt.prompt;
+		crt.prompt = 1;
 		c = progetc("Overwrite existing file \"%s\"? [y/n] ", str);
-	    else if (OutPrm.overwrite > 1)
+		crt.prompt = p;
+	    } else if (OutPrm.overwrite > 1)
 		c = 'n';
 	    if (tolower(c) != 'y') return (0);
 	}

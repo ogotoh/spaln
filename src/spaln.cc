@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.13a";
-static	const	int	date = 220930;
+static	const	char*	version = "2.4.13b";
+static	const	int	date = 221005;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -248,10 +248,22 @@ const	    char*	val = argv[0] + 2;
 	    int	rv = 0;
 	    switch (c) {
 		case '?': case 'h': usage(0);
-		case 'a': case 'A':
-		    algmode.dim = c == 'A';
-		    if ((val = getarg(argc, argv)))
-			{delete *dbs; *dbs = new DbsDt(aadbs = val);}
+		case 'a':
+		    algmode.dim = 0;
+		    if ((val = getarg(argc, argv))) {
+			delete *dbs;
+			*dbs = new DbsDt(aadbs = val);
+		    }
+		    break;
+		case 'A':
+		    if ((val = getarg(argc, argv))) {
+			if (isdigit(*val)) algmode.alg = atoi(val) & 3;
+			else {
+			    algmode.dim = 1;
+			    delete *dbs;
+			    *dbs = new DbsDt(aadbs = val);
+			}
+		    }
 		    break;
 		case 'd': case 'D': 
 		    algmode.dim = c == 'D';

@@ -771,6 +771,7 @@ const	Rvdwmlj*	maxphl[NOD];
 	Rvwmrmn	maxh = {NEVSEL, 0, 0, 0, 0};
 const	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
 const	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
+	int	rlst = INT_MAX;
 #if MONITOR
 	long	start = time(0);
 	long	stop;
@@ -898,6 +899,7 @@ const			Rvdwmlj*	prd = rcd + idx[l];
 			    maxphl[prd->dir] = prd;
 			}
 		    }
+		    int	maxk = Nod;
 		    for (int k = 0; k < Nod; ++k) {
 const			Rvdwmlj*	prd = maxphl[k];
 			if (!prd) continue;
@@ -905,8 +907,30 @@ const			Rvdwmlj*	prd = maxphl[k];
 			from = hf[k];
 			from->upr = std::max(prd->upr, r);
 			from->lwr = std::min(prd->lwr, r);
-			from->ulk = (m == mm)? r: prd->ulk;
-			if (from->val > mx->val) mx = from;
+			from->ml = prd->ml;
+			from->ulk = prd->ulk;
+			if (from->val > mx->val) {
+			    maxk = k;
+			    mx = from;
+			}
+		    }
+		    if (m == mm && maxk < Nod) {
+const			Rvdwmlj*	phl = maxphl[maxk];
+			center_lnk[0][r] = phl->ulk;
+			mx->ulk = rlst = r;
+			if (maxk == 0) {
+			  for (int c = 1, d = 1; c < pwd->Noll; ++c, d += 2) {
+			    if ((phl = maxphl[d]) &&
+				hf[d]->val > mx->val + pwd->GOP[c]) {
+				hf[d]->ulk = r + c * wdw.width;
+				center_lnk[c][r] = phl->ulk;
+			    }
+			    if (maxphl[d + 1] &&
+				hf[d + 1]->val > mx->val + pwd->GOP[c]) {
+				hf[d + 1]->ulk = r + c * wdw.width;
+			    }
+			  }
+			}
 		    }
 		}
 
@@ -963,6 +987,7 @@ const		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 			    prd->dir = k;
 			    prd->upr = from->upr;
 			    prd->lwr = from->lwr;
+			    prd->ml = from->ml;
 			    prd->ulk = (m == mm)? r: from->ulk;
 			} else --ncand;
 		    }
@@ -987,19 +1012,15 @@ const		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 
 // save variables at the center
 		if (m == mm) {
-const		    int	vk = (hd == 2 || hd == 4)? hd / 2: 0;
+		    if (hd == 0)	rlst = r;
+		    else if (hd % 2 == 1)	center_lnk[0][r] = rlst;
 		    for (int k = 0; k < pwd->Noll; ++k) {
 const			int	kk = k + k;
 			center_end[k][r] = hf[kk]->ulk;
 			center_lwr[k][r] = std::min(r, hf[kk]->lwr);
 		        center_upr[k][r] = std::max(r, hf[kk]->upr);
-			hf[kk]->upr = r;
-			if (!(hd % 2)) hf[kk]->lwr = r;
-			if (k) hf[kk]->ulk = r + k * wdw.width;
-			else {
-			    center_lnk[0][r] = hf[0]->ulk;
-			    hf[0]->ulk = r + vk * wdw.width;
-			}
+			hf[kk]->lwr = hf[kk]->upr = r;
+			hf[kk]->ulk = r + k * wdw.width;
 		    }
 		}	// was center
 	    }	// end of n-loop
@@ -1016,11 +1037,13 @@ const	    int	rr = b->right - a->right;
 const	    Rvwml*	mx = hlastS_ng(hh, wdw);
 	    maxh.val = mx->val;
 	    maxh.ulk = mx->ulk;
-	    wdwb.up = mx->upr;
-	    wdwb.lw = mx->lwr;
+	    maxh.ml = mx->ml;
 	    r = mx - hh[0];
 	    if (a->inex.exgr && rr < r) a->right = b->right - r;
 	    if (b->inex.exgr && rr > r) b->right = a->right + r;
+	    r = b->right - a->right;
+	    wdwb.up = std::max(r, mx->upr);
+	    wdwb.lw = std::min(r, mx->lwr);
 	}
 	int	c = 0;
 	int	d = 0;
@@ -1043,6 +1066,9 @@ const	    Rvwml*	mx = hlastS_ng(hh, wdw);
 	} else {
 	    if (a->inex.exgl && rl > r) a->left = b->left - r;
 	    if (b->inex.exgl && rl < r) b->left = a->left + r;
+	    r = b->left - a->left;
+	    wdwf.up = std::max(r, wdwf.up);
+	    wdwf.lw = std::min(r, wdwf.lw);
 	}
 	bexgl = (d > 0)? 1: 0;
 	delete[] wbuf;
@@ -1626,7 +1652,7 @@ VTYPE Aln2s1::trcbkalignS_ng(const WINDOW& wdw, bool spj, const RANGE* mc)
 #else
 const	int	nelem = 8;
 const	int	m = a->right - a->left;
-	if (m < nelem || mc) {
+	if (algmode.alg == 0 || m < nelem || mc) {
 	    scr = forwardS_ng(wdw, &ptr, mc);
 	} else {
 	    float	cvol = wdw.lw - b->left + a->right;
@@ -1690,6 +1716,7 @@ const	INT	bexgr = b->inex.exgr;	// reserve
 		    pwd->GapExtPen(n): pwd->UnpPenalty(n);
 	}
 	if (wdw.up == wdw.lw) return(diagonalS_ng());
+
 const	float	k = wdw.lw - b->left + a->right;
 const	float	q = b->right - a->left - wdw.up;
 	float	cvol =  float(m) * float(n) - (k * k + q * q) / 2;
@@ -1707,7 +1734,7 @@ const	float	q = b->right - a->left - wdw.up;
 #if !__SSE4_1__	// scalar version of unidirectional Hirschberg method
 	scr = hirschbergS_ng(cpos, wdw, wdwf, wdwb, exgl);
 #else
-	if (m < 4) {
+	if (algmode.alg == 0 || m < 4) {
 	    scr = hirschbergS_ng(cpos, wdw, wdwf, wdwb, exgl);
 	} else {
 	    int	mode = 
