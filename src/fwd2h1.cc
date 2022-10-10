@@ -946,6 +946,7 @@ const	EXIN*	bb = b->exin->score(n);
  		    h->val = (bb[1].sigS > 0)? bb[1].sigS: 0;
 		    h->dir = dir;
 		    h->lwr = h->ulk = r;
+		    h->ml = a->left;
 		} else {
 		    *h = h[-3];
 		    int	d = n - jnc;
@@ -980,12 +981,14 @@ const	EXIN*	bb = b->exin->score(n);
 		h->val = 0;
 		h->dir = DEAD;
 		h->upr = h->lwr = h->ulk = r;
+		h->ml = a->left + i / 3; 
 	    } else if (i <= 3) {
 		*h = h[i];
 		if (!(b->inex.exgl & 2)) h->val += pwd->BasicGEP;
 		if (!(b->inex.exgl & 1)) h->val += pwd->BasicGOP;
 		if (i < 3) h->val += pwd->ExtraGOP;
 		h->dir = VERT;
+		h->ml += i / 3;
 		*f = *h;
 		h->lwr = f->lwr = h->ulk = r;
 	    } else {
@@ -996,6 +999,7 @@ const	EXIN*	bb = b->exin->score(n);
 		    f->val += pwd->BasicGEP;
 		}
 		h->lwr = f->lwr = h->ulk = r;
+		++h->ml; ++f->ml;
 	    }
 	}
 }

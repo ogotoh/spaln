@@ -705,6 +705,7 @@ void Aln2s1::hinitS_ng(Rvwml* hh[], const WINDOW& wdw)
 		++h;
 		h->val = 0;
 		h->lwr = h->upr = h->ulk = r;
+		h->ml = a->left;
 	    }
 	}
 
@@ -718,13 +719,16 @@ void Aln2s1::hinitS_ng(Rvwml* hh[], const WINDOW& wdw)
 	    if (b->inex.exgl) {
 		h->val = 0;
 		h->lwr = h->upr = h->ulk = r;
+		h->ml = h[1].ml + 1;
 	    } else {
 		*h = h[1];
+		++h->ml;
 		if (i == 1) {
 		    h->val += pwd->GapPenalty(1);
 		    *f = *h;
 		} else {
 		    *f = f[1];
+		    ++f->ml;
 		    h->val += pwd->GapExtPen(i);
 		    f->val += pwd->BasicGEP;
 		}

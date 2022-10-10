@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.13b";
-static	const	int	date = 221005;
+static	const	char*	version = "2.4.13c";
+static	const	int	date = 221010;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -165,7 +165,6 @@ static void usage(const char* messg)
 	fputs("spaln [R_options] -aAAdb protein.fa\t(to search aa database)\n", stderr);
 	fputs("\nin the following, # = integer or real number; $ = string; default in ()\n\n", stderr);
 	fputs("W_Options:\n", stderr);
-	fputs("\t-E\tGenerate local lookup table for each block\n", stderr);
 	fputs("\t-XC#\tnumber of bit patterns < 6 (1)\n", stderr);
 	fputs("\t-XG#\tMaximum expected gene size (inferred from genome|db size)\n", stderr);
 	fputs("\t-Xk#\tWord size (inferred from genome|db size)\n", stderr);
@@ -175,7 +174,6 @@ static void usage(const char* messg)
 	fputs("\t-g\tgzipped output\n", stderr);
 	fputs("\t-t#\tMutli-thread operation with # threads\n\n", stderr);
 	fputs("R_Options (representatives):\n", stderr);
-	fputs("\t-E\tUse local lookup table for each block\n", stderr);
 	fputs("\t-H#\tMinimum score for report (35)\n", stderr);
 	fputs("\t-L or -LS or -L#\tsemi-global or local alignment (-L)\n", stderr);
 	fputs("\t-M#[,#2]\tNumber of outputs per query (1) (4 if # is omitted)\n", stderr);
@@ -257,12 +255,9 @@ const	    char*	val = argv[0] + 2;
 		    break;
 		case 'A':
 		    if ((val = getarg(argc, argv))) {
-			if (isdigit(*val)) algmode.alg = atoi(val) & 3;
-			else {
-			    algmode.dim = 1;
-			    delete *dbs;
-			    *dbs = new DbsDt(aadbs = val);
-			}
+			algmode.dim = 1;
+			delete *dbs;
+			*dbs = new DbsDt(aadbs = val);
 		    }
 		    break;
 		case 'd': case 'D': 
