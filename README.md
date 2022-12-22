@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.13c
-#### Last updated: 2022-10-10
+#### Present Version 2.4.13d
+#### Last updated: 2022-12-22
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -313,6 +313,10 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.13d.
+1. Remove the obsolete restriction on newer versions of zlib.
+2. Fix a small bug concerning with unidirectional Hirschberg method.
+
 ## Changes in version 2.4.13c.
 1. Fix aditional bugs concerning with unidirectional Hirschberg method with -LS option.
 

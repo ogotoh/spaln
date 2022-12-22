@@ -485,7 +485,7 @@ const			RVPDJ*	phl = maxphl[d];
 			    from->ptr = vmf->add(m, n, 
 			    vmf->add(m, phl->jnc + phs, phl->ptr));
 			}
-			from->dir |= SPIN;
+			from->dir = nod2dir[phl->dir] | SPIN;
 			if (from->val > mx->val) mx = from;
 		    }
 		    if (bb->phs3 - phs == 3) {	// AGAG
@@ -1119,6 +1119,7 @@ const	    bool	internal = (!a->inex.exgr || m < a->right);
 	    n1 += 3; n2 += 3;
 const	    int	n0 = std::max(n1, b->left);
 const	    int	n9 = std::min(n2, b->right);
+const	    bool	is_center = m == mm;
 	    int	n = n0;
 	    r = n - 3 * m;
 	    vset(e1, black_vdwml, 2 * NQUE);
@@ -1292,7 +1293,7 @@ const			CHAR*	cs = spjcs->spjseq(phl->jnc, nb);
 const			Rvdwmlj*	phl = maxphl[k];
 			if (!phl) continue;
 			from = hf[k];
-			from->dir = phl->dir | SPIN;
+			from->dir = nod2dir[phl->dir] | SPIN;
 			from->upr = std::max(phl->upr, r);
 			from->lwr = std::min(phl->lwr, r);
 			from->ml = phl->ml;
@@ -1302,7 +1303,7 @@ const			Rvdwmlj*	phl = maxphl[k];
 			    mx = from;
 			}
 		    }
-		    if (m == mm && maxk < Nod) {
+		    if (is_center && maxk < Nod) {
 const			Rvdwmlj*	phl = maxphl[maxk];
 			center_lnk[0][r] = phl->ulk;
 			mx->ulk = rlst[q] = r;
@@ -1386,7 +1387,12 @@ const			bool	crossspj = phs == 1 && k == 0;
 			    phl->upr = from->upr;
 			    phl->lwr = from->lwr;
 			    phl->ml = from->ml;
-			    phl->ulk = (m == mm)? r: from->ulk;
+			    if (is_center) {
+				if (k == 1) center_lnk[0][r] = rlst[q];
+				else	center_end[k / 2][r] = from->ulk;
+				phl->ulk = r;
+			    } else
+				phl->ulk = from->ulk;
 			} else --nc;
 		    }
 		    if (bb->phs5 - phs == 3) {	//	GTGT..
@@ -1412,7 +1418,7 @@ const			bool	crossspj = phs == 1 && k == 0;
 #endif
 
 // center low
-		if (m == mm) {
+		if (is_center) {
 		    if (hd == 0) rlst[q] = r;
 		    if (hd % 2 == 1) center_lnk[0][r] = rlst[q];
 		    for (int k = 0; k < pwd->Noll; ++k) {

@@ -93,7 +93,6 @@ static	const	char	OPTCHAR = '-';
 #if USE_ZLIB
 #include <zlib.h>
 static	const	char	gz_ext[] = ".gz";
-#if ZLIB_VERNUM < 0x12c0
 
 extern	size_t	lgzread(gzFile gzfd, char* buf, size_t sz);
 extern	size_t	lgzwrite(gzFile gzfd, const char* buf, size_t sz);
@@ -145,7 +144,6 @@ inline	int fclose(gzFile gzfd) {
 inline	int fflush(gzFile gzfd) {
 	return (gzflush(gzfd, Z_SYNC_FLUSH));
 }
-#endif	// ZLIB_VERNUM
 #endif	// USE_ZLIB
 
 /*	Others	*/

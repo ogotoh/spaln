@@ -814,6 +814,7 @@ const	CHAR*	as = a->at(m);
 const	    VTYPE	sigB = cip? cip->cip_score(m): 0;
 	    int	n = std::max(n1, b->left);
 const	    int	n9 = std::min(n2, b->right);
+const	    bool	is_center = m == mm;
 const	    CHAR*	bs = b->at(n);
 	    CHAR	psp = 0;
 	    r = n - m;
@@ -918,7 +919,7 @@ const			Rvdwmlj*	prd = maxphl[k];
 			    mx = from;
 			}
 		    }
-		    if (m == mm && maxk < Nod) {
+		    if (is_center && maxk < Nod) {
 const			Rvdwmlj*	phl = maxphl[maxk];
 			center_lnk[0][r] = phl->ulk;
 			mx->ulk = rlst = r;
@@ -992,7 +993,12 @@ const		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 			    prd->upr = from->upr;
 			    prd->lwr = from->lwr;
 			    prd->ml = from->ml;
-			    prd->ulk = (m == mm)? r: from->ulk;
+			    if (is_center) {
+				if (k == 1) center_lnk[0][r] = rlst;
+				center_end[k / 2][r] = from->ulk;
+				prd->ulk = r;
+			    } else
+				prd->ulk = from->ulk;
 			} else --ncand;
 		    }
 		}
@@ -1015,7 +1021,7 @@ const		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 #endif
 
 // save variables at the center
-		if (m == mm) {
+		if (is_center) {
 		    if (hd == 0)	rlst = r;
 		    else if (hd % 2 == 1)	center_lnk[0][r] = rlst;
 		    for (int k = 0; k < pwd->Noll; ++k) {

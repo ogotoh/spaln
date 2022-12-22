@@ -26,6 +26,13 @@
 #include "seq.h"
 #include "simmtx.h"
 
+enum TraceBackDir {
+	DEAD, RSRV, DIAG, NEWD, VERT, SLA1, SLA2, VERL, 
+	HORI, HOR1, HOR2, HORL, NEWV, NEWH,
+	SPIN=16, SPJC=32, SPF2=64, SPJCI=SPJC + SPIN,
+	SPALL=SPIN+SPJC+SPF2
+};
+
 static	const	int	NOL = 3;
 static	const	int	NOD = 2 * NOL - 1;
 static	const	int	INTR = 2;
@@ -41,6 +48,7 @@ static	const	float	def_alprm2z = 2.;
 static	const	int	end_of_ulk = INT_MAX - 2;
 static	const	int	dir2nod[16] = 
 	{-1, -1, 0, 0, 2, 2, 2, 4, 1, 1, 1, 3, 2, 1, -1, -1};
+static	const	int	nod2dir[5] = {DIAG, HORI, VERT, HORL, VERL};
 static	const	float	defSss[3] = {0.3, 0.50, 0.7};
 static	const	int	N_Out_Modes = 16;
 static	const	int	NCAND = 4;
@@ -48,13 +56,6 @@ static	const	CHAR	psp_bit[5] = {4, 1, 8, 2, 16};
 static	const	CHAR	e1_psp = 1;
 static	const	CHAR	e2_psp = 2;
 static	const	CHAR	e_psp = e1_psp + e2_psp;
-
-enum TraceBackDir {
-	DEAD, RSRV, DIAG, NEWD, VERT, SLA1, SLA2, VERL, 
-	HORI, HOR1, HOR2, HORL, NEWV, NEWH,
-	SPIN=16, SPJC=32, SPF2=64, SPJCI=SPJC + SPIN,
-	SPALL=SPIN+SPJC+SPF2
-};
 
 enum DistMes {QFdiv, QFidn, QCdiv, QCidn, QJuCa, Qpamd, NJuCa};
 enum OutFm {GFF_FORM, ALN_FORM, PWA_FORM, BED_FORM, EXN_FORM, ITN_FORM, 
