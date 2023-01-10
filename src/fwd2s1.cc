@@ -1388,15 +1388,13 @@ const	size_t	bufsiz = 2 * wdw.width;
 	int	m = a->right;
 	if (!a->inex.exgr) ++m; 	// global
 const	CHAR*	as = a->at(m);
-	int	n = 0;
-	int	n9 = 0;
 	int	n1 = m + wdw.lw;
 	int	n2 = m + wdw.up + 1;
 	while (--m >= a->left) {
 	    lcl = lcl || m == a->left;
 	    --as; --n1; --n2;
-	    n = std::min(n2, b->right);
-	    n9 = std::max(n1, b->left);
+	    int	n = std::min(n2, b->right);
+const	    int	n9 = std::max(n1, b->left);
 	    int	r = n - m;
 	    int	nr = n + 1;
 	    int	peak = 0;
@@ -1479,7 +1477,7 @@ HorizonB:
 	}
 #endif
 	    } // end of n loop
-	    if (peak) n1 = n;
+	    if (peak) n1 = n + 1;
 	} // end of m loop
 
 	*ptr = vmf->add(maxh.m, maxh.n, maxh.p);
@@ -1515,13 +1513,11 @@ const	size_t	bufsiz = 2 * wdw.width;
 	if (!a->inex.exgl) --m;		// global
 	int	n1 = m + wdw.lw;
 	int	n2 = m + wdw.up + 1;
-	int	n = 0;
-	int	n9 = 0;
 const	CHAR*	as = a->at(m);
 	for ( ; ++m <= a->right; ++as, ++n1, ++n2) {
 	    lcl = lcl || m == a->right;
-	    n = std::max(n1, b->left);
-	    n9 = std::min(n2, b->right);
+	    int	n = std::max(n1, b->left);
+const	    int	n9 = std::min(n2, b->right);
 	    int	nr = n - 1;
 	    int	peak = 0;
 	    int	r = n - m;
@@ -1603,7 +1599,7 @@ HorizonP:
 	}
 #endif
 	    } // end of n-loop
-	    if (peak) n2 = n;
+	    if (peak) n2 = n - 1;
 	} // end of m-loop
 
 	*ptr = vmf->add(maxh.m, maxh.n, maxh.p);

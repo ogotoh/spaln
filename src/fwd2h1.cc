@@ -1723,7 +1723,7 @@ HorizonB:
 #endif
 	    } // end of n loop
 	    if (!mxd->dir) break;	// no peak
-	    if (peak) n1 = n;
+	    if (peak) n1 = n + 3;
 	}	// end of m loop
 	maxscr = maxh.val;
 	if (vmf) *ptr = vmf->add(maxh.m, maxh.n, maxh.p);
@@ -1921,7 +1921,7 @@ HorizonP:
 #endif
 
 	    } // end of n-loop
-	    if (peak) n2 = n; 
+	    if (peak) n2 = n - 3; 
 	    if (!mxd->dir) break;
 	} // end of m-loop
 	maxscr = maxh.val;
