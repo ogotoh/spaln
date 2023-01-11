@@ -144,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "2.4.13e";
-static	const	int	date = 230109;
+static	const	char*	version = "2.4.13f";
+static	const	int	date = 230111;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -196,11 +196,12 @@ static void usage(const char* messg)
 	fputs("\t-l#\tNumber of characters per line in alignment (60)\n", stderr);
 	fputs("\t-o$\tFile/directory/prefix where results are written (stdout)\n", stderr);
 	fputs("\t-pa#\tRemove 3' poly A >= # (0: don't remove)\n", stderr);
+	fputs("\t-pF\tOutput full Fasta entry name\n", stderr);
+	fputs("\t-pj\tSuppress splice junction information with -O[6|7]\n", stderr);
 	fputs("\t-pn\tRetain existing output file\n", stderr);
 	fputs("\t-po\tOverwrite existing output file\n", stderr);
 	fputs("\t-pw\tReport results even if the score is below the threshold\n", stderr);
 	fputs("\t-pT\tExclude termination codon from CDS\n", stderr);
-	fputs("\t-r$\tReport information about block data file\n", stderr);
 	fputs("\t-r$\tReport information about block data file\n", stderr);
 	fputs("\t-u#\tGap-extension penalty (3)\n", stderr);
 	fputs("\t-v#\tGap-open penalty (8)\n", stderr);
@@ -399,6 +400,7 @@ const	    char*	val = argv[0] + 2;
 			case 'D': OutPrm.debug = 1; break;
 			case 'e': OutPrm.trimend = !OutPrm.trimend; break;
 			case 'f': OutPrm.deflbl = 1; break;
+			case 'F': OutPrm.full_name = 1; break;
 			case 'i': OutPrm.ColorEij = 1; break;
 			case 'j': OutPrm.spjinf = 1 - OutPrm.spjinf; break;
 			case 'n': OutPrm.overwrite = 2; break;
@@ -532,7 +534,8 @@ readend:
 void AlnOutModes::alnoutput(Seq** sqs, Gsinfo* GsI)
 {
 	int	print2Skip = 0;
-const	bool	swp = sqs[1]->inex.intr;
+const	bool	swp = sqs[1]->inex.intr ||
+		(sqs[0]->isprotein() && sqs[1]->istron());
 	Seq*	gene = 0;
 	GAPS*	gaps[2] = {0, 0};
 
@@ -641,7 +644,7 @@ static	RANGE*	skl2exrng(SKL* skl)
 
 static int spalign2(Seq* sqs[], PwdB* pwd, Gsinfo* GsI, int ori)
 {
-	if (algmode.lsg && pwd->DvsP != 3)
+	if (pwd->DvsP != 3)
 	    genomicseq(sqs + 1, pwd, ori);
 	switch (QRYvsDB) {
 	  case AvsG: 
@@ -1053,13 +1056,13 @@ static void genomicseq(Seq** sqs, PwdB* pwd, int ori)
 	sqs[0]->inex.intr = algmode.lsg;
 	if (ori & 1) {
 	    if (pwd->DvsP == 1) sqs[0]->nuc2tron();
-	    if (algmode.lsg) sqs[0]->exin = new Exinon(sqs[0], pwd, ori == 3);
+	    sqs[0]->exin = new Exinon(sqs[0], pwd, ori == 3);
 	}
 	if (ori & 2 && pwd->DvsP != 3) {
 	    sqs[0]->comrev(sqs + 1);
 	    sqs[1]->setanti(sqs);
 	    if (pwd->DvsP == 1) sqs[1]->nuc2tron();
-	    if (algmode.lsg) sqs[1]->exin = new Exinon(sqs[1], pwd, ori == 3);
+	    sqs[1]->exin = new Exinon(sqs[1], pwd, ori == 3);
 	}
 }
 

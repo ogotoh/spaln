@@ -109,16 +109,9 @@ PwdB::PwdB(const Seq** seqs, const ALPRM* alp) :
 	LongGOP(BasicGOP - diffu * alp->k1),
 	GOP{0, BasicGOP, LongGOP}
 {
-	int	step = (DvsP == 3)? 1: 3;
+const	int	step = (DvsP == 3)? 1: 3;
 	codonk1 = alp->ls == 3? step * alp->k1: LARGEN;
-	if (!seqs[0]->inex.intr && !seqs[1]->inex.intr) return;	// without splice
-	eijpat = new EijPat(DvsP);				// boundary signal
-	if (DvsP || algmode.mns == 0)
-	    codepot = new ExinPot(static_cast<int>(Iefp::CP));	// coding potential
-	if (!DvsP) {		// C vs G
-	    if (alprm2.z > 0)  exonpot = new ExinPot(static_cast<int>(Iefp::EP));
-	    if (alprm2.Z > 0)  intnpot = new ExinPot(static_cast<int>(Iefp::IP));
-	} else if (DvsP != 3) {	// A vs G
+	if (DvsP == 1 || DvsP == 2) {	// A vs G
 	    ++Nrow; ++Nrwb;
 	    MaxGapL = 100;
 	    ExtraGOP = (VTYPE) (-alprm2.x * Vab);
@@ -129,9 +122,17 @@ PwdB::PwdB(const Seq** seqs, const ALPRM* alp) :
 	    GapW3 = BasicGOP + BasicGEP;
 	    GapW3L = LongGOP + LongGEP;
 	    pmt = new Premat(seqs);
+	    codepot = new ExinPot(static_cast<int>(Iefp::CP));	// coding potential
+	}
+	if (!seqs[0]->inex.intr && !seqs[1]->inex.intr) return;	// without splice
+	eijpat = new EijPat(DvsP);				// boundary signal
+	IntPen = new IntronPenalty(Vab, DvsP, eijpat, intnpot);
+	if (!DvsP) {		// C vs G
+	    if (alprm2.z > 0)  exonpot = new ExinPot(static_cast<int>(Iefp::EP));
+	    if (alprm2.Z > 0)  intnpot = new ExinPot(static_cast<int>(Iefp::IP));
+	} else {
 	    if (alprm2.Z > 0) intnpot = new ExinPot(static_cast<int>(Iefp::IP), 4);
 	}
-	if (DvsP != 3) IntPen = new IntronPenalty(Vab, DvsP, eijpat, intnpot);
 }
 
 PwdB::~PwdB()

@@ -69,7 +69,7 @@ static	const	char*	attrfrmt3 = " %d:%d  ( %d - %d )";
 static	const	char	grext[] = ".grd";		// gene
 static	const	char	erext[] = ".erd";		// exon
 static	const	char	qrext[] = ".qrd";		// query seq name
-static	const	char	arext[] = ".ard";		// alignment
+//static	const	char	arext[] = ".ard";	// alignment
 //	const	char	cigar[] = "MIDNSHP=XJA";	// J=5, A=3
 //	const	char	vulgar[] = "MCGN53ISFJA";	// J=5, A=3
 
@@ -2164,16 +2164,16 @@ void PrintAln::printaln()
 	int 	active = seqnum;
 const	RANGE*	exon = 0;
 	int	maxleft = 0;
-	gene = -1;
+	gene = -1;	// htl 1: AvsA, 2: GvsC, 3: GvsA
 	for (int j = htl = 0; j < seqnum; ++j) {
 	    Seq*&	sd = seqs[j];
 	    if (sd->left > maxleft) maxleft = sd->left;
-	    if (sd->isprotein()) htl |= 1;
+	    if (sd->isprotein()) {htl |= 1; pro = j;}
+	    else	htl |= 2;
 	    if (sd->inex.intr && sd->exons) {
-		htl |= 2;		// 0: CvsC
 		exon = sd->exons + 1;	// 1: AvsA
-		gene = j;		// 2: GvsC
-		gpos = gaps[j]->gps;	// 3: GvsA
+		gene = j;
+		gpos = gaps[j]->gps;
 	    }
 	    for (int i = 0; i < sd->many; ++i, ++k, wbuf += OutPrm.lpw) {
 		nbr[k] = sd->calcnbr(gaps[j]->gps, i);
@@ -2184,7 +2184,6 @@ const	RANGE*	exon = 0;
 	    if (!gp[j]->gln) ++gp[j];
 	    agap[j] = 0;
 	}
-	pro = (gene >= 0)? gene + 1: -1;
 const	int	c_step = (htl == 1)? 3: 1;
 	if (markeij) {
 	    for (int j = 0; j < seqnum; ++j) {

@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.13e
-#### Last updated: 2023-01-10
+#### Present Version 2.4.13f
+#### Last updated: 2023-01-11
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -218,7 +218,9 @@ or more comment lines starting with ';C', such as
      * -o *S*:	Destination of output file name (stdout). If multiple output formats are specified by -O option(s), *S* specifies the directory or prefix to which the file names with .O*N* extensions are concatenated.
       
      * -pa*N*:	Terminal polyA or polyT sequence longer than *N* (12) is trimmed off and the orientation is fixed accordingly. If *N* = 0 or empty, these functionalities are disabled.
+     * -pF:     Output full Fasta entry name (only the last term separated '|').
      * -pi:	Mark exon-intron junctions by color in the alignment (-O1).
+     * -pj:     Supress splice junction information in output of -O[6|7] option.
      * -pn:	Prohibit ovewrite of existing output files (ask).
      * -po:	Allow ovewrite of existing output files (ask).
      * -pq:	Suppress warning messages sent to *stderr*.
@@ -313,6 +315,10 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.13f.
+1. Add -pF option to output full Fasta entry name. By defult, if the entry name is 
+separated by vertical bar(s) '|', only the last term is shown.
+
 ## Changes in version 2.4.13e.
 1. Fix a bug concerning with heuristic alignment at either end of sequences.
 

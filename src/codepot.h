@@ -62,21 +62,20 @@ enum INTENDS {IE5, IE3, IE53, IE35, IE5P3};
 class Exinon {
 	Seq*	sd;
 const	PwdB*	pwd;
-const	bool&	both_ori;
+const	bool	both_ori;
 	int	size;
 	int	bias;
 	INT53*	int53 = 0;
 	STYPE**	sig53tab = 0;
 	bool	statictab;
 	ExinPot* intnpot = 0;
-	ExinPot* exonpot = 0;
 public:
 	FTYPE	fact;
 	FTYPE	fS;
 	STYPE	at_sig5 = 0;
 	STYPE	gc_sig5 = 0;
 	EXIN*	data = 0;
-	Exinon(Seq* sd_, const PwdB* pwd_, bool bo);
+	Exinon(Seq* sd_, const PwdB* pwd_, const bool bo);
 	~Exinon();
 	STYPE	sig53(int m, int n, INTENDS c) const;
 	STYPE	sigST(int n, bool init) const {
@@ -95,6 +94,8 @@ public:
 	int	rplay(int n) const {return (bias + size - n);}
 	EXIN*	begin() const {return (data + bias);}
 	EXIN*	end()	const {return (data + bias + size - 1);}
+	bool	good(const EXIN* bb) const 
+		{return (data && begin() <= bb && bb < end());}
 	void	intron53();
 	void	intron53N();
 	void	resize();

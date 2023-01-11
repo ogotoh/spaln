@@ -853,12 +853,15 @@ CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* p
 	    if (*sp == '\n') *sp = 0;
 	    else	*sp = '\0';
 	    if (algmode.mns == 0) setstrand(0, ss);
-	    while (char* sb = strchr(++ss, '|')) {
-		if (sb[1] == '\0' || isspace(sb[1])) {
-		    *sb = ' ';
-		    break;
+	    if (OutPrm.full_name) ++ss;
+	    else {
+		while (char* sb = strchr(++ss, '|')) {
+		    if (sb[1] == '\0' || isspace(sb[1])) {
+			*sb = ' ';
+			break;
+		    }
+		    ss = sb;
 		}
-		ss = sb;
 	    }
 	    sname->push(ss);
 	    if (sp) {				// process comments in header

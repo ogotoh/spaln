@@ -337,20 +337,32 @@ void makeStdSig53()
 	}
 }
 
-Exinon::Exinon(Seq* sd_, const PwdB* pwd_, bool bo) :
+Exinon::Exinon(Seq* sd_, const PwdB* pwd_, const bool bo) :
 	sd(sd_), pwd(pwd_), both_ori(bo),
 	size(sd->right - sd->left + 2), bias(sd->left - 1), 
 	intnpot(pwd? pwd->intnpot: 0), 
-	exonpot(pwd? pwd->exonpot: 0),
 	fact((FTYPE) (pwd->Vab / sd->many)),
 	fS(alprm2.y * fact)
 {
+	data = new EXIN[size + 1] - bias;
+	vclear(data + bias, size + 1);
+	if (!algmode.lsg) {	// no splice
+	    if (!pwd->codepot) return;
+	    float*	prefE = pwd->codepot->calcScr(sd);
+	    float*	prfE = prefE;
+const	    float	fE = alprm2.z * fact;
+	    for (EXIN* wkb = begin(); ++wkb < end(); ) {
+		wkb->sigE = (STYPE) (fE * *prfE++);
+		wkb->phs5 = wkb->phs3 = -2;
+	    }
+	    delete[] prefE;
+	    return;
+	}
 	if (!stdSig53) fatal("call makeStdSig53 beforehand !\n");
 const	INT53	zero53 = {0, 0, 0, 0};
 	int53 = new INT53[size + 1];
 	int53[0] = int53[size] = zero53;
 	int53 -= bias;
-	data = new EXIN[size + 1] - bias;
 
 	if (fS == stdfS) {
 	    sig53tab = stdSig53->sig53tab;

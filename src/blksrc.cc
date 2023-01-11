@@ -499,15 +499,10 @@ MakeBlk::MakeBlk(const Seq* sq, DbsDt* dd, MakeDbs* mdbs, bool mk_blk) :
 	if (!molc && dd) molc = dd->curdb->defmolc;
 	defcode = setSeqCode(0, isaa? PROTEIN: DNA);
 	if (isaa) bias = ALA - 1;
-	INT	nwd = (wcp.blklen / wcp.Nshift + 1) * wcp.Nbitpat;
-	if (istron) {
-	    prepacomp();
-	    nwd *= 2;
-	}
-#if M_THREAD
-#endif	// M_THREAD
+	if (istron) prepacomp();
+
 	if (dd) {
-	    char*	cvt = isaa? acodon: nucl;
+const	    char*	cvt = isaa? acodon: nucl;
 	    s2r = new CHAR[defcode->max_code];
 	    s2r[nil_code] = s2r[gap_code] = Nalpha + 1;
 	    s2r[defcode->amb_code] = Nalpha;

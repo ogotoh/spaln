@@ -50,7 +50,7 @@ const	char*	esc_code = "\x1b[";
 const	char*	font_end = "</font></b>";
 
 		//lpw blk Nout Ncolony eij ovl fnm rm trim lg lbl dsc odr spj olr color self term
-OUTPRM	OutPrm = {60, 0, 16, 1, 4, 10, 5, 0, 1, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0};
+OUTPRM	OutPrm = {60, 0, 16, 1, 4, 10, 5, 0, 1, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0};
 
 static  const   char*   font_tag[3] = {
 	"<b><font color=\"%s\">",

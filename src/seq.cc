@@ -513,7 +513,7 @@ void Seq::seqalloc(const int& num, const int& len, const bool& keep)
 	CHAR*	ss = 0;
 	try {
 	    ss = new CHAR[area];
-	} catch (std::bad_alloc ba) {
+	} catch (std::bad_alloc& ba) {
 	    fatal(NoSeqSpace);
 	}
 	if (seq_) {
