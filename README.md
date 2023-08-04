@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.13f
-#### Last updated: 2023-01-11
+#### Present Version 2.4.13g
+#### Last updated: 2023-08-04
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -315,6 +315,11 @@ on the same strand.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 2.4.13g.
+1. Fix a minor bug concerning with coordinates of HSPs.
+2. With a protein query and -LS option, include the termination codon when 
+alignment reaches near the C-terminal end.
+
 ## Changes in version 2.4.13f.
 1. Add -pF option to output full Fasta entry name. By defult, if the entry name is 
 separated by vertical bar(s) '|', only the last term is shown.
@@ -453,4 +458,4 @@ Cooperation of Spaln and Prrn5 for construction of gene-structure-aware multiple
 
 * * *
 
-Copyright (c) 1997-2022 Osamu Gotoh (o.gotoh@aist.go.jp) All Rights Reserved.
+Copyright (c) 1997-2023 Osamu Gotoh (gotoh.osamu.67a@st.kyoto-u.ac.jp) All Rights Reserved.

@@ -311,6 +311,7 @@ const	EXIN*	bb = 0;
 	VTYPE	maxscr = scr;
 const	CHAR*	al = as;
 	int	start = 0;
+	int	restart = 0;
 	int	end = 0;
 	int	nid = 0;
 	while (++as < ax && (bs += bbt) < bx) {
@@ -326,11 +327,12 @@ const	CHAR*	al = as;
 // Kadane-Gries algorithm
 	    if (scr < 0) {
 		scr = 0;
-		start = as - al;
+		restart = as - al;
 		jxt->jlen = jxt->nid = 0;
 	    }
 	    if (scr > maxscr) {
 		maxscr = scr;
+		start = restart;
 		end = jxt->jlen;
 		nid = jxt->nid;
 	    }

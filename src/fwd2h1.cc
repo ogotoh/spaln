@@ -588,12 +588,12 @@ const			bool	crossspj = phs == 1 && k == 0;
 	    }	// end of n-loop
 	}	// end of m-loop
 
-	if (LocalR) {
-	    if (pp) *pp = vmf->add(maxh.m, maxh.n, maxh.p);
-	} else {
+	if (!LocalR || maxh.m == a->right) {
 	    RVPD*	mx = lastH_ng(hh, wdw, cutrng);
 	    maxh.val = mx->val;
 	    if (pp) *pp = mx->ptr;
+	} else {
+	    if (pp) *pp = vmf->add(maxh.m, maxh.n, maxh.p);
 	}
 	delete[] buf;
 	return (maxh.val);
@@ -1434,7 +1434,7 @@ const			int	kk = k + k;
 	}	// end of m-loop
 
 const	int	rl = b->left - 3 * a->left;
-	if (LocalR) {
+	if (LocalR || maxh.mr < a->right) {
 	    a->right = maxh.mr;
 	    b->right = maxh.nr;
 	    wdwb.up = maxh.upr;
