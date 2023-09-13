@@ -6,7 +6,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -16,7 +16,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #include "aln.h"
@@ -45,6 +46,7 @@ static	BlkWcPrm	wcp_cf = {4, 8, 0, 65536, 0, 8, 4096, 0, 1, 10};
 static	BlkWcPrm	wcp_cx = {4, 8, 3255, 65536, 7573, 8, 4096, 0, 5, 10};
 
 static	int	gene_rng_max_extend = -1;
+static	float	min_cover_rate = 0.2;
 static	float	hfact = 1.25;
 static	int	gratio = 10;	// ratio of average gene and cDNA
 static	const	char*	WriteFile = 0;
@@ -122,8 +124,8 @@ const	char*	val = ps + 1;
 	    case 'b':	// block length
 		if (*val) wcp.blklen = ktoi(val);
 		break;
-	    case 'c':	// factor for hash mergin
-		if (*val) hfact = atof(val);
+	    case 'c': min_cover_rate = atof(val);
+		if (min_cover_rate > 1.) min_cover_rate /= 100.;
 		break;
 	    case 'd':	// N-best all hit block score
 		if (*val) Nascr = atoi(val);
@@ -142,6 +144,9 @@ const	char*	val = ps + 1;
 		break;
 	    case 'k':	// tuple size
 		if (*val) wcp.Ktuple = atoi(val);
+		break;
+	    case 'j':	// factor for hash mergin
+		if (*val) hfact = atof(val);
 		break;
 	    case 'm':	// max allowed mishits
 		if (*val) MaxMmc = atoi(val);
@@ -186,6 +191,15 @@ const	char*	val = ps + 1;
 MakeDbs::MakeDbs(const char* dbn, int molc)
 	: isaa(molc == PROTEIN)
 {
+	if (WriteFile) {
+	    write_path = new char[strlen(WriteFile) + 1];
+	    strcpy(write_path, WriteFile);
+	    char* sls = strrchr(write_path, '/');
+	    if (sls) {
+		*sls = 0;
+		OutPrm.out_file = write_path;
+	    }
+	}
 	entryprv[0] = '\0';
 	dbname = strrealloc(0, dbn);
 #if USE_ZLIB
@@ -2306,7 +2320,6 @@ int SrchBlk::FindHsp(BPAIR* wrkbp)
 const	INT	intr = (*gener)->inex.intr;
 const	int	sr = chrsize(wrkbp->chr);
 const	bool	rvs = wrkbp->rvs;
-const	float	log_2[4] = {0.f, 1.0f, 1.585f, 2.0f};
 
 	wrkbp->jscr = 0;
 	Seq*	cursd = 0;
@@ -2317,6 +2330,7 @@ const	float	log_2[4] = {0.f, 1.0f, 1.585f, 2.0f};
 	Wilip*	wilip = 0;
 	BPAIR	orgbp = *wrkbp;
 const	int	qlen = query->right - query->left;
+const	int	clen = int(qlen * min_cover_rate);
 
 retry:
 	cursd = setgnmrng(wrkbp);
@@ -2342,10 +2356,10 @@ retry:
 		float	x = wlu->scr;
 		wlu->scr = int(x * qlen / wlu->tlen);
 	    }
-	    wlu->scr += IntronPrm.sip * log_2[std::min(wlu->num - 1, 3)] ;
-	    if (wlu->scr >= lcritjscr) {
+	    if (wlu->tlen > clen && wlu->scr >= lcritjscr) {
 		++nbetter;
 		lcritjscr = wlu->scr - vthr;
+//		lcritjscr = wlu->scr * 3 / 4;
 		JUXT*	wjxt = wlu->jxt;
 	 	if (lend.jx > wjxt->jx) lend = *wjxt;
 	 	wjxt += wlu->num - 1;
@@ -2418,7 +2432,7 @@ retry:
 		wrkbp->db = min(wrkbp->rb + ExtBlock, wrkbp->zr);
 	    }
 	}
-	if (retry_no++ < NoRetry && 
+	if (pwd->DvsP == 1 && retry_no++ < NoRetry && 
 		(wrkbp->lb != orgbp.lb || wrkbp->rb != orgbp.rb)) {
 	    orgbp = *wrkbp;
 	    goto retry;
@@ -2489,6 +2503,7 @@ retry:
 	    }
 	    if (curgr - gener >= OutPrm.MaxOut - 1) {
 		critjscr = gener[OutPrm.MaxOut - 1]->jscr - vthr;
+//		critjscr = gener[OutPrm.MaxOut - 1]->jscr * 3 / 4;
 		if (critjscr < 0) critjscr = 0;
 	    }
 	    if (curgr < lstgr) ++curgr;
@@ -2972,6 +2987,7 @@ const		    CHAR*	ss = *ws;
 		    if (wdscr == 0) {q = 1; continue;}	// ubiquitous
 		    qwd.init_mrglist();
 		    ++p; q = 0;
+//		    if (nmmc == 0) wdscr = wdscr * 5 / 4;	// end bonus
 		    cscr += wdscr;
 		    while (BLKTYPE blk = qwd.next_mrglist()) {
 			KVpair<INT, int>*	h = hh.incr(blk);

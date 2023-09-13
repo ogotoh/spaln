@@ -7,7 +7,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -17,7 +17,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #define IDEBUG	0
@@ -34,10 +35,10 @@
 enum {Ad, Cy, Gu, Ty};
 enum {AA, AC, AG, AT, CA, CC, CG, CT, GA, GC, GG, GT, TA, TC, TG, TT};
 
-INTRONPEN IntronPrm = {FQUERY, FQUERY, -2.767, 20, 224, 
-//		     	ip, 	fact,	mean,llmt,  mu, 
-	825, 2, 5, 20, 0, 0, 0, 0, 0,
-//	rlmt, minexon, tlmt, maxl, array, table, sip
+INTRONPEN IntronPrm = {FQUERY, FQUERY, -2.767, 20, 224, 825, 2, 
+//		     	ip 	fact	mean  llmt  mu rlmt minexon 
+	5,   20,   0,   0,    5,     0,
+//	tlmt minl maxl mode  nquant sip
 	0.2767, -22.80, 83.35, 5.488, 21.870, 223.95, 0.7882,
 //	a1      m1      t1     k1     m2      t2      k2
 	0, 0, 0, 0};
@@ -58,8 +59,6 @@ struct Sig53 {
 	Sig53(const FTYPE fS = 1, const char* fname = INT53PAT);
 	~Sig53();
 };
-
-static	double	ProbDist(int i, double mu, double th, double kk);
 
 // [Dvsp][crs]
 static	DefPrm2	defprm2[2] = {{4., 4.}, {8., 8.}};
@@ -123,20 +122,7 @@ const	Seq*&	b = seqs[1];
 	if (swp) swap(seqs[0], seqs[1]);
 }
 
-// Frechet Distribution
-
-static double ProbDist(int i, double mu, double th, double kk)
-{
-	double	z, zz;
-
-	if (i <= mu) return (0.);
-	z = th / (i - mu);
-	zz = pow(z, kk);
-	return (kk / th * z * zz * exp(-zz));
-}
-
 IntronPenalty::IntronPenalty(VTYPE f, int dvsp, EijPat* eijpat, ExinPot* exinpot)
-	: optip(SHRT_MIN), array(0), table(0)
 {
 	if (IntronPrm.fact == FQUERY) IntronPrm.fact = defprm2[dvsp > 0].Y;
 	if (alprm2.y == FQUERY) alprm2.y = defprm2[dvsp > 0].y;
@@ -144,53 +130,86 @@ IntronPenalty::IntronPenalty(VTYPE f, int dvsp, EijPat* eijpat, ExinPot* exinpot
 	IntronPrm.sip = (STYPE) (f * IntronPrm.ip);
 
 	if (IntronPrm.maxl <= 0)
-	    IntronPrm.maxl = max_intron_len(0.99, 0);
-	FTYPE	expsig = 0;
-	FTYPE	fy = f * alprm2.y;
-	FTYPE	fY = f * IntronPrm.fact;
+	    IntronPrm.maxl = max_intron_len(0.99);	// 99% quantile
+
+	double	expsig = 0;
+	double	fy = f * alprm2.y;
+const	double	fY = f * IntronPrm.fact;
 	if (fy > 0.) {
 	    expsig = fy * (1. - alprm2.sss) * avrsig53[0];
 	    fy *= alprm2.sss;
 	    if (eijpat) {
-		FTYPE	fB = f * alprm2.sss * bpprm.factor;
+const		double	fB = f * alprm2.sss * bpprm.factor;
 		expsig += fy * (eijpat->pattern5->mmm.mean + eijpat->pattern3->mmm.mean);
 		if (eijpat->patternB) expsig += fB * eijpat->patternB->mmm.mean;
 	    } else	expsig += fy * avrsig53[1];
 	}
 	if (exinpot) expsig += exinpot->avrpot(f * alprm2.Z);
 	AvrSig = (STYPE) expsig;
-	STYPE	IntPen = (STYPE) (expsig + fY * IntronPrm.mean + f * IntronPrm.ip);
-	GapWI = (STYPE) (fY * IntronPrm.mean) - IntPen;
-	int	i = IntronPrm.rlmt - IntronPrm.llmt + 1;
-	array = new STYPE[i];
-	table = array - IntronPrm.llmt;
-	STYPE*	pentab = array;
-	float	a2 = IntronPrm.a2? IntronPrm.a2: 1 - IntronPrm.a1;
-	float	a3 = IntronPrm.a2? 1 - IntronPrm.a1 - IntronPrm.a2: 0;
+const	double	IpBias = expsig + fY * IntronPrm.mean + f * IntronPrm.ip;
+const	double	mean_ip = fY * IntronPrm.mean - IpBias;
+	GapWI = STYPE(mean_ip);
+	if (fY == 0.) return;
 
-	VTYPE	gep = f * alprm.u;
-	VTYPE	gappen = -(f * alprm.v + IntronPrm.llmt * gep);
+	IntronPrm.rlmt = max_intron_len(rlmt_quant);	// 80% quantile
+const	size_t	array_size = IntronPrm.rlmt - IntronPrm.llmt;
+	array = new STYPE[array_size + 1];
+	table = array - IntronPrm.llmt;
+	if (IntronPrm.nquant < 1) IntronPrm.nquant = 1;
+const	float	q_interval = 1. / IntronPrm.nquant;
+	if (algmode.alg > 1)	// eqi-quantile
+	    qm = new LenPen[IntronPrm.nquant + 1];
+
+	STYPE*	pentab = array;
+	double	ipen = 0;		// intron penalty
+	double	cdf = 0.;		// cumulative distribution
+	double	fmt = 0.;		// first moment
+	double	qdf = q_interval;	// next quantile
+	double	qfm = 0.;		// previous fmt
+	double	optipen = DBL_MIN;
+	LenPen*	wqm = qm;
+	double	a2 = IntronPrm.a2? IntronPrm.a2: 1 - IntronPrm.a1;
+	double	a3 = IntronPrm.a2? 1 - IntronPrm.a1 - IntronPrm.a2: 0;
+	double	gep = f * alprm.u;
+	double	gappen = -(f * alprm.v + IntronPrm.llmt * gep);
 	IntronPrm.minl = 0;
-	for (i = IntronPrm.llmt; i <= IntronPrm.rlmt; ++i) {
-	    double z = ProbDist(i, IntronPrm.m1, IntronPrm.t1, IntronPrm.k1);
+
+	for (int n = IntronPrm.llmt; n <= IntronPrm.maxl; ++n) {
+	    double z = ProbDist(n, IntronPrm.m1, IntronPrm.t1, IntronPrm.k1);
 	    if (a2 > 0.) {
 		z *= IntronPrm.a1;
-		z += a2 * ProbDist(i, IntronPrm.m2, IntronPrm.t2, IntronPrm.k2);
+		z += a2 * ProbDist(n, IntronPrm.m2, IntronPrm.t2, IntronPrm.k2);
 		if (a3) 
-		    z += a3 * ProbDist(i, IntronPrm.m3, IntronPrm.t3, IntronPrm.k3);
+		    z += a3 * ProbDist(n, IntronPrm.m3, IntronPrm.t3, IntronPrm.k3);
 	    }
-	    STYPE	gp = (STYPE) (fY * log10(z)) - IntPen;
-	    *pentab++ = gp;
-	    if (gp > optip) {
-		optip = gp;
-		IntronPrm.mode = i;
+	    ipen = fY * log10(z) - IpBias;
+	    cdf += z;
+	    fmt += ipen * z;
+	    if (n < IntronPrm.rlmt) *pentab++ = STYPE(ipen);
+	    if (qm) {
+		if (cdf >= qdf) {
+		    wqm->len = n;
+		    (wqm++)->pen = STYPE((fmt - qfm) / q_interval);
+		    qfm = fmt;
+		    qdf += q_interval;
+		}
+	    }
+	    if (ipen > optipen) {
+		optipen = ipen;
+		IntronPrm.mode = n;
 	    }
 	    if (!IntronPrm.minl) {
-		if (gp > gappen) IntronPrm.minl = i;
+		if (ipen > gappen) IntronPrm.minl = n;
 		else	gappen -= gep;
 	    }
 	}
+	if (qm) {
+	    wqm->len = IntronPrm.rlmt;
+	    wqm->pen = STYPE((fmt - qfm) / (cdf - 1. + q_interval));
+	}
 	if (!IntronPrm.minl) IntronPrm.minl = IntronPrm.llmt;
+	optip = STYPE(optipen);
+
 	int	k = 1;
 	double	z = ProbDist(IntronPrm.rlmt, IntronPrm.m1, IntronPrm.t1, IntronPrm.k1);
 	double	zz = a2? ProbDist(IntronPrm.rlmt, IntronPrm.m2, IntronPrm.t2, IntronPrm.k2): 0;
@@ -209,10 +228,6 @@ IntronPenalty::IntronPenalty(VTYPE f, int dvsp, EijPat* eijpat, ExinPot* exinpot
 	}
 	IntEp = (FTYPE) (-(z + 1) * fY / log(10.));
 	IntFx = *--pentab - IntEp * log((double) (IntronPrm.rlmt - IntronPrm.mu));
-#if IDEBUG
-	for (i = IntronPrm.llmt; i < IntronPrm.rlmt + 10; ++i)
-	    printf("%d\t%7.2f\n", i, (double) Penalty(i));
-#endif
 }
 
 EijPat::EijPat(int dvsp)
@@ -344,14 +359,19 @@ Exinon::Exinon(Seq* sd_, const PwdB* pwd_, const bool bo) :
 	fact((FTYPE) (pwd->Vab / sd->many)),
 	fS(alprm2.y * fact)
 {
-	data = new EXIN[size + 1] - bias;
-	vclear(data + bias, size + 1);
-	if (!algmode.lsg) {	// no splice
+	if (pwd && pwd->DvsP) {
+	    data_p = new SGPT6[size + 1] - bias;
+	    vclear(data_p + bias, size + 1);
+	} else if (pwd) {
+	    data_n = new SGPT2[size + 1] - bias;
+	    vclear(data_n + bias, size + 1);
+	}
+	if (!algmode.lsg && data_p) {	// no splice
 	    if (!pwd->codepot) return;
 	    float*	prefE = pwd->codepot->calcScr(sd);
 	    float*	prfE = prefE;
 const	    float	fE = alprm2.z * fact;
-	    for (EXIN* wkb = begin(); ++wkb < end(); ) {
+	    for (SGPT6* wkb = begin_p(); ++wkb < end_p(); ) {
 		wkb->sigE = (STYPE) (fE * *prfE++);
 		wkb->phs5 = wkb->phs3 = -2;
 	    }
@@ -371,44 +391,48 @@ const	INT53	zero53 = {0, 0, 0, 0};
 	    sig53tab = new53tab(fS / stdfS, stdSig53);
 	    statictab = false;
 	}
-	intron53N();
-	intron53();
-}
-
-Exinon::~Exinon()
-{
-	if (data) 	delete[] (data + bias);
-	if (int53)	delete[] (int53 + bias);
-	if (!statictab && sig53tab) {
-	    delete[] *sig53tab;
-	    delete[] sig53tab;
-	}
+	intron53_c();
+	if (data_n)	intron53_n();
+	else		intron53_p();
 }
 
 STYPE Exinon::sig53(int m, int n, INTENDS c) const
 {
 	STYPE	sig = 0;
 	switch (c) {		// acanonical signal
-	    case IE5:	sig = data[m].sig5; break;
-	    case IE3:	sig = data[n].sig3; break;
-	    case IE53:	sig = data[n].sig3 - sig53tab[1][int53[n].dinc3]
+	    case IE5:
+		sig = data_n? data_n[m].sig5: data_p[m].sig5;
+		break;
+	    case IE3:
+		sig = data_n? data_n[n].sig3: data_p[n].sig3;
+		break;
+	    case IE53:
+		sig = (data_n? data_n[n].sig3: data_p[n].sig3)
+		- sig53tab[1][int53[n].dinc3]
 		+ sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3];
 		break;
-	    case IE35:	sig = data[m].sig5 -  sig53tab[0][int53[m].dinc5]
+	    case IE35:
+		sig = (data_n? data_n[m].sig5: data_p[m].sig5) 
+		- sig53tab[0][int53[m].dinc5]
 		+ sig53tab[3][16 * int53[m].dinc5 + int53[n].dinc3];
 		break;
-	    case IE5P3: sig = data[m].sig5 + data[n].sig3 - sig53tab[1][int53[n].dinc3]
+	    case IE5P3:
+		sig = (data_n? data_n[m].sig5: data_p[m].sig5) 
+		+ (data_n? data_n[n].sig3: data_p[n].sig3) 
+		- sig53tab[1][int53[n].dinc3]
 		+ sig53tab[2][16 * int53[m].dinc5 + int53[n].dinc3];
 		break;
 	}
 	if (alprm2.Z > 0) {
-	    if (c == IE53 || c == IE5P3) sig += intnpot->intpot(data + m, data + n);
-	    else if (c == IE35) sig += intnpot->intpot(data + n, data + m);
+	    if (c == IE53 || c == IE5P3) 
+		sig += intnpot->intpot(data_p + m, data_p + n);
+	    else if (c == IE35) 
+		sig += intnpot->intpot(data_p + n, data_p + m);
 	}
 	return (sig);
 }
 
-void Exinon::intron53N()
+void Exinon::intron53_c()
 {
 const	static	INT	jlevelac[4] = {0, 2, 3, 1};
 const	static	INT	jlevelgt[4] = {0, 0, 3, 1};
@@ -450,7 +474,54 @@ const	static	INT	jlevelgt[4] = {0, 0, 3, 1};
 	}
 }
 
-void Exinon::intron53()
+void Exinon::intron53_n()
+{
+	--sd->left; ++sd->right;
+	STYPE	th3 = (STYPE) (fS * pwd->eijpat->tonic3);
+	STYPE	th5 = (STYPE) (fS * pwd->eijpat->tonic5);
+	float*	pref5 = pwd->eijpat->pattern5? pwd->eijpat->pattern5->calcPatMat(sd): 0;
+	float*	pref3 = pwd->eijpat->pattern3? pwd->eijpat->pattern3->calcPatMat(sd): 0;
+	float*	prf5 = pref5;	// 5'ss signal
+	float*	prf3 = pref3;	// 3'ss signal
+	++sd->left; --sd->right;
+	if (pref5)	++prf5;
+	if (pref3)	++prf3;
+
+	vset(data_n + bias, ZeroSGPT2, size + 1);
+	at_sig5 = sig53tab[0][3];
+	gc_sig5 = sig53tab[0][9];
+	CHAR*	ss = sd->at(sd->left);
+	SGPT2*	last = end_n();
+	INT53*	wk53 = int53 + bias + 1;
+const	float	fs = fS * alprm2.sss;
+	for (SGPT2* wkb = begin_n(); ++wkb < last; ++ss, ++wk53) {
+	    STYPE	sig5 = pref5? (STYPE) (fs * *prf5++): 0;
+	    STYPE	sig3 = pref3? (STYPE) (fs * *prf3++): 0;
+	    sig5 += sig53tab[0][wk53->dinc5];
+	    sig3 += sig53tab[1][wk53->dinc3];
+	    wkb->sig5 = sig5;
+	    if (wkb->phs5 == -2 && ((algmode.any == 2 && sig5 > th5) || wk53->cano5)) {
+		wkb->phs5 = 0;
+		if (wk53->cano5 > 1) {
+		    wkb[1].phs5 = 1;
+		    if (wkb[-1].phs5 == 1) wkb[-1].phs5 = 2;	// GTGT
+		    else wkb[-1].phs5 = -1;
+		}
+	    }
+	    wkb->sig3 = sig3;
+	    if (wkb->phs3 == -2 && ((algmode.any == 2 && sig3 > th3) || wk53->cano3)) {
+		wkb->phs3 = 0;
+		if (wk53->cano3 > 1) {
+		    wkb[1].phs3 = 1;
+		    if (wkb[-1].phs3 == 1) wkb[-1].phs3 = 2;	// AGAG
+		    else wkb[-1].phs3 = -1;
+		}
+	    }
+	}
+	delete[] pref5; delete[] pref3;
+}
+
+void Exinon::intron53_p()
 {
 	FTYPE	fE = alprm2.z * fact;
 	FTYPE	fI = alprm2.Z * fact;
@@ -464,8 +535,10 @@ void Exinon::intron53()
 	STYPE	thB = (STYPE) (pwd->eijpat->tonicB);
 	float*	pref5 = pwd->eijpat->pattern5? pwd->eijpat->pattern5->calcPatMat(sd): 0;
 	float*	pref3 = pwd->eijpat->pattern3? pwd->eijpat->pattern3->calcPatMat(sd): 0;
-	float*	prefS = pwd->eijpat->patternI? pwd->eijpat->patternI->calcPatMat(sd): 0;
-	float*	prefT = pwd->eijpat->patternT? pwd->eijpat->patternT->calcPatMat(sd): 0;
+	float*	prefS = (sd->inex.sigs && pwd->eijpat->patternI)?
+		pwd->eijpat->patternI->calcPatMat(sd): 0;
+	float*	prefT = (sd->inex.sigt && pwd->eijpat->patternT)?
+		pwd->eijpat->patternT->calcPatMat(sd): 0;
 	float*	prefB = pwd->eijpat->patternB? pwd->eijpat->patternB->calcPatMat(sd): 0;
 	float*	prefE = pwd->codepot? pwd->codepot->calcScr(sd): 0;
 	float*	prefI = pwd->intnpot? pwd->intnpot->calcScr(sd): 0;
@@ -486,16 +559,16 @@ void Exinon::intron53()
 	if (prefE)	++prfE;
 	if (prefI)	++prfI;
 
-	vset(data + bias, ZeroExin, size + 1);
+	vset(data_p + bias, ZeroSGPT6, size + 1);
 	at_sig5 = sig53tab[0][3];
 	gc_sig5 = sig53tab[0][9];
 	CHAR*	ss = sd->at(sd->left);
 	STYPE	sigB = 0;
 	CHAR*	posB = 0;
-	EXIN*	last = end();
+	SGPT6*	last = end_p();
 	INT53*	wk53 = int53 + bias + 1;
 const	float	fs = fS * alprm2.sss;
-	for (EXIN* wkb = begin(); ++wkb < last; ++ss, ++wk53) {
+	for (SGPT6* wkb = begin_p(); ++wkb < last; ++ss, ++wk53) {
 	    wkb->sigS = prefS? (STYPE) (fT * *prfS++): 0;
 	    wkb->sigT = prefT? (STYPE) (fT * *prfT++): 0;
 	    wkb->sigI = prefI? (STYPE) (fI * *prfI++): 0;
@@ -548,7 +621,6 @@ void Exinon::resize() {
 	if (bias < sd->left && sd->right < (bias + size)) return;
 	RANGE	rng;
 	sd->saverange(&rng);
-	if (data) 	delete[] (data + bias);
 	if (int53)	delete[] (int53 + bias);
 	if (bias + 1 < sd->left) sd->left = bias + 1;
 	if (sd->left + size - 2 > sd->right) sd->right = sd->left + size - 2;
@@ -558,28 +630,18 @@ void Exinon::resize() {
 const	INT53	zero53 = {0, 0, 0, 0};
 	int53[0] = int53[size] = zero53;
 	int53 -= bias;
-	data = new EXIN[size + 1] - bias;
-	intron53N();
-	intron53();
+	if (data_n) {
+	    delete[] (data_n + bias);
+	    data_n = new SGPT2[size + 1] - bias;
+	}
+	if (data_p) {
+	    delete[] (data_p + bias);
+	    data_p = new SGPT6[size + 1] - bias;
+	}
+	intron53_c();
+	if (data_n)	intron53_n();
+	else		intron53_p();
 	sd->restrange(&rng);
-}
-
-STYPE IntronPenalty::Penalty(int n) const 
-{
-	if (n < 0 || !array) return (GapWI);
-	if (n < IntronPrm.llmt) return (SHRT_MIN);
-	if (n >= IntronPrm.rlmt)
-	    return (STYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)));
-	return (table[n]);
-}
-
-STYPE IntronPenalty::Penalty(int n, bool addsig) const 
-{
-	if (n < IntronPrm.llmt) return (SHRT_MIN);
-	if (!array) return (GapWI + AvrSig);
-	if (n >= IntronPrm.rlmt)
-	    return (STYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)) + AvrSig);
-	return (table[n] + AvrSig);
 }
 
 INT max_intron_len(float p, const char* fn)

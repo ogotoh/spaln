@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # Catenate a single or separate chromosomal sequences in a single multi-fasta file
-# Copyright(c) Osamu Gotoh <<o.gotoh@i.aist.go.jp>>
+# Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
 #
 # Input: FASTA, Genbank/DDBJ, or EMBL format sequence files
 # Output: to STDOUT in FASTA format, in which

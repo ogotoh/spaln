@@ -7,7 +7,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -17,7 +17,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #ifndef  _ADDDEF_
@@ -37,19 +38,19 @@ typedef unsigned long LONG;
 
 typedef int (*CMPF)(const UPTR, const UPTR);
 
-#define ERROR	(-1)
-#define OK	0
-#define ABORT	INT_MIN
-#define MAXL	256
+static	const	int	ERROR = -1;
+static	const	int	OK = 0;
+static	const	int	ABORT = INT_MIN;
+static	const	int	MAXL = 256;
+static	const	int	ON = 1;
+static	const	int	OFF = 0;
+static	const	int	YES = 1;
+static	const	int	NO = 0;
+static	const	char	ESC = 0x1b;
+static	const	char	OPTCHAR = '-';
 #ifndef LINE_MAX
 #define LINE_MAX	2048
 #endif
-#define ON	1
-#define OFF	0
-#define YES	1
-#define NO	0
-#define ESC	0x1b
-static	const	char	OPTCHAR = '-';
 #define MAX(X, Y) (((X) > (Y))? (X): (Y))
 #define MIN(X, Y) (((X) < (Y))? (X): (Y))
 #define ABS(X)	  (((X) < 0)? (-(X)): (X))

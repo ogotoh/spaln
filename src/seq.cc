@@ -6,7 +6,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -16,7 +16,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #include <new>
@@ -149,14 +150,13 @@ SEQ_CODE* setSeqCode(Seq* sd, const int& molc)
 
 /* examine and get the first query sequence */
 
-SeqServer::SeqServer(int ac, const char** av, InputMode infm, 
-	const char* catalog, int mq, int mt)
+SeqServer::SeqServer(int ac, const char** av, const InputMode& infm, 
+	const char* catalog, const int& mq, const int& mt)
 	: argc(ac), argc0(ac), argv(av), argv0(av), 
-	  cfrom(0), cto(0), input_form(infm)
+	  molc{mq, mt == TRON? DNA: mt},
+	  input_form(infm),
+	  input_ns(infm == IM_SNGL? 1: 2)
 {
-	molc[0] = mq;
-	molc[1] = mt == TRON? DNA: mt;
-	input_ns = (infm == IM_SNGL)? 1: 2;
 	if (algmode.blk) {
 	    target_dbf = dbs_dt[0];
 	    query_dbf = dbs_dt[1];
@@ -172,11 +172,6 @@ SeqServer::SeqServer(int ac, const char** av, InputMode infm,
 	vclear(gzfd, 2);
 #endif
 	fc = catalog? fopen(catalog, "r"): 0;
-	nfrom = counter = 0;
-	nto = INT_MAX;
-	attr[0] = attr[1] = 0;
-	atsz[0] = atsz[1] = 0;
-	sw = false;
 }
 
 void SeqServer::reset()
@@ -190,11 +185,13 @@ void SeqServer::reset()
 	if (gzfd[1]) {fclose(gzfd[1]); gzfd[1] = 0;}
 #endif
 	if (fc) rewind(fc);
-	nfrom = counter = 0;
-	nto = INT_MAX;
-	delete[] cfrom; cfrom = 0;
-	delete[] cto; cto = 0;
-	sw = false;
+	nfrom[0] = nfrom[1] = counter[0] = counter[1] = 0;
+	nto[0] = nto[1] = INT_MAX;
+	delete[] cfrom[0]; cfrom[0] = 0;
+	delete[] cfrom[1]; cfrom[1] = 0;
+	delete[] cto[0]; cto[0] = 0;
+	delete[] cto[1]; cto[1] = 0;
+	sw[0] = sw[1] = false;
 }
 
 InSt SeqServer::nextseq(Seq* sd, int which)
@@ -241,8 +238,8 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 		int	c = 0;
 		while ((c = *ps) && !isspace(c) && !strchr(",-)", c)) ++ps;
 		if (c) *ps++ = '\0';
-		if (isdigit(*qs))	nfrom = atoi(qs) - 1;
-		else if (isalpha(*qs))	cfrom = strrealloc(0, qs);
+		if (isdigit(*qs))	nfrom[which] = atoi(qs) - 1;
+		else if (isalpha(*qs))	cfrom[which] = strrealloc(0, qs);
 
 		while (*ps && isspace(*ps)) ++ps;
 
@@ -250,22 +247,22 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 		qs = ps;
 		while (*ps && !isspace(*ps) && *ps != ')') ++ps;
 		*ps = '\0';
-		if (isdigit(*qs))	nto = atoi(qs);
-		else if (isalpha(*qs))	cto = strrealloc(0, qs);
+		if (isdigit(*qs))	nto[which] = atoi(qs);
+		else if (isalpha(*qs))	cto[which] = strrealloc(0, qs);
 		else if (c != ',' && c != '-') {
-		    if (cfrom) cto = strrealloc(0, "");
-		    else nto = nfrom + 1;
+		    if (cfrom[which]) cto[which] = strrealloc(0, "");
+		    else nto[which] = nfrom[which] + 1;
 		}
 	    } else if ((ps = strchr(str, '$'))) {
 		char* qs = ++ps;
 		while (*ps && !isspace(*ps)) ++ps;
 		*ps = '\0';
 		if (isdigit(*qs)) {
-		    nfrom = atoi(qs);
-		    nto = nfrom + 1;
+		    nfrom[which] = atoi(qs);
+		    nto[which] = nfrom[which] + 1;
 		} else if (isalpha(*qs)) {
-		    cfrom = strrealloc(0, qs);
-		    cto = strrealloc(0, "");
+		    cfrom[which] = strrealloc(0, qs);
+		    cto[which] = strrealloc(0, "");
 		}
 	    }
 #if USE_ZLIB
@@ -292,16 +289,18 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 		molc[which] = sd->inex.molc;
 		strcat(attr[which], molc[which] == PROTEIN? "P": "D");
 	    }
-	    if (sw && cto && (!*cto || (sd->sname && !wordcmp(cto, (*sd->sname)[0])))) {
-		sw = false; delete[] cto; cto = 0;
+	    if (sw[which] && cto[which] && (!*cto[which] || 
+		(sd->sname && !wordcmp(cto[which], (*sd->sname)[0])))) {
+		sw[which] = false; delete[] cto[which]; cto[which] = 0;
 	    }
-	    if (cfrom && sd->sname && !wordcmp(cfrom, (*sd->sname)[0])) {
-		sw = true; delete[] cfrom; cfrom = 0;
+	    if (cfrom[which] && sd->sname && 
+		!wordcmp(cfrom[which], (*sd->sname)[0])) {
+		sw[which] = true; delete[] cfrom[which]; cfrom[which] = 0;
 	    }
-	    if (!cfrom && nfrom == counter) sw = true;
-	    ++counter;
-	    if (sw && counter <= nto) return IS_OK;
-	    if (sw && counter > nto) return IS_END;
+	    if (!cfrom[which] && nfrom[which] == counter[which]) sw[which] = true;
+	    ++counter[which];
+	    if (sw[which] && counter[which] <= nto[which]) return IS_OK;
+	    if (sw[which] && counter[which] > nto[which]) return IS_END;
 	    else	continue;
 	   }
 	   fclose(fd[which]);
@@ -314,25 +313,27 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 		molc[which] = sd->inex.molc;
 		strcat(attr[which], molc[which] == PROTEIN? "P": "D");
 	    }
-	    if (sw && cto && (!*cto || (sd->sname && !wordcmp(cto, (*sd->sname)[0])))) {
-		sw = false; delete[] cto; cto = 0;
+	    if (sw[which] && cto[which] && (!*cto[which] || 
+		(sd->sname && !wordcmp(cto[which], (*sd->sname)[0])))) {
+		sw[which] = false; delete[] cto[which]; cto[which] = 0;
 	    }
-	    if (cfrom && sd->sname && !wordcmp(cfrom, (*sd->sname)[0])) {
-		sw = true; delete[] cfrom; cfrom = 0;
+	    if (cfrom[which] && sd->sname && 
+		!wordcmp(cfrom[which], (*sd->sname)[0])) {
+		sw[which] = true; delete[] cfrom[which]; cfrom[which] = 0;
 	    }
-	    if (!cfrom && nfrom == counter) sw = true;
-	    ++counter;
-	    if (sw && counter <= nto) return IS_OK;
-	    if (sw && counter > nto) return IS_END;
+	    if (!cfrom[which] && nfrom[which] == counter[which]) sw[which] = true;
+	    ++counter[which];
+	    if (sw[which] && counter[which] <= nto[which]) return IS_OK;
+	    if (sw[which] && counter[which] > nto[which]) return IS_END;
 	    else	continue;
 	   }
 	   fclose(gzfd[which]);
 	   gzfd[which] = 0;
 	  }
 #endif
-	  delete[] cfrom; cfrom = 0;
-	  delete[] cto; cto = 0;
-	  nfrom = 0; nto = INT_MAX;
+	  delete[] cfrom[which]; cfrom[which] = 0;
+	  delete[] cto[which]; cto[which] = 0;
+	  nfrom[which] = 0; nto[which] = INT_MAX;
 	}
 	return IS_END;
 }
@@ -408,7 +409,7 @@ Seq* Seq::aliaseq(Seq* dest, const bool& this_is_alias)
 	if (!dest)	dest = new Seq(0);
 	else	dest->refresh();
 	int	destid = dest->sid;
-	memcpy(dest, this, sizeof(Seq));
+	memcpy((void*) dest, (void*) this, sizeof(Seq));
 	dest->jxt = 0;
 	if (is_eldest()) --vrtl;
 	if (this_is_alias) {
@@ -510,15 +511,19 @@ void Seq::seqalloc(const int& num, const int& len, const bool& keep)
 	    return;
 	}
 
+	if (seq_ && !keep) {
+	    seq_ -= many;
+	    delete[] seq_;
+	}
 	CHAR*	ss = 0;
 	try {
 	    ss = new CHAR[area];
 	} catch (std::bad_alloc& ba) {
 	    fatal(NoSeqSpace);
 	}
-	if (seq_) {
+	if (seq_ && keep) {
 	    seq_ -= many;
-	    if (keep) memcpy(ss, seq_, area_);
+	    memcpy(ss, seq_, area_);
 	    delete[] seq_;
 	}
 	many = byte = num;
@@ -535,7 +540,7 @@ CHAR* Seq::seq_realloc()
 
 	try {
 	    ss = new CHAR[area_];
-	} catch (std::bad_alloc ba) {
+	} catch (std::bad_alloc& ba) {
 	    fatal(NoSeqSpace);
 	}
 	memcpy(ss, seq_ -= many, area);

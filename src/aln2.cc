@@ -7,7 +7,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -17,7 +17,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #include "aln.h"
@@ -152,7 +153,7 @@ void putvar(VTYPE x)
 	else	fputs("  *****", stdout);
 }
 
-void stripe(const Seq* seqs[], WINDOW* wdw, int sh)
+void stripe(const Seq* seqs[], WINDOW* wdw, int sh, const int& cmode)
 {
 const 	Seq*	a = seqs[0];
 const 	Seq*	b = seqs[1];
@@ -163,6 +164,8 @@ const 	Seq*	b = seqs[1];
 	}
 	wdw->up = b->right - a->right;
 	wdw->lw = b->left - a->left;
+	if (cmode == 1)	wdw->lw = wdw->up; else
+	if (cmode == 2)	wdw->up = wdw->lw; else
 	if (wdw->up < wdw->lw) swap(wdw->up, wdw->lw);
 	wdw->up += sh;
 	wdw->lw -= sh;
@@ -172,7 +175,7 @@ const 	Seq*	b = seqs[1];
 	wdw->width = wdw->up - wdw->lw + 3;
 }
 
-void stripe31(const Seq* seqs[], WINDOW* wdw, int shld)
+void stripe31(const Seq* seqs[], WINDOW* wdw, int shld, const int& cmode)
 {
 const 	Seq*	a = seqs[0];
 const 	Seq*	b = seqs[1];
@@ -184,6 +187,8 @@ const 	Seq*	b = seqs[1];
 	shld *= 3;
 	wdw->up = b->right - 3 * a->right;
 	wdw->lw = b->left - 3 * a->left;
+	if (cmode == 1)	wdw->lw = wdw->up; else
+	if (cmode == 2)	wdw->up = wdw->lw; else
 	if (wdw->up < wdw->lw) swap(wdw->up, wdw->lw);
 	wdw->up += shld;
 	wdw->lw -= shld;

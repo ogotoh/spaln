@@ -6,7 +6,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -16,7 +16,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #ifndef  _BSEQ_H_
@@ -26,7 +27,8 @@
 
 struct	ALPRM {float u, v, u0, u1, v0, tgapf, thr, scale, maxsp, gamma; 
 	    int k1, ls, sh, ubh, mtx_no;};
-struct	ALPRM2 {float x, y, z, o, w, bti, spb, Z, sss; int jneibr, termk1;};
+struct	ALPRM2 {float x, y, z, o, w, bti, spb, Z, sss; 
+	    int jneibr, termk1, desert;};
 struct	ALPRM3 {float scnd, hydr, hpmt; int hpwing, no_angle;};
 struct	DefSetup {int defmolc, delamb; InputMode def_input_mode;};
 
@@ -169,6 +171,8 @@ mutable	INT	exgr:	2;
 	INT	sshp:	1;
 	INT	cmps:	1;
 	INT	vtwt:	1;
+	INT	sigs:	1;	// use translational start signal
+	INT	sigt:	1;	// use translational termination  signal
 };
 
 struct JUXT {
@@ -268,7 +272,7 @@ mutable	int	right;		// right boundary to be operated
 	RANGE*	exons;		// CDS/exons in a gene seq
 	Exinon*	exin;		// statistical scores related to gene organization
 	SigII*	sigII;		// eson-intron junction signal
-	INEX	inex;		// internally used flags
+mutable	INEX	inex;		// internally used flags
 #if USE_WEIGHT
 	FTYPE*	weight;		// relative weight to each member
 	FTYPE*	pairwt;		// weight to each pair of members
@@ -1163,30 +1167,30 @@ const	char**	argv0;
 	gzFile	gzfd[2];
 #endif
 	FILE*	fc;
-	int	nfrom;
-	int	nto;
-	char*	cfrom;
-	char*	cto;
-	int	counter;
-	bool	sw;
+	int	nfrom[2] = {0, 0};
+	int	nto[2] = {INT_MAX, INT_MAX};
+	char*	cfrom[2] = {0, 0};
+	char*	cto[2] = {0, 0};
+	int	counter[2] = {0, 0};
+	bool	sw[2] = {false, false};
 	int	molc[2];
-	char*	attr[2];
-	int	atsz[2];
+	char*	attr[2] = {0, 0};
+	int	atsz[2] = {0, 0};
 public:
 	InputMode	input_form;
 	int	input_ns;
 	DbsDt*	target_dbf;
 	DbsDt*	query_dbf;
-	SeqServer(int ac, const char** av, InputMode infm, 
-	    const char* catalog = 0, int mq = UNKNOWN, int mt = UNKNOWN);
+	SeqServer(int ac, const char** av, const InputMode& infm, 
+	    const char* catalog = 0, const int& mq = UNKNOWN, 
+	    const int& mt = UNKNOWN);
 	~SeqServer() {
 	    if (fd[0]) fclose(fd[0]);
 	    if (fd[1]) fclose(fd[1]);
 	    if (fc) fclose(fc);
-	    delete[] attr[0];
-	    delete[] attr[1];
-	    delete[] cfrom;
-	    delete[] cto;
+	    delete[] attr[0]; delete[] attr[1];
+	    delete[] cfrom[0]; delete[] cfrom[1];
+	    delete[] cto[0]; delete[] cto[1];
 	}
 	InSt nextseq(Seq* sd, int which = 0);
 	void	reset();
@@ -1257,7 +1261,7 @@ public:
 	int	many;
 	int	pos;
 	CHAR*	res;
-	EXIN*	bb;
+	SGPT6*	bb;
 	SeqItr& operator++()
 	{
 	    ++pos;
@@ -1319,7 +1323,7 @@ public:
 	SeqItr&	reset(int n = 0, Seq* sd = 0) {
 	    if (sd) {
 		many = sd->many; res = sd->at(n);
-		bb = sd->exin? sd->exin->score(n): 0;
+		bb = sd->exin? sd->exin->score_p(n): 0;
 	    } else if (res) {
 		int shft = n - pos;
 		res += shft * many;

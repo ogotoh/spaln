@@ -6,7 +6,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -16,7 +16,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #ifndef _CMN_H_
@@ -50,7 +51,7 @@ typedef	float	FTYPE;
 typedef	FTYPE	VTYPE;
 typedef	FTYPE	STYPE;
 typedef	float	PVTYPE;	// printf
-static	const	FTYPE	VABORT = -1.e127f;
+static	const	FTYPE	VABORT = -FLT_MAX;
 static	const	FTYPE	fepsilon = 1.e-7f;
 static	const	VTYPE	fInfinit = FLT_MAX;
 #if DVAL

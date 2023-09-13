@@ -9,7 +9,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -19,7 +19,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #include "aln.h"
@@ -43,9 +44,10 @@ static	const	char*	Badpam = "Illegal pam = %d !\n";
 static	const	char*	strscale = "scale";
 
 //		   u,      v,   u0, u1, v0, tgapf, thr, sclase, maxsp, gamma, k1, ls, sh, ubh, mtx_no
-ALPRM	alprm = {FQUERY, FQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 2, 0};
-//		   x,   y,      z,   o, m, bti, spb, Z, sss, jneibr termk1
-ALPRM2	alprm2 = {30., FQUERY, FQUERY, 30., 9., 8., 20., 0., -1., 10, 45};
+ALPRM	alprm = {FQUERY, FQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 0, 0};
+//ALPRM	alprm = {FQUERY, FQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 2, 0};
+//		   x,   y,      z,   o, m, bti, spb, Z, sss, jneibr termk1 desert
+ALPRM2	alprm2 = {30., FQUERY, FQUERY, 30., 9., 8., 20., 0., -1., 10, 45, 150};
 //		scnd, hydr, hpmt, hpwing, no_angle
 ALPRM3	alprm3 = {0., 0., 0., 3, 0};
 
@@ -633,6 +635,7 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	    case 'a': algmode.any = atoi(vl); break;	// boundary stringency
 	    case 'b': defPprm[k].b = atof(vl); break;	// bias added to mat elem
 	    case 'c': alprm2.jneibr = atoi(vl); break;	// 
+	    case 'd': alprm2.desert = atoi(vl); break;	// giveup alignment if nohit
 	    case 'e': alprm.u0 = atof(vl); break;	// background gep
 	    case 'f': alprm.v0 = atof(vl); break;	// background gop
 	    case 'g': alprm.gamma = atof(vl); break;	// gap parameter gamma
@@ -688,6 +691,7 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	    case 'L': IntronPrm.llmt = atoi(vl); break;	// lower limit of intron
 	    case 'M': IntronPrm.maxl = int(ktof(vl)); break;	// maximum expected length of intron
 //	    case 'N': alprm2.nrmlipot = 1; break;	// normalize intron potential
+	    case 'Q': IntronPrm.nquant = atoi(vl); break;	// number of steps of rough ILD
 	    case 'S': alprm2.sss = atof(vl); 
 		if (alprm2.sss > 1.) alprm2.sss /= 100.;
 		break;

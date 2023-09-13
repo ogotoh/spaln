@@ -10,7 +10,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -20,7 +20,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #include "sortgrcd.h"
@@ -67,7 +68,7 @@ static	bool	reverse = false;
 
 static void usage()
 {
-	fputs("sortgrcd version 2.2.1: read binary .?rds and sort them\n", stderr);
+	fputs("sortgrcd version 2.2.2: read binary .?rds and sort them\n", stderr);
 	fputs("\tin the order of chromosomal location in each direction\n", stderr);
 	fputs("Usage: sortgrcd [options] *.grd\n", stderr);
 	fputs("Note: version 2 supports outputs from spaln 2.1.0 or later\n", stderr);
@@ -91,10 +92,11 @@ static void usage()
 	fputs("\t-Sr:\tsort records mapped on minus strand in the reverse order of genomic positions\n", stderr);
 	fputs("\t-UN:\tMaximum total number of unpaired bases in gaps\n", stderr);
 	fputs("\t-VN:\ttMaximum memory size used for core sort (16M)\n", stderr);
-	fputs("\t-gS:\tSpecify the .grp file name\n", stderr);
+	fputs("\t-dS:\tSpecify the directory/genome_id (inferred from input)\n", stderr);
 	fputs("\t-lN:\tNumber of residues per line for -O6 or -O7 (60)\n", stderr);
 	fputs("\t-mN:\tMaximum allowed missmatches at both exon boundaries\n", stderr);
 	fputs("\t-nN:\tallow non-canonical boundary? [0: no; 1: AT-AN; 2: 1bp mismatch; 3: any]\n", stderr);
+	fputs("\t-oS:\toutput file (stdout)\n", stderr);
 	fputs("\t-uN:\tMaximum allowed unpaired bases in gaps at both exon boundaries\n", stderr);
 	exit(1);
 }
@@ -1043,7 +1045,14 @@ Sortgrcd::Sortgrcd(int ac, const char** av) : argc(ac), grdname(*av)
 	nrcd = (GERecN*) mfd.flush();
 	ngrcd = gerNo.gcn;
 	nercd = gerNo.ecn;
-	gdbs = new DbsDt((*gerNo.sname)[0]);
+	if (!gdbs) gdbs = new DbsDt((*gerNo.sname)[0]);
+	strcpy(str, gdbs->dbsid);
+	strcat(str, ".grp");
+	FILE*	fd = fopen(str, "r");
+	if (!fd) fatal("%s not found !\n", str);
+	while (fgets(str, MAXL, fd)) ;
+	fclose(fd);
+	HashSize = atoi(cdr(str));	// read from the last line
 }
 
 Sortgrcd::~Sortgrcd()
@@ -1052,10 +1061,10 @@ Sortgrcd::~Sortgrcd()
 	delete[] chrlist; delete[] grcd; delete[] nrcd;
 }
 
-void Sortgrcd::readGrcd(int ac, const char** av, INT hashsize)
+void Sortgrcd::readGrcd(int ac, const char** av)
 {
 // readn G-records
-	Chash*	hh = new Chash(hashsize);
+	Chash*	hh = new Chash(HashSize);
 	grcd = new GRFn[ngrcd];
 	GRFn*	grfn = grcd;
 	char	str[LINE_MAX];
@@ -1133,10 +1142,6 @@ static	const	int	no_cp = 10;
 	ftime(tb);
 #endif
 
-const	char*	grpfn = 0;
-	char	str[MAXL];
-	INT	HashSize = 1033;
-
 // Get options
 	while (--argc && (++argv)[0][0] == OPTCHAR) {
 const	  char*	val = argv[0] + 2;
@@ -1212,13 +1217,9 @@ const	  char*	val = argv[0] + 2;
 		    }
 		  }
 		  break;
-	    case 'g':
-		if ((val = getarg(argc, argv)))		// .grp file name
-		    {grpfn = val;}
-		break;
-	    case 'h':
-		if ((val = getarg(argc, argv, true)))	// hash size
-		    {HashSize = atoi(val);}
+	    case 'd':
+		if ((val = getarg(argc, argv)))		// gdbs id
+		    {gdbs = new DbsDt(val);}
 		break;
 	    case 'l':
 		if ((val = getarg(argc, argv)))		// max number of mismatches
@@ -1232,6 +1233,10 @@ const	  char*	val = argv[0] + 2;
 		if ((val = getarg(argc, argv)))		// 0: disallow; 1: allow
 		    {filter.ncan = atoi(val);}		// non-canonical ends
 		else	{filter.ncan = 0;}
+		break;
+	    case 'o':
+		if ((val = getarg(argc, argv)))		// max number of mismatches
+		    {OutPrm.out_file = val;}
 		break;
 #if M_THREAD
 	    case 't':
@@ -1249,13 +1254,7 @@ const	  char*	val = argv[0] + 2;
 	}
 	if (!argc) usage();
 	setup_output(OutMode);
-	if (grpfn) {	// get seq size from *.grp 
-	    FILE*	fd = fopen(grpfn, "r");
-	    if (!fd) fatal("%s not found !\n", grpfn);
-	    while (fgets(str, MAXL, fd)) ;
-	    fclose(fd);
-	    HashSize = atoi(cdr(str));	// read from the last line
-	}
+
 #if MONITOR
 	times(tt + cp);
 	ftime(tb + cp++);
@@ -1269,7 +1268,7 @@ const	  char*	val = argv[0] + 2;
 	ftime(tb + cp++);
 #endif
 // read and sort G-records
-	srtgrcd.readGrcd(argc, argv, HashSize);
+	srtgrcd.readGrcd(argc, argv);
 
 #if MONITOR
 	times(tt + cp);

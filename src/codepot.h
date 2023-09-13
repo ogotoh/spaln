@@ -5,7 +5,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -15,7 +15,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #ifndef  _CODEPOT_H_
@@ -23,7 +24,14 @@
 
 class	ExinPot;
 
-struct EXIN {
+struct SGPT2 {
+	STYPE   sig5;
+	STYPE   sig3;
+	char   phs5;
+	char   phs3;
+};
+
+struct SGPT6 {
 	STYPE   sig5;
 	STYPE   sig3;
 	STYPE   sigS;
@@ -34,7 +42,9 @@ struct EXIN {
 	char   phs3;
 };
 
-static	const	EXIN	ZeroExin = {0, 0, 0, 0, 0, 0, -2, -2};
+static	const	SGPT2	ZeroSGPT2 = {0, 0, -2, -2};
+static	const	SGPT6	ZeroSGPT6 = {0, 0, 0, 0, 0, 0, -2, -2};
+static	const	float	rlmt_quant = 0.8;
 
 struct INT53 {
 	INT	dinc5:	4;
@@ -74,30 +84,46 @@ public:
 	FTYPE	fS;
 	STYPE	at_sig5 = 0;
 	STYPE	gc_sig5 = 0;
-	EXIN*	data = 0;
+	SGPT2*	data_n = 0;
+	SGPT6*	data_p = 0;
 	Exinon(Seq* sd_, const PwdB* pwd_, const bool bo);
-	~Exinon();
+	~Exinon() {
+	    if (data_n) 	delete[] (data_n + bias);
+	    if (data_p) 	delete[] (data_p + bias);
+	    if (int53)	delete[] (int53 + bias);
+	    if (!statictab && sig53tab) {
+		delete[] *sig53tab;
+		delete[] sig53tab;
+	    }
+	}
 	STYPE	sig53(int m, int n, INTENDS c) const;
 	STYPE	sigST(int n, bool init) const {
-	    return (STYPE) (data? (init? data[n].sigS: data[n].sigT) / fact : 0);
+	    return (STYPE) (data_p? 
+		(init? data_p[n].sigS: data_p[n].sigT) / fact : 0);
 	}
-	EXIN*	score(int n) const {return (data + n);}
-	bool	isDonor(int n) const {return (int53[n].cano5);}
-	bool	isAccpt(int n) const {return (int53[n].cano3);}
-	int	isCanon(int d, int a) const {return
+	SGPT2*	score_n(const int& n) const {return (data_n + n);}
+	SGPT6*	score_p(const int& n) const {return (data_p + n);}
+	bool	isDonor(const int& n) const {return (int53[n].cano5);}
+	bool	isAccpt(const int& n) const {return (int53[n].cano3);}
+	int	isCanon(const int& d, const int& a) const {return
 	    (((int53[d].cano5 == 3) && int53[a].cano3 == 3) ||
 	    (int53[d].cano5 == 2 && int53[a].cano3 == 2) ||
 	    (int53[d].cano5 == 1 && int53[a].cano3) ||
 	    (int53[d].cano5 && int53[a].cano3 == 1))?
 		int53[d].cano5 + int53[a].cano3: 0;}
-	int	lplay(int n) const {return (n - bias);}
-	int	rplay(int n) const {return (bias + size - n);}
-	EXIN*	begin() const {return (data + bias);}
-	EXIN*	end()	const {return (data + bias + size - 1);}
-	bool	good(const EXIN* bb) const 
-		{return (data && begin() <= bb && bb < end());}
-	void	intron53();
-	void	intron53N();
+	int	lplay(const int& n) const {return (n - bias);}
+	int	rplay(const int& n) const {return (bias + size - n);}
+	SGPT2*	begin_n() const {return (data_n + bias);}
+	SGPT2*	end_n()	const {return (data_n + bias + size - 1);}
+	bool	good(const SGPT2* bb) const 
+		{return (data_n && begin_n() <= bb && bb < end_n());}
+	SGPT6*	begin_p() const {return (data_p + bias);}
+	SGPT6*	end_p()	const {return (data_p + bias + size - 1);}
+	bool	good(const SGPT6* bb) const 
+		{return (data_p && begin_p() <= bb && bb < end_p());}
+	void	intron53_c();
+	void	intron53_n();
+	void	intron53_p();
 	void	resize();
 };
 
@@ -163,6 +189,8 @@ inline bool isJunct(int phs5, int phs3) {
 	return (phs5 == phs3 && phs5 > -2);
 }
 
+// Frechet Distribution
+
 class SpJunc {
 const	Seq*	b;
 const	PwdB*	pwd;
@@ -178,27 +206,50 @@ const	CHAR*	spjseq(int n5, int n3);
 
 struct INTRONPEN {
 	float	ip, fact, mean;
-	int	llmt, mu, rlmt, elmt, tlmt, minl, maxl, mode;
-	STYPE*	array, *table, sip;
+	int	llmt, mu, rlmt, elmt, tlmt, minl, maxl, mode, nquant;
+	STYPE	sip;
 	float	a1, m1, t1, k1, m2, t2, k2, a2, m3, t3, k3;
 };
 
 extern	INTRONPEN IntronPrm;
 
+struct LenPen {
+	SHORT	len;	// intron length
+	short	pen;	// penalty
+};
+
 class IntronPenalty {
 	STYPE	GapWI;
 	STYPE	AvrSig;
-	STYPE	optip;
-	FTYPE	IntEp;
-	FTYPE	IntFx;
-	STYPE*	array;
-	STYPE*	table;
+	STYPE	optip = SHRT_MIN;
+	FTYPE	IntEp = 0;
+	FTYPE	IntFx = 0;
+	STYPE*	array = 0;
+	STYPE*	table = 0;
 public:
+	LenPen*	qm = 0;
 	IntronPenalty(VTYPE f, int hh, EijPat* eijpat, ExinPot* exinpot);
-	~IntronPenalty() {delete[] array;}
-	STYPE	Penalty(int n = -1) const;
-	STYPE	Penalty(int n, bool addsig53) const;
-	STYPE	PenaltyDrop(int n) const {	// <= 0
+	~IntronPenalty() {delete[] array; delete[] qm;}
+	double ProbDist(int i, double mu, double th, double kk) {
+	    if (i <= mu) return (0.);
+	    double	z = th / (i - mu);
+	    double	zz = pow(z, kk);
+	    return (kk / th * z * zz * exp(-zz));
+	}
+	STYPE	Penalty() const {return (GapWI);}
+	STYPE	Penalty(const int& n) const {
+	    if (n < IntronPrm.llmt) return (SHRT_MIN); else
+	    if (n < IntronPrm.rlmt && table)
+		return (table[n]); else
+	    return (STYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)));
+	}
+	STYPE	PenaltyPlus(const int& n) const {
+	    if (n < IntronPrm.llmt) return (SHRT_MIN); else
+	    if (n < IntronPrm.rlmt && table)
+		return (table[n] + AvrSig); else
+	    return (STYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)) + AvrSig);
+	}
+	STYPE	PenaltyDrop(const int& n) const {	// <= 0
 	    return (n > IntronPrm.mode? Penalty(n) - optip: 0);
 	}
 };

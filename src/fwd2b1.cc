@@ -10,17 +10,18 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
 *
-*	Osamu Gotoh, Ph.D.      (2003-2012)
+*	Osamu Gotoh, Ph.D.      (2003-)
 *	Department of Intelligence Science and Technology
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #define	DEBUG	1
@@ -28,8 +29,11 @@
 #include "aln.h"
 #include "vmf.h"
 #include "wln.h"
+
 #if __SSE4_1__
 #include "fwd2s1_simd.h"
+#else
+#include "udh_intermediate.h"
 #endif
 
 class Aln2b1 {
@@ -41,6 +45,12 @@ const	bool	Local;
 	Mfile*	mfd = 0;
 	Vmf*	vmf = 0;
 const	INT	lowestlvl;
+#if __SSE4_1__
+const	int	simd = algmode.alg & 3;
+#else
+const	int	simd = 0;
+#endif
+const	bool	recursive = algmode.alg & 4;
 public:
 	Aln2b1(const Seq** _seqs, const PwdB* _pwd) :
 	    seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd), 
@@ -51,8 +61,7 @@ public:
 	VTYPE	forwardB_ng(const WINDOW& wdw, int pp[] = 0);
 	void	hinitB_ng(Rvwml* hh[], const WINDOW& wdw);
 	Rvwml*	hlastB_ng(Rvwml* hh[], const WINDOW& wdw);
-	VTYPE	hirschbergB_ng(int cpos[], 		// coordinates on center row
-		const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb, INT& bexgl);
+	VTYPE	hirschbergB_ng(Dim10* cpos, const int n_imd, const WINDOW& wdw);
 	void	sinitB_ng(VTYPE* hh[], const WINDOW& wdw);
 	VTYPE	slastB_ng(VTYPE* hh[], const WINDOW& wdw);
 	VTYPE	scorealoneB_ng(const WINDOW& wdw);
@@ -61,6 +70,8 @@ public:
 	void	cinitB_ng(RVDWC* hhc[], const WINDOW& wdw);
 	Colonies*	fwdswgB_ng(VTYPE* scr, const WINDOW& wdw);
 	VTYPE	backforth(int n, const BOUND& lub);
+	void	mimd_postwork(const Dim10* cpos, const int n_imd);
+	void	rcsv_postwork(const Dim10* cpos);
 	VTYPE	lspB_ng(const WINDOW& wdw);
 	VTYPE	seededB_ng(INT level, int cmode, const BOUND& lub);
 	SKL*	globalB_ng(VTYPE* scr, const WINDOW& wdw);
@@ -305,11 +316,12 @@ const	CHAR*	as = a->at(m);
 const	CHAR*	bs = b->at(n);
 	if (samfm) {
 	    samfm->left = m;
-	    if ( m) samfm->push('H', m);	// local alignment
+	    if (m) samfm->push('H', m);	// local alignment
 	    if (b->inex.sens == 0) samfm->pos = n;
 	}
 	FTYPE	tgapf = (m == 0. || n == 0)? alprm.tgapf: 1.;
-	Iiinfo*	iif = (SpbFact > 0 && ((a->sigII && a->sigII->pfqnum) || (b->sigII && b->sigII->pfqnum)))?
+	Iiinfo*	iif = (SpbFact > 0 && ((a->sigII && a->sigII->pfqnum) 
+		|| (b->sigII && b->sigII->pfqnum)))?
 	    new Iiinfo(seqs, a->left, b->left, true): 0;
 	int	span = 0;
 	while (--num) {
@@ -451,8 +463,7 @@ Rvwml* Aln2b1::hlastB_ng(Rvwml* hh[], const WINDOW& wdw)
 	return (mx);
 }
 
-VTYPE Aln2b1::hirschbergB_ng(int cpos[], 
-	const WINDOW& wdw, WINDOW& wdwf, WINDOW& wdwb, INT& bexgl)
+VTYPE Aln2b1::hirschbergB_ng(Dim10* cpos, const int n_imd, const WINDOW& wdw)
 {
 const	bool	dagp = pwd->Noll == 3;	// double affine gap penalty
 const	int	LocalL = Local && a->inex.exgl && b->inex.exgl;
@@ -462,11 +473,7 @@ const	int	LocalR = Local && a->inex.exgr && b->inex.exgr;
 	Rvwml	e[2];
 	Rvwml*&	e1 = hf[1] = e;
 	Rvwml*&	e2 = hf[3] = e + 1;
-	int*	center_lnk[NOL];
-	int*	center_end[NOL];
-	int*	center_lwr[NOL];
-	int*	center_upr[NOL];
-	Rvwmrmn	maxh = {NEVSEL, 0, 0, 0, 0};
+	Rvwmrmn	maxh = {NEVSEL, 0, 0, a->left, 0, a->right, b->right};
 
 const	size_t	bufsiz = pwd->Noll * wdw.width;
 	Rvwml*	wbuf = new Rvwml[bufsiz];
@@ -475,31 +482,25 @@ const	Rvwml	black_vpwml = {NEVSEL, r, r, 0, end_of_ulk};
 	vset(wbuf, black_vpwml, bufsiz);
 	Rvwml*	blackvwu = wbuf + bufsiz - 1;	// assume to be const
 	hh[0] = wbuf - wdw.lw + 1;
-	int*	ibuf = new int[4 * bufsiz];
-	center_lnk[0] = ibuf - wdw.lw + 1;
-	center_end[0] = center_lnk[0] + bufsiz;
-	center_lwr[0] = center_end[0] + bufsiz;
-	center_upr[0] = center_lwr[0] + bufsiz;
-	for (int k = 1; k < pwd->Noll; ++k) {
+	for (int k = 1; k < pwd->Noll; ++k)
 	    hh[k] = hh[k-1] + wdw.width;
-	    center_lnk[k] = center_lnk[k - 1] + wdw.width;
-	    center_end[k] = center_end[k - 1] + wdw.width;
-	    center_lwr[k] = center_lwr[k - 1] + wdw.width;
-	    center_upr[k] = center_upr[k - 1] + wdw.width;
-	}
-	vset(ibuf, end_of_ulk, 2 * bufsiz);	// center_lnk
 
 	hinitB_ng(hh, wdw);
 
+const	int	ms = (a->right - a->left + n_imd) / (n_imd + 1);	// interval
+	Udh_Imds	udhimds(n_imd, a->left, ms, wdw, pwd->Noll, true);
+	UdhIntermediate*	imd = udhimds[0];
+	int	mm = imd->mi;
+
 	int	m = a->left;
-const	int	mm = (a->left + a->right + 1) / 2;
 	if (!a->inex.exgl) --m; 	// global
 	int	n1 = m + wdw.lw;
 	int	n2 = m + wdw.up + 1;
 const	CHAR*	as = a->at(m);
-	for ( ; ++m <= a->right; ++as, ++n1, ++n2) {
+	for (int i = 0; ++m <= a->right; ++as, ++n1, ++n2) {
 	    int	n = std::max(n1, b->left);
 const	    int	n9 = std::min(n2, b->right);
+const	    bool	is_imd = m == mm;
 const	    CHAR*	bs = b->at(n);
 	    r = n - m;
 	    Rvwml*&	h = hf[0] = hh[0] + r;
@@ -515,14 +516,8 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #endif
 	    for ( ; ++n <= n9; ++bs) {
 		++r;
-		for (int k = 0; k < pwd->Noll; ++k) {
-		    int	kk = k + k;
-		    ++hf[kk];
-		    if (m == mm) {
-			center_end[k][r] = hf[kk]->ulk;
-			hf[kk]->ulk = k? end_of_ulk: r;
-		    }
-		}
+		for (int k = 0; k < pwd->Noll; ++k)
+		    ++hf[k + k];
 
 //	Diagonal
 		Rvwml*	from = h;
@@ -610,67 +605,98 @@ HorizonF:
 		}
 #endif
 
-// save variables at the center
-		if (m == mm) {
-const		    int	vk = (hd == 2 || hd == 4)? hd / 2: 0;
+//	intermediate row
+		if (is_imd) {
 		    for (int k = 0; k < pwd->Noll; ++k) {
-			int	kk = k + k;
-			center_lwr[k][r] = hf[kk]->lwr;
-		        center_upr[k][r] = hf[kk]->upr;
-			hf[kk]->upr = r;
-			if (!(hd % 2)) hf[kk]->lwr = r;
-			if (k) hf[kk]->ulk = r + k * wdw.width;
-			else {
-			    center_lnk[0][r] = hf[0]->ulk;
-			    hf[0]->ulk = r + vk * wdw.width;
-			}
+const			int	kk = k + k;
+			imd->hlnk[k][r] = hf[kk]->ulk;
+			imd->lwrb[k][r] = std::min(r, hf[kk]->lwr);
+		        imd->uprb[k][r] = std::max(r, hf[kk]->upr);
+			hf[kk]->lwr = hf[kk]->upr = r;
+			hf[kk]->ulk = r + k * wdw.width;
 		    }
 		}	// was center
 	    }	// end of n-loop
+	    if (is_imd) {		// reset intermediate
+		if (++i < n_imd) {
+		    imd = udhimds[i];
+		    mm = imd->mi;
+		} else
+		    mm = a->right;
+	    }
 	}	// end of m-loop
 
-const	int	rl = b->left - a->left;
+	int	i = n_imd;
+	while (udhimds[--i]->mi > maxh.mr) ;
+
 	if (LocalR) {
 	    a->right = maxh.mr;
 	    b->right = maxh.nr;
-	    wdwb.up = maxh.upr;
-	    wdwb.lw = maxh.lwr;
+	    if (i < 0) i = 0;
+	    cpos[i][8] = maxh.lwr;
+	    cpos[i][9] = maxh.upr;
 	} else {
-const	    int	rr = b->right - a->right;
 const	    Rvwml*	mx = hlastB_ng(hh, wdw);
 	    maxh.val = mx->val;
+	    maxh.lwr = mx->lwr;
+	    maxh.upr = mx->upr;
 	    maxh.ulk = mx->ulk;
-	    wdwb.up = mx->upr;
-	    wdwb.lw = mx->lwr;
+	    maxh.ml = mx->ml;
 	    r = mx - hh[0];
+const	    int	rr = b->right - a->right;
 	    if (a->inex.exgr && rr < r) a->right = b->right - r;
 	    if (b->inex.exgr && rr > r) b->right = a->right + r;
 	}
-	int	c = 0;
+
+	i = n_imd;
+	while (--i >= 0 && udhimds[i]->mi > a->right) ;
+	if (i < 0 && udhimds[0]->mi > a->right) cpos[0][2] = b->right;
+const	int	rr = b->right - a->right;
+	cpos[i + 1][8] = std::min(maxh.lwr, rr);
+	cpos[i + 1][9] = std::max(maxh.upr, rr);
+
+	r = maxh.ulk;
 	int	d = 0;
-	for (r = maxh.ulk; r > wdw.up; r -= wdw.width) ++d;
-	if (center_end[d][r] < end_of_ulk) {	// cross center
-	    cpos[c++] = mm;
-	    for (int rp = center_lnk[d][r]; rp < end_of_ulk && r != rp;
-		rp = center_lnk[0][r = rp]) {
-		cpos[c++] = r + mm;
-	    }
-	    cpos[c++] = r + mm;
-	    cpos[c] = end_of_ulk;
-	    wdwf.up = center_upr[d][r];
-	    wdwf.lw = center_lwr[0][r];
-	    r = center_end[d][r];
-	} else	cpos[0] = end_of_ulk;		// don't cross center
+	for ( ; i >= 0 && (imd = udhimds[i])->mi > maxh.ml; --i) {
+	    int	c = 0;
+	    for (d = 0; r > wdw.up; r -= wdw.width) ++d;
+	    if (imd->vlnk[d][r] < end_of_ulk) {	// cross intermediate
+		cpos[i][c++] = imd->mi;
+		cpos[i][c++] = (d > 0)? 1: 0;
+		for (int rp = imd->hlnk[d][r]; rp < end_of_ulk && r != rp;
+		    rp = imd->hlnk[0][r = rp]) {
+		    cpos[i][c++] = r + imd->mi;
+		}
+		cpos[i][c++] = r + imd->mi;
+		cpos[i][c] = end_of_ulk;
+ 		cpos[i][8] = imd->lwrb[d][r];
+		cpos[i][9] = imd->uprb[d][r];
+		r = imd->vlnk[d][r];
+		if (r == end_of_ulk) break;
+	    } else
+		cpos[i][0] = end_of_ulk;	// don't cross center
+	}
+
+	for (d = 0; r > wdw.up; r -= wdw.width) ++d;
 	if (LocalL) {
 	    a->left = maxh.ml;
 	    b->left = r + maxh.ml;
 	} else {
-	    if (a->inex.exgl && rl > r) a->left = b->left - r;
+const	    int	rl = b->left - a->left;
+	    if (a->inex.exgl && rl > r) {
+		a->left = b->left - r;
+		for (int j = 0; j < n_imd && udhimds[j]->mi < a->left; ++j)
+		    cpos[j][0] = end_of_ulk;
+	    }
 	    if (b->inex.exgl && rl < r) b->left = a->left + r;
 	}
-	bexgl = (d > 0)? 1: 0;
+	int	j = ++i;
+	if (udhimds[n_imd - 1]->mi < a->left)
+	    cpos[j = 0][2] = b->left;
+const	int	rl = b->left - a->left;
+	cpos[j][8] = std::min(rl, cpos[i][8]);
+	cpos[j][9] = std::max(rl, cpos[i][9]);
 	delete[] wbuf;
-	delete[] ibuf;
 	return (maxh.val);
 }
 
@@ -1133,8 +1159,121 @@ eop:
 	return (scr);
 }
 
-VTYPE Aln2b1::lspB_ng(const WINDOW& wdw)  /* recursive */ 
+// multi-intermediate unidirectional Hierschberg menthod
+
+void Aln2b1::mimd_postwork(const Dim10* cpos, const int n_imd)
 {
+const	int	aleft = a->left;
+const	int	bleft = b->left;
+const	int	aexgl = a->inex.exgl;
+const	int	bexgl = b->inex.exgl;
+	a->inex.exgl = b->inex.exgl = 
+	a->inex.exgr = b->inex.exgr = 0;
+	WINDOW	vwdw;
+	int	i = n_imd;
+	while (--i >= 0 && cpos[i][0] == end_of_ulk) ;
+	for ( ; i >= 0 && cpos[i][0] != end_of_ulk; --i) {
+	    int	c = 0;
+	    a->left = cpos[i][c];
+	    b->inex.exgl = cpos[i][++c];
+	    b->left = cpos[i][++c];
+	    if (a->right > a->len || b->right > b->len ||
+		a->left < 0 || b->left < 0) return;	// bad range
+	    SKL	wskl = {a->left};
+	    if (b->left < 0 || b->left > b->right) break;
+	    while (cpos[i][++c] < end_of_ulk) {
+		wskl.n = cpos[i][c];
+		mfd->write((UPTR) &wskl);
+	    }
+	    if (simd) stripe(seqs, &vwdw, alprm.sh);
+	    else {
+		vwdw.lw = cpos[i + 1][8];
+		vwdw.up = cpos[i + 1][9];
+		vwdw.width = vwdw.up - vwdw.lw + 3;
+	    }
+	    trcbkalignB_ng(vwdw);
+	    a->right = a->left;
+	    b->right = cpos[i][c - 1];
+	}
+
+	if ((i < 0 && cpos[0][0] != end_of_ulk) || cpos[0][2] != end_of_ulk) {
+	    a->left = aleft;
+	    b->left = bleft;
+	    a->inex.exgl = aexgl;
+	    b->inex.exgl = bexgl;
+	    if (simd) stripe(seqs, &vwdw, alprm.sh);
+	    else {
+		vwdw.lw = cpos[0][8];
+		vwdw.up = cpos[0][9];
+		vwdw.width = vwdw.up - vwdw.lw + 3;
+	    }
+	    trcbkalignB_ng(vwdw);
+	}
+}
+
+void Aln2b1::rcsv_postwork(const Dim10* cpos)
+{
+	SKL	wskl = {cpos[0][0], 0};
+	a->inex.exgl = b->inex.exgl = 
+	a->inex.exgr = b->inex.exgr = 0;
+	WINDOW	wdw;
+	int	c = 0;
+	if (cpos[0][c++] < end_of_ulk) {	// cross center
+	    while (cpos[0][++c] < end_of_ulk) {
+		wskl.n = cpos[0][c];
+		mfd->write((UPTR) &wskl);
+	    }
+const	    int	aright = a->right;	// reserve
+const	    int	bright = b->right;
+	    a->right = cpos[0][0];
+	    b->right = cpos[0][c - 1];
+	    if (simd)
+		stripe(seqs, &wdw, alprm.sh);
+	    else {
+		wdw.lw = cpos[0][8];
+		wdw.up = cpos[0][9];
+		wdw.width = wdw.up - wdw.lw + 3;
+	    }
+	    lspB_ng(wdw);		// first half
+	    a->left = cpos[0][0];
+	    b->inex.exgl = cpos[0][1];
+	    b->left = cpos[0][2];
+	    a->right = aright;	// recover
+	    b->right = bright;
+	    if (simd)
+		stripe(seqs, &wdw, alprm.sh);
+	    else {
+		wdw.lw = cpos[1][8];
+		wdw.up = cpos[1][9];
+		wdw.width = wdw.up - wdw.lw + 3;
+	    }
+	    lspB_ng(wdw);		// second half
+	} else if (Local) {		// don't cross center
+	    stripe(seqs, &wdw, alprm.sh);
+	    trcbkalignB_ng(wdw);
+	}	// end of cross center
+}
+
+VTYPE Aln2b1::lspB_ng(const WINDOW& wdw)  // recursive 
+{
+#if __SSE4_1__
+#if _SIMD_PP_
+#if __AVX2__
+const	int	nelem = 16;
+#else
+const	int	nelem = 8;
+#endif	// __SIMD_PP_ _AVX2__
+#elif __AVX512BW__
+const	int	nelem = 32;
+#elif __AVX2__
+const	int	nelem = 16;
+#else	// __SSE4_1__
+const	int	nelem = 8;
+#endif	// _SIMD_PP_
+#else	// !__SSE4_1__
+const	int	nelem = 1;
+#endif	// __SSE4_1__
+
 const	int	m = a->right - a->left;
 const	int	n = b->right - b->left;
 	if (!m && !n) return (0);
@@ -1156,26 +1295,34 @@ const	INT	bexgr = b->inex.exgr;	// reserve
 		    pwd->GapExtPen(n): pwd->UnpPenalty(n);
 	}
 	if (wdw.up == wdw.lw) return(diagonalB_ng());
-const	float	k = wdw.lw - b->left + a->right;
-const	float	q = b->right - a->left - wdw.up;
-	float	cvol =  m * n - (k * k + q * q) / 2;
-	if (cvol < MaxVmfSpace || m == 1 || n <= 1)
+	if (abs(n - m) < 8 || m == 1 || n == 1)
 	    return (trcbkalignB_ng(wdw));
+	float	cvol = float(m) * float(n + m);
+const	int	n_imd = recursive? 1:
+		int(std::min(cvol / MaxVmfSpace, float(m) / nelem));
+	if (n_imd == 0) return (trcbkalignB_ng(wdw));
+
+	if (simd < 2) {		// linked list traceback
+const	    float	k = wdw.lw - b->left + a->right;
+const	    float	q = b->right - a->left - wdw.up;
+	    float	cvol =  float(m) * float(n) - (k * k + q * q) / 2;
+	    if (cvol < MaxVmfSpace || m == 1 || n <= 1)
+		return (trcbkalignB_ng(wdw));
+	}
 
 	RANGE	rng[2];			// reserve
 	save_range(seqs, rng, 2);
-	int	cpos[6];
-	VTYPE	scr;
-	WINDOW	wdwf = {INT_MAX};
-	WINDOW	wdwb = {INT_MAX};
-	INT	exgl = bexgl;
+	Dim10*	cpos = new Dim10[n_imd + 1];
+	for (int i = 0; i <= n_imd; ++i)
+	    cpos[i][0] = cpos[i][2] = end_of_ulk;
 
-#if !__SSE4_1__	// scalar version of unidirectional Hirschberg method
-	scr = hirschbergB_ng(cpos, wdw, wdwf, wdwb, exgl);
-#else
-	if (m < 4) scr = hirschbergB_ng(cpos, wdw, wdwf, wdwb, exgl);
-	else {
-	    int	mode = 1 + ((std::max(abs(wdw.lw), wdw.up) < SHRT_MAX)? 0: 4);
+	VTYPE	scr = 0;
+
+#if __SSE4_1__
+
+const	int	mode = 
+	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 2: 4;
+	if (simd) {	// simd version
 #if _SIMD_PP_	// 2B int vectorized unidirectional Hirschberg method
 #if __AVX2__
 	    SimdAln2s1<short, 16, 
@@ -1191,39 +1338,26 @@ const	float	q = b->right - a->left - wdw.up;
 #else	// __SSE4_1__
 	    SimdAln2s1<short, 8, __m128i, __m128i> 
 #endif	// _SIMD_PP_
-		sb1(seqs, pwd, wdw, 0, 0, mode);
-	    scr = sb1.hirschbergS1(cpos, exgl);
-	}
-#endif	// !__SSE4_1__
-	a->inex.exgl = a->inex.exgr = b->inex.exgl = b->inex.exgr = 0;
-	SKL	wskl = {cpos[0], 0};
-	int	c = 0;
-	if (cpos[c] < end_of_ulk) {	// cross center
-	    while (cpos[++c] < end_of_ulk) {
-		wskl.n = cpos[c];
-		mfd->write((UPTR) &wskl);
-	    }
-const	    int	aright = a->right;	// reserve
-const	    int	bright = b->right;
-	    a->right = cpos[0];
-	    b->right = cpos[c - 1];
-	    stripe(seqs, &wdwf, alprm.sh);
-	    wdwf.width = wdwf.up - wdwf.lw + 3;
-	    lspB_ng(wdwf);		// first half
-	    a->left = cpos[0];
-	    b->left = cpos[1];
-	    a->right = aright;		// recover
-	    b->right = bright;
-	    b->inex.exgl = exgl;
-	}
-	stripe(seqs, &wdwb, alprm.sh);
-	wdwb.width = wdwb.up - wdwb.lw + 3;
-	lspB_ng(wdwb);			// second half
+	    sb1(seqs, pwd, wdw, 0, 0, mode);
+	    if (simd == 1)	// observed ILD
+		scr = sb1.hirschbergS1(cpos, n_imd);
+	    else 		// well-shaped ILD
+		scr = sb1.hirschbergS1_wip(cpos, n_imd);
+	} else		// scalar version
+#endif	// __SSE4_1__
+	    scr = hirschbergB_ng(cpos, n_imd, wdw);
+
+	if (recursive)
+	    rcsv_postwork(cpos);	// recursive
+	else
+	    mimd_postwork(cpos, n_imd);	// recurrent
+
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = aexgl;
 	a->inex.exgr = aexgr;
 	b->inex.exgl = bexgl;
 	b->inex.exgr = bexgr;
+	delete[] cpos;
 	return scr;
 }
 
@@ -1501,12 +1635,12 @@ const	Seq*	b = seqs[1];
 	return (alnv.globalB_ng(scr, wdw));
 }
 
-SKL* alignB_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr)
+SKL* alignB_ng(const Seq* seqs[], const PwdB* pwd, Gsinfo* gsi)
 {
 	Aln2b1 alnv(seqs, pwd);
 	WINDOW	wdw;
 	stripe((const Seq**) seqs, &wdw, alprm.sh);
-	return (alnv.globalB_ng(scr, wdw));
+	return (alnv.globalB_ng(&gsi->scr, wdw));
 }
 
 Gsinfo* localB_ng(Seq* seqs[], const PwdB* pwd) {
@@ -1517,7 +1651,7 @@ Gsinfo* localB_ng(Seq* seqs[], const PwdB* pwd) {
 	WINDOW	wdw;
 	stripe((const Seq**) seqs, &wdw, alprm.sh);
 	Seq*	b = seqs[1];
-	int	n = min((int) OutPrm.MaxOut, wl->size());
+	int	n = std::min((int) OutPrm.MaxOut, wl->size());
 	Gsinfo*	mai = new Gsinfo[n + 1];
 	for (Gsinfo* wai = mai; n--; ++wlu, ++wai) {
 	    b->jxt = wlu->jxt;

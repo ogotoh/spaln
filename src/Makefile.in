@@ -1,13 +1,13 @@
 #	Makefile.in for splan/sortgrcd
-#	Copyright(c) Osamu Gotoh <<o.gotoh@asit.go.jp>>
+#	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+
 exec_prefix = /usr/local/bin
 table_dir = /usr/local/bin
 alndbs_dir = /db/seqdb
 CXX  = g++
-CFLAGS = -O3
+#CXX  = clang++
+CFLAGS = -O3 -march=native
 RANLIB = ranlib
-#CXX = clang++
-#CFLAGS = -Wall
 LD  = g++
 AR = ar ru
 DEL = rm -f
@@ -15,27 +15,31 @@ DEFLT = -DM_THREAD=1
 
 CXX := $(CXX) $(CFLAGS) $(DEFLT)
 
-.SUFFIXES: .o .c .cc .h .sh
+.SUFFIXES: .o .cc .h .sh
 
-PROG = spaln sortgrcd makmdm makdbs
+PROG_B = spaln sortgrcd makmdm makdbs
+PROG_A = dvn exinpot kmers npssm rdn utn
+PROG_F = fitild compild decompild plotild
+PROG = $(PROG_B) $(PROG_A) $(PROG_F)
 
 STDH = stdtype.h
-CLIB = clib.a
+CLIB = clib.a -lpthread -lm -lz
 SLIB = sblib.a $(CLIB)
-LLIB = -lpthread -lm -lz
+ULIB = ublib.a $(SLIB)
 
-.c.o:
-	$(CXX) -c $<
+BINDIR = $(DESTDIR)$(exec_prefix)
+TABDIR = $(DESTDIR)$(table_dir)
+DBSDIR = $(DESTDIR)$(alndbs_dir)
+
 .cc.o:
 	$(CXX) -c $<
-
-.c:
-	$(CXX) -o $@ $< $(CLIB)
 
 .cc:
 	$(CXX) -o $@ $< $(CLIB)
 
-all: $(PROG) 
+basis: $(PROG_B)
+
+all: $(PROG)
 
 clean:
 	$(DEL) $(PROG) *.exe
@@ -44,33 +48,35 @@ clear:
 clearall:
 	$(DEL) $(PROG) core *.o *.a *.exe *% *BAK Makefile iolib.h
 
-tar:
-	$(DEL) *.o *.a *% *BAK *~ Makefile iolib.h $(PROG)
-	cd .. ; \
-	Cur=`pwd` ; \
-	Pnm=`basename $$Cur` ; \
-	cd .. ; \
-	tar cvf Sources.tar $$Pnm
-
 install:
-	test -d $(exec_prefix) || mkdir -p $(exec_prefix)
-	cp $(PROG) $(exec_prefix)
-	test -d $(table_dir) || mkdir -p $(table_dir)
-	@if test "$(table_dir)" != "$(PWD)/../table"; then \
-		cp -pfR ../table/* $(table_dir); \
+	test -d $(BINDIR) || mkdir -p $(BINDIR)
+	if [ -s spaln ]; then\
+	    cp $(PROG_B) $(BINDIR); \
 	fi
-	./makmdm $(table_dir)
-	test -d $(alndbs_dir) || mkdir -p $(alndbs_dir)
-	@if test "$(alndbs_dir)" != "$(PWD)/../seqdb"; then \
-		cp -pfR ../seqdb/????* $(alndbs_dir); \
+	if [ -s exinpot ]; then \
+	    cp $(PROG_A) $(BINDIR); \
+	fi
+	if [ -s fitild ]; then \
+	    cp $(PROG_F) $(BINDIR); \
+	fi
+	test -d $(TABDIR) || mkdir -p $(TABDIR)
+	@if test "$(TABDIR)" != "$(PWD)/../table"; then \
+		cp -pfR ../table/* $(TABDIR); \
+	fi
+	./makmdm $(TABDIR)
+	test -d $(DBSDIR) || mkdir -p $(DBSDIR)
+	@if test "$(DBSDIR)" != "$(PWD)/../seqdb"; then \
+		cp -pfR ../seqdb/????* $(DBSDIR); \
 	fi
 
 uninstall uninst:
-	cd $(exec_prefix); rm -f $(PROG)
-	cd $(table_dir); cd ..; rm -fr $(table_dir)
+	cd $(BINDIR)
+	if [ -s spaln ]; then\
+	    rm -f $(PROG_B)
+	cd $(TABDIR); cd ..; rm -fr $(TABDIR)
 
 test:   $(PROG)
-	@if test -r $(table_dir)/mdm_mtx; then \
+	@if test -r $(TABDIR)/mdm_mtx; then \
 	  ./test.sh; \
 	else \
 	   echo "please make install before test"; \
@@ -81,35 +87,71 @@ wc:
 ls:
 	ls $(SRC) $(HDR)
 
-spaln:	spaln.o blksrc.o $(SLIB)
-	$(CXX) -o spaln spaln.o blksrc.o $(SLIB) $(LLIB)
+spaln:	spaln.cc blksrc.o $(SLIB)
+	$(CXX) -o $@ spaln.cc blksrc.o $(SLIB) $(ILIB)
 sortgrcd:	sortgrcd.cc $(SLIB)
-	$(CXX) -o sortgrcd sortgrcd.cc $(SLIB) $(LLIB)
+	$(CXX) -o $@ sortgrcd.cc $(SLIB) $(ILIB)
 makdbs: makdbs.cc dbs.h seq.h bitpat.h $(SLIB)
-	$(CXX) -o makdbs makdbs.cc $(SLIB) $(LLIB)
+	$(CXX) -o $@ makdbs.cc $(SLIB) $(ILIB)
 makmdm: makmdm.cc mdm.h $(CLIB)
-	$(CXX) -o makmdm makmdm.cc $(CLIB) $(LLIB)
+	$(CXX) -o $@ makmdm.cc $(CLIB) $(ILIB)
 
-spaln.o: spaln.cc seq.h aln.h
+dvn:	dvn.cc autocomp.h $(ULIB)
+	$(CXX) -o $@ dvn.cc $(ULIB) $(ILIB)
+exinpot: exinpot.cc codepot.h utilseq.h eijunc.h $(SLIB)
+	$(CXX) -o $@ exinpot.cc $(SLIB) $(ILIB)
+kmers: kmers.cc $(SLIB)
+	$(CXX) -o $@ kmers.cc $(SLIB) $(ILIB)
+npssm:	npssm.cc $(SLIB)
+	$(CXX) -o $@ npssm.cc $(SLIB) $(ILIB)
+rdn:	rdn.cc 	$(ULIB)
+	$(CXX) -o $@ rdn.cc $(ULIB) $(ILIB)
+utn:	utn.o $(ULIB)
+	$(CXX) -o $@ utn.o $(ULIB) $(ILIB)
+
+compild: compild.cc calcserv.h ildpdf.o $(CLIB)
+	$(CXX) -o compild compild.cc ildpdf.o $(CLIB) -lm -lgsl -lgslcblas
+decompild: decompild.o ildpdf.o fitild.o $(CLIB)
+	$(CXX) -o decompild decompild.o ildpdf.o fitild.o $(CLIB) -lgsl -lgslcblas
+fitild: fitild.cc ildpdf.o $(CLIB)
+	$(CXX) -o $@  -DMAIN fitild.cc ildpdf.o $(CLIB) \
+	-L/usr/local/lib -lm -lgsl -lgslcblas
+plotild: plotild.cc ildpdf.o $(CLIB)
+	$(CXX) -o plotild plotild.cc ildpdf.o $(CLIB) -lm -lgsl -lgslcblas
+
+clib.o:		clib.cc		stdtype.h
+iolib.o:	iolib.cc	stdtype.h
+mfile.o:	mfile.cc	stdtype.h
+sets.o:		sets.cc		stdtype.h
+supprime.o:	supprime.cc	stdtype.h
+
+clib.a: clib.o iolib.o mfile.o sets.o supprime.o 
+	$(AR) clib.a clib.o iolib.o mfile.o sets.o supprime.o 
+	$(RANLIB) clib.a
+
+aln2.o:	aln2.cc	seq.h aln.h
 bitpat.o: bitpat.cc bitpat.h
-wln.o:	wln.cc	seq.h	    aln.h	wln.h
-sqpr.o:	sqpr.cc	seq.h		dbs.h
+blksrc.o: blksrc.cc seq.h aln.h utilseq.h blksrc.h
+boyer_moore.o: boyer_moore.h boyer_moore.cc
+codepot.o:	codepot.cc	codepot.h
+dbs.o:	dbs.cc dbs.h $(STDH)
+divseq.o:	divseq.cc	aln.h
+eijunc.o:	eijunc.cc	eijunc.h	seq.h
+fwd2b1.o: fwd2b1.cc aln.h vmf.h wln.h boyer_moore.h udh_intermediate.h \
+	rhomb_coord.h simd_functions.h fwd2s1_simd.h fwd2s1_wip_simd.h
+fwd2d1.o: fwd2d1.cc aln.h vmf.h wln.h boyer_moore.h
+fwd2h1.o: fwd2h1.cc aln.h wln.h vmf.h boyer_moore.h udh_intermediate.h \
+	rhomb_coord.h simd_functions.h fwd2h1_simd.h fwd2h1_wip_simd.h
+fwd2s1.o: fwd2s1.cc aln.h wln.h vmf.h boyer_moore.h udh_intermediate.h \
+	rhomb_coord.h simd_functions.h fwd2s1_simd.h fwd2s1_wip_simd.h
+gaps.o:	    gaps.cc  gaps.h  seq.h
+gsinfo.o:	gsinfo.cc	seq.h
 seq.o:	seq.cc	seq.h		aln.h	dbs.h
 simmtx.o:	simmtx.cc seq.h aln.h mdm.h
+sqpr.o:	sqpr.cc	seq.h		dbs.h
 utilseq.o:	utilseq.cc	seq.h
-codepot.o:	codepot.cc	codepot.h
-aln2.o:	aln2.cc	seq.h		aln.h
-gsinfo.o:	gsinfo.cc	seq.h
 vmf.o:	vmf.cc vmf.h $(STDH)
-dbs.o:	dbs.cc dbs.h $(STDH)
-gaps.o:	    gaps.cc  gaps.h  seq.h
-eijunc.o:	eijunc.cc	eijunc.h	seq.h
-divseq.o:	divseq.cc	aln.h
-fwd2b1.o:	fwd2b1.cc	aln.h	seq.h	codepot.h
-fwd2h1.o:	fwd2h1.cc	aln.h	seq.h	codepot.h
-fwd2s1.o:	fwd2s1.cc	aln.h	seq.h	codepot.h
-fwd2d1.o:	fwd2d1.cc	aln.h	seq.h
-boyer_moore.o: boyer_moore.h boyer_moore.cc
+wln.o:	wln.cc	seq.h	    aln.h	wln.h
 
 sblib.a: aln2.o dbs.o gaps.o  codepot.o divseq.o gsinfo.o \
 	fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o eijunc.o \
@@ -119,15 +161,17 @@ sblib.a: aln2.o dbs.o gaps.o  codepot.o divseq.o gsinfo.o \
 	seq.o simmtx.o sqpr.o utilseq.o vmf.o wln.o boyer_moore.o
 	$(RANLIB) sblib.a
 
-clib.o:		clib.cc		stdtype.h
-iolib.o:	iolib.cc		stdtype.h
-mfile.o:	mfile.cc		stdtype.h
-sets.o:		sets.cc		stdtype.h
-supprime.o:	supprime.cc	stdtype.h
+autocomp.h:	calcserv.h
+autocomp.o: autocomp.cc autocomp.h $(STDH)
+extcds.o: extcds.cc seq.h dbs.h extcds.h
+montseq.o: montseq.cc seq.h
+pattern.o: pattern.cc pattern.h
+resite.o: resite.cc resite.h pattern.h seq.h
 
-clib.a: clib.o iolib.o mfile.o sets.o supprime.o
-	$(AR) clib.a clib.o iolib.o mfile.o sets.o supprime.o
-	$(RANLIB) clib.a
+ublib.a: autocomp.o extcds.o montseq.o pattern.o resite.o
+	$(AR) ublib.a autocomp.o extcds.o \
+	montseq.o pattern.o resite.o
+	$(RANLIB) ublib.a
 
 cmn.h:	$(STDH) 
 	touch cmn.h

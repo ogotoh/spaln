@@ -15,17 +15,18 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-4-7 Aomi, Koutou-ku, Tokyo 135-0064, Japan
 *
-*	Osamu Gotoh, Ph.D.      (2003-2012)
+*	Osamu Gotoh, Ph.D.      (2003-)
 *	Department of Intelligence Science and Technology
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 #ifndef  _CLIB_
 #define  _CLIB_
@@ -177,6 +178,14 @@ template <int n> inline	int modN(int q)
 
 template <class key_t, class val_t>
 struct KVpair {key_t key; val_t val;};
+
+template <class key_t, class val_t>
+struct KVpair_lt {
+	key_t	key;
+	val_t	val;
+	bool	operator<(const key_t& b) const {return (val < b.val);}
+	bool	operator==(const key_t& b) const {return (key == b.key);}
+};
 
 // double hash
 
@@ -449,7 +458,7 @@ public:				// initial data size, ascending order, never replace data
 	val_t	shift();
 	val_t	shift(val_t& x);
 	void	put(const val_t& x, int p = -1);
-	val_t	gettop() {return data[0];}
+	val_t&	gettop() {return data[0];}
 	val_t&	operator[](int i) {return (data[i]);}
 	bool	empty() const{return front == 0;}
 	int	size() const {return front;}
@@ -555,7 +564,7 @@ void PrQueue<val_t>::hsort()	// heap sort data
 	}
 }
 
-// priority queue without hash
+// priority queue with hash
 
 template <typename val_t>
 class PrQueue_wh {
@@ -574,7 +583,7 @@ public:				// initial data size, ascending order, never replace data
 	val_t	shift();
 	val_t	shift(val_t& x);
 	void	put(const val_t& x, int p = -1);
-	val_t	gettop() {return data[0];}
+	val_t&	gettop() {return data[0];}
 	val_t&	operator[](int i) {return (data[i]);}
 	bool	empty() const{return front == 0;}
 	int	size() const {return front;}
@@ -708,7 +717,7 @@ public:
 	val_t	shift(val_t& x);
 	int	shift_idx(int x);
 	void	put(const val_t& x, int p = -1);
-	val_t	gettop() {return data[aidx[0]];}
+	val_t&	gettop() {return data[aidx[0]];}
 	int	gettop_idx() {return aidx[0];}
 	val_t*	gettop_ptr() {return data + aidx[0];}
 	val_t&	operator[](int i) {return (data[aidx[i]]);}

@@ -1,10 +1,31 @@
-# species specific table
+#############################################################################
+#
+#	subroutines for species specific table
+#
+#
+#	Osamu Gotoh, ph.D.      (-2001)
+#	Saitama Cancer Center Research Institute
+#	818 Komuro, Ina-machi, Saitama 362-0806, Japan
+#
+#	Osamu Gotoh, Ph.D.      (2001-2023)
+#	National Institute of Advanced Industrial Science and Technology
+#	Computational Biology Research Center (CBRC)
+#	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
+#
+#	Osamu Gotoh, Ph.D.      (2003-)
+#	Department of Intelligence Science and Technology
+#	Graduate School of Informatics, Kyoto University
+#	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
+#
+#	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+#
+###############################################################################
 
 package	SspTab;
 require	Exporter;
 
 our @ISA = qw(Exporter);
-our @EXPORT = qw(opengnmdb sspopt gnmdb setgnmdb avrintlen dbentry ftable fseqdb);
+our @EXPORT = qw(speccode opengnmdb sspopt gnmdb setgnmdb avrintlen dbentry ftable fseqdb);
 
 my @tabdirs = (".", "$ENV{HOME}/table", $ENV{"ALN_TAB"});
 my @sdbdirs = (".", "$ENV{HOME}/seqdb", $ENV{"ALN_DBS"});
@@ -16,13 +37,31 @@ my $gnmidfn = 8;	# number of letters for identifier
 my $gnmidxe = "_g";	# extention to indicate genomic seq.
 my $qtl3_4 = 100;	# default 3/4 quantile intron length
 
+sub speccode {
+	my $gen = ucfirst(shift);
+	my $spc = lc(shift);
+	my $genus = substr($gen, 0, 4);
+	if (my $ul = 4 - length($genus)) {
+	    $genus .= '_' x $ul;
+	}
+	my $spec = substr($spc, 0, 4);
+	if (my $ul = 4 - length($spec)) {
+	    if ($spec =~ /^sp\./) {$spec = 'spec';}
+	    else {$spec .= '_' x $ul;}
+	}
+	return $genus . $spec;
+}
+
 sub opengnmdb {
 	$cmndbf = shift;
 	return if (%gnm2tab);
 	my $Gnm2Tab;
-	foreach $tabdir (@tabdirs) {
-	    $Gnm2Tab = "$tabdir/gnm2tab";
-	    last if (-s $Gnm2Tab);
+	foreach (@tabdirs) {
+	    $Gnm2Tab = "$_/gnm2tab";
+	    if (-s $Gnm2Tab) {
+		$tabdir = $_;
+		last;
+	    }
 	}
 	open(G2T, $Gnm2Tab) or die "Can't open $Gnm2Tab !\n";
 	while (<G2T>) {
@@ -52,11 +91,17 @@ sub ftable {
 }
 
 sub fseqdb {
-	my $dbidx = shift;
-	$dbidx .= '.idx';
-	foreach my $td (@sdbdirs) {
-	    my $idx = "$td/$dbidx";
-	    return ($td) if (-s $idx);
+	my $fn = shift;
+	if ($fn) {
+	    foreach my $td (@sdbdirs) {
+		my $id = "$td/$fn";
+		return ($id) if (-s $id);
+	    }
+	} else {
+	    for (my $i = 1; $i < @sdbdirs; ++$i) {
+		my $td = $sdbdirs[$i];
+		return "$td/" if (-d $td);
+	    }
 	}
 	return (undef);
 }
@@ -70,7 +115,7 @@ sub avrintlen {
 	if (open(AP, "$tabdir/$spc/AlnParam")) {
 	    while (<AP>) {
 		next unless (/^-yI/);
-		my ($dmy, $avi) = split;
+		(my $dmy, $avi) = split;
 		last;
 	    }
 	    close(AP);

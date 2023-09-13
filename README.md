@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 2.4.13g
-#### Last updated: 2023-08-04
+#### Present Version 3.0.0
+#### Last updated: 2023-08-25
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -25,10 +25,9 @@ From Version 1.4, spaln supports a combination of protein sequence database and
 a given genomic segment. From Version 2.2, spaln also performs rapid similarity
 search and (semi-)global alignment of a set of protein sequence queries against
 a protein sequence database. **Spaln** adopts multi-phase
-heuristics that makes it possible to perform the job on a conventional personal
+heuristics that make it possible to perform the job on a conventional personal
 computer running under Unix/Linux and MacOS with limited memory. The program is
-written in C++ and distributed as source codes and also as executables for a few
-platforms. Unless binaries are not provided, users must compile the program on
+written in C++ and distributed as source codes. Users must compile the program on
 their own system. Although the program has been tested only on a Linux operating
 system, it is likely to be portable to most Unix systems with little or no
 modifications. The accessory program **sortgrcd** sorts the gene loci found
@@ -37,11 +36,21 @@ by **spaln** in the order of chromosomal position and orientation. From version
 'block' files without prior expansion if USE_ZLIB mode is activated upon
 compilation. From version 2.3.2a, compressed query sequence file(s) may also be
 accepted. From version 2.4.0, multiple files corresponding to different output 
-forms can be generated at a single run. 
+forms can be generated at a single run. In version 3.0.0, multi-intermediate 
+unidirectional Hirschberg method is adopted. Together with simd-based vectorization, 
+the new algorithm contributes to considerable acceleration of the DP calculation. 
+In version 3.0.0, a simple script is released to generate [species-specific parameter 
+files](makessp.md) used by **spaln**, when the genomic DNA sequence and a bunch of 
+transcript (cDNA, CDS, EST, TSA) sequences of the cognate species are provided 
+by the user.
+
 
 ## <a name="Inst">Install</a>
 
-To compile the source codes in the default settings, follow the instructions below. When you download the source file in the directory _download_, five directories will be generated under _download/spalnXX/_ after installation, where XX is a version code. We assume _work_ is your workspace, which may or may not be identical to _download_
+To compile the source codes in the default settings, follow the instructions below. 
+When you download the source file in the directory _download_, five directories will 
+be generated under _download/spalnXX/_ after installation, where XX is a version code. 
+We assume _work_ is your workspace, which may or may not be identical to _download_
 
  * bin : binaries
  * doc : documents
@@ -49,7 +58,13 @@ To compile the source codes in the default settings, follow the instructions bel
  * src : source codes
  * table : parameter files used by **spaln**
 
-To modify the location of executables and/or other settings, run 'configure --help' at step 6 below. (**Warning**: Full path name rather than relative path name must be given for executables or other directories as the arguments of the **configure** command.) These locations are hard coded in **spaln**. The locations of the 'seqdb' and 'table' directories will be respectively denoted by _seqdb_ and _table_ below. Hence, _seqdb_=_download/spalnXX/seqdb_, and _table_=_download/spalnXX/table_ in the default settings.
+To modify the location of executables and/or other settings, run 'configure --help' 
+at step 6 below. (**Warning**: Full path name rather than relative path name must 
+be given for executables or other directories as the arguments of the **configure** 
+command.) These locations are hard coded in **spaln**. The locations of the 'seqdb' 
+and 'table' directories will be respectively denoted by _seqdb_ and _table_ below. 
+Hence, _seqdb_=_download/spalnXX/seqdb_, and _table_=_download/spalnXX/table_ in 
+the default settings.
 
 1. `% mkdir download`
 2. `% cd download`
@@ -63,23 +78,32 @@ To modify the location of executables and/or other settings, run 'configure --he
     To use zlib facilities, confirm that libz.* are installed in the load 
     library path.  Then,  
     `% ./configure [other options] --use_zlib=1`  
-7. `% make`
-8. `% make install`
+7. `% make` or  
+8. `% make all` if you want to generate a parameter set for your own species
+9. `% make install`
  Executables are copied to ../bin  
  makmdm program makes mutation data matrices of various PAM levels in the ../table directory
-9. `% make clearall`
-10. Add _download/spalnXX/bin_ to your PATH  
+10. `% make clearall`
+11. Add _download/spalnXX/bin_ to your PATH  
     `% setenv PATH $PATH:download/spalnXX/bin (csh/tsh)`  
     `$ export PATH=$PATH:download/spalnXX/bin (sh/bsh)`  
  Preferably, you may add the above line in your start up rc file (e.g. ~/.bashrc)  
    Alternatively, move or copy _download/spalnXX/bin/\*_ to a directory on your PATH, if you have not specified the location of executables at step 6 above.
-11. If you have changed the location of _table_ and/or _seqdb_ directory after installation, set the env variables ALN_TAB and/or ALN_DBS as follws:
+12. If you have changed the location of _table_ and/or _seqdb_ directory after installation, set the env variables ALN_TAB and/or ALN_DBS as follws:
    * `% setenv ALN_TAB New_Aln_Tab (csh/tsh)`
    * `$ export ALN_TAB=New_Aln_Tab (sh/bsh)`
    * `% setenv ALN_DBS New_Aln_Dbs (csh/tsh)`
    * `$ export ALN_DBS=New_Aln_Dbs (sh/bsh)`  
-    Add the above lines to your rc file, so that you don't have to repeat the commands at every login time.
-12. Proceed to [Format](#Format).
+    Add the above lines to your rc file, so that you don't have to repeat the 
+commands at every login time.
+13. Alternatively, from ver3.0,0, the path to _seqdb_ can be set 
+at the run time of **spaln** without modifying ALN_DBS. Namely, the path may be 
+specified in the argument of -d, -D, -a, or -A option. For example,  
+`% spaln -Q7 -d ~/your_db/your_genome_g ..`.  
+provided that you have already formatted your genomic or database sequences in the 
+directory ~/your_db/.
+  
+14. Proceed to [Format](#Format).
 
 ## <a name="Format">Format</a>
 
@@ -106,15 +130,15 @@ and xxxgnm.bkp (for protein queries) files together with the xxxgnm.idx and asso
 genome size unless explicitly specified (see below).  
  * If *MAX_GENE* (the length of the plausibly longest gene on the genome) is 
 not specified, *MAX_GENE* is also estimated from the genome size.
-  <u>Don't forget to specify *MAX_GENE* if xxxgnm.gf represents only a part of the genome!!</u>  Otherwise, *MAX_GENE* may be seriously underestimated.  
- * Options : (default value)
+  <u>Don't forget to specify *MAX_GENE* if xxxgnm.gf represents only a part of the genome!!</u> Otherwise, *MAX_GENE* may be seriously underestimated.  
+ * Options: (default value)
    * -g: The outputs except for X.grp are gzipped.
    * -o*S*: The outputs are written into directory *S* (current directory).
    * -t*N*: Number of threads. (1)
    * ~~-E: Generate local lookup table.~~
    * -yX:    Format for remote queries (more sensitive but less economic than default)
    * -XA*N*: Alphabet size of the reduced amino acids: 6 < *N* <= 20 (20)
-   * -XB*S*: Bit patterns of the spaced seeds concatenated with commas. The pattern should be asymmetric  when the number of patterns > 2.
+   * -XB*S*: Bit patterns of the spaced seeds concatenated with commas. The pattern should be asymmetric when the number of patterns > 2.
    * -XC*N*: Number of seed patterns: 0 <= *N* <= 5 (0: contiguous seed)
    * -XG*N*: Maximum gene length (inferred from genome size)
    * -Xa*N*: A parameter used to filter excessively abundant words (10)
@@ -140,6 +164,15 @@ the query without prior expansion.
    * In the last case, *prosdb.faa* will be internally formatted, and the formatted results will be discarded after the end of execution.
    * Only a subset of queries may be examined if *query* is replaced with '*query* (from to)' (quotations are necessary), where 'from' and 'to' are the first and last entry numbers in *query* to be examined.  
    * Options: (default value)
+     * -A *N*:  
+
+       * *N*=0,4: Scalar-based DP calculation
+       * *N*=1,5: Simd-based DP calculation with precise intron-length distribution (ILD)
+       * *N*=2,6: Simd-based DP calculation with coarse grained ILD
+       * *N*=3,7: Simd-based DP calculation with flat ILD
+       * *N*=[0-3]: Multiple intermediate unidirectional Hirschberg method
+       * *N*=[4-7]: Single intermediate unidirectional Hirschberg method
+
      * -C *N*:	Use the genetic code specified by the "transl_table number" defined in [NCBI transl_table](http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi) (1).
      * ~~-E: Use local lookup table.~~
      * -H *N*: Output is suppressed if the alignment score is less than *N*. See also -pw. (35)
@@ -208,7 +241,7 @@ or more comment lines starting with ';C', such as
         * *N*=2: Reverse-complement orientation only. Leading polyT sequence may be trimmed off.
         * *N*=3: Examine both orientations. Terminal polyA or polyT sequence may be trimmed off.
      * -T *S*: Specify the species-specific parameter set. *S* corresponds to the subdirectory in the _table_ directory. Alternatively, *S* may be the 1st or the 3rd term in _table/gnm2tab_ file, where the 2nd term on the line indicates the subdirectory.
-     * -V *N*:	Minimum space to induce Hirschberg's algorithm (16M)
+     * -V *N*:	Minimum space to induce Hirschberg's algorithm (32M)
      * -W *S*:	Write block index table to files *S*.bk*x*. if *S* is omitted, the file name (without directory and extension) of the first argument is used as *S*.
      * -g: gzipped output used in combination with -O12 option.
      * -i[a|p]: Input mode with -Q[0<=N<=3].
@@ -220,9 +253,9 @@ or more comment lines starting with ';C', such as
      * -pa*N*:	Terminal polyA or polyT sequence longer than *N* (12) is trimmed off and the orientation is fixed accordingly. If *N* = 0 or empty, these functionalities are disabled.
      * -pF:     Output full Fasta entry name (only the last term separated '|').
      * -pi:	Mark exon-intron junctions by color in the alignment (-O1).
-     * -pj:     Supress splice junction information in output of -O[6|7] option.
-     * -pn:	Prohibit ovewrite of existing output files (ask).
-     * -po:	Allow ovewrite of existing output files (ask).
+     * -pj:     Suppress splice junction information in output of -O[6|7] option.
+     * -pn:	Prohibit overwrite of existing output files (ask).
+     * -po:	Allow overwrite of existing output files (ask).
      * -pq:	Suppress warning messages sent to *stderr*.
      * -pw:	Report result even if alignment score is below threshold value.
      * -px:	Suppress self-comparisons in the execution mode (C) or (D).
@@ -232,10 +265,11 @@ or more comment lines starting with ';C', such as
      * -xB *S*: 	Bit pattern of seeds used for HSP search at level 1
      * -xb *S*:	Bit pattern of seeds used for HSP search at level 3
      * -ya *N*:	Dinucleotide pairs at the ends of an intron (0)
-        * *N*=0: Accept only the canonical pairs (GT..AG,GC..AG,AT..AC)
+        * *N*=0: accept only the canonical pairs (GT..AG,GC..AG,AT..AC)
         * *N*=1: accept also AT..AN
         * *N*=2: allow up to one mismatch from GT..AG
         * *N*=3: accept any pairs. An omission of *N* implies *N* = 3
+     * -yd *N*: Minimum terminal desert (nohit) region to give up detailed alignment (150)
      * -yi *N*:	Intron penalty (11, 8, 11)
      * -yj *N*:	Incline of long gap penalty (0.6)
      * -yk *N*:	Flex point where the incline of gap penalty changes (7)
@@ -255,6 +289,7 @@ or more comment lines starting with ';C', such as
      * -yJ *N*:	Relative contribution of the bonus given
       to a conserved intron position (10)
      * -yL *N*:	Minimum intron length (30, 30)
+     * -yQ *N*: Number of categories of coarse grained ILD (5)
      * -yS *N*:	*N* specifies the percentile
       contribution of the species-specific splice signal. The other part is
       derived from the universal signal given to the dinucleotides at the ends
@@ -263,7 +298,7 @@ or more comment lines starting with ';C', such as
       *N* = 1: set parameter values for cross-species comparison. The default value for *N* is 0 or 1 for DNA or protein query, respectively.
      * -yY *N*:	Relative contribution of length-dependent part of intron penalty (8)
      * -yZ *N*:	Relative contribution of oligomer composition within an intron (0)
-     * -XS: Activete salvage mode. Considerably slow.
+     * -XS: Activate salvage mode. Considerably slow.
 
 5. **Sortgrcd**
   * **Sortgrcd** is used to recover the output of **spaln** with -O12 option, to apply some filtering, and also to rearrange the output of multiple **spaln** runs.
@@ -280,8 +315,10 @@ or more comment lines starting with ';C', such as
     * -V _N_: Internal memory size used for core sort. If the
 	     data size is greater than *N*, the sorting procedure will be
 	     done in pieces.
+    * -d _S_:	Specify the directory/genome_id (inferred from input)
     * -m _N_:	Maximum number of mismatches within 20 bp from the nearest exon-intron boundary
     * -n _N_:	Maximum number of non-canonical (other than GT..AG, GC..AG, AT..AC) intron ends
+    * -o _S_:	Output file (stdout)
     * -u _N_:	Maximum number of unpaired (gap) sites within 20 bp from the nearest exon-intron boundary
   * By default, no filter listed above is applied.
   * When the output of **spaln** is separated into several files, the combined
@@ -297,31 +334,42 @@ on the same strand.
 
 
 ## <a name="Exam">Example</a>
-  * To experience the flow of procedures with the samples in _seqdb_, type in the following series of commands after moving to _seqdb_.
+  * To experience the flow of procedures with the samples in _seqdb_, type in the 
+following series of commands after moving to _seqdb_.
 ```
+    % spaln -W -KD [-g] [-t4] dictdisc_g.gf.gz
     % make dictdisc.cf
-    % make dictdisc.faa
-    % make dictdisc_g.gf
-    % perl makeidx.pl -inp dictdisc_g.gf
     % make dictdisc.srd
+
+    % spaln -W -KP [-g] [-t4] dictdisc_g.gf.gz
+    % make dictdisc.faa
     % make dictdisc.spn
-```
-  * Alternatively, you may try below if USE_ZLIB is activated..
-```
-    % perl makeidx.pl -inp [-g] dictdisc_g.gf.gz
-    % spaln -Q7 -d dictdisc_g -T dictdisc [-t10] dictdisc.faa.gz
-    % spaln -Q7 -d dictdisc_g -yS -T dictdisc -O12 -g [-t10] dictdisc.cf.gz
-    % sortgrcd -O15 -F2 dictdisc.grd.gz
 ```
 
 ## <a name="Changes">Changes from previous version</a>
-## Changes in version 2.4.13g.
-1. Fix a minor bug concerning with coordinates of HSPs.
-2. With a protein query and -LS option, include the termination codon when 
-alignment reaches near the C-terminal end.
+## Changes in version 3.0.0
+1. New script ['make_ssp.pl'](makessp.md) generates species-specific parameter 
+files used by **spaln**, when the genomic DNA sequence and a bunch of transcript 
+sequences of the same species are provided.
+2. Multiple intermediate unidirectional Hirschberg method has been introduced, with
+which calculation time of large DP is nearly halved with a moderate increase in memory 
+compared with the conventional single intermediate unidirectional Hirschberg method.
+3. Add -A[0-7] option to select scalar- or simd-based DP engine. At present SSE4.1/AVX, 
+AVX2, and AVX512 instructions are supported, which are automatically chosen at the 
+compile time with -march=native command line option. However, AVX512 instructions have 
+not been tested on a real machine. Note that if the argument is not a digit in [0,7], 
+it specifies the amino acid sequence database as ordinarily.
+4. With -LS option, suppress outputs of weak or non-similar regions more extensively 
+than earlier.
+5. Without -LS option and at the lowest level of recursion, if no further anchor is 
+found for a terminal query region longer than a certain threshold, detailed alignment 
+for that 'desert' region is given up. The threshold value can be reset by -yd**n** 
+option. To disable this convention, set -yd0.
+6. The path to _seqdb_ can be specified at the run time of **spaln** in the 
+argument of -d, -D, -a, or -A option [Install 13.](#Inst). 
 
 ## Changes in version 2.4.13f.
-1. Add -pF option to output full Fasta entry name. By defult, if the entry name is 
+1. Add -pF option to output full Fasta entry name. By default, if the entry name is 
 separated by vertical bar(s) '|', only the last term is shown.
 
 ## Changes in version 2.4.13e.
@@ -332,13 +380,13 @@ separated by vertical bar(s) '|', only the last term is shown.
 2. Fix a small bug concerning with unidirectional Hirschberg method.
 
 ## Changes in version 2.4.13c.
-1. Fix aditional bugs concerning with unidirectional Hirschberg method with -LS option.
+1. Fix additional bugs concerning with unidirectional Hirschberg method with -LS option.
 
 ## Changes in version 2.4.13b.
-1. Fix a few aditional bugs concerning with unidirectional Hirschberg method with -LS option.
+1. Fix a few additional bugs concerning with unidirectional Hirschberg method with -LS option.
 
 ## Changes in version 2.4.13a.
-1. Fix a few aditional bugs concerning with unidirectional Hirschberg method.
+1. Fix a few additional bugs concerning with unidirectional Hirschberg method.
 
 ## Changes in version 2.4.13.
 1. Fix a few bugs concerning with unidirectional Hirschberg method.
@@ -445,7 +493,7 @@ A space-efficient and accurate method for mapping and aligning cDNA sequences on
 Direct mapping and alignment of protein sequences onto genomic sequence. *Bioinformatics* **24** (21) 2438-2444 (2008).
 
 <a name="Ref3">[[3]](http://nar.oxfordjournals.org/content/40/20/e161) Iwata, H. and Gotoh, O.
-Benchmarking spliced alignment programs including  Spaln2, an extended version of Spaln that incorporates additional species-specific features. *Nucleic Acids Research* **40** (20) e161 (2012)
+Benchmarking spliced alignment programs including Spaln2, an extended version of Spaln that incorporates additional species-specific features. *Nucleic Acids Research* **40** (20) e161 (2012)
 
 <a name="Ref4">[[4]](https://doi.org/10.1093/bioinformatics/16.3.190) Gotoh, O.
 Homology-based gene structure prediction: simplified matching algorithm using a translated codon (tron) and improved accuracy by allowing for long gaps. *Bioinformatics* **16** (3) 190-202 (2000)

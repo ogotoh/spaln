@@ -11,7 +11,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -21,7 +21,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #include <math.h>
@@ -60,6 +61,7 @@ static	double	normlz(double h[][AAS], double fact);
 static	void	makmdm(FILE* fs, FILE* fd, double a[20][20], double comp[20]);
 static	void	mkmdmpwr(FILE* fd, double a[20][20]);
 static	void	exp_qdt(double a[20][20], double comp[20], double dt, int m);
+extern	int	main(int argc, char** argv);
 
 static void usage()
 {
@@ -990,7 +992,9 @@ static void mkmdmpwr(FILE* fd, double a[20][20])
 	}
 }
 
-int main(int argc, const char** argv)
+#define fopentab(path, fname, mode) fopenpbe(path, fname, 0, mode, 1)
+
+int main(int argc, char** argv)
 {
 	int	vt = 0;
 	double	a[20][20];
@@ -1037,18 +1041,18 @@ static	struct wmode wmd = {1, 1, 0, 0};
 	FILE*	fs = 0;
 	FILE*	fd = 0;
 	if (wmd.cmp) {
-	    fd = fopenpbe(fn, mdm_cmp, 0, "wb", 1);
+	    fd = fopentab(fn, mdm_cmp, "wb");
 	    fwrite(comp, sizeof(double), 20, fd);
 	    fclose(fd);
 	    fd = 0;
 	}
-	if (wmd.tab) fs = fopenpbe(fn, mdm_tab, 0, "wb", 1);
-	if (wmd.lud) fd = fopenpbe(fn, mdmld_tab, 0, "wb", 1);
+	if (wmd.tab) fs = fopentab(fn, mdm_tab, "wb");
+	if (wmd.lud) fd = fopentab(fn, mdmld_tab, "wb");
 	makmdm(fs, fd, a, comp);
 	if (fs) fclose(fs);
 	if (fd) fclose(fd);
 	if (wmd.pwr) {
-	    fd = fopenpbe(fn, mdmpwr_tab, 0, "wb", 1);
+	    fd = fopentab(fn, mdmpwr_tab, "wb");
 	    mkmdmpwr(fd, b);
 	    fclose(fd);
 	}

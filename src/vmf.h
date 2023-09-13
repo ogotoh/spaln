@@ -6,7 +6,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -16,14 +16,15 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #ifndef _VMF_H_
 #define _VMF_H_
 
 static	const	int	VMFBLKSIZE = 7680;
-static	const	int	DefMaxVMF = 16 * 1024 * 1024;
+static	const	int	DefMaxVMF = 32 * 1024 * 1024;
 
 extern	int	MaxVmfSpace;
 extern	void	setVmfSpace(int spc);

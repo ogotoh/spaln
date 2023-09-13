@@ -6,7 +6,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -16,7 +16,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #ifndef _UTILSEQ_H_
@@ -160,7 +161,7 @@ const	    Iefp	iefp = static_cast<Iefp>(exin);
 	float*	calcScr(const Seq* sd, float* scr = 0) const {
 	    return ((nphase == 1)? calcScr_1(sd, scr): calcScr_3(sd, scr));
 	}
-	VTYPE	intpot(const EXIN* b5,const  EXIN* b3) const;
+	VTYPE	intpot(const SGPT6* b5,const  SGPT6* b3) const;
 	VTYPE	avrpot(float f = 1.) const {return (VTYPE) (f * avpot);}
 	VTYPE	self_score() const {return (ess);}
 };

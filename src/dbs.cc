@@ -2,11 +2,11 @@
 *
 *	Type definitions for various database formats
 *
-**	Osamu Gotoh, ph.D.	(-2001)
+*	Osamu Gotoh, ph.D.	(-2001)
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -16,7 +16,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #include "seq.h"
@@ -460,15 +461,24 @@ char* path2dbf(char* str, const char* fn, const char* ext)
 	strcpy(extgz, ext);
 	strcat(extgz, gz_ext);
 #endif
-	for (int i = 0; i < 3; ++i) {
-	    const char*	path = dbstab[i];
+	char	buf[LINE_MAX];
+	char*	form = strcpy(buf, fn);
+const	char*	path = 0;
+	char*	sls = strrchr(buf, '/');
+	if (sls) {
+	    *sls = '\0';
+	    form = sls + 1;
+	    path = buf;
+	}
+	for (int i = 0; i < 4; ++i) {
+	    if (i) path = dbstab[i - 1];
 	    if (!path) continue;
-	    if (FILE* fd = fopenpbe(path, fn, ext, "r", -1, str)) {
+	    if (FILE* fd = fopenpbe(path, form, ext, "r", -1, str)) {
 		fclose(fd);
 		return (str);
 	    }
 #if USE_ZLIB
-	    if (FILE* fd = fopenpbe(path, fn, extgz, "r", -1, str)) {
+	    if (FILE* fd = fopenpbe(path, form, extgz, "r", -1, str)) {
 		fclose(fd);
 		return (str);
 	    }
@@ -501,8 +511,17 @@ static 	const	char	openmsg[] =
 	} else		curdb = SeqDBs + FASTA;
 
 	if (curdb->DbName) form = curdb->DbName;
-	for (int i = 0; i < 3; ++i) {
-	    const	char*	path = dbstab[i];
+
+const	char*	path = 0;
+	if (form != buf) strcpy(buf, form);
+	char* sls = strrchr(buf, '/');
+	if (sls) {
+	    *sls = '\0';
+	    form = sls + 1;
+	    path = buf;
+	}
+	for (int i = 0; i < 4; ++i) {
+	    if (i) path = dbstab[i - 1];
 	    if (!path) continue;
 
 // read "grp" file

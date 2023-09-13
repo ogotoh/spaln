@@ -10,7 +10,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -20,7 +20,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #include "aln.h"
@@ -146,6 +147,7 @@ class Sortgrcd {
 	INT	ngrcd;		// total # of G-record
 	INT	nercd;		// total # of E-record
 	INT	nchr;		// total # of chromosomes
+	INT	HashSize = 1033;
 	GERecN*	nrcd;		// [argc]
 	GRFn*	grcd;		// [ngrcd]
 	ExonRecord*	ercd;	// 
@@ -157,7 +159,7 @@ template <typename file_t>
 			GRFn* frcd, INT grn, INT fn);
 public:
 	void	printGrcd();
-	void	readGrcd(int ac, const char** av, INT hashsize);
+	void	readGrcd(int ac, const char** av);
 	ExonRecord* ReadRcd(int ac, const char** av);
 	ExonRecord* ReadChrRcd(int ac, const char** av, INT nercd, GRFn* frcd, INT grn);
 	void	print_cds(GeneRecord* gwrk, RANGE* exon, const char* rname);

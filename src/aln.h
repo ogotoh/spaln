@@ -7,7 +7,7 @@
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
-*	Osamu Gotoh, Ph.D.	(2001-)
+*	Osamu Gotoh, Ph.D.	(2001-2023)
 *	National Institute of Advanced Industrial Science and Technology
 *	Computational Biology Research Center (CBRC)
 *	2-41-6 Aomi, Koutou-ku, Tokyo 135-0064, Japan
@@ -17,7 +17,8 @@
 *	Graduate School of Informatics, Kyoto University
 *	Yoshida Honmachi, Sakyo-ku, Kyoto 606-8501, Japan
 *
-*	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
+*	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
+*
 *****************************************************************************/
 
 #ifndef	_ALBH_
@@ -332,16 +333,18 @@ extern	VTYPE	selfAlnScr(const Seq* sd, const Simmtx* sm);
 extern	int	prePwd(int molc, bool use_mdm = false);
 extern	int	prePwd(const Seq* sd, bool use_mdm = false);
 extern	int	prePwd(const Seq** seqs, bool use_mdm = false);
-extern	void	stripe(const Seq* seqs[], WINDOW* wdw, int sh);
-extern	void	stripe31(const Seq* seqs[], WINDOW* wdw, int shld);
+extern	void	stripe(const Seq* seqs[], WINDOW* wdw, int sh, 
+	const int& cmode = 3);
+extern	void	stripe31(const Seq* seqs[], WINDOW* wdw, int shld,
+	const int& cmode = 3);
 extern	Seq*	synthseq(Seq* c, const Seq* a, const Seq* b, const SKL* skl);
 
 extern	VTYPE	HomScoreB_ng(const Seq* seqs[], const PwdB* pwd);
 extern	VTYPE	HomScoreH_ng(const Seq* seqs[], const PwdB* pwd);
 extern	VTYPE	HomScoreS_ng(const Seq* seqs[], const PwdB* pwd);
-extern	SKL*	alignB_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr);
-extern	SKL*	alignH_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr);
-extern	SKL*	alignS_ng(Seq* seqs[], const PwdB* pwd, VTYPE* scr, int ori = 3);
+extern	SKL*	alignB_ng(const Seq* seqs[], const PwdB* pwd, Gsinfo* gsi);
+extern	SKL*	alignH_ng(const Seq* seqs[], const PwdB* pwd, Gsinfo* gsi);
+extern	SKL*	alignS_ng(Seq* seqs[], const PwdB* pwd, Gsinfo* gsi, int ori = 3);
 extern	SKL*	nogap_skl(const Seq* a, const Seq* b = 0);
 extern	VTYPE	skl_rngB_ng(const Seq* seqs[], Gsinfo* gsi, const PwdB* pwd);
 extern	VTYPE	skl_rngH_ng(const Seq* seqs[], Gsinfo* gsi, const PwdB* pwd);
