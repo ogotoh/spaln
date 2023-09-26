@@ -393,7 +393,7 @@ const	INT53	zero53 = {0, 0, 0, 0};
 	}
 	intron53_c();
 	if (data_n)	intron53_n();
-	else		intron53_p();
+	else		intron53_p(pwd->DvsP != 3);
 }
 
 STYPE Exinon::sig53(int m, int n, INTENDS c) const
@@ -521,7 +521,7 @@ const	float	fs = fS * alprm2.sss;
 	delete[] pref5; delete[] pref3;
 }
 
-void Exinon::intron53_p()
+void Exinon::intron53_p(const bool dvsp)
 {
 	FTYPE	fE = alprm2.z * fact;
 	FTYPE	fI = alprm2.Z * fact;
@@ -535,9 +535,9 @@ void Exinon::intron53_p()
 	STYPE	thB = (STYPE) (pwd->eijpat->tonicB);
 	float*	pref5 = pwd->eijpat->pattern5? pwd->eijpat->pattern5->calcPatMat(sd): 0;
 	float*	pref3 = pwd->eijpat->pattern3? pwd->eijpat->pattern3->calcPatMat(sd): 0;
-	float*	prefS = (sd->inex.sigs && pwd->eijpat->patternI)?
+	float*	prefS = (dvsp && pwd->eijpat->patternI)?
 		pwd->eijpat->patternI->calcPatMat(sd): 0;
-	float*	prefT = (sd->inex.sigt && pwd->eijpat->patternT)?
+	float*	prefT = (dvsp && pwd->eijpat->patternT)?
 		pwd->eijpat->patternT->calcPatMat(sd): 0;
 	float*	prefB = pwd->eijpat->patternB? pwd->eijpat->patternB->calcPatMat(sd): 0;
 	float*	prefE = pwd->codepot? pwd->codepot->calcScr(sd): 0;
@@ -640,7 +640,7 @@ const	INT53	zero53 = {0, 0, 0, 0};
 	}
 	intron53_c();
 	if (data_n)	intron53_n();
-	else		intron53_p();
+	else		intron53_p(pwd->DvsP != 3);
 	sd->restrange(&rng);
 }
 

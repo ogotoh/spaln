@@ -844,7 +844,7 @@ const	SGPT6*	bb = b->exin->score_p(rw + m3 - 2);
 		    trb->to_right(rowM);
 		}
 	    }
-	} else if (b->inex.sigt) {
+	} else {
 	    bb += h9 - h;
 const	    VTYPE	y = h9[-3] + bb->sigT;
 	    if (y > *h9) {

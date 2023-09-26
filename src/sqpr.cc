@@ -493,8 +493,8 @@ const	char*	ltype;
 const	char*	fmt3;
 static	int	Gff3MID = 0;
 static	int	Gff3CID = 0;
-static	const	char*	fmt3g = "ID=gene%05d;Name=%s\n";
-static	const	char*	fmt3m = "ID=mRNA%05d;Parent=gene%05d;Name=%s\n";
+static	const	char*	fmt3g = "ID=gene%05d;Name=%s;Target=%s\n";
+static	const	char*	fmt3m = "ID=mRNA%05d;Parent=gene%05d;Name=%s;Target=%s\n";
 static	const	char*	fmt3c = "ID=%s%05d;Parent=mRNA%05d;Name=%s;";
 static	const	char*	fmt3t = "Target=%s %d %d %c\n";
 
@@ -519,10 +519,10 @@ static	const	char*	fmt3t = "Target=%s %d %d %c\n";
 	if (rvg == '-') swap(l, r);
 	fprintf(fd, fmt3n, (*gene->sname)[0], "gene", l, r, 
 	    (int) (scr / alprm.scale), rvg);
-	fprintf(fd, fmt3g, Gff3MID, mname);
+	fprintf(fd, fmt3g, Gff3MID, mname, (*qry->sname)[0]);
 	fprintf(fd, fmt3n, (*gene->sname)[0], "mRNA", l, r, 
 	    (int) (scr / alprm.scale), rvg);
-	fprintf(fd, fmt3m, Gff3MID, Gff3MID, mname);
+	fprintf(fd, fmt3m, Gff3MID, Gff3MID, mname, (*qry->sname)[0]);
 
 	wkr = rng;
 	prv = ++wsk;

@@ -123,7 +123,7 @@ public:
 		{return (data_p && begin_p() <= bb && bb < end_p());}
 	void	intron53_c();
 	void	intron53_n();
-	void	intron53_p();
+	void	intron53_p(const bool dvsp);
 	void	resize();
 };
 

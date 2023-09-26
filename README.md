@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.0
-#### Last updated: 2023-08-25
+#### Present Version 3.0.1
+#### Last updated: 2023-09-26
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -347,6 +347,11 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.1
+1. A bug is fixed to correctly evaluate translational initiation and termination
+signals in genome mapping mode (-Q[4-7]) with protein queries.
+2. Gff output format (-O0) is slightly modified.
+
 ## Changes in version 3.0.0
 1. New script ['make_ssp.pl'](makessp.md) generates species-specific parameter 
 files used by **spaln**, when the genomic DNA sequence and a bunch of transcript 

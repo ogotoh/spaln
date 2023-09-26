@@ -145,8 +145,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "3.0.0";
-static	const	int	date = 230912;
+static	const	char*	version = "3.0.1";
+static	const	int	date = 230925;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -830,7 +830,7 @@ static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q)
 	RANGE	frng = {INT_MAX, 0};
 	Seq*&	a = sqs[0];
 	Seq*&	b = sqs[1];
-	int	b_intr = b->inex.intr;
+const	int	b_intr = b->inex.intr;
 
 	if (gsquery) {
 	    a->saverange(&grng);
@@ -1000,6 +1000,7 @@ static SrchBlk* getblkinf(Seq* sqs[], const char* dbs, MakeBlk* mb)
 	int	ap = a->isprotein();
 	int	bp = mb? mb->dbsmolc() == PROTEIN: ((dbs && (dbs == aadbs))? 1: b->isprotein());
 	char	str[LINE_MAX];
+	int	dvsp = 0;
 
 	if (genomedb) {
 	    b->inex.molc = DNA;
@@ -1039,7 +1040,7 @@ static SrchBlk* getblkinf(Seq* sqs[], const char* dbs, MakeBlk* mb)
 	    std::swap(sqs[0], sqs[1]);
 	    std::swap(ap, bp);
 	}
-	makeWlprms(prePwd((const Seq**) sqs));
+	makeWlprms((dvsp = prePwd((const Seq**) sqs)));
 	if (!ReadBlock && dbs) {
 	    const char*	ext = 0;
 	    switch (QRYvsDB) {
@@ -1059,6 +1060,7 @@ static SrchBlk* getblkinf(Seq* sqs[], const char* dbs, MakeBlk* mb)
 	if ((QRYvsDB == CvsC || QRYvsDB == FvsG) && algmode.mns != 2) algmode.mns = 1;
 	SrchBlk* bks = dbs? new SrchBlk(sqs, ReadBlock, genomedb):
 		new SrchBlk(sqs, mb, b->inex.intr);
+	bks->pwd->DvsP = dvsp;
 	if (MinQueryLen == 0) MinQueryLen = bks->MinQuery();
 	if (algmode.mlt == 1) MinSegLen = MinQueryLen;
 	if (ap) q_mns &= ~2;
@@ -1129,13 +1131,12 @@ static void genomicseq(Seq** sqs, PwdB* pwd, int ori)
 static void spaln_job(Seq* sqs[], void* prm, ThQueue* q)
 {
 	Seq*&	a = sqs[0];
-	Seq*&	b = sqs[1];
 	PwdB*	pwd = (PwdB*) prm;
+
 	a->inex.intr = (gsquery)? algmode.lsg: 0;
 	if (a->isdrna() && !gsquery && q_mns)	 	// cDNA
 	    a->inex.ori = polyA.rmpolyA(a, a->sigII? 1: q_mns);
 	else	a->inex.ori = q_mns? q_mns: 3;
-	if (pwd->DvsP != 3)	b->inex.sigs = b->inex.sigt = 1;
 	if (algmode.crs) Wlp	wlp(sqs);		// mask low ic region
 	if (algmode.blk) (void) quick4(sqs, (SrchBlk*) prm, q);
 	else	match_2(sqs, pwd, q);

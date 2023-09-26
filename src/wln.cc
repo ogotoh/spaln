@@ -242,10 +242,8 @@ Wlp::Wlp(Seq* seqs[]) :
 	if (masked) {
 	    if (masked->left > a->right - masked->right) {
 		a->right = masked->left;
-		b->inex.sigt = 0;
 	    } else {
 		a->left = masked->right;
-		b->inex.sigs = 0;
 	    }
 	}
 	delete[] cnt;

@@ -171,8 +171,6 @@ mutable	INT	exgr:	2;
 	INT	sshp:	1;
 	INT	cmps:	1;
 	INT	vtwt:	1;
-	INT	sigs:	1;	// use translational start signal
-	INT	sigt:	1;	// use translational termination  signal
 };
 
 struct JUXT {
