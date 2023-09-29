@@ -2424,7 +2424,8 @@ const	CHAR*	bs = b->at(y + 1);
 		skl.n = y + 3;
 	    }
 	    if (bb->sigT > 0 || scr + pwd->Vthr < 0) break;
-	    if (x++ < a->len) {
+	    if (x < a->len) {
+		++x;
 		scr += pwd->simmtx->mtx[*as++][*bs];
 		bs += 3;
 	    }
