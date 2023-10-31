@@ -117,7 +117,7 @@ class	ThQueue;
 #endif	// M_THREAD
 
 static	void	usage(const char* messg);
-static	int	getoption(int argc, const char** argv);
+static	int	getoption(int argc, const char** argv, const int visit = 0);
 static	void	readargs();
 static	RANGE*	skl2exrng(SKL* skl);
 static	int	spalign2(Seq* sqs[], PwdB* pwd, Gsinfo* GsI, int ori = 1);
@@ -145,8 +145,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "3.0.1a";
-static	const	int	date = 230929;
+static	const	char*	version = "3.0.2";
+static	const	int	date = 231031;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -245,7 +245,7 @@ const	char*	arch = "";
 	exit(1);
 }
 
-static int getoption(int argc, const char** argv)
+static int getoption(int argc, const char** argv, const int visit)
 {
 const	char**	argbs = argv;
 	DbsDt**	dbs = dbs_dt;
@@ -479,7 +479,6 @@ const	    char*	val = argv[0] + 2;
 		case 'T':
 		    if ((val = getarg(argc, argv)))
 			ftable.setpath(val, gnm2tab);
-		    readargs();
 		    break;
 		case 'u': case 'v': case 'w': 
 		    readalprm(argc, argv); break;
@@ -507,6 +506,7 @@ const	    char*	val = argv[0] + 2;
 	    }
 	    if (*dbs && (dbs + 1 < dbs_dt + MAX_DBS)) ++dbs;
 	}
+	if (visit == 0) readargs();
 	return (argv - argbs);
 }
 
@@ -544,7 +544,7 @@ const	char*	argv[MAX_ARGS];
 	}
 readend:
 	fclose(fd);
-	getoption(argc, argv);
+	getoption(argc, argv, 1);
 }
 
 void AlnOutModes::alnoutput(Seq** sqs, Gsinfo* GsI)

@@ -404,6 +404,7 @@ const	    int j8 = j9 - 1;
 	    int	r = n - 3 * mp1;
 	    int	donor_r[3] = {r, r, r};
 	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * Nelem);
+	    vec_clear(hb_a[0], 12 * Np1 + 3 * Nelem);
 	    vec_clear(sm_a, 28 * Np1);
 const	    bool	is_imd_ = ml == mm;
 

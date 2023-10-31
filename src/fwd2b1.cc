@@ -1112,7 +1112,7 @@ VTYPE Aln2b1::trcbkalignB_ng(const WINDOW& wdw)
 #else
 const	int	nelem = 8;
 const	int	m = a->right - a->left;
-	if (m < nelem) scr = forwardB_ng(wdw, ptr);
+	if (simd == 0 || m < nelem) scr = forwardB_ng(wdw, ptr);
 	else {
 	    float	cvol = wdw.lw - b->left + a->right;
 	    cvol =  (float) (a->right - a->left) * (b->right - b->left)

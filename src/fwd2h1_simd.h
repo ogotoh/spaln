@@ -943,6 +943,7 @@ const	    int	n9 = std::min(b->right, wdw.up + 3 * (ml + j9) + 1) + 3 * j9;
 const	    int	mp1 = ml + 1;
 	    int	q = (n + 3 * mp1) % 6;
 	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * Nelem);	// [hv_a..fv_a]
+	    vec_clear(hb_a[0], 12 * Np1 + 3 * Nelem);
 	    vec_clear(ps_a[0], 6 * Nelem);	// ps_a, pv_a
 	    vclear(sm_a, 4 * Np1);
 	    if (spj) {
@@ -1235,6 +1236,7 @@ const	    int j8 = j9 - 1;
 	    int	q = modN<6>(n + 3 * mp1);
 	    int	r = n - 3 * mp1;
 	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * Nelem);	// [hv_a..fv_a]
+	    vec_clear(hb_a[0], 12 * Np1 + 3 * Nelem);
 	    vec_clear(ps_a[0], 6 * Nelem);	// ps_a, pv_a
 	    vclear(sm_a, 4 * Np1);
 const	    bool	is_imd_ = ml == mm;

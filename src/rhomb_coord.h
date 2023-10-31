@@ -103,6 +103,7 @@ public:
 		    cur_n = n += s;
 		    return (0);
 		} else if (n < 0) {
+		    if (s > 0) cur_m = m -= n / s;
 		    cur_n = n = 0;
 		    return (0);
 		}

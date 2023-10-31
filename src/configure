@@ -1,43 +1,31 @@
-#!/bin/bash
-# configure script for spaln
+#!/bin/sh
+# configure script for aln
 #
 # To impose specific compiler or flags or install directory, use for example:
-#    exec_prefix=$HOME CXX=g++ CFLAGS="-O3" ./configure
+#    exec_prefix=$HOME CXX=g++ CFLAGS="-O4" ./configure
 # or for csh/tcsh users:
-#    (setenv exec_prefix $HOME; setenv CXX g++; setenv CFLAGS "-O3"; ./configure)
-#	Copyright(c) Osamu Gotoh <<o.gotoh@aist.go.jp>>
-
-#for debug uncomment following 4 lines
-#exec 5> debug_output.txt
-#BASH_XTRACEFD="5"
-#PS4='$LINENO: '
-#set -x
+#    (setenv exec_prefix $HOME; setenv CXX g++; setenv CFLAGS "-O4"; ./configure)
 
 VER=`sed -n -e '/VERSION "/s/.*"\(.*\)".*/\1/p' < iolib.src`
 AR=${AR-"ar rc"}
 RANLIB=${RANLIB-"ranlib"}
-exec_prefix=${exec_prefix-${PWD}/../bin}
-table_dir=${table_dir-${PWD}/../table}
-alndbs_dir=${alndbs_dir-${PWD}/../seqdb}
-use_zlib=1
-LLIB="-lpthread -lm"
-DEFLT="-Wall -DM_THREAD=1"
+exec_prefix=${exec_prefix-${HOME}/bin}
+table_dir=${table_dir-${HOME}/table}
+alndbs_dir=${alndbs_dir-${HOME}/seqdb}
 
 while test $# -ge 1
 do
 case "$1" in
     -h* | --h*)
       echo 'usage:'
-      echo '  configure [--exec_prefix=EXPREFIX] [--table_dir=TBLDIR] [--alndbs_dir=ALN_DBS] [--use_zlib=1]'
+      echo '  configure [--exec_prefix=EXPREFIX] [--table_dir=TBLDIR] [--alndbs_dir=ALN_DBS]'
         exit 0;;
     -e*=* | --e*=*) exec_prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
     -t*=* | --table_dir=*) table_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
     -d*=* | --alndbs_dir=*) alndbs_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
-    -z*=* | --use_zlib=*) use_zlib=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
     -e* | --e*) exec_prefix="$2"; shift; shift;;
     -t* | --t*) table_dir="$2"; shift; shift;;
-    -d* | --d*) alndbs_dir="$2"; shift; shift;;
-    -z* | --z*) use_zlib="$2"; shift; shift;;
+    -t* | --t*) alndbs_dir="$2"; shift; shift;;
     esac
 done
 
@@ -59,6 +47,8 @@ IRIX*)     CFLAGS=${CFLAGS-"-LANG:std -ansi -64 -O2"} ;;
 SunOS\ 5*) CFLAGS=${CFLAGS-"-xtarget=ultra -xarch=v9 -O2"} ;;
 #  UNIX_System_V\ 4.2.0)  CFLAGS=${CFLAGS-"-O"} ;;
 UNIX_SV\ 4.2MP)  CFLAGS=${CFLAGS-"-O"} ;;
+CYGWIN*) CXX="g++"; CFLAGS=${CFLAGS-"-O3"}  ;;
+Linux*) CFLAGS=${CFLAGS-"-O3 -march=native"} ;;
 *)	     CFLAGS=${CFLAGS-"-O3"} ;;
 esac
 
@@ -66,15 +56,8 @@ if ($CXX -c $CFLAGS $test.cc) 2>/dev/null; then
   echo "OK, CXX=$CXX CFLAGS=$CFLAGS"
 else
   CXX="g++"
-  CFLAGS="-O3"
+  CFLASS="-O3"
   echo "use CXX=$CXX CFLAGS=$CFLAGS"
-fi
-
-if [ $use_zlib == "1" ] ; then
-  DEFLT="${DEFLT} -DUSE_ZLIB=1"
-  LLIB="${LLIB} -lz"
-else
-  DEFLT="${DEFLT} -DUSE_ZLIB=0"
 fi
 
 if ($RANLIB -V) >/dev/null 2>/dev/null; then
@@ -95,8 +78,6 @@ echo "alndbs install to $alndbs_dir"
 sed < Makefile.in "
 /^CXX *=/s%=.*%= $CXX%
 /^CFLAGS *=/s%=.*%= $CFLAGS%
-/^DEFLT *=/s%=.*%= $DEFLT%
-/^LLIB *=/s%=.*%= $LLIB%
 /^LD *=/s%=.*%= $LD%
 /^AR *=/s%=.*%= $AR%
 /^RANLIB *=/s%=.*%= $RANLIB%

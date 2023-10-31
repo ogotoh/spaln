@@ -548,6 +548,7 @@ const	    int j8 = j9 - 1;
 	    int	donor_r = r;
 const	    SGPT2*	bb = spj? b->exin->score_n(n): 0;
 	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
+	    vec_clear(hb_a[0], 4 * Np1 + 2 * Nelem);
 	    vec_clear(s5_a, 2 * Np1);
 	    vec_clear(ps_a, 2 * Nelem);
 const	    bool	is_imd_ = ml == mm;

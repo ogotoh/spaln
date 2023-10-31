@@ -924,8 +924,10 @@ const	    int j8 = j9 - 1;
 const	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
 	    vec_clear(ps_a, 2 * Nelem);
+	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
+	    vec_clear(hb_a[0], 4 * Np1 + 2 * Nelem);
+	    vec_clear(pb_a, Nelem);
 
 	    if (spj) {
 		for (int j = 0; j < j9; ++j)
@@ -1104,16 +1106,6 @@ regist_v	qb_v = Load(hb_a[p]);
 		Store(hb_a[p] + 1, hb_v);
 		Store(hc_a[p] + 1, hc_v);
 		if (used) Store(hd_a[p] + 1, hd_v);
-		if (LocalR) {	// max(H)
-		    var_t*	mx = vmax(hv_a[p] + 1, j9);
-		    if ((*mx + accscr) > maxh.val) {
-			int	k = mx - hv_a[p];
-			maxh.val = *mx + accscr;
-			maxh.ulk = s2_i(hc_a[p][k], hd_a[p][k]);
-			maxh.mr = ml + k;
-			maxh.nr = n - k + 1;
-		    }
-		}
 		int	mk = ml + kb;
 		int	nk = n - 1 - kb;
 		for (int k = kb; k < ke; ++k, ++mk, --nk) {
@@ -1122,6 +1114,16 @@ const		    int	kp1 = k + 1;
 			int ptr = s2_i(hc_a[p][kp1], hd_a[p][kp1]); 
 			ptr = vmf->add(mk, nk, ptr);
 			hc_a[p][kp1] = i_s2(hd_a[p] + kp1, ptr);
+		    }
+		}
+		if (LocalR) {	// max(H)
+		    var_t*	mx = vmax(hv_a[p] + 1, j9);
+		    if ((*mx + accscr) > maxh.val) {
+			int	k = mx - hv_a[p];
+			maxh.val = *mx + accscr;
+			maxh.ulk = s2_i(hc_a[p][k], hd_a[p][k]);
+			maxh.mr = ml + k;
+			maxh.nr = n - k + 1;
 		    }
 		}
 
@@ -1232,8 +1234,9 @@ const	    int j8 = j9 - 1;
 	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
 	    vec_clear(ps_a, 2 * Nelem);
+	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
+	    vec_clear(hb_a[0], 4 * Np1 + 2 * Nelem);
 const	    bool	is_imd_ = ml == mm;
 
 	    if (spj) {

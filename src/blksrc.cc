@@ -46,7 +46,6 @@ static	BlkWcPrm	wcp_cf = {4, 8, 0, 65536, 0, 8, 4096, 0, 1, 10};
 static	BlkWcPrm	wcp_cx = {4, 8, 3255, 65536, 7573, 8, 4096, 0, 5, 10};
 
 static	int	gene_rng_max_extend = -1;
-static	float	min_cover_rate = 0.2;
 static	float	hfact = 1.25;
 static	int	gratio = 10;	// ratio of average gene and cDNA
 static	const	char*	WriteFile = 0;
@@ -123,9 +122,6 @@ const	char*	val = ps + 1;
 		break;
 	    case 'b':	// block length
 		if (*val) wcp.blklen = ktoi(val);
-		break;
-	    case 'c': min_cover_rate = atof(val);
-		if (min_cover_rate > 1.) min_cover_rate /= 100.;
 		break;
 	    case 'd':	// N-best all hit block score
 		if (*val) Nascr = atoi(val);
@@ -2330,7 +2326,6 @@ const	bool	rvs = wrkbp->rvs;
 	Wilip*	wilip = 0;
 	BPAIR	orgbp = *wrkbp;
 const	int	qlen = query->right - query->left;
-const	int	clen = int(qlen * min_cover_rate);
 
 retry:
 	cursd = setgnmrng(wrkbp);
@@ -2356,7 +2351,7 @@ retry:
 		float	x = wlu->scr;
 		wlu->scr = int(x * qlen / wlu->tlen);
 	    }
-	    if (wlu->tlen > clen && wlu->scr >= lcritjscr) {
+	    if (wlu->scr >= lcritjscr) {
 		++nbetter;
 		lcritjscr = wlu->scr - vthr;
 //		lcritjscr = wlu->scr * 3 / 4;

@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.1a
-#### Last updated: 2023-09-29
+#### Present Version 3.0.2
+#### Last updated: 2023-10-31
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -33,16 +33,15 @@ system, it is likely to be portable to most Unix systems with little or no
 modifications. The accessory program **sortgrcd** sorts the gene loci found
 by **spaln** in the order of chromosomal position and orientation. From version
 2.3.2, **spaln** and **sortgrcd** can handle gzipped genome/database files and
-'block' files without prior expansion if USE_ZLIB mode is activated upon
-compilation. From version 2.3.2a, compressed query sequence file(s) may also be
-accepted. From version 2.4.0, multiple files corresponding to different output 
-forms can be generated at a single run. In version 3.0.0, multi-intermediate 
-unidirectional Hirschberg method is adopted. Together with simd-based vectorization, 
-the new algorithm contributes to considerable acceleration of the DP calculation. 
-In version 3.0.0, a simple script is released to generate [species-specific parameter 
-files](makessp.md) used by **spaln**, when the genomic DNA sequence and a bunch of 
-transcript (cDNA, CDS, EST, TSA) sequences of the cognate species are provided 
-by the user.
+'block' files without prior expansion. From version 2.3.2a, compressed query 
+sequence file(s) may also be accepted. From version 2.4.0, multiple files 
+corresponding to different output forms can be generated at a single run. 
+In version 3.0.0, multi-intermediate unidirectional Hirschberg method is adopted. 
+Together with simd-based vectorization, the new algorithm contributes to 
+considerable acceleration of the DP calculation. In version 3.0.0, a simple 
+script is released to generate [species-specific parameter files](makessp.md) 
+used by **spaln**, when the genomic DNA sequence and a bunch of transcript 
+(cDNA, CDS, EST, TSA) sequences of the cognate species are provided by the user.
 
 
 ## <a name="Inst">Install</a>
@@ -347,6 +346,13 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.2
+1. **configure** script has been modified to set `-march=native` option by default.
+2. A filtering condition for initiating alignment has been modified to 
+improve mapping sensitivity.
+3. A few bugs that can affect the quality of local and unspliced alignment are 
+fixed.
+
 ## Changes in version 3.0.1
 1. A bug is fixed to correctly evaluate transcriptional initiation and termination
 signals in genome mapping mode (-Q[4-7]) with protein queries.
