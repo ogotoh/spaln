@@ -102,7 +102,7 @@ PwdB::PwdB(const Seq** seqs, const ALPRM* alp) :
 	Noll(max(2, min(NOL, alp->ls))),
 	Nrow(Noll), Nrwb(2 * Noll - 1),
 	Vab(axbscale(seqs)),
-	Vthr((VTYPE) (alp->thr * Vab)),
+	Vthr((VTYPE) (algmode.thr? alp->thr * Vab: NEVSEL)),
 	BasicGOP((VTYPE) (-alp->v * Vab)),
 	BasicGEP((VTYPE) (-alp->u * Vab)),
 	LongGEP((VTYPE) (-alp->u1 * Vab)),

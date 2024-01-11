@@ -44,6 +44,7 @@
 
 enum	StatDist {FRECHET, LOGNORMAL, GEOMETRIC, GAMMA, WEIBULL};
 enum	GplotMode {INITIAL, CONT, LAST};
+enum	IldOutMode {PDF, CDF, Penalty};
 
 typedef	double	(*DblDbl)(double x);
 
@@ -81,7 +82,7 @@ static	const	double	minl_mu = 0.1;
 extern	LildPrm	lildprm;
 extern	GslPrm	gslprm;
 extern	StatDist	defpdf;
-extern	bool	plot_cdf;
+extern	IldOutMode	ildoutmode;
 extern	const	char*	gnuplot_terminal(const char* ext);
 
 class Verbout {

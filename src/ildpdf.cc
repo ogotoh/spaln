@@ -27,7 +27,7 @@
 LildPrm	lildprm = {0, 100, 0, INT_MAX - 1, 0, 4, 12, 1., 6., 1e-5, 0.999};
 //LildPrm	rildprm = {0, 100, INT_MAX - 1, 0, 4, 12, 0., 0.04, 1e-5, 0.999};
 GslPrm	gslprm = {1000, 10000, 100, 0., 1.e-3, 0.01, 1.e-4, 1.e-3};
-bool	plot_cdf = false;
+IldOutMode	ildoutmode = IldOutMode::PDF;
 
 struct  CdfParam {IldPrm* ip; double y;};
 static	SpecList*	speclist = 0;
@@ -1640,21 +1640,23 @@ void GnuPlotLild::add(IldPrm* dprm, bool ildents)
 	for (int n = 0; n <= n_rows; ++n) {
 	    c = clmn;
 	    double	dx = data[1][n];
-	    if (plot_cdf) {
+	    if (ildoutmode == IldOutMode::CDF) {
 		data[c++][n] = dprm->cumulative(dx);
 		if (!ildents) continue;
 		for (int m = 1; m <= dprm->n_modes; ++m)
 		    data[c++][n] = dprm->cumulative(dx, m);
-	    } else {
+	    } else if (ildoutmode == IldOutMode::PDF) {
 		double	y = normal_factor * dprm->pdf_function(dx);
 		if (nlitransform) y *= dx;
-		data[c++][n]  = y;
+		data[c++][n] = y;
 		if (!ildents) continue;
 		for (int m = 1; m <= dprm->n_modes; ++m) {
 		    double y = normal_factor * dprm->pdf_function(dx, m);
 		    if (nlitransform) y *= dx;
 		    data[c++][n] = y;
 		}
+	    } else if (ildoutmode == IldOutMode::Penalty) {
+		data[c++][n] = log10(dprm->pdf_function(dx));
 	    }
 	}
 	sname.push(dprm->sname);
@@ -1670,7 +1672,7 @@ const	char*	sl = strrchr(lild->fname, '/');
 	while (*sl && *sl != '.') *ps++ = *sl++;
 	*ps = '\0';
 	sname.push(str);
-	if (plot_cdf) {
+	if (ildoutmode == IldOutMode::CDF) {
 	    double  cdf = 0;
 	    int	n = -1;
 	    for (double* lf = lild->begin(); lf < lild->end(); ++lf, ++n)
@@ -1694,7 +1696,8 @@ const	char*	sl = strrchr(ild->fname, '/');
 	    int	n = (lf->len - int(llmt)) / ndiv;
 	    if (n < 0) n = -1;
 	    if (n > ulmt) n = int(ulmt);
-	    data[clmn][n] = plot_cdf? cdf += lf->frq: lf->frq;
+	    data[clmn][n] = (ildoutmode == IldOutMode::CDF)? 
+		cdf += lf->frq: lf->frq;
 	}
 	++clmn;
 }

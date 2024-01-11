@@ -145,8 +145,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "3.0.2";
-static	const	int	date = 231031;
+static	const	char*	version = "3.0.3";
+static	const	int	date = 240109;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -157,6 +157,8 @@ const	char*	arch = "_AVX512";
 const	char*	arch = "_AVX2";
 #elif __SSE4_1__
 const	char*	arch = "_SSE4.1";
+#elif __ARM_NEON
+const	char*	arch = "_ARM_NEON";
 #else
 const	char*	arch = "";
 #endif
@@ -369,6 +371,8 @@ const	    char*	val = argv[0] + 2;
 			    case 'U': algmode.lcl = 12; break;
 			    case 's':	// Smith-Waterman
 			    case 'S': algmode.lcl = 16; break;
+			    case 'c':	// Core 
+			    case 'C': algmode.lcl = 48; break;
 			    default:  algmode.lcl = 15; break;
 			}
 		    }
@@ -769,7 +773,7 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	    if (n) std::swap(b, gener[n - 1]);
 	    dir = spalign2(sqs, pwd, gsinf, ori);
 	    if (n) std::swap(b, gener[n - 1]);
-	    if (dir != ERROR && (!algmode.thr || GsI->fstat.val >= pwd->Vthr)) {
+	    if (dir != ERROR && GsI->fstat.val > pwd->Vthr) {
 		++n_out;
 		if (algmode.nsa == BED_FORM)
 		    GsI->rscr = selfAlnScr(a, pwd->simmtx);
@@ -890,8 +894,7 @@ const	int	basis = gener - sqs;
 	    else	b->exg_seq(algmode.lcl & 1, algmode.lcl & 2);
 	    int	dir = spalign2(sqs, bks->pwd, gsinf, a->inex.ori);
 	    delete b->exin; b->exin = 0;	// suppress Boundary output
-	    if (dir < 0 || !gsinf->skl ||
-		(algmode.thr && gsinf->scr < bks->pwd->Vthr)) {
+	    if (dir < 0 || !gsinf->skl || gsinf->scr <= bks->pwd->Vthr) {
 		gsinf->scr = NEVSEL;
 		continue;
 	    }
@@ -950,8 +953,9 @@ const	int	basis = gener - sqs;
 	if (OutPrm.MaxOut < n_out) n_out = OutPrm.MaxOut;
 	for (INT n = 0; n < n_out; ++n) {
 	    int	k = odr? odr[n]: 0;
-	    std::swap(b, gener[k]);
 	    Gsinfo*	gsinf = GsI + k;
+	    if (!gsinf->skl) continue;
+	    std::swap(b, gener[k]);
 	    if (bool(gsinf->skl->m & A_RevCom) ^ bool(a->inex.sens))
 		a->comrev();
 	    if (gsquery) std::swap(sqs[0], sqs[1]);

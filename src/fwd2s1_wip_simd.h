@@ -176,18 +176,6 @@ regist_v	    pv_v = mean_v[0];
 
 //	Find optimal path
 
-#if _SIMD_PP_
-		if (!Local) {
-		    msk_m = Cmp_gt(hv_v, ninf_v);	// clamp underflow
-		    hv_v = Blend(hv_v, ninf_v, msk_m);
-		    if (spj || dagp) {
-			msk_m = Cmp_gt(fv2_v, ninf_v);	// clamp underflow
-			fv2_v = Blend(fv2_v, ninf_v, msk_m);
-			msk_m = Cmp_gt(ev2_v, ninf_v);	// clamp underflow
-			ev2_v = Blend(ev2_v, ninf_v, msk_m);
-		    }
-		}
-#endif
 		if (LocalL && !accscr) {
 		    msk_m = Cmp_gt(zero_v, hv_v);
 		    hv_v = Blend(zero_v, hv_v, msk_m);	// Kadane-Gries
@@ -416,18 +404,6 @@ regist_v	    pv_v = mean_v[0];
 
 //	Find optimal path
 
-#if _SIMD_PP_
-		if (!Local) {
-		    msk_m = Cmp_gt(hv_v, ninf_v);	// clamp underflow
-		    hv_v = Blend(hv_v, ninf_v, msk_m);
-		    if (spj || dagp) {
-			msk_m = Cmp_gt(fv2_v, ninf_v);	// clamp underflow
-			fv2_v = Blend(fv2_v, ninf_v, msk_m);
-			msk_m = Cmp_gt(ev2_v, ninf_v);	// clamp underflow
-			ev2_v = Blend(ev2_v, ninf_v, msk_m);
-		    }
-		}
-#endif
 		if (LocalL && !accscr) {
 		    msk_m = Cmp_gt(zero_v, hv_v);
 		    hv_v = Blend(zero_v, hv_v, msk_m);
@@ -735,18 +711,6 @@ regist_v	    pv_v = mean_v[0];
 
 //	Find optimal path
 
-#if _SIMD_PP_
-		if (!Local) {
-		    msk_m = Cmp_gt(hv_v, ninf_v);	// clamp underflow
-		    hv_v = Blend(hv_v, ninf_v, msk_m);
-		    if (spj || dagp) {
-			msk_m = Cmp_gt(fv2_v, ninf_v);	// clamp underflow
-			fv2_v = Blend(fv2_v, ninf_v, msk_m);
-			msk_m = Cmp_gt(ev2_v, ninf_v);	// clamp underflow
-			ev2_v = Blend(ev2_v, ninf_v, msk_m);
-		    }
-		}
-#endif
 		if (LocalL && !accscr) {
 		    msk_m = Cmp_gt(zero_v, hv_v);
 		    hv_v = Blend(zero_v, hv_v, msk_m);
@@ -792,13 +756,7 @@ regist_v	    ss_v = Load(s5_a);		// accepter signal
 		    if (is_imd) {
 			qv_v = Blend(one_v, zero_v, msk_m);
 			Store(pb_a, qv_v);
-			if (pb_a[k8]) {		// spliced
-			    donor_r = rj;
-const			    int	rl = s2_i(hc_a[p][k9], hd_a[p][k9]);
-const			    int&	k = pv_a[k8];
-			    if (!(k & 1) && rj != rl)
-				imd->vlnk[k / 2][rj] = rl;
-			}
+			if (pb_a[k8]) donor_r = rj;	// spliced
 		    }
 		}
 
@@ -878,16 +836,17 @@ const		int	d = checkpoint(c);
 	    if (wdw.lw < imd->vlnk[d][r] && imd->vlnk[d][r] < wdw.up) {
 		cpos[i][c++] = imd->mi;		// cross intermediate
 		cpos[i][c++] = (d > 0)? 1: 0;
-		for (int rp = imd->hlnk[d][r]; rp < end_of_ulk && r != rp;
+		for (int rp = imd->hlnk[d][r]; 
+		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[d][r = rp]) {
 		    cpos[i][c++] = r + imd->mi;
 		}
 		cpos[i][c++] = r + imd->mi;
 		cpos[i][c] = end_of_ulk;
 		r = imd->vlnk[d][r];
-		if (wdw.lw <= r || r >= wdw.up) break;
+		if (r == end_of_ulk) break;
 	    } else
-		cpos[i][0] =  end_of_ulk;	// don't cross intermediate
+		cpos[i][0] = end_of_ulk;	// don't cross intermediate
 	}
 	for (int d = 0; r > wdw.up; r -= wdw.width) ++d;
 	if (LocalL) {
@@ -902,8 +861,8 @@ const	    int	rl = b->left - a->left;
 	    }
 	    if (a->inex.exgl && rl < r) b->left = a->left + r;
 	}
-	if (udhimds[n_im - 1]->mi < a->left)
-	    cpos[0][2] = b->left;
+	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left)
+	    maxh.val = NEVSEL;
 	return (maxh.val);
 }
 

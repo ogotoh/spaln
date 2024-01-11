@@ -41,19 +41,20 @@ void usage()
 	fputs("Usage:\n\tplotild [options] [y1.ild y2.ild ...] [-d IldModel x1 x2 ...]\n", stderr);
 	fputs("\nOptions:\n", stderr);
 	fputs("\n\t-g[out]\t: graphic output\n", stderr);
-	fputs("\t-i\t:  ild components (false)\n", stderr);
+	fputs("\t-i\t: ild components (false)\n", stderr);
 	fputs("\t-l#\t: lower bound of plot in log_10 (1)\n", stderr);
 	fputs("\t-s$\t: directory of ild files\n", stderr);
 	fputs("\t-u#\t: upper bound of plot in log_10 (6)\n", stderr);
 	fputs("\t-x#\t: number of bins (100)\n", stderr);
-	fputs("\t-C\t:  plot cdf (plot pdf)\n", stderr);
+	fputs("\t-C\t: plot cdf (plot pdf)\n", stderr);
 	fputs("\t-L#\t: shortest intron length (0)\n", stderr);
         fputs("\t-ME\t: exponential (geometoric) model\n", stderr);
         fputs("\t-MF\t: Frechet model\n", stderr);
         fputs("\t-MG\t: Gamma model\n", stderr);
         fputs("\t-MN\t: log normal model\n", stderr);
+	fputs("\t-P\t: plot penalty (plot pdf)\n", stderr);
 	fputs("\t-U#\t: longest intron length(inf)\n", stderr);
-	fputs("\t-X\t:  X-axix in linear scale (false)\n", stderr);
+	fputs("\t-X\t: X-axix in linear scale (false)\n", stderr);
 	exit(1);
 }
 
@@ -92,7 +93,7 @@ void getoptions(int& argc, const char**& argv)
 		if ((pn = getarg(argc, argv, true)))
 		    lildprm.ndiv = atoi(pn);
 		break;
-	    case 'C': plot_cdf = true;
+	    case 'C': ildoutmode = IldOutMode::CDF; break;
 	    case 'L':
 		if ((pn = getarg(argc, argv, true)))
 		    lildprm.minx = atoi(pn);
@@ -106,6 +107,7 @@ void getoptions(int& argc, const char**& argv)
               case 'W': defpdf = WEIBULL; pdfchar = 'W'; break;
              }
              break;
+	    case 'P': ildoutmode = IldOutMode::Penalty; break;
 	    case 'U':
 		if ((pn = getarg(argc, argv, true)))
 		    lildprm.maxx = atoi(pn);

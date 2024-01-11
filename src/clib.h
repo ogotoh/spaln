@@ -41,7 +41,7 @@ struct ALGMODE {
 	INT	bnd :   1;	// banded dp space
 	INT	mlt :   3;	// multiple output
 	INT	aut :	1;	// automatic param set
-	INT	lcl :   5;	// local or global
+	INT	lcl :   6;	// local or global
 	INT	lsg :   1;	// # of line pieces > 1 ?
 	INT	mns :   2;	// minus strand as well
 	INT	thr :   1;	// cutoff if < thr

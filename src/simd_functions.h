@@ -26,7 +26,11 @@
 #ifndef _SIMD_FUNCTIONS_
 #define _SIMD_FUNCTIONS_
 
+#if defined(__SSE4_1__)
 #include <x86intrin.h>
+#elif defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 #define SIMD_INLINE inline __attribute__((always_inline))
 
@@ -38,6 +42,11 @@ static	const	CHAR	b64_a[64] =
 	 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62,
 	  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31,
 	 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63};
+static	const	CHAR	b16_m[3][16] =
+	{{0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff},
+	 {0xff, 0xff, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0xff, 0xff},
+	 {0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff}
+	};
 
 // class declaration of elementary simd functions
 
@@ -378,6 +387,213 @@ struct Simd_functions<float, 4, regist_v> {
 };
 #endif	// __SSE4_1__
 
+#if __ARM_NEON
+
+template <typename regist_v>
+struct Simd_functions<char, 16, regist_v> {
+	regist_v clear() {return vdupq_n_s8(0);}
+	regist_v splat(const char i) {return vdupq_n_s8(i);}
+	regist_v load(const char* a) {return vld1q_s8(a);}
+	void	store(char* a, regist_v v) {vst1q_s8(a, v);}
+	regist_v add(regist_v u, regist_v v) {return vqaddq_s8(u, v);}
+	regist_v sub(regist_v u, regist_v v) {return vqsubq_s8(u, v);}
+	regist_v mul(regist_v u, regist_v v) {return vmulq_s8(u, v);}
+	regist_v max(regist_v u, regist_v v) {return vmaxq_s8(u, v);}
+	regist_v min(regist_v u, regist_v v) {return vminq_s8(u, v);}
+	regist_v shiftl(regist_v u, const int i) {
+	    return vshlq_n_s8(u, i);
+	}
+	regist_v shiftr(regist_v u, const int i) {
+	    return vshrq_n_s8(u, i);
+	}
+	regist_v blend(regist_v u, regist_v v, regist_v m) {
+	    return vbslq_s8(m, v, u);
+	}
+	regist_v cmp_gt(regist_v u, regist_v v) {return vcgtq_s8(u, v);}
+	regist_v cmp_ge(regist_v u, regist_v v) {return vcgeq_s8(u, v);}
+	regist_v cmp_eq(regist_v u, regist_v v) {return vceqq_s8(u, v);}
+	regist_v bit_and(regist_v u, regist_v v) {return vandq_s8(u, v);}
+	regist_v bit_or(regist_v u, regist_v v) {return vorrq_s8(u, v);}
+	regist_v bit_xor(regist_v u, regist_v v) {return veorq_s8(u, v);}
+	regist_v bit_andnot(regist_v u, regist_v v) {
+	    return vandq_s8(u, vmvnq_s8(v));
+	}
+};
+
+template <typename regist_v>
+struct Simd_functions<CHAR, 16, regist_v> {
+	regist_v clear() {return vdupq_n_u8(0);}
+	regist_v splat(const CHAR i) {return vdupq_n_u8(i);}
+	regist_v load(const CHAR* a) {return vld1q_u8(a);}
+	void	store(CHAR* a, regist_v v) {vst1q_u8(a, v);}
+	regist_v add(regist_v u, regist_v v) {return vqaddq_s8(u, v);}
+	regist_v sub(regist_v u, regist_v v) {return vqsubq_u8(u, v);}
+	regist_v mul(regist_v u, regist_v v) {return vmulq_u8(u, v);}
+	regist_v max(regist_v u, regist_v v) {return vmaxq_u8(u, v);}
+	regist_v min(regist_v u, regist_v v) {return vminq_u8(u, v);}
+	regist_v shiftl(regist_v u, const int i) {
+	    return vshlq_n_u8(u, i);
+	}
+	regist_v shiftr(regist_v u, const int i) {
+	    return vshrq_n_u8(u, i);
+	}
+	regist_v blend(regist_v u, regist_v v, regist_v m) {
+	    return vbslq_u8(m, v, u);
+	}
+	regist_v cmp_gt(regist_v u, regist_v v) {return vcgtq_u8(u, v);}
+	regist_v cmp_ge(regist_v u, regist_v v) {return vcgeq_u8(u, v);}
+	regist_v cmp_eq(regist_v u, regist_v v) {return vceqq_u8(u, v);}
+	regist_v bit_and(regist_v u, regist_v v) {return vandq_u8(u, v);}
+	regist_v bit_or(regist_v u, regist_v v) {return vorrq_u8(u, v);}
+	regist_v bit_xor(regist_v u, regist_v v) {return veorq_u8(u, v);}
+	regist_v bit_andnot(regist_v u, regist_v v) {
+	    return vandq_u8(u, vmvnq_u8(v));
+	}
+};
+
+template <typename regist_v>
+struct Simd_functions<short, 8, regist_v> {
+	regist_v clear() {return vdupq_n_s16(0);}
+	regist_v splat(const short i) {return vdupq_n_s16(i);}
+	regist_v load(const short* a) {return vld1q_s16(a);}
+	void	store(short* a, regist_v v) {vst1_s16(a, v);}
+	regist_v add(regist_v u, regist_v v) {return vqaddq_s16(u, v);}
+	regist_v sub(regist_v u, regist_v v) {return vqsubq_s16(u, v);}
+	regist_v mul(regist_v u, regist_v v) {return vmulq_s16(u, v);}
+	regist_v max(regist_v u, regist_v v) {return vmaxq_s16(u, v);}
+	regist_v min(regist_v u, regist_v v) {return vminq_s16(u, v);}
+	regist_v shiftl(regist_v u, const int i) {
+	    return vshlq_n_s16(u, i);
+	}
+	regist_v shiftr(regist_v u, const int i) {
+	    return vshrq_n_s16(u, i);
+	}
+	regist_v blend(regist_v u, regist_v v, regist_v m) {
+	    return vbslq_s16(m, v, u);
+	}
+	regist_v cmp_gt(regist_v u, regist_v v) {return vcgtq_s16(u, v);}
+	regist_v cmp_ge(regist_v u, regist_v v) {return vcgeq_s16(u, v);}
+	regist_v cmp_eq(regist_v u, regist_v v) {return vceqq_s16(u, v);}
+	regist_v bit_and(regist_v u, regist_v v) {return vandq_s16(u, v);}
+	regist_v bit_or(regist_v u, regist_v v) {return vorrq_s16(u, v);}
+	regist_v bit_xor(regist_v u, regist_v v) {return veorq_s16(u, v);}
+	regist_v bit_andnot(regist_v u, regist_v v) {
+	    return vandq_s16(u, vmvnq_s16(v));
+	}
+	regist_v cast16to8(regist_v v) {
+	    uint8x16_t	w = vreinterpretq_u8_s16(v);
+	    for (int i = 0, s = 1; i < 3; ++i, s *= 2) {
+		uint8x16_t	u = vshlq_n_u8(w, s);
+		uint8x16_t	m = vld1q_u8(b16_m[i]);
+		w = vbslq_u8(m, w, u);
+	    }
+	    return vreinterpretq_s16_u8(w);
+	}
+};
+
+template <typename regist_v>
+struct Simd_functions<SHORT, 8, regist_v> {
+	regist_v clear() {return vdupq_n_u16(0);}
+	regist_v splat(const SHORT i) {return vdupq_n_u16(i);}
+	regist_v load(const SHORT* a) {return vld1q_u16(a);}
+	void	store(SHORT* a, regist_v v) {vst1(a, v);}
+	regist_v add(regist_v u, regist_v v) {return vqaddq_u16(u, v);}
+	regist_v sub(regist_v u, regist_v v) {return vqsubq_u16(u, v);}
+	regist_v mul(regist_v u, regist_v v) {return vmulq_u16(u, v);}
+	regist_v max(regist_v u, regist_v v) {return vmaxq_u16(u, v);}
+	regist_v min(regist_v u, regist_v v) {return vminq_u16(u, v);}
+	regist_v shiftl(regist_v u, const int i) {
+	    return vshlq_n_u16(u, i);
+	}
+	regist_v shiftr(regist_v u, const int i) {
+	    return vshrq_n_s16(u, i);
+	}
+	regist_v blend(regist_v u, regist_v v, regist_v m) {
+	    return vbslq_u16(m, v, u);
+	}
+	regist_v cmp_gt(regist_v u, regist_v v) {return vcgtq_u16(u, v);}
+	regist_v cmp_ge(regist_v u, regist_v v) {return vcgeq_u16(u, v);}
+	regist_v cmp_eq(regist_v u, regist_v v) {return vceqq_u16(u, v);}
+	regist_v bit_and(regist_v u, regist_v v) {return vandq_u16(u, v);}
+	regist_v bit_or(regist_v u, regist_v v) {return vorrq_u16(u, v);}
+	regist_v bit_xor(regist_v u, regist_v v) {return veorq_u16(u, v);}
+	regist_v bit_andnot(regist_v u, regist_v v) {
+	    return vandq_u16(u, vmvnq_u16(v));
+	}
+	regist_v cast16to8(regist_v v) {
+	    uint8x16_t	w = vreinterpretq_u8_u16(v);
+	    for (int i = 0, s = 1; i < 3; ++i, s *= 2) {
+		uint8x16_t	u = vshlq_n_u8(w, s);
+		uint8x16_t	m = vld1q_u8(b16_m[i]);
+		w = vbslq_u8(m, w, u);
+	    }
+	    return vreinterpretq_u16_u8(w);
+	}
+};
+
+template <typename regist_v>
+struct Simd_functions<int, 4, regist_v> {
+	regist_v clear() {return vdupq_n_s32(0);}
+	regist_v splat(const int i) {return vdupq_n_s32(i);}
+	regist_v load(const int* a) {return vld1q_u16(a);}
+	void	store(int* a, regist_v v) {vst1q_s32(a, v);}
+	regist_v add(regist_v u, regist_v v) {return vqaddq_s32(u, v);}
+	regist_v sub(regist_v u, regist_v v) {return vqsubq_s32(u, v);}
+	regist_v mul(regist_v u, regist_v v) {return vmulq_s32(u, v);}
+	regist_v max(regist_v u, regist_v v) {return vmaxq_s32(u, v);}
+	regist_v min(regist_v u, regist_v v) {return vminq_s32(u, v);}
+	regist_v shiftl(regist_v u, const int i) {
+	    return vshlq_n_s32(u, i);
+	}
+	regist_v shiftr(regist_v u, const int i) {
+	    return vshrq_n_s32(u, i);
+	}
+	regist_v blend(regist_v u, regist_v v, regist_v m) {
+	    return vbslq_s32(m, v, u);
+	}
+	regist_v cmp_gt(regist_v u, regist_v v) {return vcgtq_s32(u, v);}
+	regist_v cmp_ge(regist_v u, regist_v v) {return vcgeq_s32(u, v);}
+	regist_v cmp_eq(regist_v u, regist_v v) {return vceqq_s32(u, v);}
+	regist_v bit_and(regist_v u, regist_v v) {return vandq_s32(u, v);}
+	regist_v bit_or(regist_v u, regist_v v) {return vorrq_s32(u, v);}
+	regist_v bit_xor(regist_v u, regist_v v) {return veorq_s32(u, v);}
+	regist_v bit_andnot(regist_v u, regist_v v) {
+	    return vandq_s32(u, vmvnq_s32(v));
+	}
+};
+
+template <typename regist_v>
+struct Simd_functions<INT, 4, regist_v> {
+	regist_v clear() {return vdupq_n_u32(0);}
+	regist_v splat(const INT i) {return vdupq_n_u32(i);}
+	regist_v load(const INT* a) {return vld1q_u32(a);}
+	void	store(INT* a, regist_v v) {vst1q_u32(a, v);}
+	regist_v add(regist_v u, regist_v v) {return vqaddq_u32(u, v);}
+	regist_v sub(regist_v u, regist_v v) {return vqsubq_u32(u, v);}
+	regist_v mul(regist_v u, regist_v v) {return vmulq_u32(u, v);}
+	regist_v max(regist_v u, regist_v v) {return vmaxq_u32(u, v);}
+	regist_v min(regist_v u, regist_v v) {return vminq_u32(u, v);}
+	regist_v shiftl(regist_v u, const int i) {
+	    return vshlq_n_u32(u, i);
+	}
+	regist_v shiftr(regist_v u, const int i) {
+	    return vshrq_n_u32(u, i);
+	}
+	regist_v blend(regist_v u, regist_v v, regist_v m) {
+	    return vbslq_u32(m, v, u);
+	}
+	regist_v cmp_gt(regist_v u, regist_v v) {return vcgtq_u32(u, v);}
+	regist_v cmp_ge(regist_v u, regist_v v) {return vcgeq_u32(u, v);}
+	regist_v cmp_eq(regist_v u, regist_v v) {return vceqq_u32(u, v);}
+	regist_v bit_and(regist_v u, regist_v v) {return vandq_u32(u, v);}
+	regist_v bit_or(regist_v u, regist_v v) {return vorrq_u32(u, v);}
+	regist_v bit_xor(regist_v u, regist_v v) {return veorq_u32(u, v);}
+	regist_v bit_andnot(regist_v u, regist_v v) {
+	    return vandq_u32(u, vmvnq_u32(v));
+	}
+};
+#endif	// __ARM_NEON
+
 #if __AVX2__
 
 template <typename regist_v>
@@ -657,9 +873,7 @@ struct Simd_functions<INT, 8, regist_v> {
 template <typename regist_v>
 struct Simd_functions<float, 8, regist_v> {
 	regist_v clear() {return _mm256_setzero_ps();}
-	regist_v splat(const int i) {return _mm256_set1_epi32(i);}
-	regist_v splat(const INT i) {return _mm256_set1_epi32(i);}
-	regist_v splat(const float f) {return _mm_set1_ps(f);}
+	regist_v splat(const float f) {return _mm256_set1_ps(f);}
 	regist_v load(const float* a) {
 	    return _mm256_loadu_ps(a);
 	}
@@ -972,8 +1186,6 @@ struct Simd_functions<INT, 16, regist_v> {
 template <typename regist_v>
 struct Simd_functions<float, 16, regist_v> {
 	regist_v clear() {return _mm512_setzero_ps();}
-	regist_v splat(const int i) {return _mm512_set1_epi32(i);}
-	regist_v splat(const INT i) {return _mm512_set1_epi32(i);}
 	regist_v splat(const float f) {return _mm512_set1_ps(f);}
 	regist_v load(const float* a) {return _mm512_loadu_ps(a);}
 	void	store(float* a, regist_v v) {_mm512_storeu_ps(a, v);}

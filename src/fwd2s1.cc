@@ -32,7 +32,7 @@
 #include "vmf.h"
 #include "wln.h"
 #include "boyer_moore.h"
-#if __SSE4_1__
+#if __SSE4_1__ || __ARM_NEON
 #include "fwd2s1_simd.h"
 #else
 #include "udh_intermediate.h"
@@ -54,6 +54,7 @@ const	Seq*&	a;
 const	Seq*&	b;
 const 	PwdB*	pwd;
 const	bool	Local;
+const	bool	LocalC;
 	Vmf*	vmf = 0;
 	Mfile*	mfd = 0;
 	VTYPE	gscr = 0;
@@ -68,11 +69,11 @@ const	int	Nod;
 const	float	coef_B = algmode.alg > 1? 1.: 3.;
 const	float	coef_C;
 	int	imd_intvl;	// interval between imds
-#if __SSE4_1__
+#if __SSE4_1__ || __ARM_NEON
 const	int	simd = algmode.alg & 3;
 #else
 const	int	simd = 0;
-#endif
+#endif	// __SSE4_1__ || __ARM_NEON
 	VTYPE	backward[expected_max_overlap];
 public:
 	SpJunc*	spjcs;
@@ -134,10 +135,11 @@ public:
 
 Aln2s1::Aln2s1(const Seq* _seqs[], const PwdB* _pwd) :
 	seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd), 
-	Local(algmode.lcl & 16), lowestlvl(b->wllvl),
+	Local(algmode.lcl & 16), LocalC(Local && algmode.lcl & 16), 
+	lowestlvl(b->wllvl),
 	end_margin((int) ((pwd->Vthr + pwd->BasicGOP) / pwd->BasicGEP)),
 	slmt(pwd->Vthr / 2), Nod(2 * pwd->Noll - 1),
-	coef_C(2 * pwd->Noll * sizeof(int))
+	coef_C((pwd->Noll + 1) * sizeof(int))
 {
 	if (b->inex.intr) {
 	    spjcs = new SpJunc(b, pwd);
@@ -992,8 +994,6 @@ const		    VTYPE	sigJ = b->exin->sig53(n, 0, IE5);
 			    prd->ml = from->ml;
 			    if (is_imd) {
 				if (k == 1) imd->hlnk[0][r] = rlst;
-				else if (r != from->ulk)
-				    imd->vlnk[k / 2][r] = from->ulk;
 				prd->ulk = r;
 			    } else
 				prd->ulk = from->ulk;
@@ -1074,7 +1074,8 @@ const	    Rvwml*	mx = hlastS_ng(hh, wdw);
 	    if (imd->vlnk[d][r] < end_of_ulk) {	// cross intermediate
 		cpos[i][c++] = imd->mi;
 		cpos[i][c++] = (d > 0)? 1: 0;
-		for (int rp = imd->hlnk[d][r]; rp < end_of_ulk && r != rp;
+		for (int rp = imd->hlnk[d][r]; 
+		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[0][r = rp]) {
 		    cpos[i][c++] = r + imd->mi;
 		}
@@ -1100,12 +1101,13 @@ const	    int	rl = b->left - a->left;
 	    }
 	    if (a->inex.exgl && rl < r) b->left = a->left + r;
 	}
-	int	j = ++i;
-	if (udhimds[n_im - 1]->mi < a->left)
-	    cpos[j = 0][2] = b->left;
-const	int	rl = b->left - a->left;
-	cpos[j][8] = std::min(rl, cpos[i][8]);
-	cpos[j][9] = std::max(rl, cpos[i][9]);
+	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left) {
+	    maxh.val = NEVSEL;
+	} else {
+const	    int	rl = b->left - a->left;
+	    cpos[i][8] = std::min(rl, cpos[i][8]);
+	    cpos[i][9] = std::max(rl, cpos[i][9]);
+	}
 	delete[] wbuf;
 	return (maxh.val);
 }
@@ -1673,42 +1675,37 @@ const	CHAR*	bs = b->at(b->left);
 
 VTYPE Aln2s1::trcbkalignS_ng(const WINDOW& wdw, bool spj, const RANGE* mc)
 {
+	if (wdw.width < 0) return (NEVSEL);
 	int	ptr = 0;
 	VTYPE	scr = 0;
 	vmf = (simd < 2 || mc)? new Vmf(): 0;
 
-#if !__SSE4_1__	// scalar version of forward DP 
+#if !__SSE4_1__ && !__ARM_NEON	// scalar version of forward DP 
 	scr = forwardS_ng(wdw, &ptr, mc);
 #else
 const	int	nelem = 8;
 const	int	m = a->right - a->left;
-	float	cvol = wdw.lw - b->left + a->right;
-	cvol = float(m) * float(b->right - b->left) - cvol * cvol / 2;
 	if (simd == 0 || m < nelem || mc) {
 	    if (!vmf) vmf = new Vmf();
 	    scr = forwardS_ng(wdw, &ptr, mc);
 	} else {
+	    float	cvol = wdw.lw - b->left + a->right;
+	    cvol = float(m) * float(b->right - b->left) - cvol * cvol / 2;
 const	    int	mode = simd > 1? 1: (cvol < USHRT_MAX? 3: 5);
-#if _SIMD_PP_	// vectorized forward DP 
-#if __AVX2__
-	    SimdAln2s1<short, 16, 
-		simdpp::int16<16>, simdpp::mask_int16<16>>
-#else
-	    SimdAln2s1<short, SIMDPP_FAST_INT16_SIZE, 
-		simdpp::int16<8>, simdpp::mask_int16<8>>
-#endif	// __AVX2__
-#elif __AVX512BW__
+# if __AVX512BW__
 	    SimdAln2s1<short, 32, __m512i, __m512i> 
-#elif __AVX2__
+# elif __AVX2__
 	    SimdAln2s1<short, 16, __m256i, __m256i>
-#else	// __SSE4_1__
+# elif __SSE4_1__
 	    SimdAln2s1<short, 8, __m128i, __m128i> 
-#endif	// _SIMD_PP_
+# else	// __ARM_NEON
+	    SimdAln2s1<short, 8, int8x16_t, int8x16_t>
+# endif
 		trbfwd(seqs, pwd, wdw, spjcs, cip, mode, vmf);
 	    scr = mode == 1? trbfwd.forwardS1_wip(mfd):
 		trbfwd.forwardS1(&ptr);
 	}
-#endif	// !__SSE4_1__
+#endif	// !__SSE4_1__ && !__ARM_NEON
 	if (ptr) {
 	    SKL*	lskl = vmf->traceback(ptr);
 	    if (lskl) {
@@ -1822,23 +1819,15 @@ const	    int	bright = b->right;
 
 VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)
 {
-#if __SSE4_1__
-#if _SIMD_PP_
-#if __AVX2__
-const	int	nelem = 16;
-#else
-const	int	nelem = 8;
-#endif	// __SIMD_PP_ _AVX2__
-#elif __AVX512BW__
+#if __AVX512BW__
 const	int	nelem = 32;
 #elif __AVX2__
 const	int	nelem = 16;
-#else	// __SSE4_1__
+#elif __SSE4_1__ || __ARM_NEON
 const	int	nelem = 8;
-#endif	// _SIMD_PP_
-#else	// !__SSE4_1__
+#else	// !__SSE4_1__ && !__ARM_NEON
 const	int	nelem = 1;
-#endif	// __SSE4_1__
+#endif
 
 const	int	m = a->right - a->left;
 const	int	n = b->right - b->left;
@@ -1877,9 +1866,11 @@ const	    float	q = b->right - a->left - wdw.up;
 	    return (trcbkalignS_ng(wdw, b->inex.intr));
 	imd_intvl = (m + 1) / 2;
 	if (!recursive) {
-const	    int	imd1 = int(pow(double(m * coef_B / coef_C), double(1. / 3)));
-const	    int	imd2 = int(MaxVmfSpace / coef_C / n);
-	    if (imd1 > imd2) recursive = true;
+const	    double	z = 2. * m * coef_B / coef_C;
+const	    int	imd1 = int(pow(z, 1. / 3) + 0.5) - 1;
+const	    float	spc = coef_C * n * imd1 + 
+		coef_B * cvol / (imd1 + 1) / (imd1 + 1);
+	    if (spc > MaxVmfSpace) recursive = true;
 	    else {
 const		int	imd3 = m / nelem;
 		if (alprm.ubh)	n_imd = alprm.ubh;
@@ -1899,39 +1890,34 @@ const		int	imd3 = m / nelem;
 
 	VTYPE	scr = 0;
 
-#if __SSE4_1__
+#if __SSE4_1__ || __ARM_NEON
 const	int	mode = 
 	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 2: 4;
 	if (simd) {	// simd version
-#if _SIMD_PP_	// 2B int vectorized unidirectional Hirschberg method
-#if __AVX2__
-	SimdAln2s1<short, 16, 
-	    simdpp::int16<16>, simdpp::mask_int16<16>>
-#else
-	SimdAln2s1<short, SIMDPP_FAST_INT16_SIZE, 
-	    simdpp::int16<8>, simdpp::mask_int16<8>>
-#endif	// __AVX2__
-#elif __AVX512BW__
-	SimdAln2s1<short, 32, __m512i, __m512i> 
-#elif __AVX2__
-	SimdAln2s1<short, 16, __m256i, __m256i>
-#else	// __SSE4_1__
-	SimdAln2s1<short, 8, __m128i, __m128i> 
-#endif	// _SIMD_PP_
+# if __AVX512BW__
+	    SimdAln2s1<short, 32, __m512i, __m512i>
+# elif __AVX2__
+	    SimdAln2s1<short, 16, __m256i, __m256i>
+# elif __SSE4_1__
+	    SimdAln2s1<short, 8, __m128i, __m128i>
+# else	// __ARM_NEON
+	    SimdAln2s1<short, 8, int8x16_t. int8x16_t>
+# endif
 	    sb1(seqs, pwd, wdw, spjcs, cip, mode);
 	    if (simd == 1)	// observed ILD
 		scr = sb1.hirschbergS1(cpos, n_imd);
 	    else 		// well-shaped ILD
 		scr = sb1.hirschbergS1_wip(cpos, n_imd);
 	} else 			// scalar version
-#endif	// __SSE4_1__
+#endif	// __SSE4_1__ || __ARM_NEON
 	    scr = hirschbergS_ng(cpos, n_imd, wdw);
 
-	if (recursive)
-	    rcsv_postwork(cpos);	// recursive
-	else
-	    mimd_postwork(cpos, n_imd);	// recurrent
-
+	if (scr > NEVSEL) {
+	    if (recursive)
+		rcsv_postwork(cpos);	// recursive
+	    else
+		mimd_postwork(cpos, n_imd);	// recurrent
+	}
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = aexgl;
 	b->inex.exgl = bexgl;
@@ -2482,10 +2468,6 @@ const	bool	no_rec = ovr < wlmt;			// no recurrsion
 		SKL	skl = {a->left = a->right, b->left = b->right};
 		mfd->write((UPTR) &skl);
 		iscore = 0;
-	    } else if (Local) {
-		SKL	skl = {a->right, b->right};
-		mfd->write((UPTR) &skl);
-		iscore = 0;
 	    } else {
 		Mfile*	tmp_mfd = new Mfile(*mfd);
 		VTYPE	kscore = first_exon(bab);
@@ -2510,10 +2492,6 @@ const	bool	no_rec = ovr < wlmt;			// no recurrsion
 		}
 	    } else if (bgap <= 0) {
 		SKL	skl = {a->left = b->right, b->left = b->right};
-		mfd->write((UPTR) &skl);
-		iscore = 0;
-	    } else if (Local) {
-		SKL	skl = {a->left, b->left};
 		mfd->write((UPTR) &skl);
 		iscore = 0;
 	    } else {
@@ -2547,10 +2525,12 @@ const	bool	no_rec = ovr < wlmt;			// no recurrsion
 	    save_mfd = new Mfile(*mfd);
 	    iscore = seededS_ng(level, cmode, bab);
 	}
+const	float	dpspace = fabs((float) agap * (float) bgap) / MEGA;
 const	int	max_agap = (alprm2.desert && (agap > bgap || cmode < 3))?
 	    alprm2.desert * (4 - level): INT_MAX;
 	if (iscore == NEVSEL && (no_rec || level == algmode.qck) &&
-	    agap < max_agap && !(algmode.qck == 3 && cmode < 3)) {
+	    dpspace < 32 * alprm.maxsp && agap < max_agap && 
+	    !(LocalC && algmode.qck == 3 && cmode < 3)) {
 	    RANGE	rng[2];
 	    save_range(seqs, rng, 2);
 	    if (cmode & 1) scr -= creepfwrd(ovr, slmt, bab);
@@ -2565,7 +2545,7 @@ const	int	max_agap = (alprm2.desert && (agap > bgap || cmode < 3))?
 	}
 	if (iscore == NEVSEL) {
 	    if (save_mfd) *mfd = *save_mfd;		// reset
-	    if (Local) {
+	    if (LocalC) {
 		SKL	skl = {cmode== 1? a->right: a->left, 
 				cmode== 1? b->right: b->left};
 		mfd->write((UPTR) &skl);
@@ -2649,7 +2629,6 @@ const	INT	bexgr = b->inex.exgr;
 	JUXT*	wjxt = 0;
 	Wilip*	wl = 0;
 	WLUNIT*	wlu = 0;
-const	bool	local = Local && level == lowestlvl;
 
 	save_range(seqs, rng, 2);
 const	int	wlmt = setwlprm(level)->width;
@@ -2686,13 +2665,6 @@ const	    int	bgap = b->right - b->left;
 		if (bab.ua < lx) bab.ua = lx;
 		bab.ub = wjxt->jy + bab.ua - wjxt->jx;
 		if (cmode == 2) cmode = 3;
-		if (local) {
-		    if (scr > lscr) {
-			lscr = scr;
-			gskl.m = wjxt->jx + wjxt->jlen;
-			gskl.n = wjxt->jy + wjxt->jlen;
-		    }
-		}
 		VTYPE	iscore = 
 		    interpolateS(level, cmode, wjxt, bab);
 		if (iscore != NEVSEL) {
@@ -2704,19 +2676,6 @@ const	    int	bgap = b->right - b->left;
 		    b->inex.exgl = 0;
 		    bab.la = a->right;
 		    bab.lb = b->right;
-		}
-		if (local && (iscore == NEVSEL || scr < 0)) {
-		    mfd->write((UPTR) &gskl);
-		    if (lscr > gscr) {
-			gscr = lscr;
-			std::swap(mfd, gmfd);
-		    }
-		    if (mfd)	mfd->reset();
-		    else	mfd = new Mfile(sizeof(SKL));
-		    lscr = 0;
-		    gskl.m = wjxt->jx;
-		    gskl.n = wjxt->jy;
-		    mfd->write((UPTR) &gskl);
 		}
 	    }
 	    a->inex.exgr = aexgr;
@@ -2732,16 +2691,6 @@ const	    int	bgap = b->right - b->left;
 const	VTYPE	iscore = interpolateS(level, cmode, wjxt, bab);
 	if (iscore > NEVSEL) scr += iscore;
 	else	scr = NEVSEL;
-	if (local) {
-	    if (lscr > gscr) {
-		scr = lscr;
-	    } else {
-		mfd->write((UPTR) &gskl);
-		scr = gscr;
-		std::swap(mfd, gmfd);
-	    }
-	    delete gmfd; gmfd = 0; gscr = 0;
-	}
 	rest_range(seqs, rng, 2);
 	a->inex.exgl = aexgl;
 	b->inex.exgl = bexgl;
@@ -2780,29 +2729,25 @@ VTYPE HomScoreS_ng(const Seq* seqs[], const PwdB* pwd)
 	Aln2s1 alnv(seqs, pwd);
 	WINDOW	wdw;
 	stripe(seqs, &wdw, alprm.sh);
-#if !__SSE4_1__	// scalar version of forward DP 
+#if !__SSE4_1__	&& !__ARM_NEON	// scalar version of forward DP 
 	return (alnv.scorealoneS_ng(wdw));
 #else
 const	Seq*&	a = seqs[0];
 const	int	m = a->right - a->left;
 	if ((algmode.alg & 3) == 0 || m < 4)
 	    return (alnv.scorealoneS_ng(wdw));
-#if _SIMD_PP_	// vectorized forward DP 
-#if __AVX2__
-	SimdAln2s1<short, 16, simdpp::int16<16>, simdpp::mask_int16<16>>
-#else
-	SimdAln2s1<short, 8, simdpp::int16<8>, simdpp::mask_int16<8>>
-#endif	// __AVX2__
-#elif __AVX512BW__
+# if __AVX512BW__
 	SimdAln2s1<short, 32, __m512i, __m512i> 
-#elif __AVX2__
+# elif __AVX2__
 	SimdAln2s1<short, 16, __m256i, __m256i>
-#else	// __SSE4_1__
+# elif __SSE4_1__
 	SimdAln2s1<short, 8, __m128i, __m128i> 
-#endif	// _SIMD_PP_
+# else	// __ARM_NEON
+	SimdAln2s1<short, 8, int8x16_t, int8x16_t>
+# endif
 	    fwds(seqs, pwd, wdw, alnv.spjcs, alnv.cip, 0);
 	return (fwds.scoreonlyS1());
-#endif	// !__SSE4_1__
+#endif	// !__SSE4_1__ && !__ARM_NEON
 }
 
 static int infer_orientation(Seq** sqs, const PwdB* pwd)

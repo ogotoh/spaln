@@ -36,10 +36,6 @@
 #include "aln.h"
 #include "vmf.h"
 
-#if _SIMD_PP_
-#include <simdpp/simd.h>
-#endif	// _SIMD_PP_
-
 #include "simd_functions.h"
 #include "udh_intermediate.h"
 #include "rhomb_coord.h"
@@ -71,11 +67,7 @@ struct Rvlujd {
 };
 
 template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-#if _SIMD_PP_
-class SimdAln2h1 {
-#else
 class SimdAln2h1 : public Simd_functions<var_t, Nelem, regist_v> {
-#endif
 
 protected:
 const	Seq**	seqs;
@@ -140,30 +132,6 @@ const	Rvulmn	black_Rvulmn;
 	var_t*	hfesb[6][Nelem][4];
 	var_t*	hfesc[6][Nelem][4];
 	var_t*	hfesd[6][Nelem][4];
-#if _SIMD_PP_
-#if __AVX2__
-regist_v simdpp_cast16to8(regist_v v) {
-	SHORT	buf[16];
-	simdpp::store(buf, v);
-	__m256i v_v = _mm256_loadu_si256((__m256i*) buf);
-	__m256i	b_v = _mm256_loadu_si256((__m256i*) b32_a);
-	v_v = _mm256_shuffle_epi8(v_v, b_v);
-	v_v = _mm256_permute4x64_epi64(v_v, 216);
-	_mm256_storeu_si256((__m256i*) buf, v_v);
-	return (simdpp::load(buf));
-}
-#elif __SSE4_1__
-regist_v simdpp_cast16to8(regist_v v) {
-	SHORT	buf[8];
-	simdpp::store(buf, v);
-	__m128i v_v = _mm_loadu_si128((__m128i const*) buf);
-	__m128i b_v = _mm_loadu_si128((__m128i const*) b32_a);
-	v_v = _mm_shuffle_epi8(v_v, b_v);
-	_mm_storeu_si128((__m128i*) buf, v_v);
-	return (simdpp::load(buf));
-}
-#endif	// __AVX2__
-#endif	// _SIMD_PP_
 
 class Sjsites {			// nested class
 	SimdAln2h1& hb1;
@@ -234,22 +202,6 @@ public:
 	    buf_size(wdw.width + 6 * Nelem)
 {
 
-#if _SIMD_PP_
-#define	Add(a, b)	simdpp::add(a, b)
-#define	Blend(a, b, m)	simdpp::blend(a, b, m)
-#define	Clear()		simdpp::splat(0)
-#define	Cmp_eq(a, b)	simdpp::cmp_eq(a, b)
-#define	Cmp_gt(a, b)	simdpp::cmp_gt(a, b)
-#define	Load(a)		simdpp::load(a)
-#define	Splat(c)	simdpp::splat(c)
-#define	Store(a, v)	simdpp::store(a, v)
-#define And(a, b)	simdpp::bit_and(a, b)
-#define Or(a, b)	simdpp::bit_or(a, b)
-#define AndNot(a, b)	simdpp::bit_andnot(a, b)
-#define To_mask(a)	simdpp::to_mask((regist_v) simdpp::load(a))
-#define Cast16to8(a)	simdpp_cast16to8(a) 
-#define AllZero(a)	(simdpp::reduce_max(a) == 0)
-#else	// Intel Intrinsics
 #define	Add(a, b)	this->add(a, b)
 #define	Blend(a, b, m)	this->blend(a, b, m)
 #define	Clear()		this->clear()
@@ -264,7 +216,6 @@ public:
 #define To_mask(a)	this->load(a)
 #define Cast16to8(a)	this->cast16to8(a)
 #define AllZero(a)	this->all_zero(a)
-#endif	// _SIMD_PP_
 
 /*****************************************************************
 *	mode	v	b	c	d	o	
@@ -568,7 +519,6 @@ const		    int	r = n - hb1.mm3;
 const		    int	rl = hb1.s2_i(*hfesmc[crossspj], *hfesmd[crossspj]);
 		    if (is_imd) {
 			if (k == 1) hb1.imd->hlnk[0][r] = hb1.rlst[q % 3];
-			else if (r != rl) hb1.imd->vlnk[k / 2][r] = rl;
 			prd->ulk = r;
 		    } else {
 			prd->ulk = rl;
@@ -589,9 +539,6 @@ const		    int	rl = hb1.s2_i(*hfesmc[crossspj], *hfesmd[crossspj]);
 template <typename var_t, int Nelem, typename regist_v, typename regist_m>
 void SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
 vec_add(var_t* ar, const int& n, const var_t& c) {
-#if _SIMD_PP_
-	vadd(ar, n, c);
-#else
 const	int	nn = n / Nelem * Nelem;
 	if (nn) {
 regist_v    c_v = Splat(c);
@@ -605,7 +552,6 @@ regist_v    n_v = Splat(nevsel);
 	    }
 	}
 	if (n > nn) vadd(ar, n - nn, c);
-#endif
 }
 
 // max in array ar of size n
@@ -1536,7 +1482,8 @@ const	    int	r = fhlastH1(maxh);
 		cpos[i][c++] = imd->mi;
 		cpos[i][c++] = (d > 0)? 1: 0;
 		mm3 = 3 * imd->mi;
-		for (int rp = imd->hlnk[d][r]; rp < end_of_ulk && r != rp;
+		for (int rp = imd->hlnk[d][r]; 
+		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[d][r = rp]) {
 		    cpos[i][c++] = r + mm3;
 		}
@@ -1560,8 +1507,8 @@ const	    int	rl = b->left - 3 * a->left;
 	    }
 	    if (a->inex.exgl && rl < r) b->left = 3 * a->left + r;
 	}
-	if (udhimds[n_im - 1]->mi < a->left)
-	    cpos[0][2] = b->left;
+	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left)
+	    maxh.val = NEVSEL;
 	return (maxh.val);
 }
 

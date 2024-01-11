@@ -35,8 +35,6 @@
 #ifndef	_FWD2H1_WIP_SIMD_H_
 #define _FWD2H1_WIP_SIMD_H_
 
-#define	STEP_IP_FUNC	!_SIMD_PP_
-
 static	const	int	MaxNquant = 5;
 
 static	const	short	donor_code[4] = {
@@ -78,7 +76,6 @@ const	regist_v	g3_v = Splat(pwd->GapW3);
 const	regist_v	mil_v = Splat(IntronPrm.llmt);
 const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
 
-#if STEP_IP_FUNC
 	regist_v	quant_v[IntronPrm.nquant];
 	regist_v	mean_v[IntronPrm.nquant];
 	if (spj) {
@@ -87,7 +84,6 @@ const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
 		mean_v[j] = Splat(pwd->IntPen->qm[j].pen);
 	    }
 	}
-#endif	// STEP_IP_FUNC
 
 	Anti_rhomb_coord<TBU_t>	trb(a->right, b->right, a->left, b->left, 3);
 	if (!a->inex.exgl) trb.initialize_m0(4);	// VERT
@@ -233,14 +229,12 @@ regist_v	    ph_v = Load(p3_a[pk]);
 
 		    for (int f = k? 2: 0; f < 3; ++f) {
 			qv_v = Add(hiv_v[f], ss_v);
-#if STEP_IP_FUNC
 regist_v		pv_v = mean_v[0];
 			for (int j = 1; j < IntronPrm.nquant; ++j) {
 			    msk_m = Cmp_gt(hil_v[f], quant_v[j - 1]);
 			    pv_v = Blend(mean_v[j], pv_v, msk_m);
 			}
 			qv_v = Add(qv_v, pv_v);
-#endif	// STEP_IP_FUNC
 			msk_m = Cmp_eq(ph_v, accpr_v[f]);
 			qv_v = Blend(qv_v, ninf_v, msk_m);
 			msk_m = Cmp_gt(hil_v[f], mil_v);	// filter 
@@ -256,12 +250,6 @@ regist_v		pv_v = mean_v[0];
 
 //	Find optimal path
 
-#if _SIMD_PP_	// clamp underflow
-		if (!Local) {
-		    msk_m = Cmp_gt(hv_v, ninf_v);
-		    hv_v = Blend(hv_v, ninf_v, msk_m);
-		}
-#endif
 		if (LocalL && !accscr) {
 		    msk_m = Cmp_gt(zero_v, hv_v);
 		    hv_v = Blend(zero_v, hv_v, msk_m);
@@ -370,7 +358,6 @@ const	regist_v	donor_v[3] =
 const	regist_v	accpr_v[3] =
 	{Splat(accpr_code[0]), Splat(accpr_code[1]), Splat(accpr_code[2])};
 const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
-#if STEP_IP_FUNC
 	regist_v	quant_v[IntronPrm.nquant];
 	regist_v	mean_v[IntronPrm.nquant];
 	if (spj) {
@@ -379,7 +366,6 @@ const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
 		mean_v[j] = Splat(pwd->IntPen->qm[j].pen);
 	    }
 	}
-#endif	// STEP_IP_FUNC
 	fhinitH1();
 
 	mm = (a->right - a->left + n_im) / (n_im + 1);
@@ -594,14 +580,12 @@ regist_v	    ph_v = Load(p3_a[pk]);
 
 		    for (int f = 0; f < 3; ++f) {
 			qv_v = Add(hiv_v[f], ss_v);
-#if STEP_IP_FUNC
 regist_v		pv_v = mean_v[0];
 			for (int j = 1; j < IntronPrm.nquant; ++j) {
 			    msk_m = Cmp_gt(hil_v[f], quant_v[j - 1]);
 			    pv_v = Blend(mean_v[j], pv_v, msk_m);
 			}
 			qv_v = Add(qv_v, pv_v);
-#endif
 			msk_m = Cmp_eq(ph_v, accpr_v[f]);
 			qv_v = Blend(qv_v, ninf_v, msk_m);
 			msk_m = Cmp_gt(hil_v[f], mil_v);	// filter 
@@ -627,16 +611,6 @@ regist_v		pv_v = mean_v[0];
 
 //	Find optimal path
 
-#if _SIMD_PP_
-		if (!Local) {
-		    msk_m = Cmp_gt(hv_v, ninf_v);	// clamp underflow
-		    hv_v = Blend(hv_v, ninf_v, msk_m);
-		    msk_m = Cmp_gt(fv_v, ninf_v);	// clamp underflow
-		    fv_v = Blend(fv_v, ninf_v, msk_m);
-		    msk_m = Cmp_gt(ev_v, ninf_v);	// clamp underflow
-		    ev_v = Blend(ev_v, ninf_v, msk_m);
-		}
-#endif
 		if (LocalL && !accscr) {
 		    msk_m = Cmp_gt(zero_v, hv_v);
 		    hv_v = Blend(zero_v, hv_v, msk_m);
@@ -670,7 +644,6 @@ const			int	kp1 = k + 1;
 
 		if (spj) {
 const	regist_m  nem_m = Cmp_eq(ab_v, zero_v);		// non-empty exon
-regist_v	  db_v = zero_v;
 		  for (int k = 0; k < 2; ++k) {		// GTGT
 const		    bool	leg = !nb && bb->phs5 > -2
 			 && (!k || bb->phs5 == 2);
@@ -700,20 +673,11 @@ regist_v	        pv_v = (f == 2)? Add(dv_v, ss_v): qv_v;
 			if (used) hid_v[f] = Blend(hd_v, hid_v[f], msk_m);
 			if (is_imd) {
 			    pv_v = Blend(one_v, zero_v, msk_m);// is donor
-			    db_v = Or(db_v, pv_v);
 			    Store(sm_a, pv_v);
 			    if (sm_a[k8]) donor_r[f] = rj;
 			}
 		    }	// end of f
 		  }	// end of k
-		  if (is_imd) {
-		    Store(sm_a, db_v);
-		    if (sm_a[k8]) {
-const			int	rl = s2_i(hc_a[q][k9], hd_a[q][k9]);
-const			int&	k = pv_a[p][k8];
-			if (k != 1 && rj != rl) imd->vlnk[k / 2][rj] = rl;
-		    }
-		  }
 		} // end of spj
 
 //	intermediate row
@@ -782,7 +746,8 @@ const	    int	r = fhlastH1(maxh);
 		cpos[i][c++] = imd->mi;
 		cpos[i][c++] = (d > 0)? 1: 0;
 		mm3 = 3 * imd->mi;
-		for (int rp = imd->hlnk[d][r]; rp < end_of_ulk && r != rp;
+		for (int rp = imd->hlnk[d][r]; 
+		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[d][r = rp]) {
 		    cpos[i][c++] = r + mm3;
 		}
@@ -806,8 +771,8 @@ const	    int	rl = b->left - 3 * a->left;
 	    }
 	    if (a->inex.exgl && rl < r) b->left = 3 * a->left + r;
 	}
-	if (udhimds[n_im - 1]->mi < a->left)
-	    cpos[0][2] = b->left;
+	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left)
+	    maxh.val = NEVSEL;
 	return (maxh.val);
 }
 

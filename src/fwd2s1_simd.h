@@ -36,10 +36,6 @@
 #include "aln.h"
 #include "vmf.h"
 
-#if _SIMD_PP_
-#include <simdpp/simd.h>
-#endif	// _SIMD_PP_
-
 #include "simd_functions.h"
 #include "udh_intermediate.h"
 
@@ -66,11 +62,7 @@ struct Rvlujd {
 };
 
 template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-#if _SIMD_PP_
-class SimdAln2s1 {
-#else
 class SimdAln2s1 : public Simd_functions<var_t, Nelem, regist_v> {
-#endif	// _SIMD_PP_
 
 protected:
 const	Seq**	seqs;
@@ -126,30 +118,6 @@ const	Rvulmn	black_Rvulmn;
 	var_t*	hfesb[2][Nelem][5];
 	var_t*	hfesc[2][Nelem][5];
 	var_t*	hfesd[2][Nelem][5];
-#if _SIMD_PP_
-#if __AVX2__
-regist_v simdpp_cast16to8(regist_v v) {
-	SHORT	buf[16];
-	simdpp::store(buf, v);
-	__m256i v_v = _mm256_loadu_si256((__m256i*) buf);
-	__m256i	b_v = _mm256_loadu_si256((__m256i*) b32_a);
-	v_v = _mm256_shuffle_epi8(v_v, b_v);
-	v_v = _mm256_permute4x64_epi64(v_v, 216);
-	_mm256_storeu_si256((__m256i*) buf, v_v);
-	return (simdpp::load(buf));
-}
-#elif __SSE4_1__
-regist_v simdpp_cast16to8(regist_v v) {
-	SHORT	buf[8];
-	simdpp::store(buf, v);
-	__m128i v_v = _mm_loadu_si128((__m128i const*) buf);
-	__m128i b_v = _mm_loadu_si128((__m128i const*) b32_a);
-	v_v = _mm_shuffle_epi8(v_v, b_v);
-	_mm_storeu_si128((__m128i*) buf, v_v);
-	return (simdpp::load(buf));
-}
-#endif	// __AVX2__
-#endif	// _SIMD_PP_
 
 class Sjsites {			// nested class
 	SimdAln2s1& hs1;
@@ -223,21 +191,6 @@ public:
 	    rlst(INT_MAX), buf_size(wdw.width + 2 * Nelem)
 {
 
-#if _SIMD_PP_
-#define	Add(a, b)	simdpp::add(a, b)
-#define	Blend(a, b, m)	simdpp::blend(a, b, m)
-#define	Clear()		simdpp::splat(0)
-#define	Cmp_eq(a, b)	simdpp::cmp_eq(a, b)
-#define	Cmp_gt(a, b)	simdpp::cmp_gt(a, b)
-#define	Load(a)		simdpp::load(a)
-#define	Splat(c)	simdpp::splat(c)
-#define	Store(a, v)	simdpp::store(a, v)
-#define And(a, b)	simdpp::bit_and(a, b)
-#define Or(a, b)	simdpp::bit_or(a, b)
-#define AndNot(a, b)	simdpp::bit_andnot(a, b)
-#define To_mask(a)	simdpp::to_mask((regist_v) simdpp::load(a))
-#define Cast16to8(a)	simdpp_cast16to8(a) 
-#else	// Intel Intrinsics
 #define	Add(a, b)	this->add(a, b)
 #define	Blend(a, b, m)	this->blend(a, b, m)
 #define	Clear()		this->clear()
@@ -251,7 +204,6 @@ public:
 #define AndNot(a, b)	this->bit_andnot(a, b)
 #define To_mask(a)	this->load(a)
 #define Cast16to8(a)	this->cast16to8(a)
-#endif	// _SIMD_PP_
 
 /*****************************************************************
 *	mode	v	b	c	d	o	
@@ -500,7 +452,6 @@ const	    VTYPE	x = from + sigJ;
 const		int	rl = hs1.mode? hs1.s2_i(*hfesmc[k], *hfesmd[k]): 0;
 		if (is_imd) {
 		    if (k & 1)	hs1.imd->hlnk[0][r] = hs1.rlst;
-		    else if (r != rl) hs1.imd->vlnk[k / 2][r] = rl;
 		    prd->ulk = r;
 		} else if (hs1.mode) {
 		    prd->ulk = rl;
@@ -519,9 +470,6 @@ const		int	rl = hs1.mode? hs1.s2_i(*hfesmc[k], *hfesmd[k]): 0;
 template <typename var_t, int Nelem, typename regist_v, typename regist_m>
 void SimdAln2s1<var_t, Nelem, regist_v, regist_m>::
 vec_add(var_t* ar, const int& n, const var_t& c) {
-#if _SIMD_PP_
-	vadd(ar, n, c);
-#else
 const	int	nn = n / Nelem * Nelem;
 	if (nn) {
 regist_v    c_v = Splat(c);
@@ -535,7 +483,6 @@ regist_v    n_v = Splat(nevsel);
 	    }
 	}
 	if (n > nn) vadd(ar, n - nn, c);
-#endif
 }
 
 // max in array ar of size n
@@ -709,13 +656,21 @@ scoreonlyS1()
 const	bool	LocalL = Local && a->inex.exgl && b->inex.exgl;
 const	bool	LocalR = Local && a->inex.exgr && b->inex.exgr;
 const	regist_v	zero_v = Clear();
+#if FVAL
+const	regist_v	one_v = Splat(1.f);
+const	regist_v	ge_v = Splat(float(pwd->BasicGEP));
+const	regist_v	gn_v = Splat(float(pwd->BasicGEP + pwd->BasicGOP));
+const	regist_v	ge2_v = Splat(float(pwd->LongGEP));
+const	regist_v	gn2_v = Splat(float(pwd->LongGEP + pwd->LongGOP));
+#else
 const	regist_v	one_v = Splat(1);
-const	regist_v	two_v = Add(one_v, one_v);
-const	regist_v	ninf_v = Splat(nevsel);
 const	regist_v	ge_v = Splat(pwd->BasicGEP);
 const	regist_v	gn_v = Splat(pwd->BasicGEP + pwd->BasicGOP);
 const	regist_v	ge2_v = Splat(pwd->LongGEP);
 const	regist_v	gn2_v = Splat(pwd->LongGEP + pwd->LongGOP);
+#endif	// FVAL
+const	regist_v	two_v = Add(one_v, one_v);
+const	regist_v	ninf_v = Splat(nevsel);
 
 	fhinitS1();
 
@@ -902,13 +857,21 @@ forwardS1(int* pp)
 const	bool	LocalL = Local && a->inex.exgl && b->inex.exgl;
 const	bool	LocalR = Local && a->inex.exgr && b->inex.exgr;
 const	regist_v	zero_v = Clear();
+#if FVAL
+const	regist_v	one_v = Splat(1.f);
+const	regist_v	ge_v = Splat(float(pwd->BasicGEP));
+const	regist_v	gn_v = Splat(float(pwd->BasicGEP + pwd->BasicGOP));
+const	regist_v	ge2_v = Splat(float(pwd->LongGEP));
+const	regist_v	gn2_v = Splat(float(pwd->LongGEP + pwd->LongGOP));
+#else
 const	regist_v	one_v = Splat(1);
-const	regist_v	two_v = Add(one_v, one_v);
-const	regist_v	ninf_v = Splat(nevsel);
 const	regist_v	ge_v = Splat(pwd->BasicGEP);
 const	regist_v	gn_v = Splat(pwd->BasicGEP + pwd->BasicGOP);
 const	regist_v	ge2_v = Splat(pwd->LongGEP);
 const	regist_v	gn2_v = Splat(pwd->LongGEP + pwd->LongGOP);
+#endif
+const	regist_v	two_v = Add(one_v, one_v);
+const	regist_v	ninf_v = Splat(nevsel);
 regist_v	hd_v, fd_v, fd2_v, qd_v; // used only when used == true
 
 	fhinitS1();
@@ -1085,9 +1048,9 @@ regist_v	    qb_v = Load(ps_a);		// post splicing
 		    msk_m = Cmp_gt(hv_v, ninf_v);	// clamp underflow
 		    hv_v = Blend(hv_v, ninf_v, msk_m);
 		} else if (LocalL && !accscr) {
-		    msk_m = Cmp_gt(zero_v, hv_v);
+		    msk_m = Cmp_gt(zero_v, hv_v);	// if hv < 0
 		    hv_v = Blend(zero_v, hv_v, msk_m);	// Kadane-Gries
-		    hb_v = Blend(one_v, hb_v, msk_m);
+		    hb_v = Blend(one_v, hb_v, msk_m);	// non diagonal
 		    hc_v = Blend(zero_v, hc_v, msk_m);
 		    if (used) hd_v = Blend(zero_v, hd_v, msk_m);
 		}
@@ -1101,6 +1064,7 @@ regist_v	qb_v = Load(hb_a[p]);
 		    hb_v = Blend(hb_v, fc_v, msk_m);
 		    pb_a[ke] = -1;			// all 1
 		}
+
 		Store(qb_a, qb_v);
 		Store(hv_a[p] + 1, hv_v);
 		Store(hb_a[p] + 1, hb_v);
@@ -1203,13 +1167,21 @@ hirschbergS1(Dim10* cpos, const int& n_im)
 const	bool	LocalL = Local && a->inex.exgl && b->inex.exgl;
 const	bool	LocalR = Local && a->inex.exgr && b->inex.exgr;
 const	regist_v	zero_v = Clear();
-const	regist_v	one_v = Splat(1);
-const	regist_v	two_v = Add(one_v, one_v);
 const	regist_v	ninf_v = Splat(nevsel);
+#if FVAL
+const	regist_v	one_v = Splat(1.f);
+const	regist_v	ge_v = Splat(float(pwd->BasicGEP));
+const	regist_v	gn_v = Splat(float(pwd->BasicGEP + pwd->BasicGOP));
+const	regist_v	ge2_v = Splat(float(pwd->LongGEP));
+const	regist_v	gn2_v = Splat(float(pwd->LongGEP + pwd->LongGOP));
+#else
+const	regist_v	one_v = Splat(1);
 const	regist_v	ge_v = Splat(pwd->BasicGEP);
 const	regist_v	gn_v = Splat(pwd->BasicGEP + pwd->BasicGOP);
 const	regist_v	ge2_v = Splat(pwd->LongGEP);
 const	regist_v	gn2_v = Splat(pwd->LongGEP + pwd->LongGOP);
+#endif
+const	regist_v	two_v = Add(one_v, one_v);
 
 	fhinitS1();
 
@@ -1543,17 +1515,18 @@ const		int	d = checkpoint(c);
 	    int	c = 0;
 	    int	d = 0;
 	    for ( ; r > wdw.up; r -= wdw.width) ++d;
-	    if (wdw.lw < imd->vlnk[d][r] && imd->vlnk[d][r] < wdw.up) {
+	    if (wdw.lw <= imd->vlnk[d][r] && imd->vlnk[d][r] < wdw.up) {
 		cpos[i][c++] = imd->mi;		// cross intermediate
 		cpos[i][c++] = (d > 0)? 1: 0;
-		for (int rp = imd->hlnk[d][r]; rp < end_of_ulk && r != rp;
+		for (int rp = imd->hlnk[d][r]; 
+		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[d][r = rp]) {
 		    cpos[i][c++] = r + imd->mi;
 		}
 		cpos[i][c++] = r + imd->mi;
 		cpos[i][c] = end_of_ulk;
 		r = imd->vlnk[d][r];
-		if (wdw.lw <= r || r >= wdw.up) break;
+		if (r == end_of_ulk) break;
 	    } else
 		cpos[i][0] = end_of_ulk;	// don't cross intermediate
 	}
@@ -1570,8 +1543,8 @@ const	    int	rl = b->left - a->left;
 	    }
 	    if (a->inex.exgl && rl < r) b->left = a->left + r;
 	}
-	if (udhimds[n_im - 1]->mi < a->left)
-	    cpos[0][2] = b->left;
+	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left)
+	    maxh.val = NEVSEL;
 	return (maxh.val);
 }
 

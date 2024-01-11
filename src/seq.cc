@@ -637,15 +637,29 @@ FILE* Seq::openseq(const char* str)
 	if (is_gz(pname)) {
 #if USE_ZLIB
 	    *gzfd = gzopen(pname, "r");
-	    if (*gzfd) spath = strrealloc(spath, pname);
-	    return (0);
+	    if (*gzfd) {
+		spath = strrealloc(spath, pname);
+		return (0);
+	    }
 #else
 	    fatal(gz_unsupport, pname);
 #endif
-	} 
+	}
 	FILE*	fd = fopen(pname, "r");
-	if (fd) spath = strrealloc(spath, pname);
-	return (fd);
+	if (fd) {
+	    spath = strrealloc(spath, pname);
+	    return (fd);
+	}
+#if USE_ZLIB
+	strcpy(qname, pname);
+	strcat(qname, ".gz");
+	*gzfd = gzopen(qname, "r");
+	if (*gzfd) {
+	    spath = strrealloc(spath, qname);
+	    return (0);
+	}
+#endif
+	return (0);
 }
 
 void Seq::comple()
