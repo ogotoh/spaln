@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.2
-#### Last updated: 2023-10-31
+#### Present Version 3.0.3
+#### Last updated: 2024-01-12
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -346,6 +346,12 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.3
+1. -LC option (core local alignment) is created to replace -LS option modified in
+version 3.0.0, whereas the behavior of -LS option is restored to that of version 2.
+2. ARM-NEON instructions are incorporated.
+3. Treatment of exceptional cases are modified to reduce segmentation faults.
+
 ## Changes in version 3.0.2
 1. **configure** script has been modified to set `-march=native` option by default.
 2. A filtering condition for initiating alignment has been modified to 
