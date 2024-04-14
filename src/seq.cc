@@ -1978,11 +1978,11 @@ GAPS* Seq::elim_column(const int& which, float frac)
 		if (isGap(*ss)) {
 		    ++ndel;
 		    if (cond == DEL_GAP) ++k; else
-		    if (cond == DEL_GRC) w += *wt;
+		    if (cond == DEL_GRC && wt) w += *wt;
 		} else if (isAmb(*ss)) {
 		    ++namb;
 		    if (cond == DEL_AMB) ++k; else
-		    if (cond == DEL_ARC) w += *wt;
+		    if (cond == DEL_ARC && wt) w += *wt;
 		}
 		*dd++ = *ss++;
 		if (wt) ++wt;

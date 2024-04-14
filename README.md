@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.3
-#### Last updated: 2024-01-12
+#### Present Version 3.0.4
+#### Last updated: 2024-04-15
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -113,10 +113,17 @@ To perform genome mapping, the genomic sequence must be formatted before use.
 Formatting is optional for amino acid sequence database search.
 
 1. `% cd seqdb`
-2. Download or copy genomic sequences or protein database sequence in multi-fasta format. If **spaln** is 
-[compiled](#compile) accordingly, gzipped file need not be uncompressed (the file name must be _X_.gz).
-3. To use 'makeidx.pl' command, chromosomal sequences must be concatenated into a single file. The extension of the genomic sequence file must be '.mfa' or '.gf', and protein database sequence must be '.faa', to render 'make' command effective. With 'spaln -W' command, these restrictions are not obligatory. Hereafter, the file name is assumed to be xxxgnm.gf or prosdb.faa. 
-4. To format xxxgnm.gf(.gz), run either of the following two commands, which  are equivalent to each other except that the former is faster, accepts multiple input files, and does not need Makefile.  
+2. Download or copy genomic sequences or protein database sequence in multi-fasta 
+format. If **spaln** is [compiled](#compile) accordingly, gzipped file need not 
+be uncompressed (the file name must be _X_.gz).
+3. To use 'makeidx.pl' command, chromosomal sequences must be concatenated into 
+a single file. The extension of the genomic sequence file must be '.mfa' or '.gf', 
+and protein database sequence must be '.faa', to render 'make' command effective. 
+However, with 'spaln -W' command (see below), these restrictions are not obligatory. 
+Hereafter, the file name is assumed to be xxxgnm.gf or prosdb.faa. 
+4. To format xxxgnm.gf(.gz), run either of the following two commands, which are 
+equivalent to each other except that the former is faster, accepts multiple input 
+files, and does not need Makefile. Thus preferred .  
    `% spaln -W -K[D|P] [-XGMAX_GENE] [spaln options] xxxgnm.gf(.gz) ...`  
    `% ./makeidx.pl -i[n|p|np] [-XGMAX_GENE] [spaln options] xxxgnm.gf(.gz)`  
 To format prosdb.faa(.gz), run either of the following two commands, which  are equivalent to each other except that the former accepts multiple input files.  
@@ -346,6 +353,9 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.4
+1. Fix a new bug that causes segmentation fault when -pw option is set.
+
 ## Changes in version 3.0.3
 1. -LC option (core local alignment) is created to replace -LS option modified in
 version 3.0.0, whereas the behavior of -LS option is restored to that of version 2.
