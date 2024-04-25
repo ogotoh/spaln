@@ -28,8 +28,8 @@
 
 #if defined(__SSE4_1__)
 #include <x86intrin.h>
-#elif defined(__ARM_NEON)
-#include <arm_neon.h>
+#elif defined(__aarch64__)
+#include "sse2neon.h"
 #endif
 
 #define SIMD_INLINE inline __attribute__((always_inline))
@@ -79,7 +79,7 @@ struct Simd_functions {
 
 // class specialization
 
-#if __SSE4_1__
+#if __SSE4_1__ || __aarch64__
 
 template <typename regist_v>
 struct Simd_functions<char, 16, regist_v> {
@@ -387,7 +387,7 @@ struct Simd_functions<float, 4, regist_v> {
 };
 #endif	// __SSE4_1__
 
-#if __ARM_NEON
+#if __ARM_NEON_NO
 
 template <typename regist_v>
 struct Simd_functions<char, 16, regist_v> {
