@@ -2023,7 +2023,7 @@ const	    int	mode = simd > 1? 1: (cvol < USHRT_MAX? 3: 5);
 	    SimdAln2h1<short, 32, __m512i, __m512i> 
 # elif __AVX2__
 	    SimdAln2h1<short, 16, __m256i, __m256i>
-# elif __SSE4_1__ || __aarch64__	// __SSE4_1__
+# elif __SSE4_1__ || __ARM_NEON	// __SSE4_1__
 	    SimdAln2h1<short, 8, __m128i, __m128i>
 # else	// __ARM_NEON_NO
 	    SimdAln2h1<short, 8, int8x16_t, int8x16_t>
@@ -2228,7 +2228,7 @@ const	int	mode =
 	SimdAln2h1<short, 32, __m512i, __m512i> 
 # elif __AVX2__
 	SimdAln2h1<short, 16, __m256i, __m256i>
-# elif __SSE4_1__ || __aarch64__	// __SSE4_1__
+# elif __SSE4_1__ || __ARM_NEON	// __SSE4_1__
 	SimdAln2h1<short, 8, __m128i, __m128i> 
 # else	// __ARM_NEON_NO
 	    SimdAln2s1<short, 8, int8x16_t. int8x16_t>
