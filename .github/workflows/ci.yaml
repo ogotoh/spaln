@@ -10,7 +10,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Linux x86_64
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout
@@ -22,10 +23,15 @@ jobs:
         cd src
         ./configure
         make -j
+        ls -la
+        file spaln | grep x86-64
+        file makmdm | grep x86-64
+        file sortgrcd | grep x86-64
+        file makdbs | grep x86-64
 
   build-aarch64:
-    name: Linux ARM64
-    runs-on: ubuntu-latest
+    name: Linux aarch64
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout
@@ -41,8 +47,13 @@ jobs:
           --volume "${PWD}:/spaln"
         install: |
           apt-get update -q -y
-          apt-get install -q -y make zlib1g-dev
+          apt-get install -q -y make zlib1g-dev file
         run: |
           set -x
           cd /spaln/src
+          ./configure
           make -j
+          file spaln | grep aarch64
+          file makmdm | grep aarch64
+          file sortgrcd | grep aarch64
+          file makdbs | grep aarch64
