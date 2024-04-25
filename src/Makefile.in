@@ -87,36 +87,36 @@ wc:
 ls:
 	ls $(SRC) $(HDR)
 
-spaln:	spaln.cc blksrc.o $(SLIB)
+spaln:	spaln.cc blksrc.o sblib.a
 	$(CXX) -o $@ spaln.cc blksrc.o $(SLIB) $(ILIB)
-sortgrcd:	sortgrcd.cc $(SLIB)
+sortgrcd:	sortgrcd.cc sblib.a
 	$(CXX) -o $@ sortgrcd.cc $(SLIB) $(ILIB)
-makdbs: makdbs.cc dbs.h seq.h bitpat.h $(SLIB)
+makdbs: makdbs.cc dbs.h seq.h bitpat.h sblib.a
 	$(CXX) -o $@ makdbs.cc $(SLIB) $(ILIB)
-makmdm: makmdm.cc mdm.h $(CLIB)
+makmdm: makmdm.cc mdm.h clib.a
 	$(CXX) -o $@ makmdm.cc $(CLIB) $(ILIB)
 
-dvn:	dvn.cc autocomp.h $(ULIB)
+dvn:	dvn.cc autocomp.h ublib.a
 	$(CXX) -o $@ dvn.cc $(ULIB) $(ILIB)
-exinpot: exinpot.cc codepot.h utilseq.h eijunc.h $(SLIB)
+exinpot: exinpot.cc codepot.h utilseq.h eijunc.h sblib.a
 	$(CXX) -o $@ exinpot.cc $(SLIB) $(ILIB)
-kmers: kmers.cc $(SLIB)
+kmers: kmers.cc sblib.a
 	$(CXX) -o $@ kmers.cc $(SLIB) $(ILIB)
-npssm:	npssm.cc $(SLIB)
+npssm:	npssm.cc sblib.a
 	$(CXX) -o $@ npssm.cc $(SLIB) $(ILIB)
-rdn:	rdn.cc 	$(ULIB)
+rdn:	rdn.cc 	ublib.a
 	$(CXX) -o $@ rdn.cc $(ULIB) $(ILIB)
-utn:	utn.o $(ULIB)
+utn:	utn.o ublib.a
 	$(CXX) -o $@ utn.o $(ULIB) $(ILIB)
 
-compild: compild.cc calcserv.h ildpdf.o $(CLIB)
+compild: compild.cc calcserv.h ildpdf.o clib.a
 	$(CXX) -o compild compild.cc ildpdf.o $(CLIB) -lm -lgsl -lgslcblas
-decompild: decompild.o ildpdf.o fitild.o $(CLIB)
+decompild: decompild.o ildpdf.o fitild.o clib.a
 	$(CXX) -o decompild decompild.o ildpdf.o fitild.o $(CLIB) -lgsl -lgslcblas
-fitild: fitild.cc ildpdf.o $(CLIB)
+fitild: fitild.cc ildpdf.o clib.a
 	$(CXX) -o $@  -DMAIN fitild.cc ildpdf.o $(CLIB) \
 	-L/usr/local/lib -lm -lgsl -lgslcblas
-plotild: plotild.cc ildpdf.o $(CLIB)
+plotild: plotild.cc ildpdf.o clib.a
 	$(CXX) -o plotild plotild.cc ildpdf.o $(CLIB) -lm -lgsl -lgslcblas
 
 clib.o:		clib.cc		stdtype.h
