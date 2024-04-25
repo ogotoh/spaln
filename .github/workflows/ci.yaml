@@ -46,12 +46,12 @@ jobs:
           --volume "${PWD}:/spaln"
         install: |
           apt-get update -q -y
-          apt-get install -q -y make g++ zlib1g-dev file
+          apt-get install -q -y make g++-10 zlib1g-dev file
         run: |
           set -x
           cd /spaln/src
           ./configure
-          make -j
+          make -j CXX="g++-10 -O3 -march=native -DM_THREAD=1"
           file spaln | grep aarch64
           file makmdm | grep aarch64
           file sortgrcd | grep aarch64
