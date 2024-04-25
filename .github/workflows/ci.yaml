@@ -23,7 +23,6 @@ jobs:
         cd src
         ./configure
         make -j
-        ls -la
         file spaln | grep x86-64
         file makmdm | grep x86-64
         file sortgrcd | grep x86-64
@@ -47,7 +46,7 @@ jobs:
           --volume "${PWD}:/spaln"
         install: |
           apt-get update -q -y
-          apt-get install -q -y make zlib1g-dev file
+          apt-get install -q -y make g++ zlib1g-dev file
         run: |
           set -x
           cd /spaln/src
