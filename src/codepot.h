@@ -27,8 +27,8 @@ class	ExinPot;
 struct SGPT2 {
 	STYPE   sig5;
 	STYPE   sig3;
-	char   phs5;
-	char   phs3;
+	signed char   phs5;
+	signed char   phs3;
 };
 
 struct SGPT6 {
@@ -38,8 +38,8 @@ struct SGPT6 {
 	STYPE   sigT;
 	STYPE   sigE;
 	STYPE   sigI;
-	char   phs5;
-	char   phs3;
+	signed char   phs5;
+	signed char   phs3;
 };
 
 static	const	SGPT2	ZeroSGPT2 = {0, 0, -2, -2};
