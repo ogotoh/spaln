@@ -359,7 +359,7 @@ void extractcds(Seq* sd)
 	    if (n++ > 0 && endtype != TRANS) break;
 	    Seq*	scds = extcds(sd);
 	    if (scds) {
-		sprintf(str, "%s_%d", sd->sqname(), n);
+		snprintf(str, MAXL, "%s_%d", sd->sqname(), n);
 		scds->sname = new Strlist(&str[0], "");
 		scds->typeseq(fd);
 		delete scds;

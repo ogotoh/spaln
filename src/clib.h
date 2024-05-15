@@ -916,9 +916,6 @@ template <typename file_t>
 #if USE_ZLIB
 template <class file_t>
 Strlist::Strlist(file_t fd)
-#else
-Strlist::Strlist(FILE* fd)
-#endif
 {
 	if (fread(this, sizeof(Strlist), 1, fd) != 1)
 	    fatal(fread_error, "Strlist");
@@ -929,6 +926,7 @@ Strlist::Strlist(FILE* fd)
 	if (fread(idxlst, sizeof(int), many, fd) != many)
 	    fatal(fread_error, "Strlist");
 }
+#endif
 
 // hash for string key
 

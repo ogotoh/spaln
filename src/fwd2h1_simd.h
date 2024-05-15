@@ -40,6 +40,7 @@
 #include "udh_intermediate.h"
 #include "rhomb_coord.h"
 
+using	var_t = short;
 using	TBU_t = SHORT;
 
 static	const	int	check_scr = int(0.9 * SHRT_MAX);
@@ -56,7 +57,6 @@ struct Rvulmn {		// used in Local mode
 	int	nr;	// right end n-coord
 };
 
-template <typename var_t>
 struct Rvlujd {
 	var_t	val;	// score
 	int	ulk;	// lower end diagonal
@@ -66,10 +66,23 @@ struct Rvlujd {
 	short	phs;	// phase
 };
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-class SimdAln2h1 : public Simd_functions<var_t, Nelem, regist_v> {
-
+class SimdAln2h1 : public Simd_functions<var_t> {
 protected:
+#if __AVX512BW__
+using	regist_v = __m512i;
+using	regist_m = __mmask32;
+#elif __AVX2__
+using	regist_v = __m256i;
+using	regist_m = var_v;
+#elif __SSE4_1__
+using	regist_v = __m128i;
+using	regist_m = var_v;
+#elif __ARM_NEON
+using	regist_v = int16x8_t;
+using	regist_m = uint16x8_t;
+#endif
+static	const	int	Nelem = _VecRegSize_ / 8 / sizeof(var_t);
+const	int	nelem = Nelem;
 const	Seq**	seqs;
 const	Seq*&	a;
 const	Seq*&	b;
@@ -135,10 +148,10 @@ const	Rvulmn	black_Rvulmn;
 
 class Sjsites {			// nested class
 	SimdAln2h1& hb1;
-	Rvlujd<var_t>	rcd[max_ncand + 1];
+	Rvlujd	rcd[max_ncand + 1];
 	short	idx[max_ncand + 1];
 	short	ncand;
-	Rvlujd<var_t>	black_r;
+	Rvlujd	black_r;
 public:
 	void	reset() {
 	    ncand = -1;
@@ -173,15 +186,13 @@ public:
 		*ar = (x < nevsel)? nevsel: static_cast<var_t>(x);
 	    }
 	}
-	void	vec_add(var_t* ar, const int& n, const var_t& c);
-	var_t	vec_max(const var_t* ar, const int& n);
 	int	checkpoint(const var_t& pv) const {
 	    return ((sizeof(var_t) > 2)? INT_MAX:
 	    (int((check_scr - pv) / avmch / Nelem * Nelem)));
 	}
 public:
-	VTYPE	forwardH1(int pp[]);
-	VTYPE	forwardH1_wip(Mfile* mfd);
+	VTYPE	forwardH1(int* pp = 0);
+	VTYPE	forwardH1_wip(Mfile* mfd = 0);
 	VTYPE	hirschbergH1(Dim10* cpos, const int& n_im);
 	VTYPE	hirschbergH1_wip(Dim10* cpos, const int& n_im);
 // Constructor
@@ -376,22 +387,21 @@ friend	class	Sjsites;
 	nested class: Sjsites
 *************************************************************************/
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-void SimdAln2h1<var_t, Nelem, regist_v, regist_m>::Sjsites::
+void SimdAln2h1::Sjsites::
 get(const int& j, const int& m, const int& n, const int& q)
 {
 const	int	acc = n - 1;
 const	int	r = acc - 3 * (m + 1);
-const	Rvlujd<var_t>*	maxprd[3];
-const	Rvlujd<var_t>*	brd = 0;
+const	Rvlujd*	maxprd[3];
+const	Rvlujd*	brd = 0;
 const	CHAR*	as = hb1.a->at(m);
 const	bool	is_imd = hb1.imd && (m + 1) == hb1.imd->mi;
 	vclear(maxprd, 3);
 	for (int l = 0; l <= ncand; ++l) {
-const	    Rvlujd<var_t>*	prd = rcd + idx[l];
+const	    Rvlujd*	prd = rcd + idx[l];
 const	    int	rr = r + prd->phs;
 	    if (rr < hb1.wdw.lw || rr >= hb1.wdw.up) continue;
-const	    Rvlujd<var_t>*&	mrd = maxprd[prd->dir];
+const	    Rvlujd*&	mrd = maxprd[prd->dir];
 const	    int&	don = prd->jnc;
 const	    int&	d = prd->dir;
 	    if (d == 2 && prd->phs == 1) continue;
@@ -455,7 +465,7 @@ const		int ptr = hb1.vmf->add(m + 1, acc + prd->phs,
 
 	if (is_imd && brd) {
 const	    int&	maxd = brd->dir;
-const	    Rvlujd<var_t>*	prd = maxprd[maxd];
+const	    Rvlujd*	prd = maxprd[maxd];
 const	    int	qq = modN<6>(q + prd->phs);
 const	    int&	lstr = hb1.rlst[qq % 3] = acc + prd->phs - hb1.mm3;
 	    hb1.imd->hlnk[0][lstr] = prd->ulk;
@@ -481,8 +491,7 @@ const	    int&	lstr = hb1.rlst[qq % 3] = acc + prd->phs - hb1.mm3;
 	}
 }
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-void SimdAln2h1<var_t, Nelem, regist_v, regist_m>::Sjsites::
+void SimdAln2h1::Sjsites::
 put(const int& j, const int& m, int n, int q)
 {
 const	int	don = n - 1;
@@ -512,7 +521,7 @@ const		VTYPE	x = from + sigJ;
 			break;
 		}
 		if (++l < max_ncand) {
-		    Rvlujd<var_t>*	prd = rcd + idx[l];
+		    Rvlujd*	prd = rcd + idx[l];
 		    prd->val = static_cast<var_t>(x);
 		    prd->ml = *hfesmb[k];
 const		    int	r = n - hb1.mm3;
@@ -531,62 +540,8 @@ const		    int	rl = hb1.s2_i(*hfesmc[crossspj], *hfesmd[crossspj]);
 	}
 }
 
-/*************************************************************************
-	normal member functions of SimdAln2h1
-*************************************************************************/
-
-// add const c to each element of array ar of size n
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-void SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
-vec_add(var_t* ar, const int& n, const var_t& c) {
-const	int	nn = n / Nelem * Nelem;
-	if (nn) {
-regist_v    c_v = Splat(c);
-regist_v    n_v = Splat(nevsel);
-	    for (var_t* er = ar + nn; ar < er; ar += Nelem) {
-		regist_v	a_v = Load(ar);
-		a_v = Add(a_v, c_v);
-		regist_m	msk_m = Cmp_gt(a_v, n_v);
-		a_v = Blend(a_v, n_v, msk_m);
-		Store(ar, a_v);
-	    }
-	}
-	if (n > nn) vadd(ar, n - nn, c);
-}
-
-// max in array ar of size n
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-var_t SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
-vec_max(const var_t* ar, const int& n) {
-const	int	nn = n / Nelem * Nelem;
-	var_t	buf[Nelem + Nelem / 2];
-regist_v    a_v = Splat(ar[0]);
-	Store(buf, a_v); Store(buf + Nelem / 2, a_v); 
-	if (n > nn) vcopy(buf, ar + nn, n - nn);
-	a_v = Load(buf);
-
-	if (nn) {
-const	    var_t*	er = ar + nn;
-	    for ( ; (ar + Nelem) < er; ar += Nelem) {
-regist_v	b_v = Load(ar);
-regist_m	msk_m = Cmp_gt(a_v, b_v);
-		a_v = Blend(a_v, b_v, msk_m);
-	    }
-	    Store(buf, a_v);
-	}
-// O(log_2(Nelem)) algorithm
-	for (int d = Nelem; (d >>= 1); ) {
-regist_v    b_v = Load(buf + d);
-regist_m    msk_m = Cmp_gt(a_v, b_v);
-	    a_v = Blend(a_v, b_v, msk_m);
-	    Store(buf, a_v);
-	}
-	return (buf[0]);
-}
-
 // prepare variables and initialize DP matrix
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-void SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
+void SimdAln2h1::
 fhinitH1(Anti_rhomb_coord<TBU_t>* trb)
 {
 	vec_set(vbuf, nevsel, 2 * buf_size);
@@ -731,8 +686,7 @@ const	    int	gl = r - lend[p];
 	} // end of r-loop
 }
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-int SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
+int SimdAln2h1::
 fhlastH1(Rvulmn& maxh, Anti_rhomb_coord<TBU_t>* trb)
 {
 	int	glen[3] = {0, 0, 0};
@@ -829,8 +783,7 @@ const	    VTYPE	y = h9[-3] + bb->sigT;
 	return (maxt);
 }
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-void SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
+void SimdAln2h1::
 from_spj(Queue2<int>& list, const int& m, const int& n, const int& q)
 {
 	for (int k = list.begin_i(); list.isnt_end(); k = list.next_i()) {
@@ -842,8 +795,7 @@ const	    int	mj = m + j;
 	}
 }
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-void SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
+void SimdAln2h1::
 to_spj(Queue2<int>& list, const int& m, const int& n, const int& q)
 {
 	for (int k = list.begin_i(); list.isnt_end(); k = list.next_i()) {
@@ -858,8 +810,7 @@ const	    int	mj = m + j;
 // ordinary DP forward algorithm
 // assume number of stored traceback records < INT_MAX
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-VTYPE SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
+VTYPE SimdAln2h1::
 forwardH1(int* pp)
 {
 	Rvulmn	maxh = black_Rvulmn;
@@ -1118,8 +1069,8 @@ const		    int	kp1 = k + 1;
 		var_t	c = vec_max(hv + wdw.lw - 3, wdw.width);
 		int	d = checkpoint(c);
 		if (d < md / 2) {	// all-round down score
-		    vec_add(hv + wdw.lw - 3, wdw.width, -c);
-		    vec_add(fv + wdw.lw - 3, wdw.width, -c);
+		    vec_sub_c(hv + wdw.lw - 3, c, wdw.width);
+		    vec_sub_c(fv + wdw.lw - 3, c, wdw.width);
 		    accscr += c;
 		    mc += md;
 		} else			// postpone
@@ -1139,8 +1090,7 @@ const		    int	kp1 = k + 1;
 
 // unidirectional Hirschberg method, multi-intermediate version
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-VTYPE SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
+VTYPE SimdAln2h1::
 hirschbergH1(Dim10* cpos, const int& n_im)
 {
 	Rvulmn	maxh = black_Rvulmn;
@@ -1443,8 +1393,8 @@ const			int	kp1 = k + 1;
 		var_t	c = vec_max(hv + wdw.lw - 3, wdw.width);
 		int	d = checkpoint(c);
 		if (d < md / 2) {	// down score all
-		    vec_add(hv + wdw.lw - 3, wdw.width, -c);
-		    vec_add(fv + wdw.lw - 3, wdw.width, -c);
+		    vec_sub_c(hv + wdw.lw - 3, c, wdw.width);
+		    vec_sub_c(fv + wdw.lw - 3, c, wdw.width);
 		    accscr += c;
 		    mc += md;
 		} else			// postpone

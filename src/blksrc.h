@@ -99,20 +99,21 @@ const	bool	isaa;
 	FILE*	fseq = 0;
 	FILE*	fidx = 0;
 	FILE*	fent = 0;
+	char*	dbname = 0;
 #if USE_ZLIB
 	gzFile	gzseq = 0;
 	gzFile	gzidx = 0;
 	gzFile	gzent = 0;
-#else
-	bool	gzseq = false;
-	bool	gzidx = false;
-	bool	gzent = false;
-#endif
-	char*	dbname = 0;
 	void	putsq(int c) {
 		if (gzseq)	fputc(c, gzseq);
 		else	 	fputc(c, fseq);
 	}
+#else
+	bool	gzseq = false;
+	bool	gzidx = false;
+	bool	gzent = false;
+	void	putsq(int c) {fputc(c, fseq);}
+#endif
 public:
 	MakeDbs(const char* dbname, int molc);
 	~MakeDbs() {
@@ -150,19 +151,26 @@ template <typename file_t>
 		if (c != SEQ_DELIM) ++rec.seqlen;
 	}
 	void	wrtgrp(const char* ps) {
-		long	 fpos = 0L;
+		long	fpos = 0L;
+		long	epos = 0L;
+#if USE_ZLIB
 		if (gzseq)	fpos = ftell(gzseq);
 		else	 	fpos = ftell(fseq);
-		long	epos = 0L;
 		if (gzent)	epos = ftell(gzent);
 		else		epos = ftell(fent);
+#else
+		fpos = ftell(fseq);
+		epos = ftell(fent);
+#endif
 		fprintf(fgrp, "%8ld %u %u %s\n", 
 		    fpos, (INT) recnbr, (INT) epos, ps);
 	}
 	void stamp21() {
 		DbsRec	rec21 = {magicver21, false, 0};
 		if (fidx) fwrite(&rec21, sizeof(DbsRec), 1, fidx);	// header record
+#if USE_ZLIB
 		else	fwrite(&rec21, sizeof(DbsRec), 1, gzidx);
+#endif
 	}
 
 };
@@ -565,13 +573,14 @@ template <typename file_t>
 class Qwords {
 	int	kk;
 	int	DRNA;
-	INT*	ww;
-	int*	xx;
-	CHAR**	endss;
-	BLKTYPE* front;
-	CHAR*	ConvTab;
-	ContBlk*	wc;
-	Bitpat** bpp;
+	INT*	ww = 0;
+	int*	xx = 0;
+	CHAR**	endss = 0;
+	BLKTYPE* front = 0;
+	CHAR*	ConvTab = 0;
+	ContBlk*	wc = 0;
+	Bitpat** bpp = 0;
+	double	app_c = 1.;
 public:
 	void	init_mrglist();
 	BLKTYPE	next_mrglist();
@@ -579,7 +588,9 @@ public:
 	int	querywords(const CHAR* ss, int d, bool rvs);
 	void	reset(Seq* a);
 	Qwords(int k, int nc, CHAR* ct, ContBlk* pwc, Bitpat** bp, Seq *a = 0);
-	~Qwords() {delete[] ww; delete[] xx; delete[] endss; delete[] front;}
+	~Qwords() {
+	    delete[] ww; delete[] xx; delete[] endss; delete[] front; 
+	}
 };
 
 extern	MakeBlk*	makeblock(int argc, const char** argv, int molc, bool mkblk = true);

@@ -1860,7 +1860,7 @@ const	char**	header = new const char*[n_clmns];
 	fputs("\npause -1 'push RETURN key to quit !'\n", fd);
 	fclose(fd);
 	char	cmd[MAXL];
-	sprintf(cmd, "gnuplot %s", gpcmd);
+	snprintf(cmd, MAXL, "gnuplot %s", gpcmd);
 const	int	srv = system(cmd);
 	if (srv) fatal("%s failed with code = %d !\n", cmd, srv);
 	delete[] header;

@@ -42,8 +42,8 @@ struct SGPT6 {
 	char   phs3;
 };
 
-static	const	SGPT2	ZeroSGPT2 = {0, 0, -2, -2};
-static	const	SGPT6	ZeroSGPT6 = {0, 0, 0, 0, 0, 0, -2, -2};
+static	const	SGPT2	ZeroSGPT2 = {0, 0, char(-2), char(-2)};
+static	const	SGPT6	ZeroSGPT6 = {0, 0, 0, 0, 0, 0, char(-2), char(-2)};
 static	const	float	rlmt_quant = 0.8;
 
 struct INT53 {

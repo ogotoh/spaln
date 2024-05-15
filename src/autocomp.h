@@ -849,8 +849,9 @@ char* AlnServer<seq_t>::restsq(char* str, int n, int nseq)
 {
 	if (n >= nseq) return (strcpy(str, "gq"));
 	str[0] = '\0';
-	for (char* s = str; ++n <= nseq; s = str + strlen(str))
-	    sprintf(s, "%d ", n);
+	int	slen = CONLINE;
+	for (char* s = str; slen > 0 && ++n <= nseq; s = str + strlen(str))
+	    slen -= snprintf(s, slen, "%d ", n);
 	return (str);
 }
 

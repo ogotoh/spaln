@@ -409,7 +409,7 @@ const	RANGE*	wrng = rng = fistrng(rng);
 		    intv = i - r - 1;
 		    --wrng;
 		} else {
-		    if (mode == 2) sprintf(str + c, "%d..%d", l, r);
+		    if (mode == 2) snprintf(str + c, MAXL - c, "%d..%d", l, r);
 		    break;
 		}
 	    } else {
@@ -419,13 +419,13 @@ const	RANGE*	wrng = rng = fistrng(rng);
 		    intv = i - r - 1;
 		    ++wrng;
 		} else {
-		    if (mode == 2) sprintf(str + c, "%d..%d", l, r);
+		    if (mode == 2) snprintf(str + c, MAXL - c, "%d..%d", l, r);
 		    break;
 		}
 	    }
 	    if (intv == 0 || intv >= IntronPrm.llmt) {
 		if (mode != 2) continue;
-		sprintf(str + c, "%d..%d", l, r);
+		snprintf(str + c, MAXL - c, "%d..%d", l, r);
 		l = i;
 		strcat(str, ",");
 		if ((c = strlen(str)) > 56) {
@@ -508,7 +508,7 @@ static	const	char*	fmt3t = "Target=%s %d %d %c\n";
 	while (neoeij(wkr + 1)) ++wkr;
 	int	l = gene->SiteNo(rng->left);
 	int	r = gene->SiteNo(wkr->right - 1);
-	sprintf(mname, "%s_%d", (*gene->sname)[0], (l + r) / 2000);
+	snprintf(mname, MAXL, "%s_%d", (*gene->sname)[0], (l + r) / 2000);
 	if (!Gff3MID++) fputs("##gff-version\t3\n", fd);
 	l = gene->SiteNo(0);
 	r = gene->SiteNo(gene->len - 1);
@@ -579,7 +579,7 @@ static	const	char*	fmt3t = "Target=%s %d %d %c;Gap=";
 	while (neoeij(wkr + 1)) ++wkr;
 	int	l = gene->SiteNo(rng->left);
 	int	r = gene->SiteNo(wkr->right - 1);
-	sprintf(mname, "%s_%d", (*gene->sname)[0], (l + r) / 2000);
+	snprintf(mname, MAXL, "%s_%d", (*gene->sname)[0], (l + r) / 2000);
 	if (!Gff3MID++) fputs("##gff-version\t3\n", fd);
 	l = gene->SiteNo(0);
 	r = gene->SiteNo(gene->len - 1);
@@ -1368,7 +1368,8 @@ const	char*	sl = strrchr(spath, '/');
 
 	char	str[LINE_MAX];
 	strcpy(str, prefix);
-	char*	fn = str + strlen(str);
+	slen = strlen(str);
+	char*	fn = str + slen;
 	if (n_out_modes == 1) {
 	    out_mode[0] = algmode.nsa;
 	    if (OutPrm.out_file) {
@@ -1378,7 +1379,7 @@ const	char*	sl = strrchr(spath, '/');
 		        fds[0] = stdout;
 			return (1);
 		    }
-		    sprintf(fn, ".O%d", algmode.nsa);
+		    snprintf(fn, LINE_MAX - slen, ".O%d", algmode.nsa);
 		} else if (algmode.nsa == BIN_FORM) {
 		    fds[0] = stdout;
 		    return (1);
@@ -1395,7 +1396,7 @@ const	char*	sl = strrchr(spath, '/');
 	    if (out_mode[i] < 0) continue;
 	    if (out_mode[i] == BIN_FORM) fds[n] = 0;
 	    else {
-		sprintf(fn, ".O%d", i);
+		snprintf(fn, LINE_MAX - slen, ".O%d", i);
 		fds[n] = wfopen(str, "w");
 	    }
 	    if (fds[n]) out_mode[n++] = out_mode[i];
@@ -1715,7 +1716,7 @@ static	const char* frm[] = {"%c%s [%d:%d] ", "%s ( %d - %d )",  "%-16s ( %3d - %
 	    fprintf(fd, frm[1], sqname(), SiteNo(left), SiteNo(right - 1));
 	} else {
 	    n = n == 3? 1: 2;
-	    sprintf(str, frm[0], senschar(), sqname(), many, len);
+	    snprintf(str, MAXL, frm[0], senschar(), sqname(), many, len);
 	    fprintf(fd, frm[n], str, SiteNo(left), SiteNo(right - 1));
 	}
 }
@@ -1906,16 +1907,16 @@ PrintMember::PrintMember(const Strlist* sn, bool pad_space, const char* tl)
 	if (OutPrm.taxoncode) {
 	    g2t = ftable.read_gnm2tab(OutPrm.taxoncode);
 	    if (pad_space)
-		sprintf(fmt, "%%s:%%-%ds", sname->longest());
+		snprintf(fmt, MAXL, "%%s:%%-%ds", sname->longest());
 	    else
 		strcpy(fmt, "%s:%s");
 	} else {
 	    if (pad_space)
-		sprintf(fmt, "%%-%ds", sname->longest());
+		snprintf(fmt, MAXL, "%%-%ds", sname->longest());
 	    else
 		strcpy(fmt, "%s");
 	}
-	if (tl) strcat(fmt, tl);
+	if (tl) strncat(fmt, tl, MAXL - strlen(fmt));
 }
 
 void PrintMember::put_member(FILE* fd, int i) const
@@ -1951,7 +1952,7 @@ PrintAln::PrintAln(const GAPS**  _gaps, Seq* _seqs[], const int& _seqnum, FILE* 
 	}
 	if (markeij) {
 	    char	str[MAXL];
-	    sprintf(str, "%s: %s", seqnum == 1? "Prrn": "Aln", seqs[0]->sqname());
+	    snprintf(str, MAXL, "%s: %s", seqnum == 1? "Prrn": "Aln", seqs[0]->sqname());
 	    for (int n = 1; n < seqnum; ++n) {
 		strcat(str, " + ");
 		strcat(str, seqs[n]->sqname());
@@ -2337,7 +2338,7 @@ static void put_SigII(const PFQ* pfq, const PFQ* tfq, const int* lst,
 	int	c = 0;
 	for ( ; pfq < tfq - 1; ++pfq) {
 	    if (c == 0) fputs(";b", fd);
-	    sprintf(str + c, " %d %d,", pfq->pos, pfq->num);
+	    snprintf(str + c, MAXL - c, " %d %d,", pfq->pos, pfq->num);
 	    if ((c = strlen(str)) > lwd) {
 		fputs(str, fd);
 		fputs("\n", fd);
@@ -2351,7 +2352,7 @@ static void put_SigII(const PFQ* pfq, const PFQ* tfq, const int* lst,
 	const int*	tst = lst + numlst;
 	for (c = 0; lst < tst - 1; ++lst) {
 	    if (c == 0) fputs(";m", fd);
-	    sprintf(str + c, " %d", *lst + 1);
+	    snprintf(str + c, MAXL - c, " %d", *lst + 1);
 	    if ((c = strlen(str)) > lwd) {
 		fputs(str, fd);
 		fputs("\n", fd);

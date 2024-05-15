@@ -1516,7 +1516,7 @@ char* Seq::sqline(int i, char* ps)
 	    if (pl && *pl) {
 		sname->push(pl);
 	    } else {
-		sprintf(str, "m%d", i + 1);
+		snprintf(str, 16, "m%d", i + 1);
 		sname->push(str);
 	    }
 	}
@@ -1659,7 +1659,7 @@ Seq* Seq::getseq(const char* str, DbsDt* dbf)
 		return getdbseq(dbf, str);
 	    if (!strcmp(str, "-")) {
 		fd = stdin;
-		sprintf(input, "std%d", sid);
+		snprintf(input, MAXL, "std%d", sid);
 		spath = strrealloc(spath, input);
 		if (sname) sname->assign(input);
 		else	sname = new Strlist(&input[0], "");
@@ -2054,7 +2054,7 @@ Seq* Seq::randseq(double* pcmp)
 
 	refresh(1, len);
 	inex.molc = molc;
-	sprintf(name, "RAND%d", sid);
+	snprintf(name, MAXL, "RAND%d", sid);
 	if (sname) sname->assign(name);
 	else	sname = new Strlist(&name[0], "");
 	CHAR*	s = at(0);

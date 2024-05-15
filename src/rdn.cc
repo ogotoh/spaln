@@ -316,10 +316,11 @@ static void breakup(Seq* sd, Seq* tmp, int delgap)
 	topath(str, OutPrm.out_file);
 	if (!ul) strcat(str, sd->sqname());
 	char*	ps = str + strlen(str);
+	int	slen = MAXL - strlen(str);
 
 	for (int i = 0; i < sd->many; ++i) {
-	    if (ul)	strcpy(ps, (*sd->sname)[i]);
-	    else	sprintf(ps, ".%d", i+1);
+	    if (ul)	strncpy(ps, (*sd->sname)[i], slen);
+	    else	snprintf(ps, slen, ".%d", i+1);
 	    FILE*	fd = fopen(str, "w");
 	    if (!fd) fatal(no_file);
 	    buf[0] = i;
@@ -353,7 +354,7 @@ static Seq* rdcseq(Seq* dst, Seq* src, int many)
 	    i++, sseq += src->many, dseq += many)
 		compress(dseq, many, sseq, wt, src->many, max_code);
 	for (int i = 0; i < many; i++) {
-	    sprintf(str, "RDC%d", i);
+	    snprintf(str, MAXL, "RDC%d", i);
 	    dst->sname->push(str);
 	}
 	dst->postseq(dseq);
@@ -534,7 +535,7 @@ static	const char mssg[] =
 	if (manys == 0) dstsq = src->copyseq(seqs[1], CPY_ALL);
 	if (ichi) dstsq = justseq(dstsq, ichi);
 	if (ichi || strchr(ans, 'd'))  dstsq->elim_column(DEL_GAP);
-	sprintf(ans, "%s%d", src->sqname(), dstsq->many);
+	snprintf(ans, MAXL, "%s%d", src->sqname(), dstsq->many);
 	strrealloc(dstsq->spath, ans);
 	prntout(dstsq);
 	*ans = '\0';

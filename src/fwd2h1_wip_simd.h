@@ -47,9 +47,7 @@ static	const	short	accpr_code[4] = {
 	static_cast<short>(TraceBackCode::ACCP), 0};
 static	const	int	min_ssv = -1000;
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-VTYPE SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
-forwardH1_wip(Mfile* mfd)
+VTYPE SimdAln2h1::forwardH1_wip(Mfile* mfd)
 {
 	Rvulmn	maxh = black_Rvulmn;
 const	bool	LocalL = Local && a->inex.exgl && b->inex.exgl;
@@ -321,8 +319,8 @@ regist_v	        pv_v = (f == 2)? Add(dv_v, ss_v): qv_v;
 const		var_t	c = vec_max(hv + wdw.lw - 3, wdw.width);
 const		int	d = checkpoint(c);
 		if (d < md / 2) {	// down score all
-		    vec_add(hv + wdw.lw - 3, wdw.width, -c);
-		    vec_add(fv + wdw.lw - 3, wdw.width, -c);
+		    vec_sub_c(hv + wdw.lw - 3, c, wdw.width);
+		    vec_sub_c(fv + wdw.lw - 3, c, wdw.width);
 		    accscr += c;
 		    mc += md;
 		} else			// postpone
@@ -333,13 +331,11 @@ const		int	d = checkpoint(c);
 	    fhlastH1(maxh, &trb);
 	    maxh.val += accscr;
 	}
-	trb.traceback(maxh.mr, maxh.nr, mfd);
+	if (mfd) trb.traceback(maxh.mr, maxh.nr, mfd);
 	return (maxh.val);
 }
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-VTYPE SimdAln2h1<var_t, Nelem, regist_v, regist_m>::
-hirschbergH1_wip(Dim10* cpos, const int& n_im)
+VTYPE SimdAln2h1::hirschbergH1_wip(Dim10* cpos, const int& n_im)
 {
 	Rvulmn	maxh = black_Rvulmn;
 const	bool	LocalL = Local && a->inex.exgl && b->inex.exgl;
@@ -709,8 +705,8 @@ regist_v	        pv_v = (f == 2)? Add(dv_v, ss_v): qv_v;
 		var_t	c = vec_max(hv + wdw.lw - 3, wdw.width);
 const		int	d = checkpoint(c);
 		if (d < md / 2) {	// down score all
-		    vec_add(hv + wdw.lw - 3, wdw.width, -c);
-		    vec_add(fv + wdw.lw - 3, wdw.width, -c);
+		    vec_sub_c(hv + wdw.lw - 3, c, wdw.width);
+		    vec_sub_c(fv + wdw.lw - 3, c, wdw.width);
 		    accscr += c;
 		    mc += md;
 		} else			// postpone

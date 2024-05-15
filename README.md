@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.4
-#### Last updated: 2024-04-15
+#### Present Version 3.0.5
+#### Last updated: 2024-05-15
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -73,10 +73,11 @@ the default settings.
 6. <a name="compile">For compilation</a>  
     `% ./configure [--help]`  
     Please manually edit Makefile if $(CXX) does not indicate a C++ compiler or  
-    `% CXX=g++ ./configure [other options]`  
-    To use zlib facilities, confirm that libz.* are installed in the load 
-    library path.  Then,  
-    `% ./configure [other options] --use_zlib=1`  
+    `% CXX=`_cxx_` ./configure [other options]`  
+    where _cxx_ is the compiler name such as 'g++' or 'clang++'.
+    To use zlib facilities (default), confirm that libz.* are installed in the 
+    load library path. Alternatively, zlib.h and libz.a are placed in the src 
+    directory.
 7. `% make` or  
 8. `% make all` if you want to generate a parameter set for your own species
 9. `% make install`
@@ -353,6 +354,13 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.5
+1. Simd-related functions, ARM-NEON instructions in particular, have been modified.
+Installation in MacOS-Pro has been confirmed, where zlib library was manually
+installed from the source downloaded from https://github.com/madler/zlib. 
+However, GSL-dependent programs such as *fitild* remain to be installed 
+in MacOS. 
+
 ## Changes in version 3.0.4
 1. Fix a new bug that causes segmentation fault when -pw option is set.
 

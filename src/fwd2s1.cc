@@ -34,8 +34,11 @@
 #include "boyer_moore.h"
 #if __SSE4_1__ || __ARM_NEON
 #include "fwd2s1_simd.h"
+#include "fwd2s1_simd.cc"
+#include "fwd2s1_wip_simd.h"
 #else
 #include "udh_intermediate.h"
+#define _VecRegSize_ 0
 #endif
 #define	CigarM	0
 
@@ -53,32 +56,75 @@ const	Seq**	seqs;
 const	Seq*&	a;
 const	Seq*&	b;
 const 	PwdB*	pwd;
-const	bool	Local;
-const	bool	LocalC;
-	Vmf*	vmf = 0;
-	Mfile*	mfd = 0;
-	VTYPE	gscr = 0;
-	VTYPE	lscr = 0;
-	SKL	gskl = {0, 0};
-	Mfile*	gmfd = 0;
-const	INT	lowestlvl;
-const	int	end_margin;
-const	VTYPE	slmt;
-	bool	is3end = false;
-const	int	Nod;
-const	float	coef_B = algmode.alg > 1? 1.: 3.;
+const	float	coef_B = sizeof(short);
 const	float	coef_C;
-	int	imd_intvl;	// interval between imds
-#if __SSE4_1__ || __ARM_NEON
-const	int	simd = algmode.alg & 3;
-#else
-const	int	simd = 0;
-#endif	// __SSE4_1__ || __ARM_NEON
+const	bool	Local = algmode.lcl & 16;
+const	bool	LocalC = Local && algmode.lcl & 32;
+const	int	end_margin;
+const	INT	lowestlvl;
+const	int	Nod;
+const	VTYPE	slmt;
 	VTYPE	backward[expected_max_overlap];
+	int	imd_intvl;	// interval between imds
+	bool	is3end = false;
+	Mfile*	mfd = 0;
+	Vmf*	vmf = 0;
+
+	VTYPE	back2ward5endS_ng(int* ptr, const WINDOW& wdw, bool lcl);
+	VTYPE	backforth(int n, const BOUND& lub);
+	WLUNIT*	bestwlu(WLUNIT* wlu, const int nwlu, const int cmode);
+	VTYPE	creepback(int ovr, VTYPE bscr, const BOUND& lub);
+	VTYPE	creepfwrd(int& ovr, VTYPE bscr, const BOUND& lub);
+	VTYPE	diagonalS_ng(bool r_justt = false);
+	VTYPE	failed(const RANGE* rng) {
+	    rest_range(seqs, rng, 2);
+	    return (NEVSEL);
+	}
+	VTYPE	first_exon(const BOUND& bab);
+	int	first_exon_wmm(VTYPE& maxscr);
+	VTYPE	for2ward3endS_ng(int* ptr, const WINDOW& wdw, bool lcl);
+	void	hinitS_ng(Rvwml* hh[], const WINDOW& wdw);
+	VTYPE	hirschbergS_ng(Dim10* cpos, const int& n_im, const WINDOW& wdw);
+	Rvwml*	hlastS_ng(Rvwml* hh[], const WINDOW& wdw);
+	bool	indelfreespjS(int agap, VTYPE& iscr, const bool write_skl = true);
+	void	initS_ng(RVP* hh[], CHAR* hdir, const WINDOW& wdw, const RANGE* cutrng = 0);
+	VTYPE	interpolateS(INT level, const int cmode, 
+		const JUXT* wjxt, const BOUND& bab);
+	RVP*	lastS_ng(RVP* hh[], const WINDOW& wdw, const RANGE* cutrng = 0);
+	VTYPE	last_exon(const BOUND& bab);
+	int	last_exon_wmm(VTYPE& maxscr);
+	VTYPE	lspS_ng(const WINDOW& wdw);
+	VTYPE	micro_exon(const BOUND& bab);
+	void	mimd_postwork(const Dim10* cpos, const int n_imd);
+	int	nearest5ss(const BOUND& bab);
+	int	nearest3ss(const BOUND& bab);
+	VTYPE	openendS_ng(int cmode, bool lcl = true);
+	void	pfinitS_ng(RVP* hh[], const WINDOW& wdw);
+	void	pbinitS_ng(RVP* hh[], const WINDOW& wdw);
+	void	rcsv_postwork(const Dim10* cpos);
+	VTYPE	seededS_ng(INT level, int cmode, const BOUND& lub);
+	VTYPE	shortcutS_ng(int ovr, const BOUND& bab);
+	void	sinitS_ng(VTYPE* hh[], const WINDOW& wdw);
+	VTYPE	slastS_ng(VTYPE* hh[], const WINDOW& wdw);
+	VTYPE	trcbkalignS_ng(const WINDOW& wdw, bool spj = true,
+		const RANGE* cutrng = 0);
+
 public:
-	SpJunc*	spjcs;
+const	int	simd = _VecRegSize_? (algmode.alg & 3): 0;
 	Cip_score*	cip;
-	Aln2s1(const Seq** _seqs, const PwdB* _pwd);
+	SpJunc*	spjcs;
+	Aln2s1(const Seq** _seqs, const PwdB* _pwd) :
+	    seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd), 
+	    coef_C((pwd->Noll + 1) * sizeof(int)),
+	    end_margin((int) ((pwd->Vthr + pwd->BasicGOP) / pwd->BasicGEP)),
+	    lowestlvl(b->wllvl), Nod(2 * pwd->Noll - 1),
+	    slmt(pwd->Vthr / 2)
+	{
+	    if (!b->inex.intr) return;
+	    spjcs = new SpJunc(b, pwd);
+	    cip = a->sigII? new Cip_score(a): 0;
+	    if (simd == 3) IntronPrm.nquant = 1;	// flat ild
+	}
 	~Aln2s1() {delete mfd; delete spjcs; delete cip;}
 	void	reset(const Seq** sqs) {
 	    delete mfd; mfd = 0;
@@ -88,65 +134,11 @@ public:
 	    spjcs = new SpJunc(b, pwd);
 	    is3end = false;
 	}
-	void	initS_ng(RVP* hh[], CHAR* hdir, const WINDOW& wdw, const RANGE* cutrng = 0);
-	RVP*	lastS_ng(RVP* hh[], const WINDOW& wdw, const RANGE* cutrng = 0);
 	VTYPE	forwardS_ng(const WINDOW& wdw, int pp[] = 0, 
 		const RANGE* cutrng = 0);
-	VTYPE	shortcutS_ng(int ovr, const BOUND& bab);
-	void	hinitS_ng(Rvwml* hh[], const WINDOW& wdw);
-	Rvwml*	hlastS_ng(Rvwml* hh[], const WINDOW& wdw);
-	VTYPE	hirschbergS_ng(Dim10* cpos, const int& n_im, const WINDOW& wdw);
-	void	sinitS_ng(VTYPE* hh[], const WINDOW& wdw);
-	VTYPE	slastS_ng(VTYPE* hh[], const WINDOW& wdw);
-	VTYPE	scorealoneS_ng(const WINDOW& wdw);
-	void	pfinitS_ng(RVP* hh[], const WINDOW& wdw);
-	void	pbinitS_ng(RVP* hh[], const WINDOW& wdw);
-	VTYPE	back2ward5endS_ng(int* ptr, const WINDOW& wdw, bool lcl);
-	VTYPE	for2ward3endS_ng(int* ptr, const WINDOW& wdw, bool lcl);
-	VTYPE	openendS_ng(int cmode, bool lcl = true);
-	bool	indelfreespjS(int agap, VTYPE& iscr, const bool write_skl = true);
-	VTYPE	diagonalS_ng(bool r_justt = false);
-	VTYPE	trcbkalignS_ng(const WINDOW& wdw, bool spj = true,
-		const RANGE* cutrng = 0);
-	VTYPE	ordinaryS_ng(const WINDOW& wdw);
-	VTYPE	backforth(int n, const BOUND& lub);
-	void	mimd_postwork(const Dim10* cpos, const int n_imd);
-	void	rcsv_postwork(const Dim10* cpos);
-	VTYPE	lspS_ng(const WINDOW& wdw);
-	int	nearest5ss(const BOUND& bab);
-	int	nearest3ss(const BOUND& bab);
-	VTYPE	failed(const RANGE* rng) {
-	    rest_range(seqs, rng, 2);
-	    return (NEVSEL);
-	}
-	int	first_exon_wmm(VTYPE& maxscr);
-	VTYPE	first_exon(const BOUND& bab);
-	int	last_exon_wmm(VTYPE& maxscr);
-	VTYPE	last_exon(const BOUND& bab);
-	VTYPE	micro_exon(const BOUND& bab);
-	VTYPE	interpolateS(INT level, const int cmode, 
-		const JUXT* wjxt, const BOUND& bab);
-	VTYPE	seededS_ng(INT level, int cmode, const BOUND& lub);
 	SKL*	globalS_ng(const WINDOW& wdw, VTYPE* scr);
-	VTYPE	creepback(int ovr, VTYPE bscr, const BOUND& lub);
-	VTYPE	creepfwrd(int& ovr, VTYPE bscr, const BOUND& lub);
-	WLUNIT*	bestwlu(WLUNIT* wlu, const int nwlu, const int cmode);
+	VTYPE	scorealoneS_ng(const WINDOW& wdw);
 };
-
-Aln2s1::Aln2s1(const Seq* _seqs[], const PwdB* _pwd) :
-	seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd), 
-	Local(algmode.lcl & 16), LocalC(Local && algmode.lcl & 16), 
-	lowestlvl(b->wllvl),
-	end_margin((int) ((pwd->Vthr + pwd->BasicGOP) / pwd->BasicGEP)),
-	slmt(pwd->Vthr / 2), Nod(2 * pwd->Noll - 1),
-	coef_C((pwd->Noll + 1) * sizeof(int))
-{
-	if (b->inex.intr) {
-	    spjcs = new SpJunc(b, pwd);
-	    cip = a->sigII? new Cip_score(a): 0;
-	   if (simd == 3) IntronPrm.nquant = 1;	// flat ild
-	}
-}
 
 void Aln2s1::initS_ng(RVP* hh[], CHAR* hdir, const WINDOW& wdw, const RANGE* cutrng)
 {
@@ -1676,36 +1668,26 @@ const	CHAR*	bs = b->at(b->left);
 VTYPE Aln2s1::trcbkalignS_ng(const WINDOW& wdw, bool spj, const RANGE* mc)
 {
 	if (wdw.width < 0) return (NEVSEL);
-	int	ptr = 0;
-	VTYPE	scr = 0;
-	vmf = (simd < 2 || mc)? new Vmf(): 0;
-
-#if !__SSE4_1__ && !__ARM_NEON	// scalar version of forward DP 
-	scr = forwardS_ng(wdw, &ptr, mc);
-#else
 const	int	nelem = 8;
 const	int	m = a->right - a->left;
+	int	ptr = 0;
+	VTYPE	scr = 0;
+	vmf = (simd < 2 || m < nelem || mc)? new Vmf(): 0;
+
+#if _VecRegSize_	// scalar version of forward DP 
 	if (simd == 0 || m < nelem || mc) {
-	    if (!vmf) vmf = new Vmf();
 	    scr = forwardS_ng(wdw, &ptr, mc);
 	} else {
 	    float	cvol = wdw.lw - b->left + a->right;
 	    cvol = float(m) * float(b->right - b->left) - cvol * cvol / 2;
 const	    int	mode = simd > 1? 1: (cvol < USHRT_MAX? 3: 5);
-# if __AVX512BW__
-	    SimdAln2s1<short, 32, __m512i, __m512i> 
-# elif __AVX2__
-	    SimdAln2s1<short, 16, __m256i, __m256i>
-# elif __SSE4_1__
-	    SimdAln2s1<short, 8, __m128i, __m128i> 
-# else	// __ARM_NEON
-	    SimdAln2s1<short, 8, int8x16_t, int8x16_t>
-# endif
-		trbfwd(seqs, pwd, wdw, spjcs, cip, mode, vmf);
+	    SimdAln2s1	trbfwd(seqs, pwd, wdw, spjcs, cip, mode, vmf);
 	    scr = mode == 1? trbfwd.forwardS1_wip(mfd):
 		trbfwd.forwardS1(&ptr);
 	}
-#endif	// !__SSE4_1__ && !__ARM_NEON
+#else
+	scr = forwardS_ng(wdw, &ptr, mc);
+#endif	// _VecRegSize_
 	if (ptr) {
 	    SKL*	lskl = vmf->traceback(ptr);
 	    if (lskl) {
@@ -1819,16 +1801,7 @@ const	    int	bright = b->right;
 
 VTYPE Aln2s1::lspS_ng(const WINDOW& wdw)
 {
-#if __AVX512BW__
-const	int	nelem = 32;
-#elif __AVX2__
-const	int	nelem = 16;
-#elif __SSE4_1__ || __ARM_NEON
-const	int	nelem = 8;
-#else	// !__SSE4_1__ && !__ARM_NEON
-const	int	nelem = 1;
-#endif
-
+const	int	nelem = _VecRegSize_? _VecRegSize_ / sizeof(short): 1;
 const	int	m = a->right - a->left;
 const	int	n = b->right - b->left;
 	if (!m && !n) return(0);
@@ -1890,26 +1863,17 @@ const		int	imd3 = m / nelem;
 
 	VTYPE	scr = 0;
 
-#if __SSE4_1__ || __ARM_NEON
-const	int	mode = 
-	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 2: 4;
+#if _VecRegSize_
 	if (simd) {	// simd version
-# if __AVX512BW__
-	    SimdAln2s1<short, 32, __m512i, __m512i>
-# elif __AVX2__
-	    SimdAln2s1<short, 16, __m256i, __m256i>
-# elif __SSE4_1__
-	    SimdAln2s1<short, 8, __m128i, __m128i>
-# else	// __ARM_NEON
-	    SimdAln2s1<short, 8, int8x16_t. int8x16_t>
-# endif
-	    sb1(seqs, pwd, wdw, spjcs, cip, mode);
+const	    int	mode = 
+	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 2: 4;
+	    SimdAln2s1	sb1(seqs, pwd, wdw, spjcs, cip, mode);
 	    if (simd == 1)	// observed ILD
 		scr = sb1.hirschbergS1(cpos, n_imd);
 	    else 		// well-shaped ILD
 		scr = sb1.hirschbergS1_wip(cpos, n_imd);
 	} else 			// scalar version
-#endif	// __SSE4_1__ || __ARM_NEON
+#endif	// _VecRegSize_
 	    scr = hirschbergS_ng(cpos, n_imd, wdw);
 
 	if (scr > NEVSEL) {
@@ -2726,28 +2690,24 @@ SKL* Aln2s1::globalS_ng(const WINDOW& wdw, VTYPE* scr)
 
 VTYPE HomScoreS_ng(const Seq* seqs[], const PwdB* pwd)
 {
-	Aln2s1 alnv(seqs, pwd);
 	WINDOW	wdw;
 	stripe(seqs, &wdw, alprm.sh);
-#if !__SSE4_1__	&& !__ARM_NEON	// scalar version of forward DP 
-	return (alnv.scorealoneS_ng(wdw));
-#else
+	Aln2s1 alnv(seqs, pwd);
+#if _VecRegSize_	// vector version of forward DP 
 const	Seq*&	a = seqs[0];
+const	Seq*&	b = seqs[1];
 const	int	m = a->right - a->left;
-	if ((algmode.alg & 3) == 0 || m < 4)
+	if (alnv.simd == 0 || m < 4)
 	    return (alnv.scorealoneS_ng(wdw));
-# if __AVX512BW__
-	SimdAln2s1<short, 32, __m512i, __m512i> 
-# elif __AVX2__
-	SimdAln2s1<short, 16, __m256i, __m256i>
-# elif __SSE4_1__
-	SimdAln2s1<short, 8, __m128i, __m128i> 
-# else	// __ARM_NEON
-	SimdAln2s1<short, 8, int8x16_t, int8x16_t>
-# endif
-	    fwds(seqs, pwd, wdw, alnv.spjcs, alnv.cip, 0);
-	return (fwds.scoreonlyS1());
-#endif	// !__SSE4_1__ && !__ARM_NEON
+	float	cvol = wdw.lw - b->left + 3 * a->right;
+	cvol = float(m) * float(b->right - b->left) - cvol * cvol / 3;
+const	int	mode = alnv.simd > 1? 1: (cvol < USHRT_MAX? 3: 5);
+	SimdAln2s1 fwds(seqs, pwd, wdw, alnv.spjcs, alnv.cip, mode);
+	return (mode == 1? fwds.scoreonlyS1_wip():
+		(VTYPE) fwds.scoreonlyS1());
+#else	// scalar version of forward DP 
+	return (alnv.scorealoneS_ng(wdw));
+#endif	// _VecRegSize_
 }
 
 static int infer_orientation(Seq** sqs, const PwdB* pwd)

@@ -287,13 +287,6 @@ int SeqDb::is_DbOrigin(const char* str) const
 	return (0);
 }
 
-bool space_digit(const char* ps)
-{
-	while (int c = *ps++)
-	    if (!(isspace(c) || isdigit(c))) return (false);
-	return (true);
-}
-
 SeqDb* whichdb(const char* ps)
 {
 	SeqDb*	db = SeqDBs + FASTA;
@@ -454,6 +447,60 @@ DbsDt::DbsDt(int c, int molc)
 
 static	const	char*	dbstab[3] = {".", getenv(ALN_DBS), DBS_DIR};
 
+#if !USE_ZLIB
+void DbsDt::readentry(FILE* fent, const char* fn)
+{
+	if (ent_space == 0) {
+	    fseek(fent, 0L, SEEK_END);
+	    ent_space = (INT) ftell(fent);
+	}
+	if (ent_space == 0) {
+	    int	c;
+	    while ((c = fgetc(fent)) != EOF) ++ent_space;
+	}
+	rewind(fent);
+	entry = new char[ent_space];
+	if (fread(entry, sizeof(char), ent_space, fent) != ent_space)
+	    fatal("%s: Bad entry file!", fn);
+	fclose(fent);
+}
+
+void DbsDt::readodr(FILE* fodr, const char* fn)
+{
+	recodr = new INT[numidx];
+	rewind(fodr);
+	if (fread(recodr, sizeof(INT), numidx, fodr) != numidx)
+	    fatal("%s: Bad order file!", fn);
+	fclose(fodr);
+}
+
+DbsRec*	DbsDt::readidx(FILE* fidx, const char* fn)
+{
+	recidx = new DbsRec[numidx];
+	rewind(fidx);
+	if (fread(recidx, sizeof(DbsRec), numidx, fidx) != numidx)
+	    fatal("%s: Index file may be corrupted!\n", fn);
+	fclose(fidx);
+	return (recidx);
+}
+
+char* dbs_header(char* str, FILE* fin)
+{
+	char*	ps = str;
+	while (*ps == _LCOMM || space_digit(ps))
+	    if (!fin || !(ps = fgets(str, MAXL, fin)))
+		return (0);
+	return (ps);
+}
+
+SeqDb*	whichdb(char* ps, FILE* fd)
+{
+	if (fd) ps = dbs_header(ps, fd);
+	return (whichdb(ps));
+}
+
+#endif	// !USE_ZLIB
+
 char* path2dbf(char* str, const char* fn, const char* ext)
 {
 #if USE_ZLIB
@@ -534,16 +581,9 @@ const	char*	path = 0;
 	    fd = fopenpbe(path, form, IDX_EXT, "r", -1, str);
 #if USE_ZLIB
 	    gzFile	gzfd = 0;
-#else
-	    bool	gzfd = false;
-#endif
 	    if (!fd) {
-#if USE_ZLIB
 		gzfd = gzopenpbe(path, form, IDZ_EXT, "r", -1, str);
 	 	if (!gzfd) continue;
-#else
-	 	continue;
-#endif
 	    }
 	    DbsRec*	ridx = gzfd? readidx(gzfd, str): readidx(fd, str);
 	    if (!ridx) continue;
@@ -551,12 +591,8 @@ const	char*	path = 0;
 // read "entry" file
 	    fd = fopenpbe(path, form, ENT_EXT, "r", -1, str);
 	    if (!fd) {
-#if USE_ZLIB
 		gzfd = gzopenpbe(path, form, ENZ_EXT, "r", -1, str);
 		if (!gzfd) continue;
-#else
-		continue;
-#endif
 	    } else	gzfd = 0;
 	    if (gzfd)	readentry(gzfd, str);
 	    else	readentry(fd, str);
@@ -564,12 +600,10 @@ const	char*	path = 0;
 // read "order" file
 	    fd = fopenpbe(path, form, ODR_EXT, "r", -1, str);
 	    if (fd)	readodr(fd, str);
-#if USE_ZLIB
 	    else {
 		gzfd = gzopenpbe(path, form, ODZ_EXT, "r", -1, str);
 		if (gzfd) readodr(gzfd, str);
 	    }
-#endif
 
 // read "seq" file
 	    fseq = fopenpbe(path, form, SEQ_EXT, "r", -1, str);
@@ -577,7 +611,6 @@ const	char*	path = 0;
 		pseq = strrealloc(0, str);
 		if (algmode.dim) readseq(str);	// seq dat in memory
 	    } else {
-#if USE_ZLIB
 		gzfd = gzopenpbe(path, form, SGZ_EXT, "r", -1, str);
 		if (!gzfd) continue;
 		pseq = strrealloc(0, str);
@@ -587,10 +620,26 @@ const	char*	path = 0;
 		if (fread(dbsseq, sizeof(CHAR), rss, gzfd) <= 0)
 		    fatal("Fail to read .seq.gz file !\n");
 		fclose(gzfd);
-#else
-		continue;
-#endif
 	    }
+#else
+	    bool	gzfd = false;
+	    if (!fd) continue;
+	    DbsRec*	ridx = readidx(fd, str);
+	    if (!ridx) continue;
+	    readentry(fd, str);
+// read "entry" file
+	    fd = fopenpbe(path, form, ENT_EXT, "r", -1, str);
+	    if (!fd) continue;
+// read "order" file
+	    fd = fopenpbe(path, form, ODR_EXT, "r", -1, str);
+	    if (fd)	readodr(fd, str);
+// read "seq" file
+	    fseq = fopenpbe(path, form, SEQ_EXT, "r", -1, str);
+ 	    if (fseq) {
+		pseq = strrealloc(0, str);
+		if (algmode.dim) readseq(str);	// seq dat in memory
+	    } else continue;
+#endif
 	    if (curdb->defmolc == UNKNOWN)
 		curdb->defmolc = guessmolc();
 	    return;

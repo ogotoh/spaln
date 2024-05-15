@@ -39,8 +39,7 @@
 
 // score-only DP forward algorithm
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-VTYPE SimdAln2s1<var_t, Nelem, regist_v, regist_m>::
+VTYPE SimdAln2s1::
 scoreonlyS1_wip()
 {
 	Rvulmn	maxh = black_Rvulmn;
@@ -214,9 +213,9 @@ regist_v	    ss_v = Load(s5_a);		// accepter signal
 const		var_t	c = vec_max(hv + wdw.lw, wdw.up - wdw.lw);
 const		int	d = checkpoint(c);
 		if (d < md / 2) {	// all-round down score
-		    vec_add(hv + wdw.lw - 1, wdw.width, -c);
-		    vec_add(fv + wdw.lw - 1, wdw.width, -c);
-		    if (dagp) vec_add(fv2 + wdw.lw - 1, wdw.width, -c);
+		    vec_sub_c(hv + wdw.lw - 1, c, wdw.width);
+		    vec_sub_c(fv + wdw.lw - 1, c, wdw.width);
+		    if (dagp) vec_sub_c(fv2 + wdw.lw - 1, c, wdw.width);
 		    accscr += c;
 		    mc += md;
 		} else			// postpone
@@ -231,8 +230,7 @@ const		int	d = checkpoint(c);
 	return (maxh.val);
 }
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-VTYPE SimdAln2s1<var_t, Nelem, regist_v, regist_m>::
+VTYPE SimdAln2s1::
 forwardS1_wip(Mfile* mfd)
 {
 	Rvulmn	maxh = black_Rvulmn;
@@ -457,9 +455,9 @@ regist_v	    ss_v = Load(s5_a);			// donor signal
 const		var_t	c = vec_max(hv + wdw.lw, wdw.up - wdw.lw);
 const		int	d = checkpoint(c);
 		if (d < md / 2) {	// down score all
-		    vec_add(hv + wdw.lw - 1, wdw.width, -c);
-		    vec_add(fv + wdw.lw - 1, wdw.width, -c);
-		    if (dagp) vec_add(fv2 + wdw.lw - 1, wdw.width, -c);
+		    vec_sub_c(hv + wdw.lw - 1, c, wdw.width);
+		    vec_sub_c(fv + wdw.lw - 1, c, wdw.width);
+		    if (dagp) vec_sub_c(fv2 + wdw.lw - 1, c, wdw.width);
 		    accscr += c;
 		    mc += md;
 		} else			// postpone
@@ -475,8 +473,7 @@ const		int	d = checkpoint(c);
 	return (maxh.val);
 }
 
-template <typename var_t, int Nelem, typename regist_v, typename regist_m>
-VTYPE SimdAln2s1<var_t, Nelem, regist_v, regist_m>::
+VTYPE SimdAln2s1::
 hirschbergS1_wip(Dim10* cpos, const int& n_im)
 {
 	Rvulmn	maxh = black_Rvulmn;
@@ -798,9 +795,9 @@ regist_v	    ss_v = Load(s5_a);		// accepter signal
 const		var_t	c = vec_max(hv + wdw.lw, wdw.up - wdw.lw);
 const		int	d = checkpoint(c);
 		if (d < md / 2) {	// down score all
-		    vec_add(hv + wdw.lw - 1, wdw.width, -c);
-		    vec_add(fv + wdw.lw - 1, wdw.width, -c);
-		    if (dagp) vec_add(fv2 + wdw.lw - 1, wdw.width, -c);
+		    vec_sub_c(hv + wdw.lw - 1, c, wdw.width);
+		    vec_sub_c(fv + wdw.lw - 1, c, wdw.width);
+		    if (dagp) vec_sub_c(fv2 + wdw.lw - 1, c, wdw.width);
 		    accscr += c;
 		    mc += md;
 		} else			// postpone

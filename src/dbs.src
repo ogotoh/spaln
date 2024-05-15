@@ -185,16 +185,19 @@ extern	SeqDb*	setform(int c);
 extern	void	setdefdbf(DbsDt* dbf);
 extern	void	EraDbsDt();
 extern	char*	path2dbf(char* str, const char* fn, const char* ext = 0);
-extern	bool	space_digit(const char* ps);
 extern	const	char*	finddbfpath(const char* fn, const char* ext = 0);
 extern	SeqDb*	whichdb(const char* ps);
+
+inline bool space_digit(const char* ps)
+{
+	while (int c = *ps++)
+	    if (!(isspace(c) || isdigit(c))) return (false);
+	return (true);
+}
 
 #if USE_ZLIB
 template <typename file_t>
 void DbsDt::readentry(file_t fent, const char* fn)
-#else
-void DbsDt::readentry(FILE* fent, const char* fn)
-#endif
 {
 	if (ent_space == 0) {
 	    fseek(fent, 0L, SEEK_END);
@@ -211,12 +214,8 @@ void DbsDt::readentry(FILE* fent, const char* fn)
 	fclose(fent);
 }
 
-#if USE_ZLIB
 template <typename file_t>
 void DbsDt::readodr(file_t fodr, const char* fn)
-#else
-void DbsDt::readodr(FILE* fodr, const char* fn)
-#endif
 {
 	recodr = new INT[numidx];
 	rewind(fodr);
@@ -225,12 +224,8 @@ void DbsDt::readodr(FILE* fodr, const char* fn)
 	fclose(fodr);
 }
 
-#if USE_ZLIB
 template <typename file_t>
 DbsRec*	DbsDt::readidx(file_t fidx, const char* fn)
-#else
-DbsRec* DbsDt::readidx(FILE* fidx, const char* fn)
-#endif
 {
 	recidx = new DbsRec[numidx];
 	rewind(fidx);
@@ -240,12 +235,8 @@ DbsRec* DbsDt::readidx(FILE* fidx, const char* fn)
 	return (recidx);
 }
 
-#if USE_ZLIB
 template <typename file_t>
 char* dbs_header(char* str, file_t fin)
-#else
-char* dbs_header(char* str, FILE* fin)
-#endif
 {
 	char*	ps = str;
 	while (*ps == _LCOMM || space_digit(ps))
@@ -256,10 +247,15 @@ char* dbs_header(char* str, FILE* fin)
 
 template <typename file_t>
 SeqDb*	whichdb(char* ps, file_t fd = 0)
-#else
-SeqDb*	whichdb(char* ps, FILE* fd = 0)
-#endif
 {
 	if (fd) ps = dbs_header(ps, fd);
 	return (whichdb(ps));
 }
+
+#else
+
+extern	char* dbs_header(char* str, FILE* fin);
+extern	SeqDb*	whichdb(char* ps, FILE* fd);
+
+#endif	// USE_ZLIB
+#endif	// _DBS_

@@ -332,7 +332,7 @@ const	char*	eij = 0;
 		if (!gzfd) fatal(not_found, strdbs);
 		kmers.readCount(gzfd, molc);
 #else
-		fatal(gz_unsupport, fn);
+		fatal(gz_unsupport, strdbs);
 #endif
 	    } else {
 		FILE*	fd = fopen(strdbs, "rb");

@@ -436,7 +436,7 @@ const	SigII*	sgi = sd->sigII;
 		int abc[3];
 		float	d = 100. * sgi->eij_dist(i, j, abc);
 		if (dmx) {
-		    sprintf(str, " %7.3f", d);
+		    snprintf(str, MAXL, " %7.3f", d);
 		    if (clm >= MaxClm) {
 			fputc('\n', fd);
 			clm = 0;

@@ -92,7 +92,7 @@ Seq* randseq(Seq* sd, int len)
 	char	name[MAXL];
 
 	sd->refresh(1, len);
-	sprintf(name, "RAND%d", ++rno);
+	snprintf(name, MAXL, "RAND%d", ++rno);
 	if (sd->sname) sd->sname->assign(name);
 	else	sd->sname = new Strlist(&name[0], "");
 	CHAR*	s = sd->at(0);

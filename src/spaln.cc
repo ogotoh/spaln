@@ -40,7 +40,6 @@
 #include <sched.h>
 #endif
 
-#define	USE_FULL_RANGE	0
 #define	TESTRAN		0
 #define	QDEBUG	0
 
@@ -145,8 +144,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "3.0.4";
-static	const	int	date = 240415;
+static	const	char*	version = "3.0.5";
+static	const	int	date = 240515;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -854,10 +853,6 @@ const	int	b_intr = b->inex.intr;
 	    nparalog = bks->findblock(sqs);
 	if (nparalog == ERROR || algmode.nsa == MAP1_FORM || algmode.nsa == MAP2_FORM)
 	    return (0);		// no alignment
-#if USE_FULL_RANGE
-// skip the next line if only the specified range is used as the query
-	if (rng) a->right = a->right == rng->right? a->len: rng->right;
-#endif
 	HalfGene	hfg(0, INT_MAX, a->CdsNo);
 	Gsinfo*	GsI = new Gsinfo[nparalog + 1];
 	Gsinfo*	gsinf = GsI;
@@ -1328,10 +1323,12 @@ static void* mistress_func(void* arg)
 	    if (strcmp(whf->sname, whf[1].sname)) continue;
 	    int	l = whf[1].segno - whf->segno;
 	    if (l == 1) { 
-		sprintf(str, "%s %d %d", whf->sname, whf->right, whf[1].left);
+		snprintf(str, LINE_MAX, "%s %d %d", 
+			whf->sname, whf->right, whf[1].left);
 		if ((*fsd)->getseq(str)) q->enqueue(fsd);
 	    } else if (l == -1) {
-		sprintf(str, "%s %d %d <", whf->sname, whf[1].left, whf->right);
+		snprintf(str, LINE_MAX, "%s %d %d <", 
+			whf->sname, whf[1].left, whf->right);
 		if ((*fsd)->getseq(str)) q->enqueue(fsd);
 	    }
 	}

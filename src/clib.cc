@@ -335,6 +335,20 @@ double ktof(const char* str)
 	return (x);
 }
 
+#if !USE_ZLIB
+Strlist::Strlist(FILE* fd)
+{
+	if (fread(this, sizeof(Strlist), 1, fd) != 1)
+	    fatal(fread_error, "Strlist");
+	strbuf = new char[totallen];
+	idxlst = new INT[many];
+	if (fread(strbuf, sizeof(char), totallen, fd) != totallen)
+	    fatal(fread_error, "Strlist");
+	if (fread(idxlst, sizeof(int), many, fd) != many)
+	    fatal(fread_error, "Strlist");
+}
+#endif
+
 Strlist::Strlist(int m, int len) 
 {
 	if (m > 0) {

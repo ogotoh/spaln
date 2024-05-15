@@ -25,7 +25,7 @@ case "$1" in
     -d*=* | --alndbs_dir=*) alndbs_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
     -e* | --e*) exec_prefix="$2"; shift; shift;;
     -t* | --t*) table_dir="$2"; shift; shift;;
-    -t* | --t*) alndbs_dir="$2"; shift; shift;;
+    -d* | --d*) alndbs_dir="$2"; shift; shift;;
     esac
 done
 
@@ -48,7 +48,8 @@ SunOS\ 5*) CFLAGS=${CFLAGS-"-xtarget=ultra -xarch=v9 -O2"} ;;
 #  UNIX_System_V\ 4.2.0)  CFLAGS=${CFLAGS-"-O"} ;;
 UNIX_SV\ 4.2MP)  CFLAGS=${CFLAGS-"-O"} ;;
 CYGWIN*) CXX="g++"; CFLAGS=${CFLAGS-"-O3"}  ;;
-Linux*) CFLAGS=${CFLAGS-"-O3 -march=native"} ;;
+Linux*) CFLAGS=${CFLAGS-"-O3 -march=native"}; CLIB=${CLIB-"clib.a -lm -lz -ldl"} ;;
+Darwin*) CFLAGS=${CFLAGS-"-O3 -std=c++11"}; CLIB=${CLIB-"clib.a libz.a"} ;;
 *)	     CFLAGS=${CFLAGS-"-O3"} ;;
 esac
 
@@ -78,6 +79,7 @@ echo "alndbs install to $alndbs_dir"
 sed < Makefile.in "
 /^CXX *=/s%=.*%= $CXX%
 /^CFLAGS *=/s%=.*%= $CFLAGS%
+/^CLIB *=/s%=.*%= $CLIB%
 /^LD *=/s%=.*%= $LD%
 /^AR *=/s%=.*%= $AR%
 /^RANLIB *=/s%=.*%= $RANLIB%

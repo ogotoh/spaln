@@ -313,7 +313,7 @@ void Sortgrcd::print_cds(GeneRecord* gwrk, RANGE* exon, const char* Rname)
 	int	r = gwrk->Gend;
 	int	Glen = r - l;
 
-	sprintf(str, "Dbs%d %d %d", gwrk->Cid, l, r);
+	snprintf(str, MAXL, "Dbs%d %d %d", gwrk->Cid, l, r);
 	gene.getdbseq(gdbs, str, gwrk->Cid);
 	if (gwrk->Csense) gene.comrev();
 	for (RANGE* rng = fistrng(exon); neorng(rng); ++rng) {
@@ -375,7 +375,7 @@ static	const	char*	BedFrom = "%s\t%d\t%d\t%s\t%d\t%c\t%d\t%d\t%-11s\t%d\t";
 	int	r = gwrk->Gend;
 	int&	n_exon = exon->left;
 
-	sprintf(str, "Dbs%d %d %d", gwrk->Cid, l, r);
+	snprintf(str, MAXL, "Dbs%d %d %d", gwrk->Cid, l, r);
 	gene.getdbseq(gdbs, str, gwrk->Cid);
 	if (gwrk->Csense) gene.comrev();
 	for (RANGE* rng = fistrng(exon); neorng(rng); ++rng) {
@@ -759,7 +759,7 @@ const	char*	ltype = "";
 	    if (grfn >= elocus) niso = 0;
 	    fprintf(out_fd, fmt3n, gdbs->entname(gwrk->Cid), "mRNA", 
 		gwrk->Gstart, gwrk->Gend,(int) gwrk->Gscore, rvg);
-	    sprintf(mname, "%s_%d", gdbs->entname(gwrk->Cid), 
+	    snprintf(mname, MAXL, "%s_%d", gdbs->entname(gwrk->Cid), 
 		(gwrk->Gstart + gwrk->Gend) / 2000);
 	    fprintf(out_fd, fmt3m, ++Gff3MID, Gff3GID, mname);
 	    for (INT m = 0; m < gwrk->nexn; ++m, ++ewrk) {

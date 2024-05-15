@@ -214,23 +214,23 @@ static	const	char	seqargfrm2[] = "%s %d %d %d %d %c";
 	char*	seqid = dbs? seqarg + 1: seqarg;
 	switch (eori) {
 	  case DONOR:
-	    sprintf(seqid, seqargfrm, chr, ll, lr, sgn);
-	    sprintf(sid, "%s%d", chr, l);
+	    snprintf(seqid, MAXL - 1, seqargfrm, chr, ll, lr, sgn);
+	    snprintf(sid, MAXL, "%s%d", chr, l);
 	    break;
 	  case ACCPTR: case BRANCH:
-	    sprintf(seqid, seqargfrm, chr, rl, rr, sgn);
-	    sprintf(sid, "%s%d", chr, r);
+	    snprintf(seqid, MAXL - 1, seqargfrm, chr, rl, rr, sgn);
+	    snprintf(sid, MAXL, "%s%d", chr, r);
 	    break;
 	  case JOIN:
 	    if (rvs)
-		sprintf(seqid, seqargfrm2, chr, rl, rr, ll, lr, sgn);
+		snprintf(seqid, MAXL - 1, seqargfrm2, chr, rl, rr, ll, lr, sgn);
 	    else
-		sprintf(seqid, seqargfrm2, chr, ll, lr, rl, rr, sgn);
-	    sprintf(sid, "%s%d.%d", chr, l, r);
+		snprintf(seqid, MAXL - 1, seqargfrm2, chr, ll, lr, rl, rr, sgn);
+	    snprintf(sid, MAXL, "%s%d.%d", chr, l, r);
 	    break;
 	  case INTRON: case EXON:
-	    sprintf(seqid, seqargfrm, chr, ll, rr, sgn);
-	    sprintf(sid, "%s%d.%d", chr, l, r);
+	    snprintf(seqid, MAXL - 1, seqargfrm, chr, ll, rr, sgn);
+	    snprintf(sid, MAXL, "%s%d.%d", chr, l, r);
 	    break;
 	}
 	Seq*	tmp = eijseq->getseq(seqarg, dbs);

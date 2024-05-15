@@ -5,7 +5,8 @@ exec_prefix = /usr/local/bin
 table_dir = /usr/local/bin
 alndbs_dir = /db/seqdb
 CXX  = g++
-#CXX  = clang++
+# for MACOS uncomment below line
+#CXX  = clang++ -std=c++11
 CFLAGS = -O3 -march=native
 RANLIB = ranlib
 LD  = g++
@@ -21,9 +22,13 @@ PROG_B = spaln sortgrcd makmdm makdbs
 PROG_A = dvn exinpot kmers npssm rdn utn
 PROG_F = fitild compild decompild plotild
 PROG = $(PROG_B) $(PROG_A) $(PROG_F)
+# for MACOS uncomment below line
+#PROG = $(PROG_B) $(PROG_A)
 
 STDH = stdtype.h
 CLIB = clib.a -lpthread -lm -lz
+# for MACOS uncomment below line
+#CLIB = clib.a libz.a
 SLIB = sblib.a $(CLIB)
 ULIB = ublib.a $(SLIB)
 
@@ -143,7 +148,8 @@ fwd2d1.o: fwd2d1.cc aln.h vmf.h wln.h boyer_moore.h
 fwd2h1.o: fwd2h1.cc aln.h wln.h vmf.h boyer_moore.h udh_intermediate.h \
 	rhomb_coord.h simd_functions.h fwd2h1_simd.h fwd2h1_wip_simd.h
 fwd2s1.o: fwd2s1.cc aln.h wln.h vmf.h boyer_moore.h udh_intermediate.h \
-	rhomb_coord.h simd_functions.h fwd2s1_simd.h fwd2s1_wip_simd.h
+	rhomb_coord.h simd_functions.h fwd2s1_simd.h fwd2s1_wip_simd.h \
+	fwd2s1_simd.cc
 gaps.o:	    gaps.cc  gaps.h  seq.h
 gsinfo.o:	gsinfo.cc	seq.h
 seq.o:	seq.cc	seq.h		aln.h	dbs.h

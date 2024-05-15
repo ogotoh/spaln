@@ -71,6 +71,7 @@ static	float	ild_up_quantile = 0.996;
 static	BLKTYPE	MaxBlock = 0;
 static	BLKTYPE	ExtBlock = 0;
 static	BLKTYPE	ExtBlockL = 0;
+static	double	cfact = 0.75;
 
 static	void	setupbitpat(int molc, size_t gnmsz);
 static	bool	newer(char* str, const char** argv);
@@ -122,6 +123,9 @@ const	char*	val = ps + 1;
 		break;
 	    case 'b':	// block length
 		if (*val) wcp.blklen = ktoi(val);
+		break;
+	    case 'c':	// exponet to Nbitpat
+		if (*val) cfact = atof(val);
 		break;
 	    case 'd':	// N-best all hit block score
 		if (*val) Nascr = atoi(val);
@@ -227,6 +231,7 @@ void MakeDbs::read_ent(file_t fd)
 {
 	size_t	flen = ftell(fd);
 	cbuf = new char[flen];
+#if USE_ZLIB
 	if (gzent) {
 	    fclose(fd);
 	    gzent = gzopenpbe(OutPrm.out_file, dbname, ENZ_EXT, "r", 2);
@@ -237,11 +242,17 @@ void MakeDbs::read_ent(file_t fd)
 	    if (fread(cbuf, sizeof(char), flen, fd) != flen)
 		fatal("Corrupted entry file !\n");
 	}
+#else
+	rewind(fd);
+	if (fread(cbuf, sizeof(char), flen, fd) != flen)
+	    fatal("Corrupted entry file !\n");
+#endif
 }
 
 template <typename file_t>
 void MakeDbs::read_idx(file_t fd)
 {
+#if USE_ZLIB
 	if (gzidx) {
 	    fclose(fd);
 	    gzidx = gzopenpbe(OutPrm.out_file, dbname, IDZ_EXT, "r", 2);
@@ -252,6 +263,11 @@ void MakeDbs::read_idx(file_t fd)
 	    if (fread(rbuf, sizeof(DbsRec), recnbr, fd) != recnbr)
 		fatal("Corrupted index file !\n");
 	}
+#else
+	rewind(fd);
+	if (fread(rbuf, sizeof(DbsRec), recnbr, fd) != recnbr)
+	    fatal("Corrupted index file !\n");
+#endif
 }
 
 template <typename file_t>
@@ -273,16 +289,21 @@ void MakeDbs::write_odr(file_t fd, const INT* order, const char* str)
 void MakeDbs::mkidx()
 {
 	if (!cridxf) return;		// has been sorted
+	char	str[LINE_MAX];
+	FILE*	fodr = 0;
+#if USE_ZLIB
 	if (gzent)	read_ent(gzent);
 	else 		read_ent(fent);
-	rbuf = new DbsRec[recnbr];
 	if (gzidx)	read_idx(gzidx);
 	else		read_idx(fidx);
+#else
+	read_ent(fent);
+	read_idx(fidx);
+#endif
+	rbuf = new DbsRec[recnbr];
 	INT*	order = new INT[recnbr];
 	for (INT i = 0; i < recnbr; ++i) order[i] = i;
 	qsort((UPTR) order, recnbr, sizeof(INT), (CMPF) cmpkey);
-	char	str[LINE_MAX];
-	FILE*	fodr = 0;
 #if USE_ZLIB
 	gzFile	gzodr = 0;
 	if (OutPrm.gzipped)
@@ -293,7 +314,7 @@ void MakeDbs::mkidx()
 	else		write_odr(gzodr, order, str);
 #else
 	fodr = fopenpbe(OutPrm.out_file, dbname, ODR_EXT, "w", 2, str);
-	write_odr(fodr, str);
+	write_odr(fodr, order, str);
 #endif
 	delete[] cbuf;
 	delete[] rbuf;
@@ -305,14 +326,23 @@ int MakeDbs::write_recrd(file_t fd, int c)
 { 
 	putseq(SEQ_DELIM);
 	if (rec.seqlen) {
+#if USE_ZLIB
 	    if (gzidx)	write_idx(gzidx);
 	    else	write_idx(fidx);
+#else
+	    write_idx(fidx);
+#endif
 	}
 	if (c != EOF) {
+#if USE_ZLIB
 	    if (gzent)	rec.entptr = ftell(gzent);
 	    else	rec.entptr = ftell(fent);
 	    if (gzseq)	rec.seqptr = ftell(gzseq);
 	    else	rec.seqptr = ftell(fseq);
+#else
+	    rec.entptr = ftell(fent);
+	    rec.seqptr = ftell(fseq);
+#endif
 	    char*	ps = entrystr;
 	    char*	pe = ps;
 	    char*	pb = ps;
@@ -328,11 +358,15 @@ int MakeDbs::write_recrd(file_t fd, int c)
 	    else	*ps = '\0';
 	    if (wordcmp(pe, entryprv) < 0) cridxf = true;
 	    strcpy(entryprv, pe);
+#if USE_ZLIB
 	    if (gzent) {
 		fputs(pe, gzent); fputc('\0', gzent);
 	    } else {
 		fputs(pe, fent); fputc('\0', fent);
 	    }
+#else
+	    fputs(pe, fent); fputc('\0', fent);
+#endif
 	}
 	rec.seqlen = b = 0;
 	return (c);
@@ -637,25 +671,17 @@ static  const char* wfmt =
 
 static void setupbitpat(int molc, size_t gnmsz)
 {
-	if (molc == PROTEIN || molc == TRON) {
-	    BlkWcPrm&	wcp_t = algmode.crs == 2? wcp_ax: wcp_af;
-	    if (wcp.Nalpha == 0) wcp.Nalpha = wcp_t.Nalpha;
-	    if (wcp.Ktuple == 0 && !gnmsz) wcp.Ktuple = wcp_t.Ktuple;
-	    if (wcp.Bitpat2 == 1) wcp.Bitpat2 = wcp_t.Bitpat2;
-	    if (wcp.BitPat == 1) wcp.BitPat = wcp_t.BitPat;
-	    if (wcp.blklen == 0 && !gnmsz) wcp.blklen = wcp_t.blklen;
-	    if (wcp.Nbitpat == 0) wcp.Nbitpat = wcp_t.Nbitpat;
-	    if (wcp.afact == 0) wcp.afact = wcp_t.afact;
-	} else {
-	    BlkWcPrm&	wcp_t = algmode.crs == 2? wcp_cx: wcp_cf;
-	    if (wcp.Nalpha == 0) wcp.Nalpha = wcp_t.Nalpha;
-	    if (wcp.Ktuple == 0 && !gnmsz) wcp.Ktuple = wcp_t.Ktuple;
-	    if (wcp.Bitpat2 == 1) wcp.Bitpat2 = wcp_t.Bitpat2;
-	    if (wcp.BitPat == 1) wcp.BitPat = wcp_t.BitPat;
-	    if (wcp.blklen == 0 && !gnmsz) wcp.blklen = wcp_t.blklen;
-	    if (wcp.Nbitpat == 0) wcp.Nbitpat = wcp_t.Nbitpat;
-	    if (wcp.afact == 0) wcp.afact = wcp_t.afact;
-	}
+	BlkWcPrm&	wcp_t = (molc == PROTEIN || molc == TRON)?
+	    (algmode.crs == 2? wcp_ax: wcp_af):
+	    (algmode.crs == 2? wcp_cx: wcp_cf);
+	if (wcp.Nalpha == 0) wcp.Nalpha = wcp_t.Nalpha;
+	if (wcp.Ktuple == 0 && !gnmsz) wcp.Ktuple = wcp_t.Ktuple;
+	if (wcp.Bitpat2 == 1) wcp.Bitpat2 = wcp_t.Bitpat2;
+	if (wcp.BitPat == 1) wcp.BitPat = wcp_t.BitPat;
+	if (wcp.blklen == 0 && !gnmsz) wcp.blklen = wcp_t.blklen;
+	if (wcp.Nbitpat == 0) wcp.Nbitpat = wcp_t.Nbitpat;
+	if (wcp.afact == 0) wcp.afact = wcp_t.afact;
+
 	if (gnmsz && !(wcp.Ktuple && wcp.blklen && wcp.MaxGene)) {
 	    if (!wcp.blklen) {
 		wcp.blklen = int(sqrt(double(gnmsz)));
@@ -1159,20 +1185,20 @@ const	char**	seqdb = argv;
 	for (int ac = 0; ac++ < argc && *seqdb; ++seqdb) {
 	    if (mkdbs) mkdbs->wrtgrp(*argv);
 	    bool	gz = is_gz(*seqdb);
-	    if (gz) {
 #if USE_ZLIB
+	    if (gz) {
 		gzFile	gzfd = gzopen(*seqdb, "rb");
 		if (gzfd)
 		    scan_genome(gzfd, tcount);
 		else	fatal("%s not found!\n", *seqdb);
-#else
-		fatal(gz_unsupport);
-#endif
 	    } else {
 		FILE*	fd = fopen(*seqdb, "r");
 		if (!fd) fatal("%s not found!\n", *seqdb);
 		scan_genome(fd, tcount);
 	    }
+#else
+	    if (gz) fatal(gz_unsupport);
+#endif
 	}
 	if (mkdbs) mkdbs->wrtgrp("E_O_F");
 	if (!mkblk) return;
@@ -1974,7 +2000,7 @@ Seq* SrchBlk::setgnmrng(const BPAIR* wrkbp)
 	INT	x = (wrkbp->zl? wrkbp->lb - wrkbp->zl: 0) * wcp.blklen;
 	INT	y = ((wrkbp->zl? wrkbp->rb - wrkbp->zl: 0) + 1) * wcp.blklen;
 	char	str[LINE_MAX];
-	sprintf(str, "Dbs%d %d %d", wrkbp->chr, x + 1, y);
+	snprintf(str, LINE_MAX, "Dbs%d %d %d", wrkbp->chr, x + 1, y);
 	Seq*	sd = (*curgr)->getdbseq(dbf, str, wrkbp->chr);
 	if (wrkbp->rvs) sd->comrev();
 	return (sd);
@@ -2286,10 +2312,10 @@ bool extend_gene_rng(Seq* sqs[], const PwdB* pwd, DbsDt* dbf)
 
 	    char	str[LINE_MAX];
 	    if (rvs)
-		sprintf(str, "$%s %d %d <", (*b->sname)[0],
+		snprintf(str, LINE_MAX, "$%s %d %d <", (*b->sname)[0],
 		    b->SiteNo(grng.right), b->SiteNo(grng.left));
 	    else
-		sprintf(str, "$%s %d %d", (*b->sname)[0],    
+		snprintf(str, LINE_MAX, "$%s %d %d", (*b->sname)[0],    
 		    b->SiteNo(grng.left), b->SiteNo(grng.right));
 	    Seq*    tmp = new Seq(1, abs(grng.right - grng.left));
 	    swap(b, tmp);
@@ -2791,6 +2817,7 @@ Qwords::Qwords(int k, int nc, CHAR* ct, ContBlk* pwc, Bitpat** bp, Seq* a) :
 	xx = new int[kk];
 	front = new BLKTYPE[kk];
 	endss = new CHAR*[kk];
+	if (kk > 1) app_c = pow((double) wcp.Nbitpat, cfact);
 	if (a) reset(a);
 }
 
@@ -2838,7 +2865,7 @@ int Qwords::querywords(const CHAR* ss)
 		    wdscr += wc->wscr[*w];
 		}
 	    }
-	    if (c) return (wdscr / c);			// find hit
+	    if (c) return (int(double(wdscr) / app_c));	// find hit
 	}
 	return (-1);					// no hit or bad query
 }
@@ -2895,7 +2922,7 @@ int Qwords::querywords(const CHAR* ss, int d, bool rvs)
 		    wdscr += wc->wscr[*w];
 		}
 	    }
-	    if (c) return (wdscr / c);			// find hit
+	    if (c) return (int(double(wdscr) / app_c));	// find hit
 	}
 	return (-1);					// no hit or bad query
 }

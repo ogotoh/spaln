@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*	fwd2b1.c
+*	fwd2b1.cc
 *
 *	Alignment of two protein or nucleotide sequences.
 *	Splicing is NOT considered.
@@ -34,6 +34,7 @@
 #include "fwd2s1_simd.h"
 #else
 #include "udh_intermediate.h"
+#define _VecRegSize_ 0
 #endif
 
 class Aln2b1 {
@@ -41,42 +42,42 @@ const	Seq**	seqs;
 const	Seq*&	a;
 const	Seq*&	b;
 const	PwdB*	pwd;
-const	bool	Local;
+const	float	coef_B = sizeof(short);
+const	float	coef_C = 2 * sizeof(int);
+const	bool	Local = algmode.lcl & 16;
+const	bool	LocalC = Local && algmode.lcl & 32;
+const	INT	lowestlvl;
+const	int	nelem = _VecRegSize_? _VecRegSize_ / sizeof(short): 1;
+
 	Mfile*	mfd = 0;
 	Vmf*	vmf = 0;
-const	INT	lowestlvl;
-#if __SSE4_1__ || __ARM_NEON
-const	int	simd = algmode.alg & 3;
-#else
-const	int	simd = 0;
-#endif	// __SSE4_1__ || __ARM_NEON
-const	bool	recursive = algmode.alg & 4;
-public:
-	Aln2b1(const Seq** _seqs, const PwdB* _pwd) :
-	    seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd), 
-	    Local(algmode.lcl & 16), lowestlvl(b->wllvl) {} 
-	~Aln2b1() {delete vmf; delete mfd;}
-	void	initB_ng(RVPD* hh[], const WINDOW& wdw);
-	RVPD*	lastB_ng(RVPD* hh[], const WINDOW& wdw);
-	VTYPE	forwardB_ng(const WINDOW& wdw, int pp[] = 0);
-	void	hinitB_ng(Rvwml* hh[], const WINDOW& wdw);
-	Rvwml*	hlastB_ng(Rvwml* hh[], const WINDOW& wdw);
-	VTYPE	hirschbergB_ng(Dim10* cpos, const int n_imd, const WINDOW& wdw);
-	void	sinitB_ng(VTYPE* hh[], const WINDOW& wdw);
-	VTYPE	slastB_ng(VTYPE* hh[], const WINDOW& wdw);
-	VTYPE	scorealoneB_ng(const WINDOW& wdw);
-	VTYPE	diagonalB_ng();
-	VTYPE	trcbkalignB_ng(const WINDOW& wdw);
-	void	cinitB_ng(RVDWC* hhc[], const WINDOW& wdw);
-	Colonies*	fwdswgB_ng(VTYPE* scr, const WINDOW& wdw);
 	VTYPE	backforth(int n, const BOUND& lub);
-	void	mimd_postwork(const Dim10* cpos, const int n_imd);
-	void	rcsv_postwork(const Dim10* cpos);
-	VTYPE	lspB_ng(const WINDOW& wdw);
-	VTYPE	seededB_ng(INT level, int cmode, const BOUND& lub);
-	SKL*	globalB_ng(VTYPE* scr, const WINDOW& wdw);
+	void	cinitB_ng(RVDWC* hhc[], const WINDOW& wdw);
 	VTYPE	creepback(int ovr, VTYPE bscr, const BOUND& lub);
 	VTYPE	creepfwrd(int& ovr, VTYPE bscr, const BOUND& lub);
+	VTYPE	diagonalB_ng();
+	VTYPE	forwardB_ng(const WINDOW& wdw, int pp[] = 0);
+	void	hinitB_ng(Rvwml* hh[], const WINDOW& wdw);
+	VTYPE	hirschbergB_ng(Dim10* cpos, const int n_imd, const WINDOW& wdw);
+	Rvwml*	hlastB_ng(Rvwml* hh[], const WINDOW& wdw);
+	void	initB_ng(RVPD* hh[], const WINDOW& wdw);
+	RVPD*	lastB_ng(RVPD* hh[], const WINDOW& wdw);
+	VTYPE	lspB_ng(const WINDOW& wdw);
+	void	mimd_postwork(const Dim10* cpos, const int n_imd);
+	void	rcsv_postwork(const Dim10* cpos);
+	VTYPE	seededB_ng(INT level, int cmode, const BOUND& lub);
+	void	sinitB_ng(VTYPE* hh[], const WINDOW& wdw);
+	VTYPE	slastB_ng(VTYPE* hh[], const WINDOW& wdw);
+	VTYPE	trcbkalignB_ng(const WINDOW& wdw);
+public:
+const	int	simd = _VecRegSize_? (algmode.alg & 3): 0;
+	Aln2b1(const Seq** _seqs, const PwdB* _pwd) :
+	    seqs(_seqs), a(seqs[0]), b(seqs[1]), pwd(_pwd), 
+	    lowestlvl(b->wllvl) {} 
+	~Aln2b1() {delete vmf; delete mfd;}
+	Colonies*	fwdswgB_ng(VTYPE* scr, const WINDOW& wdw);
+	VTYPE	scorealoneB_ng(const WINDOW& wdw);
+	SKL*	globalB_ng(VTYPE* scr, const WINDOW& wdw);
 };
 
 void Aln2b1::initB_ng(RVPD* hh[], const WINDOW& wdw)
@@ -266,7 +267,6 @@ printf("%-2d", m);
 		if (LocalL && h->val <= 0) h->val = h->dir = 0;
 		else if (h->dir == NEWD || h->dir == NEWV || h->dir == NEWH)
 			h->ptr = vmf->add(m - 1, n - 1, h->ptr);
-printf(" %2d %2d:", mx->val, mx->ptr);
 
 #if DEBUG
 		if (OutPrm.debug) {
@@ -280,7 +280,6 @@ printf(" %2d %2d:", mx->val, mx->ptr);
 		}
 #endif
 	    }	/* end of n-loop */
-fputc('\n', stdout);
 	}	/* end of m-loop */
 
 	if (LocalR) {
@@ -1109,14 +1108,11 @@ VTYPE Aln2b1::trcbkalignB_ng(const WINDOW& wdw)
 	if (wdw.width < 0) return (NEVSEL);
 	int	ptr[2];
 	VTYPE	scr;
-
 	vmf = simd < 2? new Vmf(): 0;
-
-#if !__SSE4_1__ && !__ARM_NEON	// scalar version of forward DP 
-	scr = forwardB_ng(wdw, ptr);
-#else
 const	int	nelem = 8;
 const	int	m = a->right - a->left;
+
+#if _VecRegSize_
 	if (simd == 0 || m < nelem) {
 	    if (!vmf) vmf = new Vmf();
 	    scr = forwardB_ng(wdw, ptr);
@@ -1124,20 +1120,13 @@ const	int	m = a->right - a->left;
 	    float	cvol = wdw.lw - b->left + a->right;
 	    cvol =  (float) (m) * (b->right - b->left) - cvol * cvol / 2;
 const	    int	mode = simd > 1? 1: (cvol < USHRT_MAX? 3: 5);
-# if __AVX512BW__
-	    SimdAln2s1<short, 32, __m512i, __m512i> 
-# elif __AVX2__
-	    SimdAln2s1<short, 16, __m256i, __m256i>
-# elif __SSE4_1__
-	    SimdAln2s1<short, 8, __m128i, __m128i>
-# else		// __ARM_NEON
-	    SimdAln2s1<short, 8, int8x16_t, int8x16_t>
-# endif
-		trbfwd(seqs, pwd, wdw, 0, 0, mode, vmf);
+	    SimdAln2s1 trbfwd(seqs, pwd, wdw, 0, 0, mode, vmf);
 	    scr = mode == 1? trbfwd.forwardS1_wip(mfd):
 		trbfwd.forwardS1(ptr);
 	}
-#endif		// !__SSE4_1__ && !__ARM_NEON
+#else
+	scr = forwardB_ng(wdw, ptr);
+#endif	// _VecRegSize_
 	if (*ptr) {
 	    SKL* lskl = vmf->traceback(*ptr);
 	    if (!lskl) {
@@ -1257,16 +1246,6 @@ const	    int	bright = b->right;
 
 VTYPE Aln2b1::lspB_ng(const WINDOW& wdw)  // recursive 
 {
-#if __AVX512BW__
-const	int	nelem = 32;
-#elif __AVX2__
-const	int	nelem = 16;
-#elif  __SSE4_1__ || __ARM_NEON
-const	int	nelem = 8;
-#else	// !__SSE4_1__ && !__ARM_NEON
-const	int	nelem = 1;
-#endif
-
 const	int	m = a->right - a->left;
 const	int	n = b->right - b->left;
 	if (!m && !n) return (0);
@@ -1290,17 +1269,34 @@ const	INT	bexgr = b->inex.exgr;	// reserve
 	if (wdw.up == wdw.lw) return(diagonalB_ng());
 	if (abs(n - m) < 8 || m == 1 || n == 1)
 	    return (trcbkalignB_ng(wdw));
-	float	cvol = float(m) * float(n + m);
-const	int	n_imd = recursive? 1:
-		int(std::min(cvol / MaxVmfSpace, float(m) / nelem));
-	if (n_imd == 0) return (trcbkalignB_ng(wdw));
-
-	if (simd < 2) {		// linked list traceback
+	bool	recursive = algmode.alg & 4;
+	int	n_imd = 1;
+	float	cvol = 0;
+	if (simd < 2) {	// hexagonal
 const	    float	k = wdw.lw - b->left + a->right;
 const	    float	q = b->right - a->left - wdw.up;
-	    float	cvol =  float(m) * float(n) - (k * k + q * q) / 2;
-	    if (cvol < MaxVmfSpace || m == 1 || n <= 1)
-		return (trcbkalignB_ng(wdw));
+	    cvol = float(m) * n - (k * k + q * q) / 2;
+	} else {	// rhombic
+	    cvol = float(m) * (n + m);
+	}
+	if (coef_B * cvol < MaxVmfSpace)
+	    return (trcbkalignB_ng(wdw));
+	int	imd_intvl = (m + 1) / 2;
+	if (!recursive) {
+const	    double	z = 2. * m * coef_B / coef_C;
+const	    int	imd1 = int(pow(z, 1. / 3) + 0.5) - 1;
+const	    float	spc = coef_C * n * imd1 + 
+		coef_B * cvol / (imd1 + 1) / (imd1 + 1);
+	    if (spc > MaxVmfSpace) recursive = true;
+	    else {
+const		int	imd3 = m / nelem;
+		if (alprm.ubh)	n_imd = alprm.ubh;
+		else		n_imd = std::min(imd1, imd3);
+		imd_intvl = (m + n_imd) / (n_imd + 1);
+		if (imd_intvl * n_imd == m) --n_imd;
+		if (n_imd == 0)
+		    return (trcbkalignB_ng(wdw));
+	    }
 	}
 
 	RANGE	rng[2];			// reserve
@@ -1311,27 +1307,18 @@ const	    float	q = b->right - a->left - wdw.up;
 
 	VTYPE	scr = 0;
 
-#if __SSE4_1__ || __ARM_NEON
-const	int	mode = 
-	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 2: 4;
+#if _VecRegSize_
 	if (simd) {	// simd version
-# if __AVX512BW__
-	    SimdAln2s1<short, 32, __m512i, __m512i>
-# elif __AVX2__
-	    SimdAln2s1<short, 16, __m256i, __m256i>
-# elif __SSE4_1__	// __SSE4_1__
-	    SimdAln2s1<short, 8, __m128i, __m128i>
-# else	// __ARM_NEON
-	    SimdAln2s1<short, 8, int8x16_t. int8x16_t>
-# endif
-	    sb1(seqs, pwd, wdw, 0, 0, mode);
+const	    int	mode = 
+	    ((std::max(abs(wdw.lw), wdw.up) + wdw.width) < SHRT_MAX)? 2: 4;
+	    SimdAln2s1	sb1(seqs, pwd, wdw, 0, 0, mode);
 	    if (simd == 1)	// full-precision ILD
 		scr = sb1.hirschbergS1(cpos, n_imd);
 	    else 		// coase-grained ILD
 		scr = sb1.hirschbergS1_wip(cpos, n_imd);
 	} else		// scalar version
-#endif	// __SSE4_1__ || __ARM_NEON
-	    scr = hirschbergB_ng(cpos, n_imd, wdw);
+#endif
+	scr = hirschbergB_ng(cpos, n_imd, wdw);
 
 	if (scr > NEVSEL) {
 	    if (recursive)
@@ -1572,28 +1559,17 @@ VTYPE HomScoreB_ng(const Seq* seqs[], const PwdB* pwd)
 {
 	WINDOW	wdw;
 	stripe((const Seq**) seqs, &wdw, alprm.sh);
-#if !__SSE4_1__	&& !__ARM_NEON	// scalar version of forward DP 
 	Aln2b1 alnv(seqs, pwd);
-	return (alnv.scorealoneB_ng(wdw));
-#else
+#if _VecRegSize_	// vector version of forward DP
 const	Seq*&	a = seqs[0];
 const	int	m = a->right - a->left;
-	if ((algmode.alg & 3) == 0 || m < 4) {
-	    Aln2b1 alnv(seqs, pwd);
+	if (alnv.simd == 0 || m < 4)
 	    return (alnv.scorealoneB_ng(wdw));
-	}
-# if __AVX512BW__	// integer variables
-	SimdAln2s1<short, 32, __m512i, __m512i>
-# elif __AVX2__
-	SimdAln2s1<short, 16, __m256i, __m256i>
-# elif	__SSE4_1__	// __SSE4_1__
-	SimdAln2s1<short, 8, __m128i, __m128i>
-# else	// __ARM_NEON
-	SimdAln2s1<short, 8, int8x16_t, int8x16_t>
-# endif
-	    fwds(seqs, pwd, wdw, 0, 0, 0);
+	SimdAln2s1 fwds(seqs, pwd, wdw, 0, 0, 0);
 	return (fwds.scoreonlyS1());
-#endif	// !__SSE4_1__ && !__ARM_NEON
+#else	// scalar version of forward DP 
+	return (alnv.scorealoneB_ng(wdw));
+#endif	// _VecRegSize_
 }
 
 Colonies* swg1stB_ng(const Seq* seqs[], const PwdB* pwd, VTYPE* scr)

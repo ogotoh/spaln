@@ -721,7 +721,7 @@ int setCodonUsage(int gc)
 	char	str[MAXL];
 
 	if (gc == 40 || gc == 50 || gc == 60 || gc == 70) {
-	    sprintf(str, "human%d.cdi", gc);
+	    snprintf(str, MAXL, "human%d.cdi", gc);
 	    return getCodonUsage(str);
 	}
 	if (!progets(str,"Codon Usage file [0/40/50/60/70/filename] : ") ||
@@ -729,7 +729,7 @@ int setCodonUsage(int gc)
 	if (isdigit(*str)) {
 	    gc = atoi(str);
 	    if (gc == 0) return evenusage();
-	    sprintf(str, "human%d.cdi", gc);
+	    snprintf(str, MAXL, "human%d.cdi", gc);
 	}
 	return getCodonUsage(str);
 }
