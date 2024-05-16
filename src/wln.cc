@@ -214,7 +214,7 @@ Wlp::Wlp(const Seq* seqs[], const PwdB* _pwd, const int level)
 	  tplwt(wlprm->tpl * wlprm->gain), 
 	  awspan(wlprm->width - 1), bwspan(3 * wlprm->width - 1), 
 	  precutoff(wlprm->cutoff - wlprm->gain * wlprm->tpl), 
-	  ixtd{0, 0, -int(wlprm->width + 1), 0, 0},
+	  ixtd{{0}, {0}, {-int(wlprm->width + 1)}, 0, 0},
 	  min_lnkscr(-wlprm->vthr / 2),
 	  dhit(algmode.crs && level > 1)
 {
@@ -233,7 +233,7 @@ Wlp::Wlp(const Seq* seqs[], const PwdB* _pwd, const int level)
 
 Wlp::Wlp(Seq* seqs[]) : 
 	a(seqs[0]), b(seqs[1]), mm(a->right - a->left), wlprm(setwlprm(0)), 
-	awspan(wlprm->width - 1), ixtd{0, 0, 0, 0,0}, min_lnkscr(0)
+	awspan(wlprm->width - 1), ixtd{{0}, {0}, {0}, 0, 0}, min_lnkscr(0)
 {
 	if (!afact) return;
 	position = foldseq();

@@ -224,7 +224,6 @@ public:
 #define And(a, b)	this->bit_and(a, b)
 #define AndNot(a, b)	this->bit_andnot(a, b)
 #define Or(a, b)	this->bit_or(a, b)
-#define To_mask(a)	this->load(a)
 #define Cast16to8(a)	this->cast16to8(a)
 #define AllZero(a)	this->all_zero(a)
 
@@ -1444,7 +1443,7 @@ const	    int	r = fhlastH1(maxh);
 	    } else
 		cpos[i][0] = end_of_ulk;	// don't cross intermediate
 	}
-	for (int d = 0; r > wdw.up; r -= wdw.width) ++d;
+	for ( ; r > wdw.up; r -= wdw.width) ;
 	if (LocalL) {
 	    a->left = maxh.ml;
 	    b->left = r + 3 * a->left;

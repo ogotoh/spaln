@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.5
-#### Last updated: 2024-05-15
+#### Present Version 3.0.5a
+#### Last updated: 2024-05-16
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -354,6 +354,9 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.5a
+1. Fix additional type mismatches concerning with ARM-NEON instructions.
+
 ## Changes in version 3.0.5
 1. Simd-related functions, ARM-NEON instructions in particular, have been modified.
 Installation in MacOS-Pro has been confirmed, where zlib library was manually

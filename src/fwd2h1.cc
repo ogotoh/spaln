@@ -1490,7 +1490,7 @@ const		int	mm3 = 3 * imd->mi;
 	    } else
 		cpos[i][0] = end_of_ulk;	// don't cross center
 	}
-	for (int d = 0; r > wdw.up; r -= wdw.width) ++d;
+	for ( ; r > wdw.up; r -= wdw.width) ;
 	if (LocalL) {
 	    a->left = maxh.ml;
 	    b->left = r + 3 * maxh.ml;

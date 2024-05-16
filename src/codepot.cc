@@ -76,7 +76,7 @@ VTYPE SpJunc::spjscr(int n5, int n3) {
 
 const CHAR* SpJunc::spjseq(int n5, int n3)
 {
-	if (n5 == b->left || n3 == b->right) return (spj_tron_tab[256]);
+	if (n5 <= b->left || n3 >= b->right) return (spj_tron_tab[256]);
 static	const	CHAR	pyrim[2] = {PHE, PHE};
 const	CHAR*	b5 = b->at(n5 - 2);
 const	CHAR*	b3 = n3? b->at(n3): pyrim;
@@ -490,11 +490,10 @@ void Exinon::intron53_n()
 	vset(data_n + bias, ZeroSGPT2, size + 1);
 	at_sig5 = sig53tab[0][3];
 	gc_sig5 = sig53tab[0][9];
-	CHAR*	ss = sd->at(sd->left);
 	SGPT2*	last = end_n();
 	INT53*	wk53 = int53 + bias + 1;
 const	float	fs = fS * alprm2.sss;
-	for (SGPT2* wkb = begin_n(); ++wkb < last; ++ss, ++wk53) {
+	for (SGPT2* wkb = begin_n(); ++wkb < last; ++wk53) {
 	    STYPE	sig5 = pref5? (STYPE) (fs * *prf5++): 0;
 	    STYPE	sig3 = pref3? (STYPE) (fs * *prf3++): 0;
 	    sig5 += sig53tab[0][wk53->dinc5];

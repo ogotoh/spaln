@@ -294,13 +294,14 @@ void MakeDbs::mkidx()
 #if USE_ZLIB
 	if (gzent)	read_ent(gzent);
 	else 		read_ent(fent);
+	rbuf = new DbsRec[recnbr];
 	if (gzidx)	read_idx(gzidx);
 	else		read_idx(fidx);
 #else
 	read_ent(fent);
+	rbuf = new DbsRec[recnbr];
 	read_idx(fidx);
 #endif
-	rbuf = new DbsRec[recnbr];
 	INT*	order = new INT[recnbr];
 	for (INT i = 0; i < recnbr; ++i) order[i] = i;
 	qsort((UPTR) order, recnbr, sizeof(INT), (CMPF) cmpkey);
@@ -3179,9 +3180,8 @@ int SrchBlk::findh(Seq** sqs)
 	if (!orf) return (ERROR);
 	Dhash<INT, int>	shash(2 * MaxNref, 0);
 	Qwords	qwd(kk,  DRNA, ConvTab, pbwc, bpp);
-	INT	norf = 0;
 	int	c;
-	for (ORF* wrf = orf; wrf->len; ++norf, ++wrf) {
+	for (ORF* wrf = orf; wrf->len; ++wrf) {
 	  bool	meet = false;
 	  b->translate(a, *wrf);
 	  if (a->right - a->left - (wcp.Nshift + bpp[0]->width) < 1) continue;

@@ -45,7 +45,6 @@ const	PwdB*	pwd;
 const	float	coef_B = sizeof(short);
 const	float	coef_C = 2 * sizeof(int);
 const	bool	Local = algmode.lcl & 16;
-const	bool	LocalC = Local && algmode.lcl & 32;
 const	INT	lowestlvl;
 const	int	nelem = _VecRegSize_? _VecRegSize_ / sizeof(short): 1;
 

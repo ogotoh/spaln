@@ -1187,7 +1187,7 @@ const	CHAR*	sseq = at(left);
 	    const int*	wk = which;
 	    if (dest->sname) dest->sname->reset(dmany);
 	    else dest->sname = new Strlist(dmany);
-	    for (int i = 0; *wk >= 0; ++i, ++wk)
+	    for ( ; *wk >= 0; ++wk)
 		dest->sname->push((*sname)[*wk]);
 	}
 	if (snl & CPY_SBI) {

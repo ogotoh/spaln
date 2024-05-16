@@ -46,7 +46,6 @@ static	const	int	expected_max_overlap = 1024;
 static	const	int	expected_overlap_ext = 16;
 static	const	int	max_dist2ss = 9;
 static	const	CHAR	Newd = 8;
-static	const	float	gudp = 0.3f;
 
 static int infer_orientation(Seq** sqs, const PwdB* pwd);
 
@@ -1080,7 +1079,7 @@ const	    Rvwml*	mx = hlastS_ng(hh, wdw);
 	    } else
 		cpos[i][0] = end_of_ulk;	// don't cross center
 	}
-	for (d = 0; r > wdw.up; r -= wdw.width) ++d;
+	for ( ; r > wdw.up; r -= wdw.width) ;
 	if (LocalL) {
 	    a->left = maxh.ml;
 	    b->left = r + maxh.ml;

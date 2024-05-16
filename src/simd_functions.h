@@ -1504,7 +1504,7 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(CHAR);
 	int_v splat(const uint8_t i) {return vdupq_n_u8(i);}
 	int_v load(uint8_t const* a) {return vld1q_u8(a);}
 	void	store(uint8_t* a, int_v v) {vst1q_u8(a, v);}
-	int_v add(int_v u, int_v v) {return vqaddq_s8(u, v);}
+	int_v add(int_v u, int_v v) {return vqaddq_u8(u, v);}
 	int_v sub(int_v u, int_v v) {return vqsubq_u8(u, v);}
 	int_v mul(int_v u, int_v v) {return vmulq_u8(u, v);}
 	int_v max(int_v u, int_v v) {return vmaxq_u8(u, v);}
@@ -1621,7 +1621,7 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(SHORT);
 	int_v cast16to8(int_v v) {
 	    uint8x16_t	w = vreinterpretq_u8_u16(v);
 	    uint8x16_t	b_v = vld1q_u8((uint8_t const*) b32s2c_a);
-	    return vreinterpretq_u16_s8(vqtbl1q_u8(w, b_v));
+	    return vreinterpretq_u16_u8(vqtbl1q_u8(w, b_v));
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
@@ -1671,7 +1671,7 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(int);
 	int_v cast32to16(int_v v) {
 	    int8x16_t	w = vreinterpretq_s8_s32(v);
 	    uint8x16_t	b_v = vld1q_u8((uint8_t const*) b32i2s_a);
-	    return vreinterpretq_u32_s8(vqtbl1q_s8(w, b_v));
+	    return vreinterpretq_s32_s8(vqtbl1q_s8(w, b_v));
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
