@@ -674,17 +674,10 @@ regist_v	    qb_v = Load(ps_a);		// post splicing
 		    hc_v = Blend(zero_v, hc_v, msk_m);
 		    if (used) hd_v = Blend(zero_v, hd_v, msk_m);
 		}
-		if (ke < j9) fc_v = hb_v;		// reserve
 		msk_m = Cmp_eq(hb_v, zero_v);
 		hb_v = Blend(one_v, zero_v, msk_m);	// diag: 1, others: 0
 regist_v	qb_v = Load(hb_a[p]);
 		qb_v = AndNot(hb_v, qb_v);		// t && !q = nd && di
-		if (ke < j9) {
-		    msk_m = To_mask(pb_a);
-		    hb_v = Blend(hb_v, fc_v, msk_m);
-		    pb_a[ke] = -1;			// all 1
-		}
-
 		Store(qb_a, qb_v);
 		Store(hv_a[p] + 1, hv_v);
 		Store(hb_a[p] + 1, hb_v);

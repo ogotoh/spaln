@@ -216,11 +216,6 @@ public:
 #define And(a, b)	this->bit_and(a, b)
 #define Or(a, b)	this->bit_or(a, b)
 #define AndNot(a, b)	this->bit_andnot(a, b)
-#if __ARM_NEON
-#define To_mask(a)	usf.load((SHORT *) a)
-#else
-#define To_mask(a)	this->load(a)
-#endif
 #define Cast16to8(a)	this->cast16to8(a)
 
 /*****************************************************************

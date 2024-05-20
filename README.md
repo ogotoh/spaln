@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.5a
-#### Last updated: 2024-05-16
+#### Present Version 3.0.5b
+#### Last updated: 2024-05-20
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -354,6 +354,10 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.5b
+1. Modify Makefie.in.
+2. Remove unnecessary lines in fwd2s1_simd.cc.
+
 ## Changes in version 3.0.5a
 1. Fix additional type mismatches concerning with ARM-NEON instructions.
 

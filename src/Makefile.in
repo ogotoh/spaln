@@ -26,11 +26,13 @@ PROG = $(PROG_B) $(PROG_A) $(PROG_F)
 #PROG = $(PROG_B) $(PROG_A)
 
 STDH = stdtype.h
-CLIB = clib.a -lpthread -lm -lz
+CLIB = clib.a
 # for MACOS uncomment below line
-#CLIB = clib.a libz.a
+#CLIB = clib.a
 SLIB = sblib.a $(CLIB)
 ULIB = ublib.a $(SLIB)
+LLIB = -lpthread -lm -lz
+GLIB = -L/usr/local/lib -lgsl -lgslcblas $(LLIB)
 
 BINDIR = $(DESTDIR)$(exec_prefix)
 TABDIR = $(DESTDIR)$(table_dir)
@@ -40,7 +42,7 @@ DBSDIR = $(DESTDIR)$(alndbs_dir)
 	$(CXX) -c $<
 
 .cc:
-	$(CXX) -o $@ $< $(CLIB)
+	$(CXX) -o $@ $< $(CLIB) $(LLIB)
 
 basis: $(PROG_B)
 
@@ -93,36 +95,35 @@ ls:
 	ls $(SRC) $(HDR)
 
 spaln:	spaln.cc blksrc.o $(SLIB)
-	$(CXX) -o $@ spaln.cc blksrc.o $(SLIB) $(ILIB)
+	$(CXX) -o $@ spaln.cc blksrc.o $(SLIB) $(LLIB)
 sortgrcd:	sortgrcd.cc $(SLIB)
-	$(CXX) -o $@ sortgrcd.cc $(SLIB) $(ILIB)
+	$(CXX) -o $@ sortgrcd.cc $(SLIB) $(LLIB)
 makdbs: makdbs.cc dbs.h seq.h bitpat.h $(SLIB)
-	$(CXX) -o $@ makdbs.cc $(SLIB) $(ILIB)
+	$(CXX) -o $@ makdbs.cc $(SLIB) $(LLIB)
 makmdm: makmdm.cc mdm.h $(CLIB)
-	$(CXX) -o $@ makmdm.cc $(CLIB) $(ILIB)
+	$(CXX) -o $@ makmdm.cc $(CLIB) $(LLIB)
 
 dvn:	dvn.cc autocomp.h $(ULIB)
-	$(CXX) -o $@ dvn.cc $(ULIB) $(ILIB)
+	$(CXX) -o $@ dvn.cc $(ULIB) $(LLIB)
 exinpot: exinpot.cc codepot.h utilseq.h eijunc.h $(SLIB)
-	$(CXX) -o $@ exinpot.cc $(SLIB) $(ILIB)
+	$(CXX) -o $@ exinpot.cc $(SLIB) $(LLIB)
 kmers: kmers.cc $(SLIB)
-	$(CXX) -o $@ kmers.cc $(SLIB) $(ILIB)
+	$(CXX) -o $@ kmers.cc $(SLIB) $(LLIB)
 npssm:	npssm.cc $(SLIB)
-	$(CXX) -o $@ npssm.cc $(SLIB) $(ILIB)
+	$(CXX) -o $@ npssm.cc $(SLIB) $(LLIB)
 rdn:	rdn.cc 	$(ULIB)
-	$(CXX) -o $@ rdn.cc $(ULIB) $(ILIB)
+	$(CXX) -o $@ rdn.cc $(ULIB) $(LLIB)
 utn:	utn.o $(ULIB)
-	$(CXX) -o $@ utn.o $(ULIB) $(ILIB)
+	$(CXX) -o $@ utn.o $(ULIB) $(LLIB)
 
 compild: compild.cc calcserv.h ildpdf.o $(CLIB)
-	$(CXX) -o compild compild.cc ildpdf.o $(CLIB) -lm -lgsl -lgslcblas
+	$(CXX) -o compild compild.cc ildpdf.o $(CLIB) $(GLIB)
 decompild: decompild.o ildpdf.o fitild.o $(CLIB)
-	$(CXX) -o decompild decompild.o ildpdf.o fitild.o $(CLIB) -lgsl -lgslcblas
+	$(CXX) -o decompild decompild.o ildpdf.o fitild.o $(CLIB) $(GLIB)
 fitild: fitild.cc ildpdf.o $(CLIB)
-	$(CXX) -o $@  -DMAIN fitild.cc ildpdf.o $(CLIB) \
-	-L/usr/local/lib -lm -lgsl -lgslcblas
+	$(CXX) -o $@  -DMAIN fitild.cc ildpdf.o $(CLIB) $(GLIB)
 plotild: plotild.cc ildpdf.o $(CLIB)
-	$(CXX) -o plotild plotild.cc ildpdf.o $(CLIB) -lm -lgsl -lgslcblas
+	$(CXX) -o plotild plotild.cc ildpdf.o $(CLIB) $(GLIB)
 
 clib.o:		clib.cc		stdtype.h
 iolib.o:	iolib.cc	stdtype.h

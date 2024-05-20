@@ -40,17 +40,20 @@ test -z "$CXX" && echo Checking for 64 bits compiler...
 # find system name and try 64 bits compiler
 CXX=${CXX-"CXX"}
 case `(uname -sr || echo unknown) 2>/dev/null` in
-#  HP-UX*)    CFLAGS=${CFLAGS-"-O"} ;;
-IRIX*)     CFLAGS=${CFLAGS-"-LANG:std -ansi -64 -O2"} ;;
-#  OSF1*)     CFLAGS=${CFLAGS-"-O -std1"} ;;
-#  SCO_SV\ 3.2*)  CFLAGS=${CFLAGS-"-O3"} ;;
-SunOS\ 5*) CFLAGS=${CFLAGS-"-xtarget=ultra -xarch=v9 -O2"} ;;
-#  UNIX_System_V\ 4.2.0)  CFLAGS=${CFLAGS-"-O"} ;;
-UNIX_SV\ 4.2MP)  CFLAGS=${CFLAGS-"-O"} ;;
-CYGWIN*) CXX="g++"; CFLAGS=${CFLAGS-"-O3"}  ;;
-Linux*) CFLAGS=${CFLAGS-"-O3 -march=native"}; CLIB=${CLIB-"clib.a -lm -lz -ldl"} ;;
-Darwin*) CFLAGS=${CFLAGS-"-O3 -std=c++11"}; CLIB=${CLIB-"clib.a libz.a"} ;;
-*)	     CFLAGS=${CFLAGS-"-O3"} ;;
+#HP-UX*)    CFLAGS=${CFLAGS-"-O"} ;;
+#IRIX*)     CFLAGS=${CFLAGS-"-LANG:std -ansi -64 -O2"} ;;
+#OSF1*)     CFLAGS=${CFLAGS-"-O -std1"} ;;
+#SCO_SV\ 3.2*)  CFLAGS=${CFLAGS-"-O3"} ;;
+#SunOS\ 5*) CFLAGS=${CFLAGS-"-xtarget=ultra -xarch=v9 -O2"} ;;
+#UNIX_System_V\ 4.2.0)  CFLAGS=${CFLAGS-"-O"} ;;
+#UNIX_SV\ 4.2MP)  CFLAGS=${CFLAGS-"-O"} ;;
+#CYGWIN*) CXX="g++"; CFLAGS=${CFLAGS-"-O3"}  ;;
+Linux*) CFLAGS=${CFLAGS-"-O3 -march=native"}; 
+	CLIB=${CLIB-"clib.a"}; 
+	ILIB=${ILIB-"-lpthread -lm -lz"} ;;
+Darwin*) CFLAGS=${CFLAGS-"-O3 -std=c++11"}; 
+	CLIB=${CLIB-"clib.a libz.a"} ;;
+*)	CFLAGS=${CFLAGS-"-O3"} ;;
 esac
 
 if ($CXX -c $CFLAGS $test.cc) 2>/dev/null; then
@@ -80,6 +83,7 @@ sed < Makefile.in "
 /^CXX *=/s%=.*%= $CXX%
 /^CFLAGS *=/s%=.*%= $CFLAGS%
 /^CLIB *=/s%=.*%= $CLIB%
+/^ILIB *=/s%=.*%= $ILIB%
 /^LD *=/s%=.*%= $LD%
 /^AR *=/s%=.*%= $AR%
 /^RANLIB *=/s%=.*%= $RANLIB%
