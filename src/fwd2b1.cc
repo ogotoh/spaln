@@ -198,7 +198,6 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 	    putvar(h->val); putchar('\n');
 	}
 #endif
-printf("%-2d", m);
 	    for ( ; ++n <= n9; ++bs) {
 		++h; ++f; if (dagp) ++f2;
 //	Diagonal
@@ -691,7 +690,7 @@ const	    int	rl = b->left - a->left;
 	    }
 	    if (b->inex.exgl && rl < r) b->left = a->left + r;
 	}
-	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left) {
+	if ((udhimds[++i] && udhimds[i]->mi < a->left) || cpos[i][2] < b->left) {
 	    maxh.val = NEVSEL;
 	} else {
 const	    int	rl = b->left - a->left;
@@ -1320,7 +1319,13 @@ const	    int	mode =
 	scr = hirschbergB_ng(cpos, n_imd, wdw);
 
 	if (scr > NEVSEL) {
-	    if (recursive)
+	    if (cpos[0][0] == end_of_ulk) {	// don't cross intermediate
+		SKL	wskl = {a->left, b->left};
+		mfd->write((UPTR) &wskl);
+		wskl.m = a->right;
+		wskl.n = b->right;
+		mfd->write((UPTR) &wskl);
+	    } else if (recursive)
 		rcsv_postwork(cpos);		// recursive
 	    else
 		mimd_postwork(cpos, n_imd);	// recurrent

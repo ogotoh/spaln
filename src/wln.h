@@ -76,8 +76,8 @@ class Wilip {
 	bool	int_wlp = true;
 public:
 	Wilip(const Seq* seqs[], const PwdB* pwd, const int level);
-	Wilip(const Seq* seqs[], Wlp* wln);
 	Wilip(mSeq* seqs[], const PwdB* pwd, const int level);
+	Wilip(const Seq* seqs[], Wlp* wln);
 	~Wilip() {delete[] top; if (int_wlp) delete[] wlu;}
 	int	size() const {return nwlu;}
 	WLUNIT*	begin() {return wlu;}
@@ -179,7 +179,7 @@ const	bool	dhit = false;
 	JXTD*	jxtd = 0;
 	Bitpat_wq*	bpp = 0;
 	INT*	lookup(INT* s, int kk);
-virtual	INT*	foldseq();
+	INT*	foldseq();
 	INT*	kmercount();
 	RANGE*	lowic(const INT* cnt);
 	VTYPE	eval(JUXT* jxt);
@@ -187,8 +187,8 @@ virtual	INT*	foldseq();
 	void	enter(const JXTD* wxtd, const int& r, const bool& on_k = false);
 	void	storedh(const int& r, int ml, int mr);
 	void	scan_b(INT m, INT n);
-virtual	void	dmsnno();
-virtual	void	dmsnno31();
+	void	dmsnno();
+	void	dmsnno31();
 	VTYPE	LinkHspScr(HSP* mcl, HSP* ncl);
 	HSP*	mkhsps(const JUXT* jxt, int& n);
 	WLUNIT* jxtcore(int& num, JUXT** ptop);
@@ -196,7 +196,7 @@ virtual	void	dmsnno31();
 public:
 	Wlp(const Seq* seqs[], const PwdB* _pwd, const int level);
 	Wlp(Seq* seqs[]);
-virtual	~Wlp() {
+	~Wlp() {
 	    delete bpp; delete mfd; delete[] header; 
 	    delete[] position; delete[] jxtd;
 	}

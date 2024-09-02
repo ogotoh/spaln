@@ -307,7 +307,7 @@ const	regist_v	ninf_v = Splat(nevsel);
 const	int	md = checkpoint(0);
 	int	mc = md + a->left;
 	for (int ml = a->left; ml < a->right; ml += Nelem) {
-const	    int	j9 = std::min(Nelem, a->right - ml);
+const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 const	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
@@ -501,7 +501,7 @@ const	int	md = checkpoint(0);
 	int	mc = md + a->left;
 
 	for (int ml = a->left; ml < a->right; ml += Nelem) {
-const	    int	j9 = std::min(Nelem, a->right - ml);
+const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 const	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
@@ -804,7 +804,7 @@ regist_v	hb_v, fb_v, qb_v;	// used only when LocalL == true
 regist_v	hd_v, fd_v, fd2_v, qd_v;// used only when used == true
 
 	for (int ml = a->left, i = 0; ml < a->right; ml += Nelem) {
-const	    int	j9 = std::min(Nelem, a->right - ml);
+const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
@@ -1147,7 +1147,7 @@ const	    int	rl = b->left - a->left;
 	    }
 	    if (a->inex.exgl && rl < r) b->left = a->left + r;
 	}
-	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left)
+	if ((udhimds[++i] && udhimds[i]->mi < a->left) || cpos[i][2] < b->left)
 	    maxh.val = NEVSEL;
 	return (maxh.val);
 }

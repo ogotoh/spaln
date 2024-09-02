@@ -84,7 +84,7 @@ my @entries;
 my $chr;
 
 $Dbs = $genspc if (!$Dbs && $genspc =~ /^[a-z]/);
-$Dbs .= '_g' if ($Dbs && substr($Dbs, 8, 2) ne '_g');
+$Dbs .= '_g' if ($Dbs && substr($Dbs, -2, 2) ne '_g');
 my $dbs = $Dbs;
 my $pgs;
 

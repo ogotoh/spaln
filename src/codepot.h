@@ -209,6 +209,8 @@ struct INTRONPEN {
 	int	llmt, mu, rlmt, elmt, tlmt, minl, maxl, mode, nquant;
 	STYPE	sip;
 	float	a1, m1, t1, k1, m2, t2, k2, a2, m3, t3, k3;
+	INT	hard_minl:	1;
+	INT	hard_maxl:	1;
 };
 
 extern	INTRONPEN IntronPrm;
@@ -239,8 +241,8 @@ public:
 	STYPE	Penalty() const {return (GapWI);}
 	STYPE	Penalty(const int& n) const {
 	    if (n < IntronPrm.llmt) return (SHRT_MIN); else
-	    if (n < IntronPrm.rlmt && table)
-		return (table[n]); else
+	    if (IntronPrm.hard_maxl && n > IntronPrm.maxl) return (SHRT_MIN);
+	    if (n < IntronPrm.rlmt && table) return (table[n]); else
 	    return (STYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)));
 	}
 	STYPE	PenaltyPlus(const int& n) const {

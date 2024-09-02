@@ -57,6 +57,7 @@ const	char*	DefBitPat[MaxBitPat] = {
 "100011110001111110111,1010110010101011111011",
 "101011001001011101101111,1001100001100111101111011",
 };
+
 ReducWord::ReducWord(const Seq* sd, INT elms, const char* ap) : 
 	molc(sd->inex.molc), master(true), 
 	ConvTabSize(sd->code->max_code),

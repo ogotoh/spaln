@@ -1350,7 +1350,8 @@ static void resezm(Seq* ns)
 static void nameseq(FILE* fd, Seq* ns)
 {
 	fprintf(fd, "%-16s [ %3d ] %5d %5d\n", ns->sqname(),
-	    ns->many, ns->SiteNo(ns->left), ns->SiteNo(ns->right - 1));
+	    ns->many? ns->many: 1, 
+	    ns->SiteNo(ns->left), ns->SiteNo(ns->right - 1));
 }
 
 static Seq* forgeseq(FILE* fd, Seq* sd)
@@ -1406,7 +1407,7 @@ int utn_main(CalcServer<Seq>* svr, Seq* seqs[], ThQueue<Seq>* q)
 		if (svr->jobcode != 'c' && svr->jobcode != 'C') sd->right += 3;
 	    } else	return (ERROR);
 	}
-	if (svr->jobcode != 'a') polyA.rmpolyA(sd, q_mns);
+	if (svr->jobcode != 'a' && svr->jobcode != 'n') polyA.rmpolyA(sd, q_mns);
 	switch (svr->jobcode) {
 	    case 'a': poly_a(sd); break;
 	    case 'B': fouteij(stdout, sd); break;

@@ -684,8 +684,12 @@ const	int	dd = std::min(ncl->lx - mcl->rx, ncl->ly - mcl->ry);
 	VTYPE	scr = NEVSEL;
 
 	if (dr < 0) dr = -dr;
-	else if (dr && algmode.lsg)
+	else if (dr && algmode.lsg) {
+	    if ((IntronPrm.hard_maxl && dr > IntronPrm.maxl) || 
+		(IntronPrm.hard_minl && dr < IntronPrm.minl))
+		return (scr);
 	    scr = pwd->IntPen->PenaltyPlus(dr);	// spliced
+	}
 	dr /= bbt;
 	VTYPE	pen = pwd->GapPenalty(dr);	// ordinay gap
 	if (pen > scr) scr = pen;
@@ -1024,7 +1028,6 @@ int geneorient(Seq* seqs[], const PwdB* pwd)
 	INT	level = 0;
 	Seq**	b = seqs + 1;
 	Seq**	c = seqs + 2;
-	(*b)->comrev(c);
 	for ( ; level < MaxWlpLevel; ++level) {
 	    wl[0] = new Wilip((const Seq**) seqs, pwd, level);
 	    WLUNIT*	wlu0 = wl[0]->begin();

@@ -154,7 +154,6 @@ struct INEX {
 	INT	cmpc:	1;
 	INT	dels:	1;
 	INT	ambs:	2;
-	INT	gfrq:	1;
 	INT	prof:	1;
 	INT	sngl:	1;
 	INT	trcv:	1;
@@ -232,7 +231,7 @@ protected:
 	CHAR*	seq_;		// sequence body
 	CHAR*	end_;		// end of seq_ memory
 	Seq**	anti_;		// rlocation of everse-complement of this
-	StrHash<int>*	mnhash;
+	StrHash<int>*	mnhash = 0;
 	void	fillpad();
 	RANGE*	setrange(const char* pa, int* ncr = 0) const;
 template <typename file_t>
@@ -260,20 +259,20 @@ mutable	int	right;		// right boundary to be operated
 	VTYPE	jscr;		// sum of weight2s
 	int*	lens;		// seq length of each member
 	int*	nbr;		// position of the first residue
-	SEQ_CODE*	code;	// code table
-	char*	spath;		// path name read from
-	char*	msaname;	// msa name
-	Strlist*	sname;	// sequence name
-	Strlist*	descr;	// descrption
-	FTYPE*	cmps;		// composition
-	JUXT*	jxt;		// HSPs
-	RANGE*	exons;		// CDS/exons in a gene seq
-	Exinon*	exin;		// statistical scores related to gene organization
-	SigII*	sigII;		// eson-intron junction signal
+	SEQ_CODE* code = 0;	// code table
+	char*	spath = 0;	// path name read from
+	char*	msaname = 0;	// msa name
+	Strlist* sname = 0;	// sequence name
+	Strlist* descr = 0;	// descrption
+	FTYPE*	cmps = 0;	// composition
+	JUXT*	jxt = 0;	// HSPs
+	RANGE*	exons = 0;	// CDS/exons in a gene seq
+	Exinon*	exin = 0;	// statistical scores related to gene organization
+	SigII*	sigII = 0;	// eson-intron junction signal
 mutable	INEX	inex;		// internally used flags
 #if USE_WEIGHT
-	FTYPE*	weight;		// relative weight to each member
-	FTYPE*	pairwt;		// weight to each pair of members
+	FTYPE*	weight = 0;	// relative weight to each member
+	FTYPE*	pairwt = 0;	// weight to each pair of members
 	void	fpweight(FILE* fd = 0) const;	// print weight
 	FTYPE*	saveseqwt() const;	// save weight vector
 	void	restseqwt(const FTYPE* tmpwt);// retore weight vector
@@ -322,7 +321,7 @@ const	char*	sqname(bool fpri = false) const {
 		{return (inex.sens & REVERS)? lens[m] - n + base_: n - 1 - base_;}
 	int	senschar() const {return SensChar[inex.sens];}
 	int	index(const CHAR* ss) const {return (ss - seq_) / many;}
-	void	seqalloc(const int& num, const int& len, const bool& keep = false);
+	void	seqalloc(const int& num, int length, const bool& keep = false);
 	void	fullrange() {left = 0; right = len;}
 	void	saverange(RANGE* rng) const {rng->left = left; rng->right = right;}
 	void	restrange(const RANGE* rng) const {left = rng->left; right = rng->right;}
@@ -429,6 +428,7 @@ template <typename file_t>
 	Seq(const char* fname);
 	Seq(Seq& sd, const int* which = 0, const int& snl = CPY_ALL);
 	Seq(Seq* sd, const int* which = 0, const int& snl = CPY_ALL);
+	Seq(const Seq* sd, const bool& alias);
 				// copy or extract
 	~Seq();
 friend	void 	antiseq(Seq** seqs);
@@ -437,7 +437,7 @@ friend	void 	reportseq(Seq** sqs, int n);
 };
 
 template <typename file_t>
-SeqDb* seq_NandL(int& num, int& len, int& mode, char* str, file_t fd, int molc)
+SeqDb* seq_NandL(int& num, int& leng, int& mode, char* str, file_t fd, int molc)
 {
 // Force to single sequence
 
@@ -448,7 +448,7 @@ SeqDb* seq_NandL(int& num, int& len, int& mode, char* str, file_t fd, int molc)
 // Givien Number & Length
 	if ((num = atoi(str))) {
 	    char*       ps = cdr(str);
-	    if (ps && isdigit(*ps)) len = atoi(ps);	     // Phylip like
+	    if (ps && isdigit(*ps)) leng = atoi(ps);	     // Phylip like
 	    else if (ps && *ps) fatal("Unsupported format:\n%s\n", str);
 	    if (num > 1) mode = SEQUENTIAL_MF;
 	    else	mode = SINGLE_SQ;
@@ -462,7 +462,7 @@ SeqDb* seq_NandL(int& num, int& len, int& mode, char* str, file_t fd, int molc)
 	    num = 1; mode = SINGLE_SQ;
 	    Strlist     stl(str, stddelim);
 	    int k = stl.size();
-	    len = (stl[k - 2][0] == 'N' || stl[k - 2][0] == 'Q')?
+	    leng = (stl[k - 2][0] == 'N' || stl[k - 2][0] == 'Q')?
 		atoi(stl[k - 4]): 0;
 	    return (0);
 	}
@@ -470,8 +470,8 @@ SeqDb* seq_NandL(int& num, int& len, int& mode, char* str, file_t fd, int molc)
 	for (const char* ps = str; (ps = strchr(ps, '[')); ) {
 	    num += atoi(++ps);
 	    const char* qs = strchr(ps, ':');
-	    int tl = qs? len += atoi(ps = ++qs): 0;
-	    if (tl > len) len = tl;
+	    int tl = qs? leng += atoi(ps = ++qs): 0;
+	    if (tl > leng) leng = tl;
 	}
 	if (num > 1) {mode = NATIVE_MF; return (0);}
 	SeqDb*  dbf = whichdb(str, fd);
@@ -616,8 +616,8 @@ static	const	char* readthru = "CDS may be read through !\n";
 		break;
 	    }
 	    ps = strcpy(str, ps);
-	    int	len = strlen(ps);
-	    if (!fgets(str + len, MAXL - len, fd)) {
+	    int	leng = strlen(ps);
+	    if (!fgets(str + leng, MAXL - leng, fd)) {
 		prompt(readthru);
 		break;
 	    }
@@ -780,13 +780,14 @@ template <typename file_t>
 CHAR* Seq::get_msf_aln(file_t fd, char* str, RANGE* pcr)
 {
 	int	num  = 0;
+	int	leng = 0;
 	if (!sname) sname = new Strlist;
 	while (fgets(str, MAXL, fd)) {
 	    if (!wordcmp(str, "//")) break;
 	    char*	qs = str;
 	    char*	ps = car(qs);
 	    if (!strcmp(ps, "MSF:")) {
-		len = atoi(++qs);
+		leng = atoi(++qs);
 		ps = cdr(qs); ps = cdr(ps);
 		setSeqCode(this, *ps == 'P'? PROTEIN: DNA);
 	    } else if (!strcmp(ps, "Name:")) {
@@ -797,7 +798,7 @@ CHAR* Seq::get_msf_aln(file_t fd, char* str, RANGE* pcr)
 	    }
 	}
 
-	seqalloc(num, len);
+	seqalloc(num, leng);
 	delete[]	lens;
 	lens = new int[many];
 	vclear(lens, many);

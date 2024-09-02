@@ -71,7 +71,7 @@ const	int	md = checkpoint(0);
 	int	mc = md + a->left;
 
 	for (int ml = a->left; ml < a->right; ml += Nelem) {
-const	    int	j9 = std::min(Nelem, a->right - ml);
+const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 const	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
@@ -280,7 +280,7 @@ regist_v    qv_v = Load(pv_a);
 const	regist_m	lmask = Cmp_eq(qv_v, one_v);
 
 	for (int ml = a->left; ml < a->right; ml += Nelem) {
-const	    int	j9 = std::min(Nelem, a->right - ml);
+const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
@@ -512,7 +512,7 @@ const	int	md = checkpoint(0);
 	VTYPE	accscr = 0;
 
 	for (int ml = a->left, i = 0; ml < a->right; ml += Nelem) {
-const	    int	j9 = std::min(Nelem, a->right - ml);
+const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
@@ -858,7 +858,7 @@ const	    int	rl = b->left - a->left;
 	    }
 	    if (a->inex.exgl && rl < r) b->left = a->left + r;
 	}
-	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left)
+	if ((udhimds[++i] && udhimds[i]->mi < a->left) || cpos[i][2] < b->left)
 	    maxh.val = NEVSEL;
 	return (maxh.val);
 }

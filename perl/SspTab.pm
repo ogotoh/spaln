@@ -24,15 +24,19 @@
 package	SspTab;
 require	Exporter;
 
+use strict;
+
 our @ISA = qw(Exporter);
-our @EXPORT = qw(speccode opengnmdb sspopt gnmdb setgnmdb avrintlen dbentry ftable fseqdb);
+our @EXPORT = qw(speccode opengnmdb sspopt gnmdb setgnmdb gnmdb_entry 
+	avrintlen dbentry ftable fseqdb);
 
 my @tabdirs = (".", "$ENV{HOME}/table", $ENV{"ALN_TAB"});
 my @sdbdirs = (".", "$ENV{HOME}/seqdb", $ENV{"ALN_DBS"});
 my $tabdir;
 my %gnm2tab;
 my $gnmdbf;
-my $cmndbf;
+my %cmngnm_entry;
+my %gnm_entry;
 my $gnmidfn = 8;	# number of letters for identifier
 my $gnmidxe = "_g";	# extention to indicate genomic seq.
 my $qtl3_4 = 100;	# default 3/4 quantile intron length
@@ -52,8 +56,38 @@ sub speccode {
 	return $genus . $spec;
 }
 
+sub read_gnm_entry {
+	my ($gnmid, $entries) = @_;
+	@$entries = ();
+	foreach my $td (@sdbdirs) {
+	    my $fent = "$td/$gnmid.ent";
+	    my $fentgz = $fent . ".gz";
+	    if (-s $fent) {
+		@$entries = split(/\0/, `cat $fent`);
+	    } elsif (-s $fentgz) {
+		@$entries = split(/\0/, `gzip -cd $fent`);
+	    }
+	    last if (@$entries);
+	}
+}
+
+sub opencmndb {
+	my $cmngnmdb = shift;
+	my @dbf = split(/,/, $cmngnmdb);
+	foreach my $gnmid (@dbf) {
+	    my @entries = ();
+	    &read_gnm_entry($gnmid, \@entries);
+	    if (@entries) {
+		foreach $_ (@entries) {
+		    $cmngnm_entry{$_} = $gnmid;
+		}
+	    }
+	}
+}
+
 sub opengnmdb {
-	$cmndbf = shift;
+	my $cmngnmdb = shift;
+	&opencmndb($cmngnmdb) if ($cmngnmdb);
 	return if (%gnm2tab);
 	my $Gnm2Tab;
 	foreach (@tabdirs) {
@@ -69,6 +103,44 @@ sub opengnmdb {
 	    $gnm2tab{$gid} = $spc;
 	}
 	close(G2T);
+}
+
+sub gnmdb_entry {
+	my ($cidlist, $cmndbf) = @_;
+	my %gnms;
+	foreach my $sid (@$cidlist) {
+	    my ($ent, $pos) = split(/\./, $sid);
+	    next if ($cmngnm_entry{$ent});
+	    my $gnmid = lc(substr($ent, 0, 8)) . $gnmidxe;
+	    $gnms{$gnmid} = 1;
+	    $gnm_entry{$ent} = $gnmid unless($gnm_entry{$ent});
+	}
+# confirm
+	my $ng;
+	foreach my $gnmid (keys(%gnms)) {
+	    my @entries;
+	    my %entries;
+	    foreach my $td (@sdbdirs) {
+		my $fent = "$td/$gnmid.ent";
+		my $fentgz = $fent . ".gz";
+		if (-s $fent) {
+		    @entries = split(/\0/, `cat $fent`);
+		} elsif (-s $fentgz) {
+		    @entries = split(/\0/, `gzip -cd $fent`);
+		}
+		if (@entries) {
+		    foreach my $ent (@entries) {
+			$entries{$ent} = $gnmid;
+		    }
+		    last;
+		}
+	    }
+	    return ("$gnmid not found !") unless (@entries);
+	    foreach my $ent (keys(%gnm_entry)) {
+		$ng .= "$ent " unless $entries{$ent};
+	    }
+	}
+	return ($ng);
 }
 
 sub sspopt {    # Species specific options
@@ -124,13 +196,10 @@ sub avrintlen {
 }
 
 sub gnmdb {
-	my $seq = shift;
-	$seq = '$' . $seq if (substr($seq, 0, 1) ne '$');
-	return ("-d$gnmdbf ") if ($gnmdbf && `utn -n -pq -d$gnmdbf '$seq 1 1'`);
-	my $gdb = lc(substr($seq, 1, $gnmidfn)) . $gnmidxe;
-	return ("-d$cmndbf ") if ($cmndbf && `utn -n -pq -d$cmndbf '$seq 1 1'`);
-	return ("-d$gdb ") if (`utn -n -pq -d$gdb '$seq 1 1'`);
-	return (undef);
+	my $sid = shift;
+	$sid = substr($sid, 1) if ($sid =~ /^\$/);
+	my ($ent, $pos) = split(/\./, $sid);
+	return ("-d$gnm_entry{$ent} ");
 }
 
 sub setgnmdb {
@@ -138,16 +207,14 @@ sub setgnmdb {
 }
 
 sub dbentry {
-	my $hline = shift;
-	@a = split(' ', $hline);
-	if ($a[0] eq '>' || $a[0] eq ';D' || $a[2] eq '+' || $a[2] eq '-')
-	    {shift(@a);}
-	elsif (/^>/) {$a[0] = substr($a[0], 1);}
+	my @a = split(' ', shift);
+	if (/^>/) {$a[0] = substr($a[0], 1);}
 	elsif (/^;D/) {$a[0] = substr($a[0], 2);}
+	my $sid = shift(@a);
 	my $st = $a[$#a - 1];
 	my $bias = ($st eq 'T' || $st eq 'Y')? 8: 0;
 	$st = 'X' unless ($st eq 'N' || $st eq 'Q' || $st eq 'T' || $st eq 'Y');
-	my $gene = ($st? '$': "") . $a[$bias];
-	return ($gene, $a[$bias + 1], $a[$bias + 4], $a[$bias + 6], $st);
+	my $cid = '$' . $a[$bias];
+	return ($cid, $a[$bias + 1], $a[$bias + 4], $a[$bias + 6], $st);
 }
 

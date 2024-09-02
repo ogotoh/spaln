@@ -83,7 +83,7 @@ public:
 	    delete[] imds;
 	}
 	UdhIntermediate*	operator[](const int& i) const {
-	    return (imds[i]);
+	    return ((0 <= i && i < n_imd)? imds[i]: 0);
 	}
 };
 

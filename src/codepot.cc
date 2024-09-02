@@ -41,8 +41,10 @@ INTRONPEN IntronPrm = {FQUERY, FQUERY, -2.767, 20, 224, 825, 2,
 //	tlmt minl maxl mode  nquant sip
 	0.2767, -22.80, 83.35, 5.488, 21.870, 223.95, 0.7882,
 //	a1      m1      t1     k1     m2      t2      k2
-	0, 0, 0, 0};
+	0, 0, 0, 0,
 //	a2 m3 t3 k3
+	0, 0};
+//	hl hr
 
 struct ALSP {
 	VTYPE	scr;

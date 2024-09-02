@@ -2843,6 +2843,7 @@ int Qwords::querywords(const CHAR* ss)
 	} else {
 	    INT*	w = ww;
 	    int*	x = xx;
+	    vset(ww, wcp.TabSize, kk);
 	    for (int k = 0; k < kk; ++k, ++w, ++x) {	// multiple bit patterns
 		if (ss >= endss[k]) break;
 		*w = *x = 0;
@@ -2860,7 +2861,7 @@ int Qwords::querywords(const CHAR* ss)
 	    w = ww;
 	    x = xx;
 	    for (int k = 0; k < kk; ++k, ++w, ++x) {
-		if (wc->wscr[*w] < 0) *x = -1;		// absent
+		if (*w >= wcp.TabSize || wc->wscr[*w] < 0) *x = -1;		// absent
 		else if (!*x && wc->blkp[*w]) {		// not amb or ubiquitous
 		    ++c;
 		    wdscr += wc->wscr[*w];
@@ -2895,6 +2896,7 @@ int Qwords::querywords(const CHAR* ss, int d, bool rvs)
 	    int	k = 0;
 	    INT*	w = ww;
 	    int*	x = xx;
+	    vset(ww, wcp.TabSize, kk);
 	    for ( ; k < kk; ++k, ++w, ++x) {		// multiple bit patterns
 		if (ss >= endss[k]) break;
 		*w = *x = 0;
@@ -2917,7 +2919,7 @@ int Qwords::querywords(const CHAR* ss, int d, bool rvs)
 	    int	c = 0;
 	    int	wdscr = 0;
 	    for (k = 0, w = ww, x = xx; k < kk; ++k, ++w, ++x) {
-		if (wc->wscr[*w] < 0) *x = -1;		// absent
+		if (*w >= wcp.TabSize || wc->wscr[*w] < 0) *x = -1;		// absent
 		else if (!*x && wc->blkp[*w]) {		// amb or ubiquitous
 		    ++c;
 		    wdscr += wc->wscr[*w];
@@ -3081,12 +3083,12 @@ const		    CHAR*	ss = *ws;
 
 INT SrchBlk::bestref(Seq* sqs[], KVpair<INT, int>* sh, int n)
 {
-	Seq*&	a = sqs[1];
 	Wilip**	wl = new Wilip*[n];
 	GeneRng	gr;
 	Mfile	mfd(sizeof(GeneRng));
 
 	swap(sqs[0], sqs[1]);
+	Seq*&	a = sqs[0];
 	for (int i = 0; i < n; ++i, ++sh) {
 	    if (!sh->val) continue;
 	    setaaseq(a, sh->key);

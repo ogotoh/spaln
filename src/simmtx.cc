@@ -688,8 +688,10 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 		break;
 	    case 'J': alprm2.spb = atof(vl); break;	// matching intron position
 	    case 'K': alprm2.termk1 = atoi(vl); break;	// max terminal gap length without penalty
-	    case 'L': IntronPrm.llmt = atoi(vl); break;	// lower limit of intron
-	    case 'M': IntronPrm.maxl = int(ktof(vl)); break;	// maximum expected length of intron
+	    case 'L': IntronPrm.llmt = atoi(vl); 
+		      IntronPrm.hard_minl = 1; break;	// lower limit of intron
+	    case 'M': IntronPrm.maxl = int(ktof(vl)); 
+		      IntronPrm.hard_maxl = 1; break;	// maximum expected length of intron
 //	    case 'N': alprm2.nrmlipot = 1; break;	// normalize intron potential
 	    case 'Q': IntronPrm.nquant = atoi(vl); break;	// number of steps of rough ILD
 	    case 'S': alprm2.sss = atof(vl); 

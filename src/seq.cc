@@ -279,7 +279,9 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 		atsz[which] = attrsize;
 	    }
 	    strcpy(attr[which], cdr(fn));
+#if !FVAL
 	    strcat(attr[which], " S");
+#endif
 	  }
 
 // read from mulitple seq. files
@@ -359,13 +361,15 @@ void Seq::refresh(const int& num, const int& length)
 	if (!is_eldest()) {
 	    sid = vrtl;
 	    seq_ = end_ = 0; cmps = 0; lens = 0; nbr = 0;
-	    sname = 0; spath = 0; exons = 0; msaname = 0; descr = 0;
+	    sname = 0; spath = 0; exons = 0; msaname = 0;
+	    exin = 0; descr = 0;
 #if USE_WEIGHT
 	    if (inex.vtwt) delete[] weight;
 	    weight = pairwt = 0;
 #endif
 	} else {
-	    delete sigII;
+	    delete sigII; 
+	    delete exin; exin = 0;
 #if USE_WEIGHT
 	    delete[] weight; weight = 0;
 	    delete[] pairwt; pairwt = 0;
@@ -384,11 +388,10 @@ void Seq::refresh(const int& num, const int& length)
 		delete descr; descr = 0;
 	    }
 	}
-	delete[] jxt; jxt = 0;
-	delete exin; exin = 0; sigII = 0; 
-	left = right = base_ = 0;
+	left = right = len = base_ = 0;
 	jscr = 0;  vrtl = 0; anti_ = 0;
-	inex = def_inex;
+	inex = def_inex; sigII = 0; 
+	delete[] jxt; jxt = 0; CdsNo = 0;
 	if (num) {
 	    seqalloc(num, length);
 	    if (!lens) lens = new int[num];
@@ -398,7 +401,7 @@ void Seq::refresh(const int& num, const int& length)
 	    if (sname)	sname->reset(num);
 	    else	sname = new Strlist(num);
 	} else {
-	    many = len = 0;
+	    many = 0;
 	}
 }
 
@@ -410,7 +413,7 @@ Seq* Seq::aliaseq(Seq* dest, const bool& this_is_alias)
 	else	dest->refresh();
 	int	destid = dest->sid;
 	memcpy((void*) dest, (void*) this, sizeof(Seq));
-	dest->jxt = 0;
+	dest->jxt = 0; dest->CdsNo = 0;
 	if (is_eldest()) --vrtl;
 	if (this_is_alias) {
 	    vrtl = sid;
@@ -498,9 +501,9 @@ void swapseq(Seq** x, Seq** y)
 	swap(*x, *y);
  }
 
-void Seq::seqalloc(const int& num, const int& len, const bool& keep)
+void Seq::seqalloc(const int& num, int length, const bool& keep)
 {
-	int length = len? len: DEFSEQLEN;
+	if (!length) length = DEFSEQLEN;
 	int	area = num * (length + 2);
 	if (seq_ && area <= area_) {
 	    if (num != many) {
@@ -544,7 +547,7 @@ CHAR* Seq::seq_realloc()
 	    fatal(NoSeqSpace);
 	}
 	memcpy(ss, seq_ -= many, area);
-	delete[] seq_ ;
+	delete[] seq_;
 	int	sz = end_ - seq_;
 	seq_ = ss + many;
 	end_ = ss + area_ - many;
@@ -613,6 +616,15 @@ Seq::Seq(Seq* sd, const int* which, const int& snl)
 	initialize();
 	if (which) sd->extseq(this, which, snl);
 	else	sd->copyseq(this, snl);
+}
+
+Seq::Seq(const Seq* sd, const bool& alias)
+{
+	memcpy((void*) this, (void*) sd, sizeof(Seq));
+	vrtl = alias;
+#if USE_WEIGHT
+	inex.vtwt = !weight;
+#endif
 }
 
 const char* Seq::path2fn(const char* pname) const
@@ -886,12 +898,12 @@ Seq* Seq::attrseq(const char* pa)
 
 int Seq::isAmb(const CHAR& r) const
 {
-static	CHAR nucamb[] = {0,0,0,0,2,0,2,2,3,0,2,2,3,2,3,3,4};
-static	CHAR aasamb[] = {0,0,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2};
+static	const CHAR nucamb[] = {0,0,0,0,2,0,2,2,3,0,2,2,3,2,3,3,4};
+static	const CHAR aasamb[] = {0,0,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2};
 
 	switch (inex.molc) {
-	    case PROTEIN: return aasamb[r];;
-	    case DNA: case RNA:	case GENOME: return (nucamb[r]);
+	    case 1: case 4: return aasamb[r];
+	    case 2: case 3: case 5: return (nucamb[r]);
 	    default:	return (0);
 	}
 }

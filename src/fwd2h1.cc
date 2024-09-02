@@ -1503,7 +1503,7 @@ const	    int	rl = b->left - 3 * a->left;
 	    }
 	    if (a->inex.exgl && rl < r) b->left = 3 * a->left + r;
 	}
-	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left) {
+	if ((udhimds[++i] && udhimds[i]->mi < a->left) || cpos[i][2] < b->left) {
 	    maxh.val = NEVSEL;
 	} else {
 	    r = b->left - 3 * a->left;
@@ -2202,7 +2202,13 @@ const	    int	mode =
 	scr = hirschbergH_ng(cpos, n_imd, wdw);
 
 	if (scr > NEVSEL) {
-	    if (recursive)
+	    if (cpos[0][0] == end_of_ulk) {	// don't cross intermediate
+		SKL	wskl = {a->left, b->left};
+		mfd->write((UPTR) &wskl);
+		wskl.m = a->right;
+		wskl.n = b->right;
+		mfd->write((UPTR) &wskl);
+	    } else if (recursive)
 		rcsv_postwork(cpos);		// recursive
 	    else
 		mimd_postwork(cpos, n_imd);	// recurrent

@@ -117,7 +117,6 @@ my $reserve_imf = 0;
 my $label;
 my $min_orf = 90;
 my $spaln_f = 0;
-my $alp = "AlnParam";
 
 #################################################################
 #
@@ -163,15 +162,24 @@ if ($cds) {
 	$cds = $eij;
 	$eij = undef;
 }
-
 $gnm = $tid . '_g' unless ($gnm);
-my $genspc = (substr($gnm, -2, 2) eq '_g')? substr($gnm, 0, -2): $gnm;
+$sl = rindex($gnm, '/') + 1;
+$dot = rindex($gnm, '_');
+$dot = length($gnm) if ($dot < $sl);
+my $genspc = substr($gnm, $sl, $dot - $sl);
+my $outpfx = $path . ($label? $label: $genspc);
 my $cf = $cds? $cds: "$tbdy.cf";
 my $cfgz = "$cf.gz";
-my $outpfx = $path . ($label? $label: $genspc);
+my $alp = $path . "AlnParam";
+my $spsig5 = $path . "Splice5.dat";
+my $spsig3 = $path . "Splice3.dat";
+my $intpot = $path . "IntronPotTab.dat";
+my $codpot = $path . "CodePotTab.dat";
+my $cdp = $outpfx . ".cdp";
 
 if ($cds) {			# coding potential
-	&make_cdp();
+	my $cp = $spaln_f? $codpot: $cdp;
+	&make_cdp() unless (-s $cp && -M $cp < -M $cds);
 	exit (0);
 }
 
@@ -191,6 +199,23 @@ die "$idx not found !\n" unless ($seqdb);
 my $gdate = -M $idx;
 $ndate = $gdate if ($ndate > $gdate);
 my @jobs = split(/,/, $level);
+my %jobs = map { $_ => 1 } (@jobs);
+my @uptodate;
+
+if ($spaln_f) {
+	if ($jobs[0] < 10) {
+	    $uptodate[0] = (-s $alp && -M $alp < $ndate);
+	    $uptodate[0] = $uptodate[0] && (-s $spsig5 && -M $spsig5 < $ndate);
+	    $uptodate[0] = $uptodate[0] && (-s $spsig3 && -M $spsig3 < $ndate);
+	}
+	if ($jobs{13}) {
+	    $uptodate[1] = (-s $intpot && -M $intpot < $ndate);
+	}
+	if ($jobs{15}) {
+	    $uptodate[2] = (-s $codpot && -M $codpot < $ndate);
+	}
+}
+
 my $sp5;
 my $sp3;
 my $tri5;
@@ -198,6 +223,7 @@ my $tri3;
 
 foreach $level (@jobs) {
     if ($level < 10) {
+	next if ($uptodate[0]);
 	next if ($level < 1);	# eij -> ild
 	&make("eij2ild.pl", $eij, "$outpfx.ild");
 
@@ -241,20 +267,20 @@ foreach $level (@jobs) {
 	my $wdfq = &make_wdfq;
 
 	if ($level > 8 && $num >= $lim[3]) {
-	    &mksig(2, $wdfq, $tri5, $sp5, $spaln_f? "Splice5": "$outpfx.2m5");
-	    &mksig(2, $wdfq, $tri3, $sp3, $spaln_f? "Splice3": "$outpfx.2m3");
+	    &mksig(2, $wdfq, $tri5, $sp5, $spaln_f? $spsig5: "$outpfx.2m5");
+	    &mksig(2, $wdfq, $tri3, $sp3, $spaln_f? $spsig3: "$outpfx.2m3");
 	} elsif ($level > 7 && $num >= $lim[2]) {
-	    &mksig(1, $wdfq, $tri5, $sp5, $spaln_f? "Splice5": "$outpfx.1m5");
-	    &mksig(1, $wdfq, $tri3, $sp3, $spaln_f? "Splice3": "$outpfx.1m3");
+	    &mksig(1, $wdfq, $tri5, $sp5, $spaln_f? $spsig5: "$outpfx.1m5");
+	    &mksig(1, $wdfq, $tri3, $sp3, $spaln_f? $spsig3: "$outpfx.1m3");
 	} elsif ($level > 6 && $num >= $lim[1]) {
-	    &mksig(0, $wdfq, $tri5, $sp5, $spaln_f? "Splice5": "$outpfx.0m5");
-	    &mksig(0, $wdfq, $tri3, $sp3, $spaln_f? "Splice3": "$outpfx.0m3");
+	    &mksig(0, $wdfq, $tri5, $sp5, $spaln_f? $spsig5: "$outpfx.0m5");
+	    &mksig(0, $wdfq, $tri3, $sp3, $spaln_f? $spsig3: "$outpfx.0m3");
 	}
     } elsif ($level == 10) {
 	&make("eijnc.pl -i -d$gnm", $eij, "$outpfx.gci");
     } elsif ($level == 11) {
 	&makeSPc($outpfx, 'b');
-    } elsif ($level == 12 || $level == 13) {
+    } elsif (($level == 12 || $level == 13) && !$uptodate[1]) {
 	my $iwdfq = "$outpfx.iwdfq";
 	&make("kmers -d$gnm -w6 -l8 -r16 -e ", $eij, $iwdfq);
 	return if ($level == 12);
@@ -263,14 +289,14 @@ foreach $level (@jobs) {
 	if (!-s $ipt || -M $ipt > -M $iwdfq) {
 	    my $cmd = "exinpot -d$gnm -i $iwdfq -g $wdfq -e $eij -b $ipt";
 	    &System($cmd);
-	    if ($spaln_f && -s $ipt) {rename($ipt, "IntronPotTab.dat");} 
+	    if ($spaln_f && -s $ipt) {rename($ipt, $intpot);} 
 	}
 	unlink($iwdfq) unless ($reserve_imf);
-    } elsif ($level == 14 || $level == 15) {
+    } elsif (($level == 14 || $level == 15) && !$uptodate[2]) {
 	next unless (-s $cf || -s $cfgz);
 	&System("gunzip $cfgz") if (!-s $cf);
 	if ($level == 14) {
-	    my $dcf = $genspc . ".dcf";
+	    my $dcf = $outpfx . ".dcf";
 	    next if (-s $dcf && -M $dcf < -M $cf);
 	    my $cmd = "exinpot -m5 -c -J$min_orf -O4 -b $dcf $cf";
 	    &System($cmd);
@@ -328,8 +354,8 @@ foreach $level (@jobs) {
 	&save_msa($sp5);
 	&save_msa($sp3);
 	if ($spaln_f) {
-	    if (-s "Splice5.psm") {rename("Splice5.psm", "Splice5.dat");}
-	    if (-s "Splice3.psm") {rename("Splice3.psm", "Splice3.dat");}
+	    if (-s "$spsig5.psm") {rename("$spsig5.psm", $spsig5);}
+	    if (-s "$spsig3.psm") {rename("$spsig3.psm", $spsig3);}
 	}
    }
 }
@@ -449,10 +475,9 @@ sub make_wdfq {
 }
 
 sub make_cdp {
-	my $cdp = $genspc . ".cdp";
 	next if (-s $cdp && -M $cdp < -M $cf);
 	my $wdfq = &make_wdfq;
 	my $cmd = "exinpot -m5 -c -g $wdfq -J$min_orf -O4 -b $cdp $cf";
 	&System($cmd);
-	if ($spaln_f && -s $cdp) {rename($cdp, "CodePotTab.dat");}
+	if ($spaln_f && -s $cdp) {rename($cdp, $codpot);}
 }

@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.5b
-#### Last updated: 2024-05-20
+#### Present Version 3.0.6
+#### Last updated: 2024-09-02
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -296,6 +296,7 @@ or more comment lines starting with ';C', such as
      * -yJ *N*:	Relative contribution of the bonus given
       to a conserved intron position (10)
      * -yL *N*:	Minimum intron length (30, 30)
+     * -yM *N*:	Maxmum intron length (unset)
      * -yQ *N*: Number of categories of coarse grained ILD (5)
      * -yS *N*:	*N* specifies the percentile
       contribution of the species-specific splice signal. The other part is
@@ -354,6 +355,12 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.6
+1. -yM_n_ (_n_ >= 0) explicitly sets the upper limit of intron length (when _n_ = 0, _n_ is inferred from the ILD as the 99% quantile). _n_ may has a suffix K (kilo).
+2. Fix a bug when -LS option is set.
+3. Fix a bug for multi-thread version of a genome segment and protein or DNA queries.
+4. Fix a bug for aa database search with a genome segment.
+
 ## Changes in version 3.0.5b
 1. Modify Makefie.in.
 2. Remove unnecessary lines in fwd2s1_simd.cc.
@@ -546,6 +553,9 @@ Automated classification of alternative splicing and transcriptional initiation 
 <a name="Ref6">[[6]](https://doi.org/10.1007/978-1-0716-1036-7_5) Gotoh, O.
 Cooperation of Spaln and Prrn5 for construction of gene-structure-aware multiple sequence alignment. In: Katoh K. (eds) Multiple Sequence Alignment. *Methods in Molecular Biology* **2231**, Humana, New York, NY. (2021).
 
+<a name="Ref7">[[7]](https://doi.org/10.1093/bioinformatics/btae517) Gotoh, O.
+Spaln3: improvement in speed and accuracy of genome mapping and spliced alignment of protein query sequences *Bioinformatics* **40** (8) btae517 (2024).
+
 * * *
 
-Copyright (c) 1997-2023 Osamu Gotoh (gotoh.osamu.67a@st.kyoto-u.ac.jp) All Rights Reserved.
+Copyright (c) 1997-2024 Osamu Gotoh (gotoh.osamu.67a@st.kyoto-u.ac.jp) All Rights Reserved.

@@ -626,10 +626,10 @@ const	char*	path = 0;
 	    if (!fd) continue;
 	    DbsRec*	ridx = readidx(fd, str);
 	    if (!ridx) continue;
-	    readentry(fd, str);
 // read "entry" file
 	    fd = fopenpbe(path, form, ENT_EXT, "r", -1, str);
 	    if (!fd) continue;
+	    readentry(fd, str);
 // read "order" file
 	    fd = fopenpbe(path, form, ODR_EXT, "r", -1, str);
 	    if (fd)	readodr(fd, str);

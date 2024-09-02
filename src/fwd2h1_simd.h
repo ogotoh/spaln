@@ -831,7 +831,7 @@ regist_v	hd_v, fd_v, ed_v, qd_v;	// used only when used == true
 const	int	md = checkpoint(0);
 	int	mc = md + a->left;
 	for (int ml = a->left; ml < a->right; ml += Nelem) {
-const	    int	j9 = std::min(Nelem, a->right - ml);
+const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + 3 * ml);
 const	    int	n9 = std::min(b->right, wdw.up + 3 * (ml + j9) + 1) + 3 * j9;
@@ -1122,7 +1122,7 @@ regist_v	hb_v, fb_v, eb_v, qb_v;	// used only when LocalL == true
 regist_v	hd_v, fd_v, ed_v, qd_v;	// used only when used == true
 
 	for (int ml = a->left, i = 0; ml < a->right; ml += Nelem) {
-const	    int	j9 = std::min(Nelem, a->right - ml);
+const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + 3 * ml);
 	    int	n9 = std::min(b->right, wdw.up + 3 * (ml + j9) + 1) + 3 * j9;
@@ -1456,7 +1456,7 @@ const	    int	rl = b->left - 3 * a->left;
 	    }
 	    if (a->inex.exgl && rl < r) b->left = 3 * a->left + r;
 	}
-	if (udhimds[++i]->mi < a->left || cpos[i][2] < b->left)
+	if ((udhimds[++i] && udhimds[i]->mi < a->left) || cpos[i][2] < b->left)
 	    maxh.val = NEVSEL;
 	return (maxh.val);
 }
