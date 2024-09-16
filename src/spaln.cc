@@ -145,8 +145,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "3.0.6";
-static	const	int	date = 240902;
+static	const	char*	version = "3.0.6a";
+static	const	int	date = 240916;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)

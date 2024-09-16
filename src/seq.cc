@@ -932,22 +932,24 @@ void Seq::exg_seq(int gl, int gr)
 
 	gl = gl || alprm.tgapf < 1;
 	gr = gr || alprm.tgapf < 1;
-	CHAR	new_codel = (CHAR) (gl? nil_code: gap_code);
-	CHAR	new_coder = (CHAR) (gr? nil_code: gap_code);
+const	CHAR	new_codel = (CHAR) (gl? nil_code: gap_code);
+const	CHAR	new_coder = (CHAR) (gr? nil_code: gap_code);
 	if (gl || !algmode.qck) vset(ss - many, new_codel, many);
 	if (gr || !algmode.qck) vset(tt, new_coder, many);
-	inex.nils = gl || gr;
+	inex.nils = 0;
 	for (int i = 0; i < many; ++i) {
 	    CHAR*	s = ss + i;
 	    for ( ; s < tt; s += many) {
 		if (IsGap(*s)) *s = new_codel;
 		else	break;
 	    }
+	    if (ss[i] == nil_code) inex.nils |= 1;
 	    if (s >= tt && (gl || !gr)) continue;
 	    for (s = tt - many + i; s > ss; s -= many) {
 		if (IsGap(*s)) *s = new_coder;
 		else	break;
 	    }
+	    if (tt[i - many] == nil_code) inex.nils |= 2;
 	}
 	if (anti_) {
 	    (*anti_)->inex.exgl = inex.exgr;
@@ -1622,7 +1624,7 @@ void Seq::estimate_len(gzFile gzfd, const int& nos, const SeqDb* dbf)
 	    if (*str == _NHEAD || *str == _CHEAD || *str == _EOS ||
 		*str == _COMM || *str == _LCOMM || *str == _WGHT) {
 		if ((strlen(str) + 1) == MAXL) flush_line(gzfd);
-		continue;
+		break;
 	    }
 	    if (nos == 1 || (dbf && dbf->FormID == FASTA)) {
 		len += strlen(str) - 1;

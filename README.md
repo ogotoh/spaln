@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.6
-#### Last updated: 2024-09-02
+#### Present Version 3.0.6a
+#### Last updated: 2024-09-16
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -157,7 +157,8 @@ not specified, *MAX_GENE* is also estimated from the genome size.
 
 1. Prepare protein, cDNA, or genomic segment sequence(s) in (multi-)fasta format
 (denoted by *query* below). From 2.3.2a, gzipped fasta file(s) may be used as 
-the query without prior expansion. 
+the query without prior expansion. (**Warning**: under multi-thread environment, 
+gzipped query may severalfold reduce execution rate.)
 2. Store *query* to _work_.
 3. `% cd work`
 4. Run **spaln** in one of the following four modes. **Spaln**
@@ -355,6 +356,9 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.6a
+1. Fix a bug for gzipped queries.
+
 ## Changes in version 3.0.6
 1. -yM_n_ (_n_ >= 0) explicitly sets the upper limit of intron length (when _n_ = 0, _n_ is inferred from the ILD as the 99% quantile). _n_ may has a suffix K (kilo).
 2. Fix a bug when -LS option is set.

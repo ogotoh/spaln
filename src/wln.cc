@@ -908,7 +908,6 @@ nextchain:
 			    break;
 			}
 		    }
-		    if (jxtr < jxtl) wlul->num = 0;
 		    break;
 		}
 	    }
