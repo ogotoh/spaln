@@ -25,7 +25,8 @@ case "$1" in
     -d*=* | --alndbs_dir=*) alndbs_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
     -e* | --e*) exec_prefix="$2"; shift; shift;;
     -t* | --t*) table_dir="$2"; shift; shift;;
-    -d* | --d*) alndbs_dir="$2"; shift; shift;;
+    -d* | --alndbs_dir | --d*) alndbs_dir="$2"; shift; shift;;
+    *) echo "ERROR: Unknown option $1, giving up!" >&2; exit 1;;
     esac
 done
 
