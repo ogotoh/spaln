@@ -5,6 +5,7 @@
 #    exec_prefix=$HOME CXX=g++ CFLAGS="-O4" ./configure
 # or for csh/tcsh users:
 #    (setenv exec_prefix $HOME; setenv CXX g++; setenv CFLAGS "-O4"; ./configure)
+#	Copyright(c) Osamu Gotoh <<gotoh.osamu.67a@st.kyoto-u.ac.jp>>
 
 VER=`sed -n -e '/VERSION "/s/.*"\(.*\)".*/\1/p' < iolib.src`
 AR=${AR-"ar rc"}
@@ -18,14 +19,15 @@ do
 case "$1" in
     -h* | --h*)
       echo 'usage:'
-      echo '  configure [--exec_prefix=EXPREFIX] [--table_dir=TBLDIR] [--alndbs_dir=ALN_DBS]'
+      echo '  configure [--exec_prefix=EXPREFIX] [--table_dir=TBLDIR] [--alndbs_dir=ALNDBS]'
         exit 0;;
     -e*=* | --e*=*) exec_prefix=`echo $1 | sed 's/[-a-z_]*=//'`; shift;;
     -t*=* | --table_dir=*) table_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
     -d*=* | --alndbs_dir=*) alndbs_dir=`echo $1 | sed 's/[-a-z_]*=//'`;shift;;
     -e* | --e*) exec_prefix="$2"; shift; shift;;
     -t* | --t*) table_dir="$2"; shift; shift;;
-    -d* | --d*) alndbs_dir="$2"; shift; shift;;
+    -d* | --alndbs_dir | --d*) alndbs_dir="$2"; shift; shift;;
+    *) echo "ERROR: Unknown option $1, giving up!" >&2; exit 1;;
     esac
 done
 

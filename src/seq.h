@@ -140,7 +140,6 @@ struct	SEQ_CODE {
 	int	amb_code;	// ambigity code
 	int	base_code;	// elementary code
 	int	ceil_code;	// upper bound of
-	int	gap_prof;	// deletion profile
 	CHAR*	encode;
 	char*	decode;
 	CHAR*	redctab;
@@ -404,7 +403,7 @@ template <typename file_t>
 	void	pos2num(int which, int* array) const;
 	void 	putSigII(FILE* fd) const;
 	bool	findGate(RANGE* gate);
-	void	typeseq(FILE* fd = 0, bool in_line = false);
+	void	typeseq(FILE* fd = 0, const bool& in_line = false);
 	ORF*	getorf() const;
 	void	passcom(FILE* fo) const;
 	Seq*	translate(Seq* aas, ORF& orf) const;

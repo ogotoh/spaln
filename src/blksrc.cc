@@ -53,6 +53,7 @@ static	SHORT	Ncand = NCAND2PHS;	// max number of candidates to pass to 2nd phase
 static	const	char*	ConvPat = 0;
 static	const	char*	sBitPat = 0;
 static	float	aaafact = 1;
+static	float	drop_rate = 1;
 static	SHORT	MinSigpr = 3;
 static	INT	MaxNref = 16;
 static	int	AllRef = 0;
@@ -110,6 +111,10 @@ const	char*	val = ps + 1;
 	    case 'M':	// Maximum gene length
 		if (*val) OutPrm.MaxOut2 = atoi(val);
 		break;
+	    case 'P':	// paralog chain score drop rate
+		if (*val) drop_rate = atof(val);
+		if (drop_rate > 1) drop_rate /= 100;
+		break;
 	    case 'Q':	// Maximum gene length
 		if (*val) ild_up_quantile = atof(val);
 		break;
@@ -142,11 +147,11 @@ const	char*	val = ps + 1;
 	    case 'h':	// bias of phase1 threshold
 		if (*val) RbsBias = atof(val);
 		break;
-	    case 'k':	// tuple size
-		if (*val) wcp.Ktuple = atoi(val);
-		break;
 	    case 'j':	// factor for hash mergin
 		if (*val) hfact = atof(val);
+		break;
+	    case 'k':	// tuple size
+		if (*val) wcp.Ktuple = atoi(val);
 		break;
 	    case 'm':	// max allowed mishits
 		if (*val) MaxMmc = atoi(val);
@@ -2380,8 +2385,8 @@ retry:
 	    }
 	    if (wlu->scr >= lcritjscr) {
 		++nbetter;
-		lcritjscr = wlu->scr - vthr;
-//		lcritjscr = wlu->scr * 3 / 4;
+		if (drop_rate < 1) lcritjscr = wlu->scr * drop_rate;
+		else	lcritjscr = wlu->scr - vthr;
 		JUXT*	wjxt = wlu->jxt;
 	 	if (lend.jx > wjxt->jx) lend = *wjxt;
 	 	wjxt += wlu->num - 1;

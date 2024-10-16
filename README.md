@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.6a
-#### Last updated: 2024-09-16
+#### Present Version 3.0.6b
+#### Last updated: 2024-10-16
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -249,15 +249,19 @@ or more comment lines starting with ';C', such as
         * *N*=2: Reverse-complement orientation only. Leading polyT sequence may be trimmed off.
         * *N*=3: Examine both orientations. Terminal polyA or polyT sequence may be trimmed off.
      * -T *S*: Specify the species-specific parameter set. *S* corresponds to the subdirectory in the _table_ directory. Alternatively, *S* may be the 1st or the 3rd term in _table/gnm2tab_ file, where the 2nd term on the line indicates the subdirectory.
-     * -V *N*:	Minimum space to induce Hirschberg's algorithm (32M)
-     * -W *S*:	Write block index table to files *S*.bk*x*. if *S* is omitted, the file name (without directory and extension) of the first argument is used as *S*.
+     * -V *N*: Minimum space to induce Hirschberg's algorithm (32M)
+     * -W *S*: Write block index table to files *S*.bk*x*. if *S* is omitted, the file name (without directory and extension) of the first argument is used as *S*.
+     * -XP*N*: Set minimum accepted paralog HSP-chain score to *N* times primary target score. 
+      When used with -M*n* option, *N* < 1.0 may produce a larger number of paralogs than default.
+      When *N* > 1.0, *N* is divided by 100.0.
+      When *N* = 1.0 (default), the threshold score = primary score minus the value set by -H option (35).
+     * ~~-XS: Activate salvage mode. Considerably slow.~~
      * -g: gzipped output used in combination with -O12 option.
      * -i[a|p]: Input mode with -Q[0<=N<=3].
         * -ia: Alternative mode; a genomic segment of an odd numbered entry in the input file is aligned with the query of the following entry.
         * -ip: Parallel mode; the i-th entry in the file specified by the first argument is aligned with the i-th entry in the file specified by the second argument.
         *  	default: The genomic segment specified by the first argument is aligned with each entry in the file specified by the second argument.
      * -o *S*:	Destination of output file name (stdout). If multiple output formats are specified by -O option(s), *S* specifies the directory or prefix to which the file names with .O*N* extensions are concatenated.
-      
      * -pa*N*:	Terminal polyA or polyT sequence longer than *N* (12) is trimmed off and the orientation is fixed accordingly. If *N* = 0 or empty, these functionalities are disabled.
      * -pF:     Output full Fasta entry name (only the last term separated '|').
      * -pi:	Mark exon-intron junctions by color in the alignment (-O1).
@@ -307,7 +311,6 @@ or more comment lines starting with ';C', such as
       *N* = 1: set parameter values for cross-species comparison. The default value for *N* is 0 or 1 for DNA or protein query, respectively.
      * -yY *N*:	Relative contribution of length-dependent part of intron penalty (8)
      * -yZ *N*:	Relative contribution of oligomer composition within an intron (0)
-     * -XS: Activate salvage mode. Considerably slow.
 
 5. **Sortgrcd**
   * **Sortgrcd** is used to recover the output of **spaln** with -O12 option, to apply some filtering, and also to rearrange the output of multiple **spaln** runs.
@@ -356,6 +359,10 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.6b
+1. Add -XP*n* option. *n* < 1.0 may output more paralogs than default (*n* = 1).
+2. Fix the unfinished bug of 'configure' script when unknown option is given.
+
 ## Changes in version 3.0.6a
 1. Fix a bug for gzipped queries.
 

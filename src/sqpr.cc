@@ -2331,7 +2331,7 @@ void pralnseq(const GAPS** gaps, Seq* seqs[], const int& seqnum, FILE* fd)
 static void put_SigII(const PFQ* pfq, const PFQ* tfq, const int* lst, 
 	int numlst, FILE* fd)
 {
-	int	lwd = OutPrm.lpw >= 10? OutPrm.lpw - 4: 56;
+const	int	lwd = OutPrm.lpw >= 10? OutPrm.lpw - 4: 56;
 	char	str[MAXL];
 
 	fprintf(fd, ";B %ld %d\n", (long) (tfq - pfq), numlst);
@@ -2349,7 +2349,7 @@ static void put_SigII(const PFQ* pfq, const PFQ* tfq, const int* lst,
 	else	fputs(";b", fd);
 	fprintf(fd, " %d %d\n", pfq->pos, pfq->num);
 	if (!lst || !numlst) return;
-	const int*	tst = lst + numlst;
+const	int*	tst = lst + numlst;
 	for (c = 0; lst < tst - 1; ++lst) {
 	    if (c == 0) fputs(";m", fd);
 	    snprintf(str + c, MAXL - c, " %d", *lst + 1);
@@ -2373,7 +2373,7 @@ const	int*	lst = sigII? sigII->lst: 0;
 	    fputs(";B 0 0\n", fd);
 	    return;
 	}
-	int	step = isprotein()? 3: 1;
+const	int	step = isprotein()? 3: 1;
 	int	upto = step * (left + base_);
 	for ( ; pfq->pos < upto; ++pfq)
 	    if (lst) lst += pfq->num;
@@ -2400,13 +2400,13 @@ static void nexus_head(FILE* fd, const Seq* sd)
 	fputs("\tmatrix\n", fd);
 }
 
-void Seq::typeseq(FILE* fd, bool in_line)
+void Seq::typeseq(FILE* fd, const bool& in_line)
 {
 	if (!many) return;
 	if (!fd) fd = out_fd;
 	if (in_line) {
-	    CHAR*	t = at(right);
-	    for (CHAR*	p = at(left); p < t; ++p) 
+const	    CHAR*	t = at(right);
+	    for (const CHAR* p = at(left); p < t; ++p) 
 		putc(code->decode[*p], fd);
 	} else if (many == 1) {
 	    listseq(fd);

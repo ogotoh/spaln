@@ -76,10 +76,10 @@ CHAR complcod[] = {___,_,T,G,K,C,Y,S,B,A,W,R,D,M,H,V,N};
 CHAR aa2nuc[] = {___,_,N,C,G,A,A,G,A,A,G,A,T,T,A,T,T,C,C,C,G,A,T,G,G,A};
 
 /* max_code, amb_code, base_code, ceil_code, gap_prof, encode, decode, redctab */
-static	SEQ_CODE str_code = {28, 1, 2, 28, 28, 0, alphab, 0};
-static	SEQ_CODE nts_code = {NSIMD, N, A, N, NSIMD, nccode, nucl, ncredctab};
-static	SEQ_CODE trc_code = {TSIMD, AMB, ALA, TSIMD, TSIMD, trccode, acodon, 0};
-static	SEQ_CODE aas_code = {ASIMD, AMB, ALA, ASIMD, ASIMD, aacode, amino, aaredctab};
+static	SEQ_CODE str_code = {28, 1, 2, 28, 0, alphab, 0};
+static	SEQ_CODE nts_code = {NSIMD, N, A, N, nccode, nucl, ncredctab};
+static	SEQ_CODE trc_code = {TSIMD, AMB, ALA, TSIMD, trccode, acodon, 0};
+static	SEQ_CODE aas_code = {ASIMD, AMB, ALA, ASIMD, aacode, amino, aaredctab};
 static	const	INEX	def_inex = {0};
 
 void setdfn(const char* newdfn) {topath(seqdfn, newdfn);}
@@ -932,24 +932,22 @@ void Seq::exg_seq(int gl, int gr)
 
 	gl = gl || alprm.tgapf < 1;
 	gr = gr || alprm.tgapf < 1;
-const	CHAR	new_codel = (CHAR) (gl? nil_code: gap_code);
-const	CHAR	new_coder = (CHAR) (gr? nil_code: gap_code);
+	CHAR	new_codel = (CHAR) (gl? nil_code: gap_code);
+	CHAR	new_coder = (CHAR) (gr? nil_code: gap_code);
 	if (gl || !algmode.qck) vset(ss - many, new_codel, many);
 	if (gr || !algmode.qck) vset(tt, new_coder, many);
-	inex.nils = 0;
+	inex.nils = gl || gr;
 	for (int i = 0; i < many; ++i) {
 	    CHAR*	s = ss + i;
 	    for ( ; s < tt; s += many) {
 		if (IsGap(*s)) *s = new_codel;
 		else	break;
 	    }
-	    if (ss[i] == nil_code) inex.nils |= 1;
 	    if (s >= tt && (gl || !gr)) continue;
 	    for (s = tt - many + i; s > ss; s -= many) {
 		if (IsGap(*s)) *s = new_coder;
 		else	break;
 	    }
-	    if (tt[i - many] == nil_code) inex.nils |= 2;
 	}
 	if (anti_) {
 	    (*anti_)->inex.exgl = inex.exgr;
@@ -963,8 +961,13 @@ void Seq::test_gap_amb()
 	CHAR*	tt = at(right);
 
 	inex.dels = inex.ambs = 0;
-	for ( ; ss < tt; ++ss) {
-	    if (IsGap(*ss)) inex.dels = 1;
+	int	ndel = 0;
+	for (int i = 0; ss < tt; ++ss) {
+	    if (IsGap(*ss)) ++ndel;
+	    if (++i == many) {
+		if (ndel && ndel < many) inex.dels = 1;
+		i = ndel = 0;
+	    }
 	    int	namb = isAmb(*ss);
 	    if (!namb) continue;
 	    if (isprotein()) {
@@ -1210,14 +1213,11 @@ const	CHAR*	sseq = at(left);
 	}
 #if USE_WEIGHT
 // weights are normalized to sum up to many
-	if (weight) {
+	if (dest->many > 1 && weight) {
 	    if (!dest->weight) dest->weight = new FTYPE[dmany];
-	    if (dmany == 1) dest->weight[0] = 1;
-	    else { 
-		const int*	wk = which;
-		for (int i = 0; *wk >= 0; ++i, ++wk) {
-		    dest->weight[i] = weight[*wk] / nfact;
-		}
+	    const int*	wk = which;
+	    for (int i = 0; *wk >= 0; ++i, ++wk) {
+		dest->weight[i] = weight[*wk] / nfact;
 	    }
 	}
 #endif
@@ -1624,7 +1624,7 @@ void Seq::estimate_len(gzFile gzfd, const int& nos, const SeqDb* dbf)
 	    if (*str == _NHEAD || *str == _CHEAD || *str == _EOS ||
 		*str == _COMM || *str == _LCOMM || *str == _WGHT) {
 		if ((strlen(str) + 1) == MAXL) flush_line(gzfd);
-		break;
+		continue;
 	    }
 	    if (nos == 1 || (dbf && dbf->FormID == FASTA)) {
 		len += strlen(str) - 1;
