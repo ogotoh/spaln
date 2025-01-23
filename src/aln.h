@@ -290,8 +290,14 @@ const	Simmtx*	simmtx;
 	VTYPE	UnpPenalty3(int i) const {
 	    int	d = i / 3;
 	    VTYPE	unp = d * BasicGEP;
-	    if (i <= codonk1) return unp;
-	    return (unp - diffu * (d - alprm.k1) + (i % 3? ExtraGOP: 0));
+	    VTYPE	egop = 0;
+	    switch (i % 3) {
+		case 1: egop = GapE1; break;
+		case 2: egop = GapE2; break;
+		default: break;
+	    }
+	    if (i <= codonk1) return (unp + egop);
+	    return (unp - diffu * (d - alprm.k1) + egop);
 	}
 	VTYPE	GapExtPen3(int i) const {
 	    return (i > codonk1)? LongGEP: BasicGEP;

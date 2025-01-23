@@ -78,7 +78,7 @@ VTYPE SpJunc::spjscr(int n5, int n3) {
 
 const CHAR* SpJunc::spjseq(int n5, int n3)
 {
-	if (n5 <= b->left || n3 >= b->right) return (spj_tron_tab[256]);
+	if (n5 < b->left || n3 >= b->right) return (spj_tron_tab[256]);
 static	const	CHAR	pyrim[2] = {PHE, PHE};
 const	CHAR*	b5 = b->at(n5 - 2);
 const	CHAR*	b3 = n3? b->at(n3): pyrim;

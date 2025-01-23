@@ -145,8 +145,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "3.0.6b";
-static	const	int	date = 2401016;
+static	const	char*	version = "3.0.6c";
+static	const	int	date = 250123;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -430,7 +430,7 @@ const	    char*	val = argv[0] + 2;
 			case 'Q': setprompt(0, 1);  break;
 			case 'r': algmode.mlt = 1; break;
 			case 't': OutPrm.deflbl = 2; break;
-			case 'w': algmode.thr = 0; break;
+			case 'w': OutPrm.all_out = 1; break;
 			case 'x': OutPrm.supself = (val[1] == '2')? 2: 1; break;
 			case 'J': case 'm': case 'u': case 'v': 
 			    setexprm_z(argc, argv); break;
@@ -790,7 +790,8 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	    if (n) std::swap(b, gener[n - 1]);
 	    dir = spalign2(sqs, pwd, gsinf, ori);
 	    if (n) std::swap(b, gener[n - 1]);
-	    if (dir != ERROR && GsI->fstat.val > pwd->Vthr) {
+	    if (dir != ERROR && 
+		(OutPrm.all_out || GsI->fstat.val > pwd->Vthr)) {
 		++n_out;
 		if (algmode.nsa == BED_FORM)
 		    GsI->rscr = selfAlnScr(a, pwd->simmtx);
@@ -910,7 +911,8 @@ const	int	basis = gener - sqs;
 		genomicseq(sqs + 1, bks->pwd, a->inex.ori);
 	    int	dir = spalign2(sqs, bks->pwd, gsinf, a->inex.ori);
 	    delete b->exin; b->exin = 0;	// suppress Boundary output
-	    if (dir < 0 || !gsinf->skl || gsinf->scr <= bks->pwd->Vthr) {
+	    if (dir < 0 || !gsinf->skl || 
+		(!OutPrm.all_out && gsinf->scr <= bks->pwd->Vthr)) {
 		gsinf->scr = NEVSEL;
 		continue;
 	    }

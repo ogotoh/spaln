@@ -50,8 +50,8 @@ const	char*	gnm2tab = "gnm2tab";
 const	char*	esc_code = "\x1b[";
 const	char*	font_end = "</font></b>";
 
-		//lpw blk Nout Ncolony eij ovl fnm rm trim lg lbl dsc odr spj olr color self term
-OUTPRM	OutPrm = {60, 0, 16, 1, 4, 10, 5, 0, 1, 0, 3, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0};
+	       //lpw blk Nout MaxOut eij ovl fnm rm lg spj 
+OUTPRM	OutPrm = {60, 0, 16, 1, 4, 10, 5, 0, 1, 3, 1};
 
 static  const   char*   font_tag[3] = {
 	"<b><font color=\"%s\">",

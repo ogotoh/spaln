@@ -33,16 +33,24 @@
 #endif
 
 static	const	CHAR	b32s2c_a[32] = 
-	{ 0,  2,  4,  6,  8, 10, 12, 14,  1, 3, 5, 7, 9, 11, 13, 15,
-	  0,  2,  4,  6,  8, 10, 12, 14,  1, 3, 5, 7, 9, 11, 13, 15};
+	{ 0,  2,  4,  6,  8, 10, 12, 14,  1,  3,  5,  7,  9, 11, 13, 15,
+	  0,  2,  4,  6,  8, 10, 12, 14,  1,  3,  5,  7,  9, 11, 13, 15};
 static	const	CHAR	b32i2s_a[32] = 
-	{ 0,  1,  4,  5,  8,  9, 12, 13, 2,  3,  6,  7, 10, 11, 14, 15,
-	  0,  1,  4,  5,  8,  9, 12, 13, 2,  3,  6,  7, 10, 11, 14, 15};
+	{ 0,  1,  4,  5,  8,  9, 12, 13,  2,  3,  6,  7, 10, 11, 14, 15,
+	  0,  1,  4,  5,  8,  9, 12, 13,  2,  3,  6,  7, 10, 11, 14, 15};
+static	const	CHAR	b32i2c_a[32] = 
+	{ 0,  4,  8, 12,  1,  5,  9, 13,  2,  6, 10, 14,  3,  7, 11, 15,
+	  0,  4,  8, 12,  1,  5,  9, 13,  2,  6, 10, 14,  3,  7, 11, 15};
 static	const	CHAR	b64s2c_a[64] = 
 	{ 0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30,
 	 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62,
 	  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31,
 	 33, 35, 37, 39, 41, 43, 45, 47, 49, 51, 53, 55, 57, 59, 61, 63};
+static	const	CHAR	b64i2c_a[64] = 
+	{ 0,  4,  8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60,
+	  1,  5,  9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61,
+	  2,  6, 10, 14, 18, 22, 26, 30, 34, 38, 42, 46, 50, 54, 58, 62,
+	  3,  7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63};
 static	const	CHAR	b64i2s_a[64] = 
 	{ 0,  1,  4,  5,  8,  9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29,
 	 32, 33, 36, 37, 40, 41, 44, 45, 48, 49, 52, 53, 56, 57, 60, 61,
@@ -58,6 +66,7 @@ static	const	CHAR	b16i2s_m[3][16] =
 	 {0xff, 0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff, 0xff, 0, 0, 0xff, 0xff, 0, 0},
 	 {0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0}
 	};
+static	const	INT	i32permute[8] = {0, 4, 1, 5, 2, 6, 3, 7};
 
 #define VecClear(d, n) \
 	size_t	nn = n / Nelem * Nelem; \
@@ -157,6 +166,22 @@ var_v	    b_v = load(buf + k); \
 	} \
 	return (buf[0]);
 
+#define VecDotP(a, b, n) \
+	var_t	dp = 0.; \
+	var_t	cbuf[Nelem]; \
+	for ( ; n > Nelem; n -= Nelem) { \
+	    var_v	a_v = load(a); \
+	    var_v	b_v = load(b); \
+	    var_v	c_v = mul(a_v, b_v); \
+	    store(cbuf, c_v); \
+	    for (int i = 0; i < Nelem; ++i) dp += cbuf[i]; \
+	    a += Nelem; \
+	    b += Nelem; \
+	} \
+	while (n-- > 0) \
+	    dp += *a++ * *b++; \
+	return (dp);
+
 /****************************************************************
 *	class declaration of elementary simd functions
 ****************************************************************/
@@ -169,7 +194,7 @@ struct Simd_functions {};
 
 #if __AVX512BW__
 
-#define _VecRegSize_ 512
+#define _VecRegSize_ 64
 
 template <>
 struct Simd_functions<char> {
@@ -177,7 +202,7 @@ using	var_t = char;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask64;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(char);
+const	int	Nelem = _VecRegSize_ / sizeof(char);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const char i) {return _mm512_set1_epi8(i);}
 	int_v load(const char* a) {
@@ -224,7 +249,7 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(char);
 	    {VecSub_c(dst, c, n)}
 	var_t	vecmax(const var_t* d, const size_t n){VecMax(d, n)}
 	var_t	vecmin(const var_t* d, const size_t n){VecMin(d, n)}
-}
+};
 
 template <>
 struct Simd_functions<CHAR> {
@@ -232,7 +257,7 @@ using	var_t = CHAR;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask64;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(CHAR);
+const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const CHAR i) {return _mm512_set1_epi8(i);}
 	int_v load(const CHAR* a) {
@@ -287,7 +312,7 @@ using	var_t = short;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask32;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(short);
+const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const short i) {return _mm512_set1_epi16(i);}
 	int_v load(const short* a) {
@@ -336,6 +361,10 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(short);
 	    int_v	b_v = _mm512_loadu_epi8(b64s2c_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
+	int_v cast32to8(int_v v) {
+	    int_v	b_v = _mm512_loadu_epi8(b64i2c_a);
+	    return _mm512_shuffle_epi8(v, b_v);
+	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
 	    {VecCopy(dst, src, n)}
@@ -355,7 +384,7 @@ using	var_t = SHORT;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask32;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(SHORT);
+const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const SHORT i) {return _mm512_set1_epi16(i);}
 	int_v load(const SHORT* a) {
@@ -423,7 +452,7 @@ using	var_t = int;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask16;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(int);
+const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const int i) {return _mm512_set1_epi32(i);}
 	int_v load(const int* a) {return _mm512_loadu_epi32(a);}
@@ -470,6 +499,10 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(int);
 	    int_v	b_v = _mm512_loadu_epi8(b64i2s_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
+	int_v cast32to8(int_v v) {
+	    int_v	b_v = _mm512_loadu_epi8(b64i2c_a);
+	    return _mm512_shuffle_epi8(v, b_v);
+	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
 	    {VecCopy(dst, src, n)}
@@ -489,7 +522,7 @@ using	var_t = INT;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask16;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(INT);
+const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const INT i) {return _mm512_set1_epi32(i);}
 	int_v load(const INT* a) {return _mm512_loadu_epi32(a);}
@@ -530,6 +563,10 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(INT);
 	    int_v	b_v = _mm512_loadu_epi8(b64i2s_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
+	int_v cast32to8(int_v v) {
+	    int_v	b_v = _mm512_loadu_epi8(b64i2c_a);
+	    return _mm512_shuffle_epi8(v, b_v);
+	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
 	    {VecCopy(dst, src, n)}
@@ -549,12 +586,12 @@ using	var_t = float;
 using	var_v = __m512;
 using	int_v = __m512i;
 using	var_m = __mmask16;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(float);
+const	int	Nelem = _VecRegSize_ / sizeof(float);
 	var_v clear() {return _mm512_setzero_ps();}
 	var_v splat(const float f) {return _mm512_set1_ps(f);}
 	var_v load(const float* a) {return _mm512_loadu_ps(a);}
 	void	store(float* a, var_v v) {_mm512_storeu_ps(a, v);}
-	var_v add(flt_v u, var_v v) {
+	var_v add(var_v u, var_v v) {
 	    return _mm512_add_ps(u, v);
 	}
 	var_v sub(var_v u, var_v v) {
@@ -598,14 +635,14 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(float);
 
 #elif __AVX2__
 
-#define _VecRegSize_ 256
+#define _VecRegSize_ 32
 
 template <>
 struct Simd_functions<char> {
 using	var_t = char;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(char);
+const	int	Nelem = _VecRegSize_ / sizeof(char);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const char i) {return _mm256_set1_epi8(i);}
 	int_v load(const char* a) {
@@ -657,7 +694,7 @@ struct Simd_functions<CHAR> {
 using	var_t = CHAR;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(CHAR);
+const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const CHAR i) {return _mm256_set1_epi8(i);}
 	int_v load(const CHAR* a) {
@@ -709,7 +746,7 @@ struct Simd_functions<short> {
 using	var_t = short;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(short);
+const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const short i) {return _mm256_set1_epi16(i);}
 	int_v load(const short* a) {
@@ -775,7 +812,7 @@ struct Simd_functions<SHORT> {
 using	var_t = SHORT;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(SHORT);
+const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const SHORT i) {return _mm256_set1_epi16(i);}
 	int_v load(const SHORT* a) {
@@ -841,7 +878,7 @@ struct Simd_functions<int> {
 using	var_t = int;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(int);
+const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const int i) {return _mm256_set1_epi32(i);}
 	int_v load(const int* a) {
@@ -887,7 +924,13 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(int);
 	int_v cast32to16(int_v v) {
 	    int_v	b_v = _mm256_loadu_si256((__m256i const*) b32i2s_a);
 	    b_v = _mm256_shuffle_epi8(v, b_v);
-	    return (_mm256_permute4x64_epi64(b_v, 216));
+	    return (_mm256_permute4x64_epi64(b_v, 216));	// 0xb8
+	}
+	int_v cast32to8(int_v v) {
+	    int_v	b_v = _mm256_loadu_si256((__m256i const*) b32i2c_a);
+	    b_v = _mm256_shuffle_epi8(v, b_v);
+	    int_v	i_v = _mm256_loadu_si256((__m256i const*) i32permute);
+	    return (_mm256_permutevar8x32_epi32(b_v, i_v));
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
@@ -907,7 +950,7 @@ struct Simd_functions<INT> {
 using	var_t = INT;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(INT);
+const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const INT i) {return _mm256_set1_epi32(i);}
 	int_v load(const INT* a) {
@@ -953,7 +996,13 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(INT);
 	int_v cast32to16(int_v v) {
 	    int_v	b_v = _mm256_loadu_si256((__m256i const*) b32i2s_a);
 	    b_v = _mm256_shuffle_epi8(v, b_v);
-	    return (_mm256_permute4x64_epi64(b_v, 216));
+	    return (_mm256_permute4x64_epi64(b_v, 216));	// 0xb8
+	}
+	int_v cast32to8(int_v v) {
+	    int_v	b_v = _mm256_loadu_si256((__m256i const*) b32i2c_a);
+	    b_v = _mm256_shuffle_epi8(v, b_v);
+	    int_v	i_v = _mm256_loadu_si256((__m256i const*) i32permute);
+	    return (_mm256_permutevar8x32_epi32(b_v, i_v));
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
@@ -974,7 +1023,7 @@ using	var_t = float;
 using	var_v = __m256;
 using	var_m = __m256;
 using	int_v = __m256i;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(float);
+const	int	Nelem = _VecRegSize_ / sizeof(float);
 	var_v clear() {return _mm256_setzero_ps();}
 	var_v splat(const float f) {return _mm256_set1_ps(f);}
 	var_v load(const float* a) {
@@ -1022,18 +1071,34 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(float);
 	    {VecSub_c(dst, c, n)}
 	var_t	vecmax(const var_t* d, const size_t n){VecMax(d, n)}
 	var_t	vecmin(const var_t* d, const size_t n){VecMin(d, n)}
+	var_t	vecdotp(const var_t* a, const var_t* b, int n) {
+	    var_t	dp = 0.;
+	    var_t	cbuf[Nelem];
+	    for ( ; n >= Nelem; n -= Nelem) {
+		var_v	a_v = _mm256_loadu_ps(a);
+		var_v	b_v = _mm256_loadu_ps(b);
+		var_v	c_v = _mm256_dp_ps(a_v, b_v, 0xff);
+		_mm256_storeu_ps(cbuf, c_v);
+		dp += cbuf[0] + cbuf[4];
+		a += Nelem;
+		b += Nelem;
+	    }
+	    while (n-- > 0)
+		dp += *a++ * *b++;
+	    return (dp);
+	}
 };
 
 #elif __SSE4_1__
 
-#define _VecRegSize_ 128
+#define _VecRegSize_ 16
 
 template <>
 struct Simd_functions<char> {
 using	var_t = char;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(char);
+const	int	Nelem = _VecRegSize_ / sizeof(char);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const char i) {return _mm_set1_epi8(i);}
 	int_v load(const char* a) {
@@ -1085,7 +1150,7 @@ struct Simd_functions<CHAR> {
 using	var_t = CHAR;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(CHAR);
+const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const CHAR i) {return _mm_set1_epi8(i);}
 	int_v load(const CHAR* a) {
@@ -1137,7 +1202,7 @@ struct Simd_functions<short> {
 using	var_t = short;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(short);
+const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const short i) {return _mm_set1_epi16(i);}
 	int_v load(const short* a) {
@@ -1202,7 +1267,7 @@ struct Simd_functions<SHORT> {
 using	var_t = SHORT;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(SHORT);
+const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const SHORT i) {return _mm_set1_epi16(i);}
 	int_v load(const SHORT* a) {
@@ -1267,7 +1332,7 @@ struct Simd_functions<int> {
 using	var_t = int;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(int);
+const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const int i) {return _mm_set1_epi32(i);}
 	int_v load(const int* a) {
@@ -1314,6 +1379,10 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(int);
 	    int_v	b_v = _mm_loadu_si128((__m128i const*) b32i2s_a);
 	    return _mm_shuffle_epi8(v, b_v);
 	}
+	int_v cast32to8(int_v v) {
+	    int_v	b_v = _mm_loadu_si128((__m128i const*) b32i2c_a);
+	    return _mm_shuffle_epi8(v, b_v);
+	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
 	    {VecCopy(dst, src, n)}
@@ -1332,7 +1401,7 @@ struct Simd_functions<INT> {
 using	var_t = INT;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(INT);
+const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const INT i) {return _mm_set1_epi32(i);}
 	int_v load(const INT* a) {
@@ -1379,6 +1448,10 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(INT);
 	    int_v	b_v = _mm_loadu_si128((__m128i const*) b32i2s_a);
 	    return _mm_shuffle_epi8(v, b_v);
 	}
+	int_v cast32to8(int_v v) {
+	    int_v	b_v = _mm_loadu_si128((__m128i const*) b32i2c_a);
+	    return _mm_shuffle_epi8(v, b_v);
+	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
 	    {VecCopy(dst, src, n)}
@@ -1398,7 +1471,7 @@ using	var_t = float;
 using	var_v = __m128;
 using	var_m = __m128;
 using	int_v = __m128i;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(float);
+const	int	Nelem = _VecRegSize_ / sizeof(float);
 	var_v clear() {return _mm_setzero_ps();}
 	var_v splat(const float f) {return _mm_set_ps1(f);}
 	var_v load(const float* a) {return _mm_loadu_ps(a);}
@@ -1444,11 +1517,27 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(float);
 	    {VecSub_c(dst, c, n)}
 	var_t	vecmax(const var_t* d, const size_t n){VecMax(d, n)}
 	var_t	vecmin(const var_t* d, const size_t n){VecMin(d, n)}
+	var_t	vecdotp(const var_t* a, const var_t* b, int n){
+	    var_t	dp = 0.;			// dot product
+	    var_t	cbuf[Nelem];
+	    for ( ; n > Nelem; n -= Nelem) {
+		var_v	a_v = _mm_loadu_ps(a);
+		var_v	b_v = _mm_loadu_ps(b);
+		var_v	c_v = _mm_dp_ps(a_v, b_v, 0xff);
+		_mm_storeu_ps(cbuf, c_v);
+		dp += cbuf[0];
+		a += Nelem;
+		b += Nelem;
+	    }
+	    while (n-- > 0)
+		dp += *a++ * *b++;
+	    return (dp);
+	}
 };
 
 #elif __ARM_NEON
 
-#define _VecRegSize_ 128
+#define _VecRegSize_ 16
 
 template <>
 struct Simd_functions<char> {
@@ -1456,7 +1545,7 @@ using	var_t = signed char;
 using	int_v = int8x16_t;
 using	var_v = int_v;
 using	int_m = uint8x16_t;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(char);
+const	int	Nelem = _VecRegSize_ / sizeof(char);
 	int_v clear() {return vdupq_n_s8(0);}
 	int_v splat(const int8_t i) {return (vdupq_n_s8(i));}
 	int_v load(int8_t const* a) {return vld1q_s8(a);}
@@ -1499,7 +1588,7 @@ using	var_t = CHAR;
 using	int_v = uint8x16_t;
 using	var_v = int_v;
 using	int_m = uint8x16_t;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(CHAR);
+const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
 	int_v clear() {return vdupq_n_u8(0);}
 	int_v splat(const uint8_t i) {return vdupq_n_u8(i);}
 	int_v load(uint8_t const* a) {return vld1q_u8(a);}
@@ -1542,7 +1631,7 @@ using	var_t = short;
 using	int_v = int16x8_t;
 using	var_v = int_v;
 using	int_m = uint16x8_t;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(short);
+const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return vdupq_n_s16(0);}
 	int_v splat(int16_t i) {return vdupq_n_s16(i);}
 	int_v load(int16_t const* a) {return vld1q_s16(a);}
@@ -1592,7 +1681,7 @@ using	var_t = SHORT;
 using	int_v = uint16x8_t;
 using	var_v = int_v;
 using	int_m = uint16x8_t;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(SHORT);
+const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return vdupq_n_u16(0);}
 	int_v splat(uint16_t i) {return vdupq_n_u16(i);}
 	int_v load(uint16_t const* a) {return vld1q_u16(a);}
@@ -1642,7 +1731,7 @@ using	var_t = int;
 using	int_v = int32x4_t;
 using	var_v = int_v;
 using	int_m = uint32x4_t;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(int);
+const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v clear() {return vdupq_n_s32(0);}
 	int_v splat(int32_t i) {return vdupq_n_s32(i);}
 	int_v load(int32_t const* a) {return vld1q_s32(a);}
@@ -1673,6 +1762,11 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(int);
 	    uint8x16_t	b_v = vld1q_u8((uint8_t const*) b32i2s_a);
 	    return vreinterpretq_s32_s8(vqtbl1q_s8(w, b_v));
 	}
+	int_v cast32to8(int_v v) {
+	    int8x16_t	w = vreinterpretq_s8_s32(v);
+	    uint8x16_t	b_v = vld1q_u8((uint8_t const*) b32i2c_a);
+	    return vreinterpretq_s32_s8(vqtbl1q_s8(w, b_v));
+	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
 	    {VecCopy(dst, src, n)}
@@ -1692,7 +1786,7 @@ using	var_t = INT;
 using	int_v = uint32x4_t;
 using	var_v = int_v;
 using	int_m = uint32x4_t;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(INT);
+const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v clear() {return vdupq_n_u32(0);}
 	int_v splat(uint32_t i) {return vdupq_n_u32(i);}
 	int_v load(uint32_t const* a) {return vld1q_u32(a);}
@@ -1723,6 +1817,11 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(INT);
 	    uint8x16_t	b_v = vld1q_u8((uint8_t const*) b32i2s_a);
 	    return vreinterpretq_u32_u8(vqtbl1q_u8(w, b_v));
 	}
+	int_v cast32to18(int_v v) {
+	    uint8x16_t	w = vreinterpretq_u8_u32(v);
+	    uint8x16_t	b_v = vld1q_u8((uint8_t const*) b32i2c_a);
+	    return vreinterpretq_u32_u8(vqtbl1q_u8(w, b_v));
+	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
 	    {VecCopy(dst, src, n)}
@@ -1742,7 +1841,7 @@ using	var_t = float;
 using	var_v = float32x4_t;
 using	int_v = int32x4_t;
 using	var_m = uint32x4_t;
-const	int	Nelem = _VecRegSize_ / 8 / sizeof(float);
+const	int	Nelem = _VecRegSize_ / sizeof(float);
 	var_v clear() {return vdupq_n_f32(0.f);}
 	var_v splat(float32_t f) {return vdupq_n_f32(f);}
 	var_v load(float32_t const* a) {return vld1q_f32(a);}
@@ -1785,8 +1884,10 @@ const	int	Nelem = _VecRegSize_ / 8 / sizeof(float);
 	    {VecAdd_c(dst, c, n)}
 	void	vecsub_c(var_t* dst, const var_t& c, const size_t n)
 	    {VecSub_c(dst, c, n)}
-	var_t	vecmax(const var_t* d, const size_t n){VecMax(d, n)}
-	var_t	vecmin(const var_t* d, const size_t n){VecMin(d, n)}
+	var_t	vecmax(const var_t* d, const size_t n) {VecMax(d, n)}
+	var_t	vecmin(const var_t* d, const size_t n) {VecMin(d, n)}
+	var_t	vecdotp(const var_t* a, const var_t* b, int n)
+	    {VecDotP(a, b, n)}
 };
 
 #else	// __ARM_NEON
@@ -1844,6 +1945,13 @@ X vec_min(const X* ary, const size_t n)
 {
 	Simd_functions<X> sf;
 	return sf.vecmin(ary, n);
+}
+
+template <typename X>
+X vec_dotp(const X* a_ary, const X* b_ary, const int n)
+{
+	Simd_functions<X> sf;
+	return sf.vecdotp(a_ary, b_ary, n);
 }
 
 #endif	// _SIMD_FUNCTIONS_

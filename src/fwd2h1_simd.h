@@ -81,7 +81,7 @@ using	regist_m = var_v;
 using	regist_v = int16x8_t;
 using	regist_m = uint16x8_t;
 #endif
-static	const	int	Nelem = _VecRegSize_ / 8 / sizeof(var_t);
+static	const	int	Nelem = _VecRegSize_ / sizeof(var_t);
 const	int	nelem = Nelem;
 const	Seq**	seqs;
 const	Seq*&	a;

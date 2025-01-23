@@ -1473,7 +1473,7 @@ static int csym(const int cmp[], int rows, const SEQ_CODE* defcode)
 		if (cc < 0) cc = 0;
 		if (cc > nmk) cc = nmk;
 		return (mark[cc]);
-	    } else if (defcode->ceil_code == NTS)
+	    } else if (defcode->max_code == NSIMD)
 		return (logonuc(cmp, ii, defcode));
 	    else
 		return (chempro(cmp, ii));
@@ -2200,11 +2200,12 @@ const	int	c_step = (htl == 1)? 3: 1;
 	    }
 	}
 
-	int	z = 0, gph = 0, phs = 0, intlen = 0;
+	int	z = 0, phs = 0, intlen = 0;
+	int	df = 0;				// df >=0? CDS: intron
 	if (htl & 2) prmode = Row_None;
 	do {
 	    if (OutPrm.SkipLongGap) {
-		int	jj = 0;			//	skip long insert
+		int	jj = 0;			// skip long insert
 		int	gap = INT_MAX;
 		for (int j = 0; j < seqnum; ++j) {
 		    int	upr = gp[j]->gps - gaps[j]->gps;
@@ -2221,7 +2222,7 @@ const		int	upr = (gap - z - OutPrm.EijMergin) / OutPrm.lpw * OutPrm.lpw;
 			Seq*&	sd = seqs[j];
 const			bool	step3 = htl == 3 && !sd->inex.intr;
 			if (j == jj) {
-			    if (step3) gph = phs = (phs + upr) % 3;
+			    if (step3) phs = (phs + upr) % 3;
 			} else {
 			    int	inc = upr;
 			    if (step3) {
@@ -2247,23 +2248,27 @@ const			bool	step3 = htl == 3 && !sd->inex.intr;
 	    for (int clm = 0; clm < OutPrm.lpw; ++clm, ++z, ++gpos, cpos += c_step, pphs = phs) {
 		int	reij = 0;
 		if (exon) {
-		    while (exon->right <= gpos) {intlen = exon[1].left - exon->right; ++exon;}
+		    while (exon->right <= gpos) {	// skip leading exons
+			intlen = exon[1].left - exon->right;
+			++exon;
+		    }
+		    df = gpos - exon->left;
 		    if (exon->right == gpos + 1 && phs == 1) reij = 3;
 		}
 		if (active) active = seqnum;
 		for (int j = k = 0; j < seqnum; k += seqs[j++]->many) {
 		    Seq*&	sd = seqs[j];
-		    bool	prot = sd->isprotein() && htl == 3;
+const		    bool	prot = sd->isprotein() && htl == 3;
 	loop:	    int		pos = gp[j]->gps - gaps[j]->gps;
-		    bool	neog = gaps_intr(gp[j]);
-		    int	gap = neog? gp[j]->gln: 0;
+const		    bool	neog = gaps_intr(gp[j]);
+const		    int	gap = neog? gp[j]->gln: 0;
 		    if (!active) {
 			for (int i = 0; i < sd->many; ++i)
 			    image[k+i][clm] = BLANK;
 		    } else if (pos > z) {
 			if (prot) {
 			    for (int i = 0; i < sd->many; ++i) {
-				if (phs == 1) {
+				if (phs == 1 && df >= 0) {
 				    image[k+i][clm] = *wkr[j] == nil_code? gap_code: *wkr[j];
 				    if (IsntGap(*wkr[j])) ++nbr[k+i];
 				    ++wkr[j];
@@ -2274,7 +2279,6 @@ const			bool	step3 = htl == 3 && !sd->inex.intr;
 			    for (int i = 0; i < sd->many; ++i) {
 				image[k+i][clm] = *wkr[j] == nil_code? gap_code: *wkr[j];
 				if (j == gene) {
-				    int	df = gpos - exon->left;
 				    if (df < 0) image[k+i][clm] |= INTRONBIT;
 				    else if (intlen > 2 && df < 2 && (htl & 2) && pphs == 1)
 					reij = 2 - df;
@@ -2285,7 +2289,8 @@ const			bool	step3 = htl == 3 && !sd->inex.intr;
 				++wkr[j];
 			    }
 			}
-			if ((htl & 2) && j == pro) gph = phs = (phs + 1) % 3;
+			if ((htl & 2) && j == pro && df >= 0)
+			    phs = next_p[phs];
 			if (markeij && pfqs[j]) {
 			    int	niis = 0;
 			    while ((pfqs[j] + niis < tfqs[j]) &&
@@ -2297,7 +2302,7 @@ const			bool	step3 = htl == 3 && !sd->inex.intr;
 		    } else if (pos + gap > z || !neog) {
 			if (prot) {
 			    for (int i = 0; i < sd->many; i++) {
-				if (gph == 1 && (!exon || gpos > exon->left))
+				if (phs == 1 && (!exon || gpos > exon->left))
 				    image[k+i][clm] = gap_code;
 				else
 				    image[k+i][clm] = BLANK;
@@ -2307,7 +2312,8 @@ const			bool	step3 = htl == 3 && !sd->inex.intr;
 				image[k+i][clm] = (!exon || gpos >= exon->left)?
 				    gap_code: BLANK;
 			}
-			if (htl & 2) gph = (gph + 1) % htl;
+			if ((htl & 2) && j == pro && df >= 0)
+			    phs = next_p[phs];
 			if (!neog && !--active && !clm--) return;
 		    } else {
 			agap[j] += gp[j]->gln * c_step;

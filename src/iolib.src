@@ -99,13 +99,14 @@ struct OUTPRM {
 	int	AllowdOverlap;
 const	char*	out_file;
 	INT	RemoveTmp:	1;
-	INT	trimend:	1;
 	INT	SkipLongGap:	2;	// 0: don't skip, 1: skip, 3: run time
+	INT	spjinf:		1;
+	INT	trimend:	1;
 	INT	deflbl:		2;	// 0: sname, 1: fname, 2: tally, 3: new
+	INT	all_out:	1;	// output results irrespective of score
 	INT	fastanno:	1;	// 0: add annotation in fasta output
 	INT	descrp:		1;	// output description
 	INT	sortodr:	2;	// 0: input, 1: bytree, 2: shorter, 3: longer
-	INT	spjinf:		1;
 	INT	olrsum:		1;
 	INT	ColorEij:	2;	// color mark intron position
 	INT	supself:	2;	// suppress result of self comparison

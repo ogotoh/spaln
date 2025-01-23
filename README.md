@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.6b
-#### Last updated: 2024-10-16
+#### Present Version 3.0.6c
+#### Last updated: 2025-01-23
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -359,6 +359,12 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.6c
+1. Fix a bug in discriminating a short intron and an ordinary insertion with a
+frame shift.
+2. Fix a bug in simd_functions.h.
+3. Update several funcions in fwd2h1.cc.
+
 ## Changes in version 3.0.6b
 1. Add -XP*n* option. *n* < 1.0 may output more paralogs than default (*n* = 1).
 2. Fix the unfinished bug of 'configure' script when unknown option is given.
