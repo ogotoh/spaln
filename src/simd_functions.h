@@ -192,7 +192,7 @@ struct Simd_functions {};
 
 // class specialization
 
-#if __AVX512BW__
+#if __AVX512F__ && __AVX512BW__
 
 #define _VecRegSize_ 64
 
@@ -620,6 +620,260 @@ const	int	Nelem = _VecRegSize_ / sizeof(float);
 	}
 	int_v castf2i(var_v u) {return _mm512_castps_si512(u);}
 	var_v casti2f(int_v u) {return _mm512_castsi512_ps(u);}
+	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
+	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
+	    {VecCopy(dst, src, n)}
+	void	vecset(var_t* dst, const var_t& c, const size_t n)
+	    {VecSet(dst, c, n)}
+	void	vecadd_c(var_t* dst, const var_t& c, const size_t n)
+	    {VecAdd_c(dst, c, n)}
+	void	vecsub_c(var_t* dst, const var_t& c, const size_t n)
+	    {VecSub_c(dst, c, n)}
+	var_t	vecmax(const var_t* d, const size_t n){VecMax(d, n)}
+	var_t	vecmin(const var_t* d, const size_t n){VecMin(d, n)}
+};
+
+#elif __AVX512BW__
+
+#define _VecRegSize_ 64
+
+template <>
+struct Simd_functions<char> {
+using	var_t = char;
+using	int_v = __m512i;
+using	var_v = int_v;
+using	var_m = __mmask64;
+const	int	Nelem = _VecRegSize_ / sizeof(char);
+	int_v clear() {return _mm512_setzero_si512();}
+	int_v splat(const char i) {return _mm512_set1_epi8(i);}
+	int_v load(const char* a) {
+	    return _mm512_loadu_epi8(a);
+	}
+	void	store(char* a, int_v v) {_mm512_storeu_epi8(a, v);}
+	int_v add(int_v u, int_v v) {
+	    return _mm512_adds_epi8(u, v);
+	}
+	int_v sub(int_v u, int_v v) {
+	    return _mm512_subs_epi8(u, v);
+	}
+	int_v max(int_v u, int_v v) {
+	    return _mm512_max_epi8(u, v);
+	}
+	int_v min(int_v u, int_v v) {
+	    return _mm512_min_epi8(u, v);
+	}
+	int_v blend(int_v u, int_v v, var_m m) {
+	    return _mm512_mask_blend_epi8(m, v, u);
+	}
+	var_m cmp_gt(int_v u, int_v v) {
+	    return _mm512_cmp_epi8_mask(u, v, 6);
+	}
+	var_m cmp_ge(int_v u, int_v v) {
+	    return _mm512_cmp_epi8_mask(u, v, 5);
+	}
+	var_m cmp_eq(int_v u, int_v v) {
+	    return _mm512_cmp_epi8_mask(u, v, 0);
+	}
+	int_v bit_and(int_v u, int_v v) {return _mm512_and_si512(u, v);}
+	int_v bit_or(int_v u, int_v v) {return _mm512_or_si512(u, v);}
+	int_v bit_xor(int_v u, int_v v) {return _mm512_xor_si512(u, v);}
+	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
+	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
+	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
+	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
+	    {VecCopy(dst, src, n)}
+	void	vecset(var_t* dst, const var_t& c, const size_t n)
+	    {VecSet(dst, c, n)}
+	void	vecadd_c(var_t* dst, const var_t& c, const size_t n)
+	    {VecAdd_c(dst, c, n)}
+	void	vecsub_c(var_t* dst, const var_t& c, const size_t n)
+	    {VecSub_c(dst, c, n)}
+	var_t	vecmax(const var_t* d, const size_t n){VecMax(d, n)}
+	var_t	vecmin(const var_t* d, const size_t n){VecMin(d, n)}
+};
+
+template <>
+struct Simd_functions<CHAR> {
+using	var_t = CHAR;
+using	int_v = __m512i;
+using	var_v = int_v;
+using	var_m = __mmask64;
+const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
+	int_v clear() {return _mm512_setzero_si512();}
+	int_v splat(const CHAR i) {return _mm512_set1_epi8(i);}
+	int_v load(const CHAR* a) {
+	    return _mm512_loadu_epi8(a);
+	}
+	void	store(CHAR* a, int_v v) {_mm512_storeu_epi8(a, v);}
+	int_v add(int_v u, int_v v) {
+	    return _mm512_adds_epi8(u, v);
+	}
+	int_v sub(int_v u, int_v v) {
+	    return _mm512_subs_epi8(u, v);
+	}
+	int_v max(int_v u, int_v v) {
+	    return _mm512_max_epi8(u, v);
+	}
+	int_v min(int_v u, int_v v) {
+	    return _mm512_min_epi8(u, v);
+	}
+	int_v blend(int_v u, int_v v, var_m m) {
+	    return _mm512_mask_blend_epi8(m, v, u);
+	}
+	var_m cmp_gt(int_v u, int_v v) {
+	    return _mm512_cmp_epi8_mask(u, v, 6);
+	}
+	var_m cmp_ge(int_v u, int_v v) {
+	    return _mm512_cmp_epi8_mask(u, v, 5);
+	}
+	var_m cmp_eq(int_v u, int_v v) {
+	    return _mm512_cmp_epi8_mask(u, v, 0);
+	}
+	int_v bit_and(int_v u, int_v v) {return _mm512_and_si512(u, v);}
+	int_v bit_or(int_v u, int_v v) {return _mm512_or_si512(u, v);}
+	int_v bit_xor(int_v u, int_v v) {return _mm512_xor_si512(u, v);}
+	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
+	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
+	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
+	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
+	    {VecCopy(dst, src, n)}
+	void	vecset(var_t* dst, const var_t& c, const size_t n)
+	    {VecSet(dst, c, n)}
+	void	vecadd_c(var_t* dst, const var_t& c, const size_t n)
+	    {VecAdd_c(dst, c, n)}
+	void	vecsub_c(var_t* dst, const var_t& c, const size_t n)
+	    {VecSub_c(dst, c, n)}
+	var_t	vecmax(const var_t* d, const size_t n){VecMax(d, n)}
+	var_t	vecmin(const var_t* d, const size_t n){VecMin(d, n)}
+};
+
+template <>
+struct Simd_functions<short> {
+using	var_t = short;
+using	int_v = __m512i;
+using	var_v = int_v;
+using	var_m = __mmask32;
+const	int	Nelem = _VecRegSize_ / sizeof(short);
+	int_v clear() {return _mm512_setzero_si512();}
+	int_v splat(const short i) {return _mm512_set1_epi16(i);}
+	int_v load(const short* a) {
+	    return _mm512_loadu_epi16(a);
+	}
+	void	store(short* a, int_v v) {_mm512_storeu_epi16(a, v);}
+	int_v add(int_v u, int_v v) {
+	    return _mm512_adds_epi16(u, v);
+	}
+	int_v sub(int_v u, int_v v) {
+	    return _mm512_subs_epi16(u, v);
+	}
+	int_v mul(int_v u, int_v v) {
+	    return _mm512_mullo_epi16(u, v);
+	}
+	int_v shiftl(int_v u, const int i) {
+	    return _mm512_slli_epi16(u, i);
+	}
+	int_v shiftr(int_v u, const int i) {
+	    return _mm512_srai_epi16(u, i);
+	}
+	int_v max(int_v u, int_v v) {
+	    return _mm512_max_epi16(u, v);
+	}
+	int_v min(int_v u, int_v v) {
+	    return _mm512_min_epi16(u, v);
+	}
+	int_v blend(int_v u, int_v v, var_m m) {
+	    return _mm512_mask_blend_epi16(m, v, u);
+	}
+	var_m cmp_gt(int_v u, int_v v) {
+	    return _mm512_cmp_epi16_mask(u, v, 6);
+	}
+	var_m cmp_ge(int_v u, int_v v) {
+	    return _mm512_cmp_epi16_mask(u, v, 5);
+	}
+	var_m cmp_eq(int_v u, int_v v) {
+	    return _mm512_cmp_epi16_mask(u, v, 0);
+	}
+	int_v bit_and(int_v u, int_v v) {return _mm512_and_si512(u, v);}
+	int_v bit_or(int_v u, int_v v) {return _mm512_or_si512(u, v);}
+	int_v bit_xor(int_v u, int_v v) {return _mm512_xor_si512(u, v);}
+	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
+	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
+	int_v cast16to8(int_v v) {
+	    int_v	b_v = _mm512_loadu_epi8(b64s2c_a);
+	    return _mm512_shuffle_epi8(v, b_v);
+	}
+	int_v cast32to8(int_v v) {
+	    int_v	b_v = _mm512_loadu_epi8(b64i2c_a);
+	    return _mm512_shuffle_epi8(v, b_v);
+	}
+	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
+	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
+	    {VecCopy(dst, src, n)}
+	void	vecset(var_t* dst, const var_t& c, const size_t n)
+	    {VecSet(dst, c, n)}
+	void	vecadd_c(var_t* dst, const var_t& c, const size_t n)
+	    {VecAdd_c(dst, c, n)}
+	void	vecsub_c(var_t* dst, const var_t& c, const size_t n)
+	    {VecSub_c(dst, c, n)}
+	var_t	vecmax(const var_t* d, const size_t n){VecMax(d, n)}
+	var_t	vecmin(const var_t* d, const size_t n){VecMin(d, n)}
+};
+
+template <>
+struct Simd_functions<SHORT> {
+using	var_t = SHORT;
+using	int_v = __m512i;
+using	var_v = int_v;
+using	var_m = __mmask32;
+const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
+	int_v clear() {return _mm512_setzero_si512();}
+	int_v splat(const SHORT i) {return _mm512_set1_epi16(i);}
+	int_v load(const SHORT* a) {
+	    return _mm512_loadu_epi16(a);
+	}
+	void	store(SHORT* a, int_v v) {_mm512_storeu_epi16(a, v);}
+	int_v add(int_v u, int_v v) {
+	    return _mm512_adds_epi16(u, v);
+	}
+	int_v sub(int_v u, int_v v) {
+	    return _mm512_subs_epi16(u, v);
+	}
+	int_v mul(int_v u, int_v v) {
+	    return _mm512_mullo_epi16(u, v);
+	}
+	int_v shiftl(int_v u, const int i) {
+	    return _mm512_slli_epi16(u, i);
+	}
+	int_v shiftr(int_v u, const int i) {
+	    return _mm512_srli_epi16(u, i);
+	}
+	int_v max(int_v u, int_v v) {
+	    return _mm512_max_epi16(u, v);
+	}
+	int_v min(int_v u, int_v v) {
+	    return _mm512_min_epi16(u, v);
+	}
+	int_v blend(int_v u, int_v v, var_m m) {
+	    return _mm512_mask_blend_epi16(m, v, u);
+	}
+	var_m cmp_gt(int_v u, int_v v) {
+	    return _mm512_cmp_epi16_mask(u, v, 6);
+	}
+	var_m cmp_ge(int_v u, int_v v) {
+	    return _mm512_cmp_epi16_mask(u, v, 5);
+	}
+	var_m cmp_eq(int_v u, int_v v) {
+	    return _mm512_cmp_epi16_mask(u, v, 0);
+	}
+	int_v bit_and(int_v u, int_v v) {return _mm512_and_si512(u, v);}
+	int_v bit_or(int_v u, int_v v) {return _mm512_or_si512(u, v);}
+	int_v bit_xor(int_v u, int_v v) {return _mm512_xor_si512(u, v);}
+	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
+	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
+	int_v cast16to8(int_v v) {
+	    int_v	b_v = _mm512_loadu_epi8(b64s2c_a);
+	    return _mm512_shuffle_epi8(v, b_v);
+	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
 	var_t*	veccopy(var_t* dst, const var_t* src, const size_t n)
 	    {VecCopy(dst, src, n)}
