@@ -320,9 +320,9 @@ static	const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const short i) {return _mm512_set1_epi16(i);}
 	int_v load(const short* a) {
-	    return _mm512_loadu_epi16(a);
+	    return _mm512_loadu_si512(a);
 	}
-	void	store(short* a, int_v v) {_mm512_storeu_epi16(a, v);}
+	void	store(short* a, int_v v) {_mm512_storeu_si512(a, v);}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi16(u, v);
 	}
@@ -392,9 +392,9 @@ static	const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const SHORT i) {return _mm512_set1_epi16(i);}
 	int_v load(const SHORT* a) {
-	    return _mm512_loadu_epi16(a);
+	    return _mm512_loadu_si512(a);
 	}
-	void	store(SHORT* a, int_v v) {_mm512_storeu_epi16(a, v);}
+	void	store(SHORT* a, int_v v) {_mm512_storeu_si512(a, v);}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi16(u, v);
 	}
@@ -459,8 +459,8 @@ using	var_m = __mmask16;
 static	const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const int i) {return _mm512_set1_epi32(i);}
-	int_v load(const int* a) {return _mm512_loadu_epi32(a);}
-	void	store(int* a, int_v v) {_mm512_storeu_epi32(a, v);}
+	int_v load(const int* a) {return _mm512_loadu_si512(a);}
+	void	store(int* a, int_v v) {_mm512_storeu_si512(a, v);}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_add_epi32(u, v);
 	}
@@ -529,8 +529,8 @@ using	var_m = __mmask16;
 static	const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const INT i) {return _mm512_set1_epi32(i);}
-	int_v load(const INT* a) {return _mm512_loadu_epi32(a);}
-	void	store(INT* a, int_v v) {_mm512_storeu_epi32(a, v);}
+	int_v load(const INT* a) {return _mm512_loadu_si512(a);}
+	void	store(INT* a, int_v v) {_mm512_storeu_si512(a, v);}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_add_epi32(u, v);
 	}
@@ -765,10 +765,10 @@ static	const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const short i) {return _mm512_set1_epi16(i);}
 	int_v load(const short* a) {
-	    return _mm512_loadu_epi16(a);
+	    return _mm512_loadu_si512(a);
 	}
 	void store(short* a, int_v v) {
-	    _mm512_storeu_epi16(a, v);
+	    _mm512_storeu_si512(a, v);
 	}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi16(u, v);
@@ -839,10 +839,10 @@ static	const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const SHORT i) {return _mm512_set1_epi16(i);}
 	int_v load(const SHORT* a) {
-	    return _mm512_loadu_epi16(a);
+	    return _mm512_loadu_si512(a);
 	}
 	void store(SHORT* a, int_v v) {
-	    _mm512_storeu_epi16(a, v);
+	    _mm512_storeu_si512(a, v);
 	}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi16(u, v);

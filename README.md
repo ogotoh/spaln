@@ -360,9 +360,9 @@ following series of commands after moving to _seqdb_.
 
 ## <a name="Changes">Changes from previous version</a>
 ## Changes in version 3.0.7
-1. Update simd_functions.h. A few intrinsics that are not supported 
-by some AVX512 subfamilies are replaced by other equivalent ones.
-2. Update fwd2h1.cc and fwd2h1_simd.h for more exact alignment scoring at 
+1. Update simd_functions.h. A few functions that are not included 
+in some x86intrin.h header file are replaced by other equivalent ones.
+2. Update fwd2h1.cc and fwd2h1_simd.h for more rigorous alignment scoring at 
 phase-2 splice boundaries.
 
 ## Changes in version 3.0.6d
