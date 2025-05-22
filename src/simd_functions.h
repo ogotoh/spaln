@@ -202,13 +202,15 @@ using	var_t = char;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask64;
-const	int	Nelem = _VecRegSize_ / sizeof(char);
+static	const	int	Nelem = _VecRegSize_ / sizeof(char);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const char i) {return _mm512_set1_epi8(i);}
 	int_v load(const char* a) {
-	    return _mm512_loadu_epi8(a);
+	    return _mm512_loadu_si512(a);
 	}
-	void	store(char* a, int_v v) {_mm512_storeu_epi8(a, v);}
+	void store(char* a, int_v v) {
+	    _mm512_storeu_si512(a, v);
+	}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi8(u, v);
 	}
@@ -257,13 +259,15 @@ using	var_t = CHAR;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask64;
-const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
+static	const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const CHAR i) {return _mm512_set1_epi8(i);}
 	int_v load(const CHAR* a) {
-	    return _mm512_loadu_epi8(a);
+	    return _mm512_loadu_si512(a);
 	}
-	void	store(CHAR* a, int_v v) {_mm512_storeu_epi8(a, v);}
+	void store(CHAR* a, int_v v) {
+	    _mm512_storeu_si512(a, v);
+	}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi8(u, v);
 	}
@@ -312,7 +316,7 @@ using	var_t = short;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask32;
-const	int	Nelem = _VecRegSize_ / sizeof(short);
+static	const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const short i) {return _mm512_set1_epi16(i);}
 	int_v load(const short* a) {
@@ -358,11 +362,11 @@ const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
 	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
 	int_v cast16to8(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64s2c_a);
+	    int_v	b_v = _mm512_loadu_si512(b64s2c_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	int_v cast32to8(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64i2c_a);
+	    int_v	b_v = _mm512_loadu_si512(b64i2c_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
@@ -384,7 +388,7 @@ using	var_t = SHORT;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask32;
-const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
+static	const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const SHORT i) {return _mm512_set1_epi16(i);}
 	int_v load(const SHORT* a) {
@@ -430,7 +434,7 @@ const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
 	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
 	int_v cast16to8(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64s2c_a);
+	    int_v	b_v = _mm512_loadu_si512(b64s2c_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
@@ -452,7 +456,7 @@ using	var_t = int;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask16;
-const	int	Nelem = _VecRegSize_ / sizeof(int);
+static	const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const int i) {return _mm512_set1_epi32(i);}
 	int_v load(const int* a) {return _mm512_loadu_epi32(a);}
@@ -496,11 +500,11 @@ const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
 	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
 	int_v cast32to16(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64i2s_a);
+	    int_v	b_v = _mm512_loadu_si512(b64i2s_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	int_v cast32to8(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64i2c_a);
+	    int_v	b_v = _mm512_loadu_si512(b64i2c_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
@@ -522,7 +526,7 @@ using	var_t = INT;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask16;
-const	int	Nelem = _VecRegSize_ / sizeof(INT);
+static	const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const INT i) {return _mm512_set1_epi32(i);}
 	int_v load(const INT* a) {return _mm512_loadu_epi32(a);}
@@ -560,11 +564,11 @@ const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
 	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
 	int_v cast32to16(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64i2s_a);
+	    int_v	b_v = _mm512_loadu_si512(b64i2s_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	int_v cast32to8(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64i2c_a);
+	    int_v	b_v = _mm512_loadu_si512(b64i2c_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
@@ -586,7 +590,7 @@ using	var_t = float;
 using	var_v = __m512;
 using	int_v = __m512i;
 using	var_m = __mmask16;
-const	int	Nelem = _VecRegSize_ / sizeof(float);
+static	const	int	Nelem = _VecRegSize_ / sizeof(float);
 	var_v clear() {return _mm512_setzero_ps();}
 	var_v splat(const float f) {return _mm512_set1_ps(f);}
 	var_v load(const float* a) {return _mm512_loadu_ps(a);}
@@ -643,13 +647,15 @@ using	var_t = char;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask64;
-const	int	Nelem = _VecRegSize_ / sizeof(char);
+static	const	int	Nelem = _VecRegSize_ / sizeof(char);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const char i) {return _mm512_set1_epi8(i);}
 	int_v load(const char* a) {
-	    return _mm512_loadu_epi8(a);
+	    return _mm512_loadu_si512(a);
 	}
-	void	store(char* a, int_v v) {_mm512_storeu_epi8(a, v);}
+	void store(char* a, int_v v) {
+	    _mm512_storeu_si512(a, v);
+	}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi8(u, v);
 	}
@@ -698,13 +704,15 @@ using	var_t = CHAR;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask64;
-const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
+static	const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const CHAR i) {return _mm512_set1_epi8(i);}
 	int_v load(const CHAR* a) {
-	    return _mm512_loadu_epi8(a);
+	    return _mm512_loadu_si512(a);
 	}
-	void	store(CHAR* a, int_v v) {_mm512_storeu_epi8(a, v);}
+	void	store(CHAR* a, int_v v) {
+	    _mm512_storeu_si512(a, v);
+	}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi8(u, v);
 	}
@@ -753,13 +761,15 @@ using	var_t = short;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask32;
-const	int	Nelem = _VecRegSize_ / sizeof(short);
+static	const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const short i) {return _mm512_set1_epi16(i);}
 	int_v load(const short* a) {
 	    return _mm512_loadu_epi16(a);
 	}
-	void	store(short* a, int_v v) {_mm512_storeu_epi16(a, v);}
+	void store(short* a, int_v v) {
+	    _mm512_storeu_epi16(a, v);
+	}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi16(u, v);
 	}
@@ -799,11 +809,11 @@ const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
 	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
 	int_v cast16to8(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64s2c_a);
+	    int_v	b_v = _mm512_loadu_si512(b64s2c_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	int_v cast32to8(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64i2c_a);
+	    int_v	b_v = _mm512_loadu_si512(b64i2c_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
@@ -825,13 +835,15 @@ using	var_t = SHORT;
 using	int_v = __m512i;
 using	var_v = int_v;
 using	var_m = __mmask32;
-const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
+static	const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return _mm512_setzero_si512();}
 	int_v splat(const SHORT i) {return _mm512_set1_epi16(i);}
 	int_v load(const SHORT* a) {
 	    return _mm512_loadu_epi16(a);
 	}
-	void	store(SHORT* a, int_v v) {_mm512_storeu_epi16(a, v);}
+	void store(SHORT* a, int_v v) {
+	    _mm512_storeu_epi16(a, v);
+	}
 	int_v add(int_v u, int_v v) {
 	    return _mm512_adds_epi16(u, v);
 	}
@@ -871,7 +883,7 @@ const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v bit_andnot(int_v u, int_v v) {return _mm512_andnot_si512(v, u);}
 	int	all_zero(int_v v) {return !(_mm512_reduce_or_epi32(v));}
 	int_v cast16to8(int_v v) {
-	    int_v	b_v = _mm512_loadu_epi8(b64s2c_a);
+	    int_v	b_v = _mm512_loadu_si512(b64s2c_a);
 	    return _mm512_shuffle_epi8(v, b_v);
 	}
 	void	vecclear(var_t* dst, const size_t n) {VecClear(dst, n)}
@@ -896,7 +908,7 @@ struct Simd_functions<char> {
 using	var_t = char;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(char);
+static	const	int	Nelem = _VecRegSize_ / sizeof(char);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const char i) {return _mm256_set1_epi8(i);}
 	int_v load(const char* a) {
@@ -948,7 +960,7 @@ struct Simd_functions<CHAR> {
 using	var_t = CHAR;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
+static	const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const CHAR i) {return _mm256_set1_epi8(i);}
 	int_v load(const CHAR* a) {
@@ -1000,7 +1012,7 @@ struct Simd_functions<short> {
 using	var_t = short;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(short);
+static	const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const short i) {return _mm256_set1_epi16(i);}
 	int_v load(const short* a) {
@@ -1066,7 +1078,7 @@ struct Simd_functions<SHORT> {
 using	var_t = SHORT;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
+static	const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const SHORT i) {return _mm256_set1_epi16(i);}
 	int_v load(const SHORT* a) {
@@ -1132,7 +1144,7 @@ struct Simd_functions<int> {
 using	var_t = int;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(int);
+static	const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const int i) {return _mm256_set1_epi32(i);}
 	int_v load(const int* a) {
@@ -1204,7 +1216,7 @@ struct Simd_functions<INT> {
 using	var_t = INT;
 using	int_v = __m256i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(INT);
+static	const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v clear() {return _mm256_setzero_si256();}
 	int_v splat(const INT i) {return _mm256_set1_epi32(i);}
 	int_v load(const INT* a) {
@@ -1277,7 +1289,7 @@ using	var_t = float;
 using	var_v = __m256;
 using	var_m = __m256;
 using	int_v = __m256i;
-const	int	Nelem = _VecRegSize_ / sizeof(float);
+static	const	int	Nelem = _VecRegSize_ / sizeof(float);
 	var_v clear() {return _mm256_setzero_ps();}
 	var_v splat(const float f) {return _mm256_set1_ps(f);}
 	var_v load(const float* a) {
@@ -1352,7 +1364,7 @@ struct Simd_functions<char> {
 using	var_t = char;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(char);
+static	const	int	Nelem = _VecRegSize_ / sizeof(char);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const char i) {return _mm_set1_epi8(i);}
 	int_v load(const char* a) {
@@ -1404,7 +1416,7 @@ struct Simd_functions<CHAR> {
 using	var_t = CHAR;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
+static	const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const CHAR i) {return _mm_set1_epi8(i);}
 	int_v load(const CHAR* a) {
@@ -1456,7 +1468,7 @@ struct Simd_functions<short> {
 using	var_t = short;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(short);
+static	const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const short i) {return _mm_set1_epi16(i);}
 	int_v load(const short* a) {
@@ -1521,7 +1533,7 @@ struct Simd_functions<SHORT> {
 using	var_t = SHORT;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
+static	const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const SHORT i) {return _mm_set1_epi16(i);}
 	int_v load(const SHORT* a) {
@@ -1586,7 +1598,7 @@ struct Simd_functions<int> {
 using	var_t = int;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(int);
+static	const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const int i) {return _mm_set1_epi32(i);}
 	int_v load(const int* a) {
@@ -1655,7 +1667,7 @@ struct Simd_functions<INT> {
 using	var_t = INT;
 using	int_v = __m128i;
 using	var_v = int_v;
-const	int	Nelem = _VecRegSize_ / sizeof(INT);
+static	const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v clear() {return _mm_setzero_si128();}
 	int_v splat(const INT i) {return _mm_set1_epi32(i);}
 	int_v load(const INT* a) {
@@ -1725,7 +1737,7 @@ using	var_t = float;
 using	var_v = __m128;
 using	var_m = __m128;
 using	int_v = __m128i;
-const	int	Nelem = _VecRegSize_ / sizeof(float);
+static	const	int	Nelem = _VecRegSize_ / sizeof(float);
 	var_v clear() {return _mm_setzero_ps();}
 	var_v splat(const float f) {return _mm_set_ps1(f);}
 	var_v load(const float* a) {return _mm_loadu_ps(a);}
@@ -1799,7 +1811,7 @@ using	var_t = signed char;
 using	int_v = int8x16_t;
 using	var_v = int_v;
 using	int_m = uint8x16_t;
-const	int	Nelem = _VecRegSize_ / sizeof(char);
+static	const	int	Nelem = _VecRegSize_ / sizeof(char);
 	int_v clear() {return vdupq_n_s8(0);}
 	int_v splat(const int8_t i) {return (vdupq_n_s8(i));}
 	int_v load(int8_t const* a) {return vld1q_s8(a);}
@@ -1842,7 +1854,7 @@ using	var_t = CHAR;
 using	int_v = uint8x16_t;
 using	var_v = int_v;
 using	int_m = uint8x16_t;
-const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
+static	const	int	Nelem = _VecRegSize_ / sizeof(CHAR);
 	int_v clear() {return vdupq_n_u8(0);}
 	int_v splat(const uint8_t i) {return vdupq_n_u8(i);}
 	int_v load(uint8_t const* a) {return vld1q_u8(a);}
@@ -1885,7 +1897,7 @@ using	var_t = short;
 using	int_v = int16x8_t;
 using	var_v = int_v;
 using	int_m = uint16x8_t;
-const	int	Nelem = _VecRegSize_ / sizeof(short);
+static	const	int	Nelem = _VecRegSize_ / sizeof(short);
 	int_v clear() {return vdupq_n_s16(0);}
 	int_v splat(int16_t i) {return vdupq_n_s16(i);}
 	int_v load(int16_t const* a) {return vld1q_s16(a);}
@@ -1935,7 +1947,7 @@ using	var_t = SHORT;
 using	int_v = uint16x8_t;
 using	var_v = int_v;
 using	int_m = uint16x8_t;
-const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
+static	const	int	Nelem = _VecRegSize_ / sizeof(SHORT);
 	int_v clear() {return vdupq_n_u16(0);}
 	int_v splat(uint16_t i) {return vdupq_n_u16(i);}
 	int_v load(uint16_t const* a) {return vld1q_u16(a);}
@@ -1985,7 +1997,7 @@ using	var_t = int;
 using	int_v = int32x4_t;
 using	var_v = int_v;
 using	int_m = uint32x4_t;
-const	int	Nelem = _VecRegSize_ / sizeof(int);
+static	const	int	Nelem = _VecRegSize_ / sizeof(int);
 	int_v clear() {return vdupq_n_s32(0);}
 	int_v splat(int32_t i) {return vdupq_n_s32(i);}
 	int_v load(int32_t const* a) {return vld1q_s32(a);}
@@ -2040,7 +2052,7 @@ using	var_t = INT;
 using	int_v = uint32x4_t;
 using	var_v = int_v;
 using	int_m = uint32x4_t;
-const	int	Nelem = _VecRegSize_ / sizeof(INT);
+static	const	int	Nelem = _VecRegSize_ / sizeof(INT);
 	int_v clear() {return vdupq_n_u32(0);}
 	int_v splat(uint32_t i) {return vdupq_n_u32(i);}
 	int_v load(uint32_t const* a) {return vld1q_u32(a);}
@@ -2095,7 +2107,7 @@ using	var_t = float;
 using	var_v = float32x4_t;
 using	int_v = int32x4_t;
 using	var_m = uint32x4_t;
-const	int	Nelem = _VecRegSize_ / sizeof(float);
+static	const	int	Nelem = _VecRegSize_ / sizeof(float);
 	var_v clear() {return vdupq_n_f32(0.f);}
 	var_v splat(float32_t f) {return vdupq_n_f32(f);}
 	var_v load(float32_t const* a) {return vld1q_f32(a);}

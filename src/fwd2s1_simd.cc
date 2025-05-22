@@ -162,7 +162,7 @@ const		int	rl = hs1.mode? hs1.s2_i(*hfesmc[k], *hfesmd[k]): 0;
 // prepare variables and initialize DP matrix
 void SimdAln2s1::fhinitS1()
 {
-const	int	ru = wdw.up + 2 * Nelem;
+const	int	ru = wdw.up + 2 * nelem;
 const	int	rl = b->left - a->left;
 	if (b->inex.exgl)	// vertical semi-global
 	    vec_clear(hv + wdw.lw, rl - wdw.lw);
@@ -306,15 +306,15 @@ const	regist_v	ninf_v = Splat(nevsel);
 	VTYPE	accscr = 0;
 const	int	md = checkpoint(0);
 	int	mc = md + a->left;
-	for (int ml = a->left; ml < a->right; ml += Nelem) {
+	for (int ml = a->left; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 const	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
-	    vec_clear(ps_a, 2 * Nelem);
+	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
+	    vec_clear(ps_a, 2 * nelem);
 
 regist_v    ev_v = ninf_v;
 regist_v    ev2_v = ninf_v;
@@ -500,17 +500,17 @@ regist_v	hd_v, fd_v, fd2_v, qd_v; // used only when used == true
 const	int	md = checkpoint(0);
 	int	mc = md + a->left;
 
-	for (int ml = a->left; ml < a->right; ml += Nelem) {
+	for (int ml = a->left; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 const	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
-	    vec_clear(ps_a, 2 * Nelem);
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
-	    vec_clear(hb_a[0], 4 * Np1 + 2 * Nelem);
-	    vec_clear(pb_a, Nelem);
+	    vec_clear(ps_a, 2 * nelem);
+	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
+	    vec_clear(hb_a[0], 4 * Np1 + 2 * nelem);
+	    vec_clear(pb_a, nelem);
 
 	    if (spj) {
 		for (int j = 0; j < j9; ++j)
@@ -792,7 +792,7 @@ const	regist_v	two_v = Add(one_v, one_v);
 	mm = (a->right - a->left + n_im) / (n_im + 1);
 	Udh_Imds	udhimds(n_im, a->left, mm, wdw, pwd->Noll);
 	imd = udhimds[0];
-	mm = a->left + (imd->mi - a->left - 1) / Nelem * Nelem;
+	mm = a->left + (imd->mi - a->left - 1) / nelem * nelem;
 	int	k9 = imd->mi - mm;
 	int	k8 = k9 - 1;
 
@@ -803,16 +803,16 @@ const	int	md = checkpoint(0);
 regist_v	hb_v, fb_v, qb_v;	// used only when LocalL == true
 regist_v	hd_v, fd_v, fd2_v, qd_v;// used only when used == true
 
-	for (int ml = a->left, i = 0; ml < a->right; ml += Nelem) {
+	for (int ml = a->left, i = 0; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
-	    vec_clear(ps_a, 2 * Nelem);
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
-	    vec_clear(hb_a[0], 4 * Np1 + 2 * Nelem);
+	    vec_clear(ps_a, 2 * nelem);
+	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
+	    vec_clear(hb_a[0], 4 * Np1 + 2 * nelem);
 const	    bool	is_imd_ = ml == mm;
 
 	    if (spj) {
@@ -1094,7 +1094,7 @@ const		int	d = checkpoint(c);
 	    }
 	    if (is_imd_ && ++i < n_im) {	// reset intermediate
 		imd = udhimds[i];
-		mm = a->left + (imd->mi - a->left - 1) / Nelem * Nelem;
+		mm = a->left + (imd->mi - a->left - 1) / nelem * nelem;
 		k9 = imd->mi - mm;
 		k8 = k9 - 1;
 	    }

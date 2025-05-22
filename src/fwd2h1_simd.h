@@ -81,7 +81,6 @@ using	regist_m = var_v;
 using	regist_v = int16x8_t;
 using	regist_m = uint16x8_t;
 #endif
-static	const	int	Nelem = _VecRegSize_ / sizeof(var_t);
 const	int	nelem = Nelem;
 const	Seq**	seqs;
 const	Seq*&	a;
@@ -188,7 +187,7 @@ public:
 	}
 	int	checkpoint(const var_t& pv) const {
 	    return ((sizeof(var_t) > 2)? INT_MAX:
-	    (int((check_scr - pv) / avmch / Nelem * Nelem)));
+	    (int((check_scr - pv) / avmch / nelem * nelem)));
 	}
 public:
 	VTYPE	forwardH1(int* pp = 0);
@@ -201,7 +200,7 @@ public:
 	    seqs(sqs), a(sqs[0]), b(sqs[1]), pwd(_pwd), wdw(_w), 
 	    Local(algmode.lcl & 16), spjcs(_spj), cip(_cip), 
 	    mode(_mode), used(sizeof(var_t) == 2 && (_mode & 4)), 
-	    spj(b->inex.intr), vmf(_vmf), Np1(Nelem + 1), 
+	    spj(b->inex.intr), vmf(_vmf), Np1(nelem + 1), 
 	    avmch(pwd->simmtx->AvTrc()), 
 #if FVAL
 	    nevsel(NEVSEL),
@@ -210,7 +209,7 @@ public:
 #endif
 	    black_Rvulmn{nevsel, end_of_ulk, 
 		SHORT(a->left), SHORT(a->right), b->right},
-	    buf_size(wdw.width + 6 * Nelem)
+	    buf_size(wdw.width + 6 * nelem)
 {
 
 #define	Add(a, b)	this->add(a, b)
@@ -237,8 +236,8 @@ public:
 *	  5	 0 + 0	 0 + 0	12 + 3	12 + 3	0 + 0	vmf2
 ******************************************************************/
 
-	    size_t		abufsiz  = 52 * Np1 + 12 * Nelem;
-	    if (mode > 1)	abufsiz += 24 * Np1 + 18 * Nelem;
+	    size_t		abufsiz  = 52 * Np1 + 12 * nelem;
+	    if (mode > 1)	abufsiz += 24 * Np1 + 18 * nelem;
 
 	    abuf = new var_t[abufsiz];
 	    sm_a = abuf;
@@ -248,24 +247,24 @@ public:
 	    p5_a[0] = s3_a[0] + 6 * Np1;
 	    p3_a[0] = p5_a[0] + 6 * Np1;
 	    ps_a[0] = p3_a[0] + 6 * Np1;
-	    pv_a[0] = ps_a[0] + 3 * Nelem;
-	    hv_a[0] = pv_a[0] + 3 * Nelem;
+	    pv_a[0] = ps_a[0] + 3 * nelem;
+	    hv_a[0] = pv_a[0] + 3 * nelem;
 	    fv_a[0] = hv_a[0] + 6 * Np1;
 	    ev_a[0] = fv_a[0] + 6 * Np1;
-	    hb_a[0] = ev_a[0] + 3 * Nelem;
+	    hb_a[0] = ev_a[0] + 3 * nelem;
 	    fb_a[0] = hb_a[0] + 6 * Np1;
 	    eb_a[0] = fb_a[0] + 6 * Np1;
 	    if (mode > 1) {
-		qv_a[0] = eb_a[0] + 3 * Nelem;
-		hc_a[0] = qv_a[0] + 3 * Nelem;
+		qv_a[0] = eb_a[0] + 3 * nelem;
+		hc_a[0] = qv_a[0] + 3 * nelem;
 		fc_a[0] = hc_a[0] + 6 * Np1;
 		ec_a[0] = fc_a[0] + 6 * Np1;
-		hd_a[0] = ec_a[0] + 3 * Nelem;
+		hd_a[0] = ec_a[0] + 3 * nelem;
 		fd_a[0] = hd_a[0] + 6 * Np1;
 		ed_a[0] = fd_a[0] + 6 * Np1;
-		qb_a[0] = ed_a[0] + 3 * Nelem;
-		qc_a[0] = qb_a[0] + 3 * Nelem;
-		qd_a[0] = qc_a[0] + 3 * Nelem;
+		qb_a[0] = ed_a[0] + 3 * nelem;
+		qc_a[0] = qb_a[0] + 3 * nelem;
+		qd_a[0] = qc_a[0] + 3 * nelem;
 	    }
 
 	    for (int q = 1; q < 6; ++q) {
@@ -286,22 +285,22 @@ public:
 	    }
 	    for (int p = 1; p < 3; ++p) {
 		cp_a[p] = cp_a[p - 1] + Np1;
-		ps_a[p] = ps_a[p - 1] + Nelem;
-		pv_a[p] = pv_a[p - 1] + Nelem;
-		ev_a[p] = ev_a[p - 1] + Nelem;
-		eb_a[p] = eb_a[p - 1] + Nelem;
+		ps_a[p] = ps_a[p - 1] + nelem;
+		pv_a[p] = pv_a[p - 1] + nelem;
+		ev_a[p] = ev_a[p - 1] + nelem;
+		eb_a[p] = eb_a[p - 1] + nelem;
 		if (mode > 1) {
-		    qv_a[p] = qv_a[p - 1] + Nelem;
-		    qb_a[p] = qb_a[p - 1] + Nelem;
-		    ec_a[p] = ec_a[p - 1] + Nelem;
-		    ed_a[p] = ed_a[p - 1] + Nelem;
-		    qc_a[p] = qc_a[p - 1] + Nelem;
-		    qd_a[p] = qd_a[p - 1] + Nelem;
+		    qv_a[p] = qv_a[p - 1] + nelem;
+		    qb_a[p] = qb_a[p - 1] + nelem;
+		    ec_a[p] = ec_a[p - 1] + nelem;
+		    ed_a[p] = ed_a[p - 1] + nelem;
+		    qc_a[p] = qc_a[p - 1] + nelem;
+		    qd_a[p] = qd_a[p - 1] + nelem;
 		}
 	    }
 	    for (int q = 0; q < 6; ++q) {
 		int	p = q % 3;
-		for (int j = 0; j < Nelem; ++j) {
+		for (int j = 0; j < nelem; ++j) {
 		    hfesv[q][j][0] = hv_a[q] + j + 1;
 		    hfesv[q][j][1] = ev_a[p] + j;
 		    hfesv[q][j][2] = fv_a[q] + j + 1;
@@ -342,12 +341,12 @@ public:
 	    }
 
 	    if (spj) {
-		fsjss = new Sjsites*[Nelem];
-		for (int k = 0; k < Nelem; ++k)
+		fsjss = new Sjsites*[nelem];
+		for (int k = 0; k < nelem; ++k)
 		    fsjss[k] = new Sjsites(*this);
 		for (int p = 0; p < 3; ++p) {
-		    donor_q[p] = new Queue2<int>(Nelem);
-		    accep_q[p] = new Queue2<int>(Nelem);
+		    donor_q[p] = new Queue2<int>(nelem);
+		    accep_q[p] = new Queue2<int>(nelem);
 		}
 	    } else {
 		vclear(donor_q, 3);
@@ -357,7 +356,7 @@ public:
 	~SimdAln2h1() {
 	    delete[] abuf; delete[] vbuf;
 	    if (fsjss) {
-		for (int k = 0; k < Nelem; ++k) delete fsjss[k];
+		for (int k = 0; k < nelem; ++k) delete fsjss[k];
 		delete[] fsjss;
 		for (int p = 0; p < 3; ++p) {
 		    delete donor_q[p];
@@ -409,10 +408,14 @@ const	    int&	d = prd->dir;
 	    x += prd->val + hb1.spjcs->spjscr(don, acc);
 	    if (d == 0 && prd->phs) {
 const	CHAR*	cs = hb1.spjcs->spjseq(don, acc);
-		if (prd->phs == -1) ++cs;
-		x += hb1.pwd->simmtx->mtx[*as][*cs];
+		if (prd->phs == 1)  x += hb1.pwd->simmtx->mtx[*as][*cs];
+		else {
+const		    CHAR*	bs = hb1.b->at(acc);
+		    x += hb1.pwd->simmtx->mtx[as[1]][*++cs] -
+			 hb1.pwd->simmtx->mtx[as[1]][*bs] - 
+			 hb1.b->exin->data_p[acc].sigE;
+		}
 	    }
-	    if (prd->phs == -1) x -= hb1.b->exin->data_p[acc].sigE;
 const	    int	qq = modN<6>(q + prd->phs);
 	    var_t**	hfesmv = hb1.hfesv[qq][j];
 	    if (x <= *hfesmv[d]) continue;
@@ -697,45 +700,44 @@ const	int	m3 = 3 * a->right;
 	else	rf = rw;
 const	int	rr = b->right - m3;
 	int	maxr = rr;
-	int	maxt = rr;
 	var_t*	h = hv + rw;
-	var_t*	h9 = hv + maxr;
-	VTYPE&	maxv = maxh.val;
-const	SGPT6*	bb = b->exin->score_p(rw + m3 - 2);
+	var_t*	h9 = hv + rr;
+	var_t*	mx = h9;
+const	SGPT6*	bb = b->exin->score_p(rw + m3);
 	TBU_t*	rowM = trb? trb->set_point(a->right, rw + m3): 0;
 
-	maxv = *h9;
 	if (a->inex.exgr) {
 	    for (int p = 0; h <= h9; ++h, ++rf, ++bb, p = next_p[p]) {
-		VTYPE	x = NEVSEL;
-		VTYPE	y = NEVSEL;
+		glen[p] += 3;
+		int	cand[3] = {*h, nevsel, nevsel};;
 		if (rf - rw >= 3 && !tcdn[p]) {
-		    x = h[-3] + bb->sigE;
-		    if (!(a->inex.exgr & 2)) x += pwd->GapExtPen3(glen[p]);
-		    if (!(a->inex.exgr & 1) && glen[p] == 3) x += pwd->BasicGOP;
-		    if (bb->sigT > 0) y = h[-3] + bb->sigT;
+		    cand[1] = h[-3] + bb[-2].sigE;
+		    if (!(a->inex.exgr & 2))
+			cand[1] += pwd->GapExtPen3(glen[p]);
+		    if (!(a->inex.exgr & 1) && glen[p] == 3)
+			cand[1] += pwd->BasicGOP;
+		    if (algmode.lcl & 2)
+			cand[2] = h[-3] + bb[-2].sigT;
 		}
-		if (rf - rw >= 3) tcdn[p] = bb->sigT > 0;
-		if (*h > x && *h > y) {		/* \ */
+		if (rf - rw >= 3) tcdn[p] = (tcdn[p] || bb[-2].sigT > 0);
+const		var_t	sig5 = (Local && bb->sig5 > 0)? bb->sig5: 0;
+		cand[0] += sig5;	// exon end
+		cand[1] += sig5;
+		int	k = vmax(cand, 3) - cand;
+
+		if (k == 0) {		/* \ */
 		    glen[p] = 0;
-		    if (*h > maxv) {
-			maxv = *h;
-			maxr = maxt = rf;
-		    }
-		    if (rowM) *rowM = static_cast<TBU_t>(TraceBackCode::DIAG);
-		} else if (x >= y) {		// _
-		    glen[p] += 3;
-		    *h = static_cast<var_t>(x);
-		    if (x > maxv) {
-			maxv = x;
-			maxt = rf;
-		    }
+		    tcdn[p] = false;
+		} else if (k == 1) {	/* _ */
+		    *h = cand[1] - sig5;
 		    if (rowM) *rowM = static_cast<TBU_t>(TraceBackCode::HORI);
-		} else if (y > maxv) {		// termination codon
-		    glen[p] += 3;
-		    maxv = y;
-		    maxt = rf;
+		} else {		// termination codon
+		    *h = cand[2];
 		    if (rowM) *rowM = static_cast<TBU_t>(TraceBackCode::HORI);
+		}
+		if (*h > *mx) {
+		    mx = h;
+		    maxr = rf - ((k == 2)? 3: 0);
 		}
 		if (rowM) {
 		    if (glen[p] == 3)		// \_
@@ -745,23 +747,29 @@ const	SGPT6*	bb = b->exin->score_p(rw + m3 - 2);
 	    }
 	} else {
 	    bb += h9 - h;
-const	    VTYPE	y = h9[-3] + bb->sigT;
+const	    var_t	y = h9[-3] + bb->sigT;
 	    if (y > *h9) {
 		*h9 = y;
-		maxt = b->right - m3;
-		maxr = maxt - 3;
+		maxr = rr - 3;
 	    }
 	}
 	if (b->inex.exgr) {
 	    rw = std::min(wdw.up - 1, b->right - 3 * a->left);
-	    for (h = hv + rw; h > h9; --h, --rw) {
-		VTYPE	x = *h + (rw % 3? pwd->ExtraGOP: 0);
-		if (x > maxv) {
-		    maxv = x;
-		    maxt = maxr = rw;
-		}
+	    var_t	g[3] = {nevsel, nevsel, nevsel};
+	    h = hv + rw - 3;
+	    for (int p = 0; h > h9; --h, --rw, p = next_p[p]) {
+		var_t	x = h[3];
+		if (!(b->inex.exgr & 1)) x += pwd->BasicGOP;
+		if (x > g[p]) g[p] = x;
+		if (!(b->inex.exgr & 2)) g[p] += pwd->BasicGEP;
+		if (*h > g[p]) g[p] = nevsel;
+		else if (g[p] > *mx) *(mx = h) = g[p];
 	    }
+	} else if (b->inex.exgr == 2) {
+	    if (vmf) maxh.ulk = vmf->add(a->right, b->right, maxh.ulk);
+	    return (rr);
 	}
+const	int	maxt = mx - hv;
 	if (mode == 2 || mode == 4) hb[maxt] = hb[maxr];
 	maxh.ulk = (mode > 1)? s2_i(hc[maxr], used? hd[maxr]: 0): maxr;
 	int	p = maxr - rr;
@@ -830,7 +838,7 @@ regist_v	hd_v, fd_v, ed_v, qd_v;	// used only when used == true
 	VTYPE	accscr = 0;
 const	int	md = checkpoint(0);
 	int	mc = md + a->left;
-	for (int ml = a->left; ml < a->right; ml += Nelem) {
+	for (int ml = a->left; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + 3 * ml);
@@ -838,9 +846,9 @@ const	    int	n9 = std::min(b->right, wdw.up + 3 * (ml + j9) + 1) + 3 * j9;
 	    int	n0 = n - 3 * j8;
 const	    int	mp1 = ml + 1;
 	    int	q = (n + 3 * mp1) % 6;
-	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * Nelem);	// [hv_a..fv_a]
-	    vec_clear(hb_a[0], 12 * Np1 + 3 * Nelem);
-	    vec_clear(ps_a[0], 6 * Nelem);	// ps_a, pv_a
+	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * nelem);	// [hv_a..fv_a]
+	    vec_clear(hb_a[0], 12 * Np1 + 3 * nelem);
+	    vec_clear(ps_a[0], 6 * nelem);	// ps_a, pv_a
 	    vclear(sm_a, 4 * Np1);
 	    if (spj) {
 		for (int j = 0; j < j9; ++j)
@@ -959,7 +967,7 @@ regist_v	fc_v = Blend(hc_v, qc_v, msk_m);
 //	diagonal match
 const		CHAR*	as = a->at(ml + kb);
 const		CHAR*	bs = b->at(n - 3 * kb - 2);
-		if (nb) vclear(sm_a, Nelem);
+		if (nb) vclear(sm_a, nelem);
 		for (int k = kb; k < ke; ++k, ++as, bs -= 3)
 		    sm_a[k] = pwd->simmtx->mtx[*as][*bs];
 		hv_v = Load(sm_a);
@@ -1109,7 +1117,7 @@ const	regist_v	g3_v = Splat(pwd->GapW3);
 	mm = (a->right - a->left + n_im) / (n_im + 1);
 	Udh_Imds	udhimds(n_im, a->left, mm, wdw, pwd->Noll);
 	imd = udhimds[0];
-	mm = a->left + (imd->mi - a->left - 1) / Nelem * Nelem;
+	mm = a->left + (imd->mi - a->left - 1) / nelem * nelem;
 	mm3 = 3 * imd->mi;
 	int	k9 = imd->mi - mm;
 	int	k8 = k9 - 1;
@@ -1121,7 +1129,7 @@ const	int	md = checkpoint(0);
 regist_v	hb_v, fb_v, eb_v, qb_v;	// used only when LocalL == true
 regist_v	hd_v, fd_v, ed_v, qd_v;	// used only when used == true
 
-	for (int ml = a->left, i = 0; ml < a->right; ml += Nelem) {
+	for (int ml = a->left, i = 0; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + 3 * ml);
@@ -1130,9 +1138,9 @@ const	    int j8 = j9 - 1;
 	    int	mp1 = ml + 1;
 	    int	q = modN<6>(n + 3 * mp1);
 	    int	r = n - 3 * mp1;
-	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * Nelem);	// [hv_a..fv_a]
-	    vec_clear(hb_a[0], 12 * Np1 + 3 * Nelem);
-	    vec_clear(ps_a[0], 6 * Nelem);	// ps_a, pv_a
+	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * nelem);	// [hv_a..fv_a]
+	    vec_clear(hb_a[0], 12 * Np1 + 3 * nelem);
+	    vec_clear(ps_a[0], 6 * nelem);	// ps_a, pv_a
 	    vclear(sm_a, 4 * Np1);
 const	    bool	is_imd_ = ml == mm;
 
@@ -1274,7 +1282,7 @@ regist_v	fc_v = Blend(hc_v, qc_v, msk_m);
 //	diagonal match
 const		CHAR*	as = a->at(ml + kb);
 const		CHAR*	bs = b->at(n - 3 * kb - 2);
-		if (nb) vclear(sm_a, Nelem);
+		if (nb) vclear(sm_a, nelem);
 		for (int k = kb; k < ke; ++k, ++as, bs -= 3)
 		    sm_a[k] = pwd->simmtx->mtx[*as][*bs];
 		hv_v = Load(sm_a);
@@ -1402,7 +1410,7 @@ const			int	kp1 = k + 1;
 	    if (is_imd_ && ++i < n_im) {	// reset intermediate
 		imd = udhimds[i];
 		mm3 = 3 * imd->mi;
-		mm = a->left + (imd->mi - a->left - 1) / Nelem * Nelem;
+		mm = a->left + (imd->mi - a->left - 1) / nelem * nelem;
 		k9 = imd->mi - mm;
 		k8 = k9 - 1;
 	    }

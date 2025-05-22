@@ -80,7 +80,6 @@ using	regist_m = var_v;
 using	regist_v = int16x8_t;
 using	regist_m = uint16x8_t;
 #endif
-static	const	int	Nelem = _VecRegSize_ / sizeof(var_t);
 const	int	nelem = Nelem;
 const	Seq**	seqs;
 const	Seq*&	a;	// query
@@ -179,7 +178,7 @@ public:
 	}
 	int	checkpoint(const var_t& pv) const {
 	    return ((sizeof(var_t) > 2)? INT_MAX:
-	    (int((check_scr - abs(pv)) / avmch / Nelem * Nelem)));
+	    (int((check_scr - abs(pv)) / avmch / nelem * nelem)));
 	}
 public:
 	VTYPE	scoreonlyS1();
@@ -196,14 +195,14 @@ public:
 	    mode(_mode), used(sizeof(var_t) == 2 && (_mode & 4)), 
 	    spj(b->inex.intr), dagp(pwd->Noll == 3), 
 	    nod(dagp? 5: 3), Ncand(NCAND + (dagp? 2: 0)), vmf(_vmf), 
-	    Np1(Nelem + 1), avmch(pwd->simmtx->AvTrc()), 
+	    Np1(nelem + 1), avmch(pwd->simmtx->AvTrc()), 
 #if FVAL
 	    nevsel(NEVSEL),
 #else
 	    nevsel((sizeof(var_t) == 2? SHRT_MIN: INT_MIN) + nevsel_play),
 #endif
 	    black_Rvulmn{nevsel, end_of_ulk, a->left, a->right, b->right},
-	    rlst(INT_MAX), buf_size(wdw.width + 2 * Nelem)
+	    rlst(INT_MAX), buf_size(wdw.width + 2 * nelem)
 {
 
 #define	Add(a, b)	this->add(a, b)
@@ -229,44 +228,44 @@ public:
 *	  5	4 + 2	4 + 2	4 + 2	4 + 2	2 + 4	vmf2
 ******************************************************************/
 
-	    size_t		bufsiz =  10 * Np1 + 6 * Nelem;
-	    if (mode > 1)	bufsiz += (8 * Np1 + 6 * Nelem);
+	    size_t		bufsiz =  10 * Np1 + 6 * nelem;
+	    if (mode > 1)	bufsiz += (8 * Np1 + 6 * nelem);
 	    abuf = new var_t[bufsiz];
 	    ps_a = abuf;
-	    pv_a = ps_a + Nelem;
-	    hv_a[0] = pv_a + Nelem;
+	    pv_a = ps_a + nelem;
+	    hv_a[0] = pv_a + nelem;
 	    hv_a[1] = hv_a[0] + Np1;
 	    ev_a = hv_a[1] + Np1;
-	    fv_a = ev_a + Nelem;
+	    fv_a = ev_a + nelem;
 	    ev2_a = fv_a + Np1;
-	    fv2_a = ev2_a + Nelem;
+	    fv2_a = ev2_a + nelem;
 	    s5_a = fv2_a + Np1;
 	    s3_a = s5_a + Np1;
 	    hb_a[0] = s3_a + Np1;
 	    hb_a[1] = hb_a[0] + Np1;
 	    eb_a = hb_a[1] + Np1;
-	    fb_a = eb_a + Nelem;
+	    fb_a = eb_a + nelem;
 	    eb2_a = fb_a + Np1;
-	    fb2_a = eb2_a + Nelem;
+	    fb2_a = eb2_a + nelem;
 	    if (mode > 1) {
 		pb_a = fb2_a + Np1;
-		qb_a = pb_a + Nelem;
-		hc_a[0] = qb_a + Nelem;
+		qb_a = pb_a + nelem;
+		hc_a[0] = qb_a + nelem;
 		hc_a[1] = hc_a[0] + Np1;
 		ec_a = hc_a[1] + Np1;
-		fc_a = ec_a + Nelem;
+		fc_a = ec_a + nelem;
 		ec2_a = fc_a + Np1;
-		fc2_a = ec2_a + Nelem;
+		fc2_a = ec2_a + nelem;
 		hd_a[0] = fc2_a + Np1;
 		hd_a[1] = hd_a[0] + Np1;
 		ed_a = hd_a[1] + Np1;
-		fd_a = ed_a + Nelem;
+		fd_a = ed_a + nelem;
 		ed2_a = fd_a + Np1;
-		fd2_a = ed2_a + Nelem;
+		fd2_a = ed2_a + nelem;
 	    }
 
 	    for (int p = 0; p < 2; ++p) {
-		for (int j = 0; j < Nelem; ++j) {
+		for (int j = 0; j < nelem; ++j) {
 		    hfesv[p][j][PS_A] = ps_a + j;
 		    hfesv[p][j][PV_A] = pv_a + j;
 		    hfesv[p][j][0] = hv_a[p] + j + 1;
@@ -316,17 +315,17 @@ public:
 	    }
 
 	    if (spj) {
-		fsjss = new Sjsites*[Nelem];
-		for (int k = 0; k < Nelem; ++k)
+		fsjss = new Sjsites*[nelem];
+		for (int k = 0; k < nelem; ++k)
 		    fsjss[k] = new Sjsites(*this);
-		donor_q = new Queue2<int>(Nelem);
-		accep_q = new Queue2<int>(Nelem);
+		donor_q = new Queue2<int>(nelem);
+		accep_q = new Queue2<int>(nelem);
 	    }
 	}
 	~SimdAln2s1() {
 	    delete[] abuf; delete[] vbuf;
 	    if (fsjss) {
-		for (int k = 0; k < Nelem; ++k) delete fsjss[k];
+		for (int k = 0; k < nelem; ++k) delete fsjss[k];
 		delete[] fsjss;
 		delete donor_q;
 		delete accep_q;

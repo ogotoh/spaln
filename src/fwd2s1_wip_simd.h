@@ -70,7 +70,7 @@ const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
 const	int	md = checkpoint(0);
 	int	mc = md + a->left;
 
-	for (int ml = a->left; ml < a->right; ml += Nelem) {
+	for (int ml = a->left; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
@@ -78,9 +78,9 @@ const	    int	n9 = std::min(b->right, wdw.up + (ml + j9) + 1) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
 const	    SGPT2*	bb = spj? b->exin->score_n(n): 0;
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
+	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
 	    vec_clear(s5_a, 2 * Np1);
-	    vec_clear(ps_a, 2 * Nelem);
+	    vec_clear(ps_a, 2 * nelem);
 
 regist_v    ev_v = ninf_v;
 regist_v    hv2_v = ninf_v;
@@ -272,14 +272,14 @@ const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
 const	int	md = checkpoint(0);
 	int	mc = md + a->left;
 const	int	mw = a->right - a->left;
-const	int	mb = a->right - 2 * Nelem;
-const	int	mt = a->left + mw / Nelem * Nelem;
-	vclear(pv_a, Nelem);
+const	int	mb = a->right - 2 * nelem;
+const	int	mt = a->left + mw / nelem * nelem;
+	vclear(pv_a, nelem);
 	for (int k = 0; k < a->right - mt; ++k) pv_a[k] = 1;
 regist_v    qv_v = Load(pv_a);	
 const	regist_m	lmask = Cmp_eq(qv_v, one_v);
 
-	for (int ml = a->left; ml < a->right; ml += Nelem) {
+	for (int ml = a->left; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
@@ -287,9 +287,9 @@ const	    int j8 = j9 - 1;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
 const	    SGPT2*	bb = spj? b->exin->score_n(n): 0;
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
+	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
 	    vec_clear(s5_a, 2 * Np1);
-	    vec_clear(ps_a, 2 * Nelem);
+	    vec_clear(ps_a, 2 * nelem);
 
 regist_v    ev_v = ninf_v;
 regist_v    hv2_v = ninf_v;
@@ -503,7 +503,7 @@ const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
 	mm = (a->right - a->left + n_im) / (n_im + 1);
 	Udh_Imds	udhimds(n_im, a->left, mm, wdw, pwd->Noll);
 	imd = udhimds[0];
-	mm = a->left + (imd->mi - a->left - 1) / Nelem * Nelem;
+	mm = a->left + (imd->mi - a->left - 1) / nelem * nelem;
 	int	k9 = imd->mi - mm;
 	int	k8 = k9 - 1;
 
@@ -511,7 +511,7 @@ const	int	md = checkpoint(0);
 	int	mc = a->left + md;
 	VTYPE	accscr = 0;
 
-	for (int ml = a->left, i = 0; ml < a->right; ml += Nelem) {
+	for (int ml = a->left, i = 0; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
@@ -520,10 +520,10 @@ const	    int j8 = j9 - 1;
 	    int	r = n - (ml + 1);
 	    int	donor_r = r;
 const	    SGPT2*	bb = spj? b->exin->score_n(n): 0;
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * Nelem);
-	    vec_clear(hb_a[0], 4 * Np1 + 2 * Nelem);
+	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
+	    vec_clear(hb_a[0], 4 * Np1 + 2 * nelem);
 	    vec_clear(s5_a, 2 * Np1);
-	    vec_clear(ps_a, 2 * Nelem);
+	    vec_clear(ps_a, 2 * nelem);
 const	    bool	is_imd_ = ml == mm;
 
 regist_v    ev_v = ninf_v;
@@ -805,7 +805,7 @@ const		int	d = checkpoint(c);
 	    }
 	    if (is_imd_ && ++i < n_im) {	// reset intermediate
 		imd = udhimds[i];
-		mm = a->left + (imd->mi - a->left - 1) / Nelem * Nelem;
+		mm = a->left + (imd->mi - a->left - 1) / nelem * nelem;
 		k9 = imd->mi - mm;
 		k8 = k9 - 1;
 	    }

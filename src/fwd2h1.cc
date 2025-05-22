@@ -223,34 +223,35 @@ const	SGPT6*	bb = b->exin->score_p(rw + m3);
 
 	if (a->inex.exgr) {
 	    for (int p = 0; h <= h9; ++h, ++bb, ++rf, p = next_p[p]) {
-		if (glen[0] == INT_MIN) continue;
-		VTYPE	y = NEVSEL;
 		glen[p] += 3;
+		VTYPE	cand[3] = {h->val, NEVSEL, NEVSEL};
 		if (rf - rw >= 3 && h[-3].dir != DEAD) {
-		    VTYPE	x = h[-3].val + bb[-2].sigE;
-		    if (!(a->inex.exgr & 2)) x += pwd->GapExtPen3(glen[p]);
-		    if (!(a->inex.exgr & 1) && glen[p] == 3) x += pwd->BasicGOP;
+		    cand[1] = h[-3].val + bb[-2].sigE;
+		    if (!(a->inex.exgr & 2))
+			cand[1] += pwd->GapExtPen3(glen[p]);
+		    if (!(a->inex.exgr & 1) && glen[p] == 3)
+			cand[1] += pwd->BasicGOP;
 		    if (bb[-2].sigT > 0 && !(h->dir & SPIN))
-			y = h[-3].val + bb[-2].sigT;
-		    if (x > h->val) {
-			h->val = x;
-			h->dir = HORI;
-			h->ptr = h[-3].ptr;
-		    } else if (isnthori(h))
-			glen[p] = 0;
+			cand[2] = h[-3].val + bb[-2].sigT;
 		}
-		VTYPE	x = h->val;
-		if (Local && bb->sig5 > 0) x += bb->sig5;
-		if (x > mx->val && x >= y) {
-		    mx = h;
-		    mx->val = x;
-		} else if (y > mx->val) {	// termination codon
+const		VTYPE	sig5 = (Local && bb->sig5 > 0)? bb->sig5: 0;
+		cand[0] += sig5;	// exon end
+		cand[1] += sig5;
+const		int	k = vmax(cand, 3) - cand;
+		if (k == 0) {
+		    if (!ishori(h)) glen[p] = 0;
+		} else if (k == 1) {
 		    *h = h[-3];
-		    mx = h;
-		    if (vmf) mx->ptr = vmf->add(a->right, rf + m3 - 3, h->ptr);
-		    mx->val = y;
-		    mx->dir = DEAD;
+		    h->dir = HORI;
+		    h->val = cand[k] - sig5;
+		} else {	// termination codon
+		    *h = h[-3];
+		    h->dir = DEAD;
+		    h->val = cand[k];
+		    if (h->val > mx->val && vmf)
+			h->ptr = vmf->add(a->right, rf + m3 - 3, h->ptr);
 		}
+		if (h->val > mx->val) mx = h;
 	    }
 	} else {
 	    bb += h9 - h;
@@ -340,7 +341,9 @@ const	    SGPT6*	bb = b->exin->score_p(n);
 	    RVPD*&	h = hf[0] = hh[k++] + r;
 	    RVPD*&	f = hf[2] = hh[k++] + r;
 	    RVPD*&	f2 = hf[4] = dagp? hh[k++] + r: 0;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];
+const	    VTYPE*	qprof[2] = {			// sim2(as, .)
+		pwd->simmtx->mtx[*as], pwd->simmtx->mtx[as[1]]
+	    };
 	    vset((RVPDJ*) &hl, black_vpdj, 3 * (NCAND + 1));
 	    for (int p = 0; p < 3; ++p)
 		for (int l = 0; l <= NCAND; ++l)
@@ -368,7 +371,7 @@ const		VTYPE&	sigE = (n > b->left)? bb[-2].sigE: 0;
 		if (m == a->left) goto Horizon;
 		if (n < b->left + 3) *h = black_vpd;
 		else {
-		    h->val += qprof[*bs] + sigE;
+		    h->val += qprof[0][*bs] + sigE;
 		    h->dir = isdiag(from)? DIAG: NEWD;
 		}
 
@@ -480,13 +483,13 @@ const			RVPDJ*	phl = hl[phs + 1] + pnx[l];
 			x = phl->val + sigB[phs] + spjcs->spjscr(phl->jnc, nb);
 			if (phl->dir == 0 && phs) {
 const			    CHAR*	cs = spjcs->spjseq(phl->jnc, nb);
-			    if (phs == 1) x += qprof[*cs];
-			    else	x += qprof[*++cs];
+			    if (phs == 1) x += qprof[0][*cs];
+			    else	x += qprof[1][*++cs]
+				- qprof[1][bs[3]] - bb[1].sigE;
 			}
 			from = hf[phl->dir];
 			if (x > from->val) {
 			    from->val = x;
-			    if (phs == -1) from->val -= bb[1].sigE;
 			    maxphl[phl->dir] = phl;
 			}
 		    }
@@ -653,7 +656,6 @@ const	Seq*	b = seqs[1];
 	int	phs = 0;
 	int	nb = 0;
 	int	psp = 0;		// post splicing position
-const	int&	maxexon = IntronPrm.rlmt;
 	EISCR	rbuf;
 	FSTAT*	fst = &gsi->fstat;
 	FSTAT	pst;
@@ -1022,39 +1024,38 @@ Rvdwml* Aln2h1::hlastH_ng(Rvdwml* hhg[], const WINDOW& wdw)
 	Rvdwml*	h = hhg[0] + rw;
 	Rvdwml*	h9 = hhg[0] + b->right - m3;
 	Rvdwml*	mx = h9;
-	VTYPE&	mxv = mx->val;
 const	SGPT6*	bb = b->exin->score_p(rw + m3);
 
 	if (a->inex.exgr) {
 	    for (int p = 0; h <= h9; ++h, ++bb, ++rf, p = next_p[p]) {
-		VTYPE	y = NEVSEL;
 		glen[p] += 3;
+		VTYPE	cand[3] = {h->val, NEVSEL, NEVSEL};
 		if (rf - rw >= 3 && h[-3].dir != DEAD) {
-		    VTYPE	x = h[-3].val + bb[-2].sigE;
-		    if (!(a->inex.exgr & 2)) x += pwd->GapExtPen3(glen[p]);
+		    cand[1] = h[-3].val + bb[-2].sigE;
+		    if (!(a->inex.exgr & 2))
+			cand[1] += pwd->GapExtPen3(glen[p]);
 		    if (glen[p] == 3 && !(a->inex.exgr & 1))
-			x += pwd->BasicGOP;
-		    if (bb[-2].sigT > 0 && !(h->dir & SPIN))
-			y = h[-3].val + bb[-2].sigT;
-		    if (x > h->val) {
-			*h = h[-3];
-			h->val = x;
-			h->dir = HORI;
-		    } else if (isnthori(h))
-			glen[p] = 0;
+			cand[1] += pwd->BasicGOP;
+		    if ((algmode.lcl & 2) && !(h->dir & SPIN))
+			cand[2] = h[-3].val + bb[-2].sigT;
 		}
-		VTYPE	x = h->val;
-		if (Local && bb->sig5 > 0) x += bb->sig5;
-		if (x > mx->val && x >= y) {
-		    mx = h;
-		    mx->val = x;
-		} else if (y > mx->val) {	// termination codon
-		    mx = h;
-		    mx->val = y;
+const		VTYPE	sig5 = (Local && bb->sig5 > 0)? bb->sig5: 0;
+		cand[0] += sig5;	// exon end
+		cand[1] += sig5;
+const		int	k = vmax(cand, 3) - cand;
+		if (k == 0) {
+		    if (!ishori(h)) glen[p] = 0;
+		} else if (k == 1) {
 		    *h = h[-3];
-		    mx->dir = DEAD;
-		    mx->upr = std::max(rf, h->upr);
+		    h->dir = HORI;
+		    h->val = cand[k] - sig5;
+		} else {	// termination codon
+		    *h = h[-3];
+		    h->dir = DEAD;
+		    h->val = cand[k];
+		    h->upr = std::max(rf, h->upr);
 		}
+		if (h->val > mx->val) mx = h;
 	    }
 	} else {
 	    bb += h9 - h;
@@ -1137,7 +1138,9 @@ const	    SGPT6*	bb = b->exin->score_p(n);
 	    Rvdwml*&	h = hf[0] = hhg[k++] + r;
 	    Rvdwml*&	f = hf[2] = hhg[k++] + r;
 	    Rvdwml*&	f2 = hf[4] = dagp? hhg[k++] + r: blackvdwuj;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];
+const	    VTYPE*	qprof[2] = {			// sim2(as, .)
+		pwd->simmtx->mtx[*as], pwd->simmtx->mtx[as[1]]
+	    };
 	    vset((Rvdwmlj*) &hl, black_vdwmlj, 3 * (NCAND + 1));
 	    for (int p = 0; p < 3; ++p)
 		for (int l = 0; l <= NCAND; ++l)
@@ -1166,7 +1169,7 @@ const		VTYPE&	sigE = (n > b->left)? bb[-2].sigE: 0;
 		if (m == a->left) goto HorizonF;
 		if (n < b->left + 3) *h = black_vdwml;
 		else {
-		    h->val += qprof[*bs] + sigE;
+		    h->val += qprof[0][*bs] + sigE;
 		    h->dir = (from->dir & DIAG)? DIAG: NEWD;
 		}
 
@@ -1279,13 +1282,13 @@ const			Rvdwmlj*	phl = hl[phs + 1] + pnx[l];
 			x = phl->val + sigB[phs] + spjcs->spjscr(phl->jnc, nb);
 			if (phl->dir == 0 && phs) {
 const			    CHAR*	cs = spjcs->spjseq(phl->jnc, nb);
-			    if (phs == 1) x += qprof[*cs];
-			    else	x += qprof[*++cs];
+			    if (phs == 1) x += qprof[0][*cs];
+			    else	x += qprof[1][*++cs]
+				- qprof[1][bs[3]] - bb[1].sigE;
 			}
 			from = hf[phl->dir];
 			if (x > from->val) {
 			    from->val = x;
-			    if (phs == -1) from->val -= bb[1].sigE;
 			    maxphl[phl->dir] = phl;
 			}
 		    }

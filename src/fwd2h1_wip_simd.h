@@ -91,14 +91,14 @@ const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
 const	int	md = checkpoint(0);
 	int	mc = md + a->left;
 const	int	mw = a->right - a->left;
-const	int	mb = a->right - Nelem;
-const	int	mt = a->left + mw / Nelem * Nelem;
-	vclear(sm_a, Nelem);
+const	int	mb = a->right - nelem;
+const	int	mt = a->left + mw / nelem * nelem;
+	vclear(sm_a, nelem);
 	for (int k = 0; k < a->right - mt; ++k) sm_a[k] = 1;
 regist_v    qv_v = Load(sm_a);
 const	regist_m	lmask = Cmp_eq(qv_v, one_v);
 
-	for (int ml = a->left; ml < a->right; ml += Nelem) {
+	for (int ml = a->left; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + 3 * ml);
@@ -107,7 +107,7 @@ const	    int j8 = j9 - 1;
 const	    int	mp1 = ml + 1;
 	    int	q = (n + 3 * mp1) % 6;
 	    int	r = n - 3 * mp1;
-	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * Nelem);	// [hv_a..fv_a]
+	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * nelem);	// [hv_a..fv_a]
 	    vec_clear(sm_a, 28 * Np1);		// sm_a, cp_a, s5/3_a, s5/3_a
 
 regist_v    hiv_v[3] = {ninf_v, ninf_v, ninf_v};
@@ -367,7 +367,7 @@ const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
 	mm = (a->right - a->left + n_im) / (n_im + 1);
 	Udh_Imds	udhimds(n_im, a->left, mm, wdw, pwd->Noll);
 	imd = udhimds[0];
-	mm = a->left + (imd->mi - a->left - 1) / Nelem * Nelem;
+	mm = a->left + (imd->mi - a->left - 1) / nelem * nelem;
 	int	k9 = imd->mi - mm;
 	int	k8 = k9 - 1;
 
@@ -375,7 +375,7 @@ const	int	md = checkpoint(0);
 	int	mc = a->left + md;
 	VTYPE	accscr = 0;
 
-	for (int ml = a->left, i = 0; ml < a->right; ml += Nelem) {
+	for (int ml = a->left, i = 0; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + 3 * ml);
@@ -385,8 +385,8 @@ const	    int j8 = j9 - 1;
 	    int	q = modN<6>(n + 3 * mp1);
 	    int	r = n - 3 * mp1;
 	    int	donor_r[3] = {r, r, r};
-	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * Nelem);
-	    vec_clear(hb_a[0], 12 * Np1 + 3 * Nelem);
+	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * nelem);
+	    vec_clear(hb_a[0], 12 * Np1 + 3 * nelem);
 	    vec_clear(sm_a, 28 * Np1);
 const	    bool	is_imd_ = ml == mm;
 
@@ -714,7 +714,7 @@ const		int	d = checkpoint(c);
 	    }
 	    if (is_imd_ && ++i < n_im) {	// reset intermediate
 		imd = udhimds[i];
-		mm = a->left + (imd->mi - a->left - 1) / Nelem * Nelem;
+		mm = a->left + (imd->mi - a->left - 1) / nelem * nelem;
 		k9 = imd->mi - mm;
 		k8 = k9 - 1;
 	    }
