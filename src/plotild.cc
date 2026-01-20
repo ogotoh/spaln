@@ -130,8 +130,8 @@ static double invtr(double y)
 
 static void getiprms(IldPrm*& iprm, int& nprm, int& argc, const char**& argv)
 {
-	FILE*	fd = ftable.fopen(ip_stat, "r");
-	if (!fd) fatal("%s not found !\n", ip_stat);
+	ReadFile	fp(ip_stat);
+	if (!fp.dtype) fatal(not_found, ip_stat);
 	SpecList*	speclist = make_speclist(argc, argv);
 	int	nn = speclist->size();
 	argc -= nn; argv += nn;
@@ -142,9 +142,13 @@ static void getiprms(IldPrm*& iprm, int& nprm, int& argc, const char**& argv)
 	}
 	iprm = ipprm;
 	int	rv;
-	while ((rv = iprm[nprm].fget(fd)) != EOF)
-	    if (rv == OK) ++nprm;
-	fclose(fd);
+	if (fp.fd) {
+	    while ((rv = iprm[nprm].fget(fp.fd)) != EOF)
+		if (rv == OK) ++nprm;
+	} else if (fp.gzfd) {
+	    while ((rv = iprm[nprm].fget(fp.gzfd)) != EOF)
+		if (rv == OK) ++nprm;
+	}
 	delete_speclist();
 }
 
@@ -202,15 +206,12 @@ int main(int argc, const char *argv[])
 		*ps++ = '/';
 	    for ( ; argc && **argv != '-'; --argc, ++argv, ++nild) {
 		strcpy(ps, *argv);
-		FILE*	fd = fopen(str, "r");
-		if (!fd) fatal("%s not found !\n", str);
 		if (xlogscale) {
-		    lild[nild] = new Lild(fd, *argv, xtransform, xinvtransf);
+		    lild[nild] = new Lild(ps, nild, xtransform, xinvtransf);
 		} else {
-		    ilds[nild] = new Ild(fd, *argv, nild);
+		    ilds[nild] = new Ild(ps, nild);
 		    ilds[nild]->normalize();
 		}
-		fclose(fd);
 	    }
 	}
 	if (argc > 0) {

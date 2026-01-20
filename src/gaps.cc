@@ -123,15 +123,20 @@ static int scmpf(const SKL* a,const SKL* b)
 
 bool badskl(const SKL* skl, const Seq** sqs)
 {
-	int	num = skl->n;
+const	int	num = skl->n;
 const	SKL*	prv = ++skl;
 const	SKL*	trm = prv + num;
-	int	m0 = sqs? sqs[0]->left: 0;
-	int	n0 = sqs? sqs[1]->left: 0;
-	if (skl->m != m0 || skl->n != n0) return (true);
+	if (sqs) {
+const	    Seq*&	a = sqs[0];
+const	    Seq*&	b = sqs[1];
+const	    int	m0 = sqs? sqs[0]->left: 0;
+const	    int	n0 = sqs? sqs[1]->left: 0;
+	    if ((!b->inex.exgl && skl->m != m0) || 
+		(!a->inex.exgl && skl->n != n0)) return (true);
+	}
 	for (++skl; skl < trm; prv = skl++) {
-	    int	dm = skl->m - prv->m;
-	    int	dn = skl->n - prv->n;
+const	    int	dm = skl->m - prv->m;
+const	    int	dn = skl->n - prv->n;
 	    if (dm != dn && dm && dn) return (true);
 	}
 	return (false);
@@ -139,7 +144,7 @@ const	SKL*	trm = prv + num;
 
 SKL* stdskl(SKL** pskl)
 {
-	int	num = (*pskl)->n;
+const	int	num = (*pskl)->n;
 	SKL*	org = *pskl + 1;
 	int	pr = 2;
 
@@ -231,7 +236,7 @@ SKL* stdskl3(SKL** pskl)
 
 int sklpartner(const SKL* skl, int m, int given)
 {
-	int	partner = 1 - given;
+const	int	partner = 1 - given;
 const 	DIM2*	coo = (const DIM2*) skl;
 const 	DIM2*	boo = coo + skl->n - 2;
 
@@ -272,11 +277,11 @@ SKL* trimskl(const Seq* seqs[], SKL* skl)
 	return (skl);
 }
 
-SKL* gap2skl(const GAPS* gga, const GAPS* ggb)
+SKL* gap2skl(const GAPS* gga, const GAPS* ggb, const Seq** sqs)
 {
 const 	GAPS*	ga = gga;
 const 	GAPS*	gb = ggb;
-	int	maxskl = 2 * (gaps_size(ga) + gaps_size(gb));
+const	int	maxskl = 2 * (gaps_size(ga) + gaps_size(gb));
 const 	GAPS*	gaps[2] = {++ga, ++gb};
 	int	mn[2] = {ga->gps - gb->gps, gb->gps - ga->gps};
 	int	ndel[2] = {0, 0};
@@ -325,7 +330,7 @@ const 	GAPS*	gaps[2] = {++ga, ++gb};
 	skl->n = i - 1;
 	skl->m = 1;
 	if (++i > maxskl) fatal(memerror, "gap2skl()", i, maxskl);
-	if (badskl(skl)) {
+	if (badskl(skl, sqs)) {
 	    delete[] skl; skl = 0;
 	}
 	return (skl);

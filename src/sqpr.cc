@@ -812,11 +812,9 @@ const 	EISCR*	skp = wkr;
 static	FILE*	fg = 0;
 static	FILE*	fe = 0;
 static	FILE*	fq = 0;
-#if USE_ZLIB
 static	gzFile	gzfg = 0;
 static	gzFile	gzfe = 0;
 static	gzFile	gzfq = 0;
-#endif
 void Gsinfo::ExonForm(const Seq* gene, const Seq* qry, int mode) const
 {
 	int	cds = 0;
@@ -858,30 +856,24 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		    *dot = '\n';
 		}
 		strcpy(bdy, grext);
-#if USE_ZLIB
 		if (OutPrm.gzipped) {
 		    strcat(str, gz_ext);
 		    if (!(gzfg = wgzopen(str, "wb"))) fatal(efmt, str, 0);
 		} else 
-#endif
 		    if (!(fg = wfopen(str, "wb"))) fatal(efmt, str, 0);
 		strcpy(bdy, erext);
-#if USE_ZLIB
 		if (OutPrm.gzipped) {
 		    strcat(str, gz_ext);
 		    if (!(gzfe = wgzopen(str, "wb"))) fatal(efmt, str, 0);
 		} else 
-#endif
 		    if (!(fe = wfopen(str, "wb"))) fatal(efmt, str, 0);
 		strcpy(bdy, qrext);
-#if USE_ZLIB
 		if (OutPrm.gzipped) {
 		    strcat(str, gz_ext);
 		    if (!(gzfq = wgzopen(str, "wb"))) fatal(efmt, str, 0);
 		    if ((fputs(dbs_dt[0]->dbsid, gzfq) == EOF) || (fputc('\0', gzfq) == EOF))
 		    fatal(efmt, qrext, gr.Nrecord);
 		} else 
-#endif
 		    if (!(fq = wfopen(str, "wb"))) fatal(efmt, str, 0);
 		if (fq && ((fputs(dbs_dt[0]->dbsid, fq) == EOF) || (fputc('\0', fq) == EOF)))
 		    fatal(efmt, qrext, gr.Nrecord);
@@ -923,10 +915,8 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 		    er.Nunp = wkr->unp;
 		    if (fe && fwrite(&er, sizeof(ExonRecord), 1, fe) != 1)
 			fatal(efmt, erext, gr.Nrecord);
-#if USE_ZLIB
 		    if (gzfe && fwrite(&er, sizeof(ExonRecord), 1, gzfe) != 1)
 			fatal(efmt, erext, gr.Nrecord);
-#endif
 		} else {
 		    fprintf(fd, fmt, 
 		    (*qry->sname)[0], (*gene->sname)[0], er.Pmatch, er.Elen,
@@ -970,16 +960,12 @@ static	const	char	efmt[] = "Cant't write to gene record %s: # %ld\n";
 	    if (qry->isprotein() && gr.ng == 0) gr.ng = -1;
 	    if (fg && fwrite(&gr, sizeof(GeneRecord), 1, fg) != 1)
 		fatal(efmt, grext, gr.Nrecord);
-#if USE_ZLIB
 	    if (gzfg && fwrite(&gr, sizeof(GeneRecord), 1, gzfg) != 1)
 		fatal(efmt, grext, gr.Nrecord);
-#endif
 	    if (fq && (fputs((*qry->sname)[0], fq) == EOF || fputc('\0', fq) == EOF))
 		fatal(efmt, qrext, gr.Nrecord);
-#if USE_ZLIB
 	    if (gzfq && (fputs((*qry->sname)[0], gzfq) == EOF || fputc('\0', gzfq) == EOF))
 		fatal(efmt, qrext, gr.Nrecord);
-#endif
 	} else {
 	    int	n = 0;
 	    for (int j = 0; j < gene->CdsNo; ++j)
@@ -999,11 +985,9 @@ void closeGeneRecord()
 	if (fg) {fclose(fg); fg = 0;}
 	if (fe) {fclose(fe); fe = 0;}
 	if (fq) {fclose(fq); fq = 0;}
-#if USE_ZLIB
 	if (gzfg) {fclose(gzfg); gzfg = 0;}
 	if (gzfe) {fclose(gzfe); gzfe = 0;}
 	if (gzfq) {fclose(gzfq); gzfq = 0;}
-#endif
 }
 
 void Gsinfo::IntronForm(const Seq* gene, const Seq* qry) const
@@ -2166,7 +2150,9 @@ void PrintAln::printaln()
 	int 	active = seqnum;
 const	RANGE*	exon = 0;
 	int	maxleft = 0;
+	int	df = 0;				// df >=0? CDS: intron
 	gene = -1;	// htl 1: AvsA, 2: GvsC, 3: GvsA
+
 	for (int j = htl = 0; j < seqnum; ++j) {
 	    Seq*&	sd = seqs[j];
 	    if (sd->left > maxleft) maxleft = sd->left;
@@ -2176,6 +2162,7 @@ const	RANGE*	exon = 0;
 		exon = sd->exons + 1;	// 1: AvsA
 		gene = j;
 		gpos = gaps[j]->gps;
+		df = gpos - exon->left;
 	    }
 	    for (int i = 0; i < sd->many; ++i, ++k, wbuf += OutPrm.lpw) {
 		nbr[k] = sd->calcnbr(gaps[j]->gps, i);
@@ -2201,7 +2188,6 @@ const	int	c_step = (htl == 1)? 3: 1;
 	}
 
 	int	z = 0, phs = 0, intlen = 0;
-	int	df = 0;				// df >=0? CDS: intron
 	if (htl & 2) prmode = Row_None;
 	do {
 	    if (OutPrm.SkipLongGap) {
@@ -2252,7 +2238,7 @@ const			bool	step3 = htl == 3 && !sd->inex.intr;
 			intlen = exon[1].left - exon->right;
 			++exon;
 		    }
-		    df = gpos - exon->left;
+		    if (exon->left < endrng.left) df = gpos - exon->left;
 		    if (exon->right == gpos + 1 && phs == 1) reij = 3;
 		}
 		if (active) active = seqnum;
@@ -2279,7 +2265,8 @@ const		    int	gap = neog? gp[j]->gln: 0;
 			    for (int i = 0; i < sd->many; ++i) {
 				image[k+i][clm] = *wkr[j] == nil_code? gap_code: *wkr[j];
 				if (j == gene) {
-				    if (df < 0) image[k+i][clm] |= INTRONBIT;
+				    if (df < 0 || (exon && exon->left == endrng.left)) 
+					image[k+i][clm] |= INTRONBIT;
 				    else if (intlen > 2 && df < 2 && (htl & 2) && pphs == 1)
 					reij = 2 - df;
 				    if (markeij && reij) 
@@ -2309,7 +2296,7 @@ const		    int	gap = neog? gp[j]->gln: 0;
 			    }
 			} else {
 			    for (int i = 0; i < sd->many; i++)
-				image[k+i][clm] = (!exon || gpos >= exon->left)?
+				image[k+i][clm] = (df >= 0)?
 				    gap_code: BLANK;
 			}
 			if ((htl & 2) && j == pro && df >= 0)

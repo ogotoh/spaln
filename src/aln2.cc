@@ -24,6 +24,10 @@
 #include "aln.h"
 #include <math.h>
 
+struct DefPrm2 {float y, Y;};
+
+// [Dvsp][crs]
+static	DefPrm2	defprm2[2] = {{4., 4.}, {8., 8.}};
 static	int	estimlen(int na, int nb, const SKL* skl);
 static	void	synthi(CHAR* cs, const CHAR* sss[], int an, int bn, int mi, int ni);
 
@@ -93,6 +97,8 @@ int prePwd(const Seq** seqs, bool use_mdm)
 	if (alprm2.z < 0) alprm2.z = dvsp? def_alprm2z: 0;
 	if (dvsp == 1) alprm2.jneibr /= 2;
 	if (algmode.crs) alprm2.w = 1.;
+	if (alprm2.y == FQUERY) alprm2.y = defprm2[dvsp > 0].y;
+	if (IntronPrm.fact == FQUERY) IntronPrm.fact = defprm2[dvsp > 0].Y;
 	return (dvsp);
 }
 
@@ -127,13 +133,10 @@ const	int	step = (DvsP == 3)? 1: 3;
 	}
 	if (!seqs[0]->inex.intr && !seqs[1]->inex.intr) return;	// without splice
 	eijpat = new EijPat(DvsP);				// boundary signal
+	if (alprm2.Z > 0)  intnpot = new ExinPot(static_cast<int>(Iefp::IP));
 	IntPen = new IntronPenalty(Vab, DvsP, eijpat, intnpot);
-	if (!DvsP) {		// C vs G
-	    if (alprm2.z > 0)  exonpot = new ExinPot(static_cast<int>(Iefp::EP));
-	    if (alprm2.Z > 0)  intnpot = new ExinPot(static_cast<int>(Iefp::IP));
-	} else {
-	    if (alprm2.Z > 0) intnpot = new ExinPot(static_cast<int>(Iefp::IP), 4);
-	}
+	if (!DvsP && alprm2.z > 0)
+	    exonpot = new ExinPot(static_cast<int>(Iefp::EP));
 }
 
 PwdB::~PwdB()

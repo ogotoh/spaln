@@ -191,7 +191,7 @@ const	    CHAR*	bs = b->at(n);
 	    RVPD*	h = hh[k] + r;
 	    RVPD*	f = hh[++k] + r;
 	    RVPD*	f2 = dagp? hh[++k] + r: 0;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
 	if (OutPrm.debug) {
 	    printf("%2d %2d %2d", m, n, h->dir);
@@ -204,7 +204,7 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 		RVPD*	from = h;
 		RVPD*	mx = h;
 		VTYPE	diag = h->val;
-		h->val += qprof[*bs];
+		h->val += (VTYPE) qprof[*bs];
 		h->dir = isdiag(from)? DIAG: NEWD;
 
 //	Vertical
@@ -507,7 +507,7 @@ const	    CHAR*	bs = b->at(n);
 	    Rvwml*&	f = hf[2] = hh[1] + r;
 	    Rvwml*&	f2 = hf[4] = dagp? hh[2] + r: blackvwu;
 	    vset(e, black_vpwml, 2);
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
 	    if (OutPrm.debug) {
 		printf("%2d %2d ", m, n);
@@ -524,7 +524,7 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 		Rvwml*	mx = h;
 		VTYPE	x;
 		if (m == a->left) goto HorizonF;
-		h->val += qprof[*bs];
+		h->val += (VTYPE) qprof[*bs];
 
 //	Vertical
 		x = (++from)->val + pwd->BasicGOP;
@@ -759,7 +759,7 @@ const	    CHAR*	bs = b->at(n);
 	    RVDWC*	hrb = hhc[0] + n9 - m;
 	    RVDWC*	h = hlb;
 	    RVDWC*	f = hhc[1] + r;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 	    if (dagp) f2 = hhc[2] + r;
 	    for (int k = 0; k < pwd->Noll; ++k)
 		hl[k] = e[k] = black_vdwc;
@@ -778,7 +778,7 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
 		VTYPE	diag = h->val;
 #endif
-		h->val += qprof[*bs];
+		h->val += (VTYPE) qprof[*bs];
 		h->dir = isdiag(h)? DIAG: NEWD;
 
 //	Vertical
@@ -999,7 +999,7 @@ const	    CHAR*	bs = b->at(n);
 	    VTYPE*&	f = hf[2] = hh[1] + r;
 	    VTYPE*&	f2 = hf[4] = dagp? hh[2] + r: blackv;
 	    e1 = e2 = NEVSEL;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
 	    if (OutPrm.debug) {
 		printf("%2d %2d ", m, n);
@@ -1014,7 +1014,7 @@ const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 		VTYPE*	mx = h;
 		VTYPE	x;
 		if (m == a->left) goto HorizonF;
-		*h += qprof[*bs];
+		*h += (VTYPE) qprof[*bs];
 
 //	Vertical
 		x = *++from + pwd->BasicGOP;

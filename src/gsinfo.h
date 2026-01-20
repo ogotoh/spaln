@@ -144,16 +144,16 @@ friend	struct	SigII;
 friend	struct	Iiinfo;
 friend	class	Cip_score;
 private:
-	int	pfqnum;
-	int	lstnum;
-	int	step;
-	PFQ*	pfq;
-	int*	lst;
+	int	pfqnum = 0;
+	int	lstnum = 0;
+	int	step = 0;
+	PFQ*	pfq = 0;
+	int*	lst = 0;
 	PFQ*	wfq = 0;
 	int*	wst = 0;
-	PFQ*	tfq;
+	PFQ*	tfq = 0;
 #if USE_WEIGHT
-	FTYPE*	weight;
+const 	FTYPE*	weight = 0;
 #endif
 public:
 	PfqItr& operator++() {
@@ -191,7 +191,13 @@ public:
 	    return (wfq && (wfq->pos < n * step));
 	}
 	bool operator<=(int n) const {
-	    return (wfq && (wfq->pos < ++n * step));
+	    return (wfq && (wfq->pos <= n * step));
+	}
+	bool operator>(int n) const {
+	    return (wfq && (wfq->pos > n * step));
+	}
+	bool operator>=(int n) const {
+	    return (wfq && (wfq->pos >= n * step));
 	}
 	bool operator&&(int m) const {	// codon match
 	    if (SpbFact == 0 || !wfq) return (false);
@@ -221,18 +227,58 @@ public:
 	    }
 	    return (*this);
 	}
+	PFQ&	current_pfq() const {
+	    return (*wfq);
+	}
 #if USE_WEIGHT
-	PfqItr(SigII& sgi, int n = 0, FTYPE* wt = 0);
-	VTYPE match_score(int n) { return (n == wfq->pos? SpbFact * wfq->dns: 0); }
+	PfqItr(SigII& sgi, const int& n = 0, const FTYPE* wt = 0);
+	VTYPE	density() const {
+	    return (wfq->dns);
+	}
+	VTYPE	density(const int& n) const {
+	    return (n == wfq->pos? wfq->dns: 0);
+	}
+	VTYPE	match_score() const {
+	    return (SpbFact * wfq->dns);
+	}
+	VTYPE	match_score(const int& n) const {
+	    return (n == wfq->pos? SpbFact * wfq->dns: 0);
+	}
 #else
-	PfqItr(SigII& sgi, int n = 0);
-	VTYPE match_score(int n) { return (n == wfq->pos? SpbFact * wfq->num: 0); }
+	PfqItr(SigII& sgi, const int& n = 0);
+	VTYPE	density() const {
+	    return (wfq->num);
+	}
+	VTYPE	density(const int& n) const {
+	    return (n == wfq->pos? wfq->num: 0);
+	}
+	VTYPE	match_score() const {
+	    return (SpbFact * wfq->num);
+	}
+	VTYPE	match_score(const int& n) const {
+	    return (n == wfq->pos? SpbFact * wfq->num: 0);
+	}
 #endif
+	int	nextsite() const {
+	    return (wfq->pos / step);
+	}
+	int	phase() const {
+	    return (wfq->pos % step);
+	}
+	int	number() const {
+	    return (wfq->num);
+	}
+	int	phase(const int& n) const {
+	    return (n == wfq->pos? wfq->pos % step: 0);
+	}
+	int	number(const int& n) const {
+	    return (n == wfq->pos? wfq->num: 0);
+	}
 	PfqItr(const Seq* sd, int n = 0);
 	VTYPE match_score(PfqItr& bpi, bool all_phase = true) const {
 	    if (step != 1) {
 		if ((wfq->pos - bpi.wfq->pos) % step) return (0);
-		if (!all_phase && wfq->pos % step) return (0);
+		if (!all_phase && wfq->pos % step) return (0);	// only phase 0
 	    }
 #if USE_WEIGHT
 	    return (SpbFact * wfq->dns * bpi.wfq->dns);

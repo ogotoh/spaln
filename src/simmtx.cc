@@ -39,7 +39,7 @@ int	minmax = MAXIMUM;
 
 Simmtxes	simmtxes;
 
-const	char*	mdm_file[max_simmtxes] = {0, 0, 0};
+const	char*	mdm_file[max_simmtxes] = {0, 0, 0, 0};
 static	const	char*	Badpam = "Illegal pam = %d !\n";
 static	const	char*	strscale = "scale";
 
@@ -55,10 +55,12 @@ BPPRM	bpprm = {0., 1., 1., 100};
 
 static	int	glocal = GLOBAL;
 static	float	smn[] = {2, 1., 0., -1., FQUERY};
-static	DefPrm	defNprm[max_simmtxes+1] = 
-{{3., 8., -6., 0., 1}, {2., 6., -4., 0., 1}, {2., 4., -2., 0., 1}, {0}};
-static	DefPrm	defPprm[max_simmtxes+1] = 
-{{4., 10., 0., 0., 100}, {2., 9., 0., 0., 150}, {2., 9., 0., 0., 250}, {0}};
+static	DefPrm	defNprm[max_simmtxes] = 
+	{{3., 8., -6., 0., 1}, {2., 6., -4., 0., 1}, 
+	 {2., 4., -2., 0., 1}, {3., 8., -6., 0., 1}};
+static	DefPrm	defPprm[max_simmtxes] = 
+	{{4., 10., 0., 0., 100}, {2., 9., 0., 0., 150}, 
+	 {2.,  9., 0., 0., 250}, {2., 9., 0., 0., 50}};
 
 void optimize(int gl, int mnmx)
 {
@@ -79,29 +81,28 @@ int dvp2pam(double x)
 	return ((pam > MAXPAM)? MAXPAM: pam);
 }
 
-VTYPE** Simmtx::SquareMtx()
-{
-	mtx = new VTYPE*[dim];
-	VTYPE*	wmtx = new VTYPE[dim * dim];
-	for (int i = 0; i < dim; ++i, wmtx += dim)
-	    mtx[i] = wmtx;
-	return mtx;
-}
-
 int Simmtx::simgrade(int aa, int bb) const
 {
 	if (IsGap(aa) || IsGap(bb)) return (0);
 	if (AxB == DxD)
 	    return (int) (4 * (mtx[aa][bb] - minscr) / drange);
 	int 	cc = (int) ((25 * mtx[aa][bb] + drange  - 1) / drange);
-	cc = max(cc, 0);
+	cc = std::max(cc, 0);
 	return (cc);
 }
 
-Simmtx::Simmtx(ComPmt ab, DefPrm* dp) 
-	: param(dp), AxB(ab), simfile(0)
+Simmtx::Simmtx(ComPmt ab, DefPrm* dp) :
+	scl(alprm.scale), param(dp), AxB(ab), simfile(0)
 {
 	Simmtx*	pm = 0;
+	switch (ab) {
+	    case DxD: dim = rows = NSIMD; break;
+	    case PxP: dim = rows = ASIMD; break;
+	    case PxT: case TxP: case TxT: dim = TSIMD; break;
+	    default:
+		fatal("Simmtx %d is not supported currently!\n", (int) ab);
+	}
+	mtx = SquareMtx<sim_t>(dim);
 	switch (ab) {
 	    case DxD: Nmtx(); break;
 	    case PxP: Pmtx(); break;
@@ -109,17 +110,24 @@ Simmtx::Simmtx(ComPmt ab, DefPrm* dp)
 		pm = new Simmtx(PxP, dp);
 		Hmtx(ab, pm);
 		delete pm; break;
-	    default:
-		fatal("Simmtx %d is not supported currently!\n", (int) ab);
+	    default: break;
 	}
 	simunp = mtx[gap_code];
 }
 
-Simmtx::Simmtx(ComPmt ab, const char* fname, DefPrm* dp) 
-	: param(dp), AxB(ab), simfile(fname)
+Simmtx::Simmtx(ComPmt ab, const char* fname, DefPrm* dp) :
+	scl(alprm.scale), param(dp), AxB(ab), simfile(0)
 {
 	Simmtx*	pm = 0;
 	param->p = GivenMat;
+	switch (ab) {
+	    case DxD: dim = rows = NSIMD; break;
+	    case PxP: dim = rows = ASIMD; break;
+	    case PxT: case TxP: case TxT: dim = TSIMD; break;
+	    default:
+		fatal("Simmtx %d is not supported currently!\n", (int) ab);
+	}
+	mtx = SquareMtx<sim_t>(dim);
 	switch (ab) {
 	    case DxD: Nmtx(fname); break;
 	    case PxP: Pmtx(fname); break;
@@ -127,8 +135,7 @@ Simmtx::Simmtx(ComPmt ab, const char* fname, DefPrm* dp)
 		pm = new Simmtx(PxP, fname, dp);
 		Hmtx(ab, pm);
 		delete pm; break;
-	    default:
-		fatal("Simmtx %d is not supported currently!\n", (int) ab);
+	    default: break;
 	}
 	simunp = mtx[gap_code];
 }
@@ -144,23 +151,19 @@ Simmtxes::~Simmtxes()
 
 void Simmtx::Nmtx()
 {
-	dim = rows = NSIMD;
-	mtx = SquareMtx();
-	VTYPE	ntsunp = (VTYPE) -(alprm.scale * param->u);
+	sim_t	ntsunp = (sim_t) -(scl * param->u);
 	setNpam(4, smn[4]);
 	for (int i = 1; i < NTS; ++i) {
 	    int	ii = i + gap_code;
 	    for (int j = 1; j < i; ++j) {
 		int	jj = j + gap_code;
-		mtx[ii][jj] = mtx[jj][ii] = 
-		    (VTYPE) (alprm.scale * smn[level(i, j)]);
+		mtx[ii][jj] = mtx[jj][ii] = (sim_t) (scl * smn[level(i, j)]);
 	    }
-	    mtx[ii][ii] = (VTYPE) (alprm.scale * smn[level(i, i)]);
+	    mtx[ii][ii] = (sim_t) (scl * smn[level(i, i)]);
 	    mtx[_][ii] = mtx[ii][_] = ntsunp;
 	    mtx[NIL][ii] = mtx[ii][NIL] = 0;
 	}
-	mtx[_][_] = mtx[NIL][NIL] = 
-	mtx[_][NIL] = mtx[NIL][_] = 0;
+	mtx[_][_] = mtx[NIL][NIL] = mtx[_][NIL] = mtx[NIL][_] = 0;
 	avtrc = mtx[A][A] + mtx[C][C] + mtx[G][G] + mtx[T][T];
 	nrmlf = avtrc /= 4;
 	minscr = mtx[A][C];
@@ -171,15 +174,13 @@ void Simmtx::Nmtx(const char* fname)
 {
 	FILE*	fd = ftable.fopen(fname, BLASTMAT, DEF_MAT_PATH);
 	if (!fd) fatal("Matrix File %s was not found!\n", fname);
-	dim = rows = NSIMD;
-	mtx = SquareMtx();
 	int	aref[26];
 	int	xref[26];
 	int	nrow[26];
+	sim_t	maxs = SHRT_MIN;
 	float	scale = 1.;
-	VTYPE	maxs = INT_MIN;
-	VTYPE	ntsunp = (VTYPE) -(alprm.scale * param->u);
-static	const	int	nbit[16] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
+	sim_t	ntsunp = (sim_t) -(scl * param->u);
+static	const	short	nbit[16] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
 
 	char	str[MAXL];
 	*str = _LCOMM;
@@ -217,11 +218,11 @@ static	const	int	nbit[16] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
 		ps = cdr(str);
 	    } else if (ps[1] == '=') {	/* gap penalty */
 		if (c == 'u' || c == 'e') {
-		    alprm.u = (VTYPE) atof(ps+2);
+		    alprm.u = (float) atof(ps+2);
 		    k = gap_code;
 		    ps = cdr(str);
 		} else if (c == 'v' || c == 'o') {
-		    alprm.v = (VTYPE) atof(ps+2);
+		    alprm.v = (float) atof(ps+2);
 		    ps = cdr(str);
 		    continue;
 		} else {
@@ -238,13 +239,13 @@ static	const	int	nbit[16] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
 	    }
 	    int	j = 0;
 	    for ( ; *ps && j < NTS; ps = cdr(ps), ++j) {
-		mtx[k][xref[j]] = (VTYPE) 
-		    ((atof(ps) / scale + param->b) * alprm.scale);
+		mtx[k][xref[j]] = (sim_t) 
+		    ((atof(ps) / scale + param->b) * scl);
 	    }
 	    nrow[i] = j;
 	}
 	fclose(fd);
-	minscr = INT_MAX;
+	minscr = SHRT_MAX;
 	for (int p = 1; p < 16; p <<= 1) {
 	    int	i = p + 1;
 	    for (int j = A; j < Z; ++j) {
@@ -255,7 +256,7 @@ static	const	int	nbit[16] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
 			minscr = mtx[i][j];
 		    continue;
 		}
-		VTYPE	s = 0;
+		sim_t	s = 0;
 		for (int k = 1; k < 16; k <<= 1) {
 		    if (q & k) s += mtx[i][k+1];
 		}
@@ -277,7 +278,6 @@ static	const	int	nbit[16] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
 	}
 	avtrc = mtx[A][A] + mtx[C][C] + mtx[G][G] + mtx[T][T];
 	nrmlf = avtrc /= 4;
-	simunp = mtx[gap_code];
 	drange = maxs - minscr;
 }
 
@@ -285,12 +285,10 @@ void Simmtx::Pmtx()
 {
 	double	buf[AASCMB];
 	double	buf2[PAMLEVELS];
-	double	fscl = alprm.scale / 10.;
+	double	fscl = scl / 10.;
 	double	fbias = 10. * param->b;
-	VTYPE	unp_aas = (VTYPE) -(alprm.scale * param->u);
+	sim_t	unp_aas = (sim_t) -(scl * param->u);
 
-	dim = rows = ASIMD;
-	mtx = SquareMtx();
 	nrmlf = 1.;
 	FILE*	fd = ftable.fopen(mdm_tab, "rb");
 	if (!fd) fatal(not_found, mdm_tab);
@@ -319,7 +317,7 @@ void Simmtx::Pmtx()
 #if !FVAL
 		buf[k] += 0.5;
 #endif
-		mtx[ii][jj] = mtx[jj][ii] = (VTYPE) buf[k];
+		mtx[ii][jj] = mtx[jj][ii] = (sim_t) buf[k];
 	    }
 	}
 	for (int i = AMB; i < ASIMD; ++i) {
@@ -330,7 +328,6 @@ void Simmtx::Pmtx()
 	mtx[UNP][UNP] = 0;
 	for (int i = 0; i < ASIMD; ++i)
 	    mtx[i][NIL] = mtx[NIL][i] = 0;
-	simunp = mtx[gap_code];
 	minscr = mtx[TRP][CYS];
 	drange = mtx[TRP][TRP] - minscr;
 }
@@ -348,11 +345,9 @@ void Simmtx::Pmtx(const char* fname)
 	int	glx = 0;
 #endif
 	float	scale = 1.;
-	VTYPE	unp_aas = (VTYPE) -(alprm.scale * param->u);
+	sim_t	unp_aas = (sim_t) -(scl * param->u);
 
-	dim = rows = ASIMD;
-	mtx = SquareMtx();
-	nrmlf = log(4.) * alprm.scale;	/* half bit */;
+	nrmlf = log(4.) * scl;	/* half bit */;
 	char	str[MAXL];
 	*str = _LCOMM;
 	while (*str == _LCOMM) {
@@ -403,8 +398,8 @@ void Simmtx::Pmtx(const char* fname)
 	    }
 	    int	j = 0;
 	    for ( ; *ps && j < AAS; ps = cdr(ps), ++j) {
-		mtx[k][xref[j]] = (VTYPE) 
-		    ((atof(ps) / scale + param->b) * alprm.scale);
+		mtx[k][xref[j]] = (sim_t) 
+		    ((atof(ps) / scale + param->b) * scl);
 	    }
 	    nrow[i] = j;
 	}
@@ -441,19 +436,16 @@ void Simmtx::Pmtx(const char* fname)
 	    mtx[SEC][j] = mtx[j][SEC] = mtx[j][CYS];
 #endif	// USE_GLX
 	fclose(fd);
-	simunp = mtx[gap_code];
 	minscr = mtx[TRP][CYS];
 	drange = mtx[TRP][TRP] - minscr;
 }
 
 void Simmtx::Hmtx(ComPmt compmt, Simmtx* pm)
 {
-	dim = TSIMD;
 	rows = compmt == TxT? dim: SER2;
-	mtx = SquareMtx();
-	VTYPE	unp_aas = (VTYPE) -(alprm.scale * param->u);
-	VTYPE	trm_aas = (VTYPE) -(alprm.scale * alprm2.o);
-	VTYPE	trm_trm = (VTYPE) (alprm.scale * pm->mtx[ALA][ALA]);
+	sim_t	unp_aas = (sim_t) -(scl * param->u);
+	sim_t	trm_aas = (sim_t) -(scl * alprm2.o);
+	sim_t	trm_trm = (sim_t) (scl * pm->mtx[ALA][ALA]);
 	nrmlf = pm->nrmlf;
 	avtrc = pm->avtrc;
 	for (int i = 0; i < SER2; ++i) {
@@ -475,7 +467,6 @@ void Simmtx::Hmtx(ComPmt compmt, Simmtx* pm)
 	    mtx[TRM2][TRM] = mtx[TRM2][TRM2] = trm_trm;
 	for (int i = 0; i < TSIMD; ++i)
 	    mtx[NIL][i] = mtx[i][NIL] = 0;
-	simunp = mtx[gap_code];
 	minscr = mtx[TRP][CYS];
 	drange = mtx[TRP][TRP] - minscr;
 }
@@ -574,7 +565,7 @@ void setNpam(int q, float v)
 
 void setdefNprm(float n, float u, float v, float b, int c)
 {
-	if (c < 0 || c > 1) return;
+	if (c < 0 || c >= max_simmtxes) return;
 	if (n > FPOPUP) defNprm[c].n = n;
 	if (u > FPOPUP) defNprm[c].u = u;
 	if (v > FPOPUP) defNprm[c].v = v;
@@ -583,7 +574,7 @@ void setdefNprm(float n, float u, float v, float b, int c)
 
 void setdefPprm(int p, float u, float v, float b, int c)
 {
-	if (c < 0 || c > 1) return;
+	if (c < 0 || c >= max_simmtxes) return;
 	if (p > POPUP)  defPprm[c].p = p;
 	if (u > FPOPUP) defPprm[c].u = u;
 	if (v > FPOPUP) defPprm[c].v = v;
@@ -614,8 +605,8 @@ void setlsegs(int ls)
 {
 	if (ls > 0) alprm.ls = ls;
 	else if (ls == QUERY) promptin("lsegs  (%d) : ", &alprm.ls);
-	alprm.ls = min(alprm.ls, NOL);
-	alprm.ls = max(alprm.ls, 1);
+	alprm.ls = std::min(alprm.ls, NOL);
+	alprm.ls = std::max(alprm.ls, 1);
 }
 
 void readalprm(int& argc, const char**& argv, int oc)
@@ -629,6 +620,7 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	const	char*	ps;
 	const	char*	cs = vl? strchr(vl, ':'): 0;
 	int	k = cs? atoi(cs + 1): 0;
+	int	crs;
 	if (k > max_simmtxes - 1) k = 0;
 	if (vl) {
 	  switch (opt) {
@@ -678,20 +670,13 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	    case 'H':
 		setthr(atof(vl)); break;
 	    case 'I': 
-		IntronPrm.a1 = 1.; IntronPrm.a2 = 0.;
-		sscanf(vl + 1, "%d %d %f %f %f %f %f %f %f %f %f %f %f %f", 
-		&IntronPrm.llmt, &IntronPrm.rlmt, 
-		&IntronPrm.mean, &IntronPrm.a1,
-		&IntronPrm.m1, &IntronPrm.t1, &IntronPrm.k1,
-		&IntronPrm.m2, &IntronPrm.t2, &IntronPrm.k2,
-		&IntronPrm.a2, &IntronPrm.m3, &IntronPrm.t3, &IntronPrm.k3);
+		IntronPrm.from_str(vl + 1);
 		break;
 	    case 'J': alprm2.spb = atof(vl); break;	// matching intron position
 	    case 'K': alprm2.termk1 = atoi(vl); break;	// max terminal gap length without penalty
-	    case 'L': IntronPrm.llmt = atoi(vl); 
-		      IntronPrm.hard_minl = 1; break;	// lower limit of intron
-	    case 'M': IntronPrm.maxl = int(ktof(vl)); 
-		      IntronPrm.hard_maxl = 1; break;	// maximum expected length of intron
+	    case 'L': IntronPrm.llmt = atoi(vl); break;	// lower limit of intron
+	    case 'M': IntronPrm.maxl = int(ktof(vl)); break;
+		      // maximum expected length of intron
 //	    case 'N': alprm2.nrmlipot = 1; break;	// normalize intron potential
 	    case 'Q': IntronPrm.nquant = atoi(vl); break;	// number of steps of rough ILD
 	    case 'S': alprm2.sss = atof(vl); 
@@ -701,7 +686,9 @@ const	char*	vl = getarg(argc, argv, num, ++oc);
 	    case 'U': alprm.ubh = atoi(vl); break;	// min vects for uni-dir Hirschberg
 	    case 'V': alprm.maxsp = atof(vl); break;	// max traceback volume
 	    case 'W': alprm2.w = atof(vl); break;	// match factor in very short alignment
-	    case 'X': algmode.crs = atoi(vl); break;	// cross-species				// set cross-species switch
+	    case 'X': crs = atoi(vl);			// cross-species
+		if (0 <= crs && crs < 3) algmode.crs = crs;
+		break;					// set cross-species switch
 	    case 'Y': IntronPrm.fact = atof(vl); break;	// amplitude of intron pen.
 	    case 'Z': alprm2.Z = atof(vl); break;	// intron potential
 	    default:  break;
@@ -720,8 +707,8 @@ void setSimmtxes(ComPmt ab, bool mdm, DefPrm* dp)
 {
 	int	upto = dp? 1: max_simmtxes;
 	if (!dp) dp = (ab == DxD? defNprm: defPprm);
-	int	odr[3] = {0, 1, 2};
-	if (algmode.crs) swap(odr[0], odr[1]);
+	int	odr[max_simmtxes] = {0, 1, 2, 3};
+	if (algmode.crs) std::swap(odr[0], odr[algmode.crs]);
 	DefPrm*	ddp = upto == 1? dp: dp + odr[0];
 	if (smn[4] == FQUERY) smn[4] = ddp->n;
 	else	ddp->n = smn[4];

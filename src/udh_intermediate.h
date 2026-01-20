@@ -73,9 +73,10 @@ public:
 	Udh_Imds(const int& n, int mi, const int& mm, const WINDOW& wdw, 
 	    const int& nol = NOL, const bool& lub = false)
 	 : n_imd(n) {
-	    imds = new UdhIntermediate*[n_imd];
+	    imds = new UdhIntermediate*[n_imd + 1];
 	    for (int i = 0; i < n_imd; ++i)
 		imds[i] = new UdhIntermediate(mi += mm, wdw, nol, lub);
+	    imds[n_imd] = 0;
 	}
 	~Udh_Imds() {
 	    for (int i = 0; i < n_imd; )

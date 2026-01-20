@@ -148,12 +148,14 @@ EiJuncSeq::EiJuncSeq(Eijmode mode, const char* eij, const char* gnmdb, int w)
 	char	genome[MAXL];
 	if (gnmdb) strcpy(genome, gnmdb);
 	if (!gnmdb || !*genome) {
-	    strncpy(genome, str, 8);
+	    for (int i = 0; i < 8; ++i)
+		genome[i] = str[i]? str[i]: '_';
 	    strcpy(genome + 8, "_g");
 	}
 	*genome = tolower(*genome);
-	strncpy(genspc, genome, 8);
-	dbs = new DbsDt(genome);
+	memcpy(genspc, genome, 8);
+	genspc[8] = '\0';
+	dbs = new DbsDt(genome, DNA);
 	if (gnmdb && !dbs) fatal(no_file, genome);
 	eijseq = new Seq(1);
 }

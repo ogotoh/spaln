@@ -8,7 +8,7 @@
 *	inputf		finputf		sinputf	
 *	promptin	prompt		progetc		progets
 *
-**	Osamu Gotoh, ph.D.	(-2001)
+*	Osamu Gotoh, ph.D.	(-2001)
 *	Saitama Cancer Center Research Institute
 *	818 Komuro, Ina-machi, Saitama 362-0806, Japan
 *
@@ -32,6 +32,7 @@
 #include "adddef.h"
 #include <dirent.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 /*	Default Paths/Names of FIles	*/
 
@@ -57,10 +58,6 @@
 #define BLASTMAT	"BLASTMAT"
 #endif
 
-#if LEAKTRACE
-#include "MemoryTrace.hpp"
-#endif
-
 //	Others
 
 static	const	int	QUERY = INT_MIN;
@@ -70,10 +67,17 @@ static	const	float	FQUERY = QUERY + 0.L;
 static	const	int	n_tabpath = 3;
 static	const	float	FSILENT = FQUERY + 1.L;
 static	const	float	FPOPUP = FQUERY + 2.L;
-
-extern	const	char*	gnm2tab;
-extern	const	char*	esc_code;
-extern	const	char*	font_end;
+static	const	char	gz_ext[] = ".gz";
+static	const	char	dat_ext[] = ".dat";
+static	const	char	datgz[] = ".dat.gz";
+static	const	char	dgz_ext[] = ".dgz";
+static	const	char	txt_ext[] = ".txt";
+static	const	char	no_file[] = "\'%s\' cannot be created!\n";;
+static	const	char	bad_file[] = "Bad binary file : %s !\n";
+static	const	char	not_found[] = "\'%s\' is not found!\n";
+static	const	char	esc_code[] = "\x1b[";
+static	const	char	font_end[] = "</font></b>";
+static	const	char	gnm2tab[] = "gnm2tab";
 
 enum CharColorCode {
 	CMC_BLACK = '0', CMC_RED, CMC_GREEN, CMC_YELLOW,
@@ -124,15 +128,17 @@ const	char*	out_file;
 
 class EscCharCtl {
 	FILE*	fd;
-	void	putctl(int maincode, int subcode = 0, int attr = 0);
+	void	putctl(const int& maincode, const int& subcode = 0, const int& attr = 0);
 	void	reset() {fputs(esc_code, fd); fputs("0m", fd);}
 public:
-	void	putchr(int c, int front = 0, int back = 0, int attr = 0) {
+	void	putchr(const int& c, const int& front = 0, 
+		const int& back = 0, const int& attr = 0) {
 	    putctl(front, back, attr);
 	    putc(c, fd);
 	    reset();
 	}
-	void	putstr(const char* s, int front = 0, int back = 0, int attr = 0) {
+	void	putstr(const char* s, const int& front = 0, const int& back = 0, 
+		const int& attr = 0) {
 	    putctl(front, back, attr);
 	    fputs(s, fd);
 	    reset();
@@ -145,7 +151,7 @@ class HtmlCharCtl {
 	void    putctl(const char* fg, const char* bg);
 	void    reset() {fputs(font_end, fd);}
 public:
-	void    putchr(int c, const char* front = 0, const char* back = 0) {
+	void    putchr(const int& c, const char* front = 0, const char* back = 0) {
 	    putctl(front, back);
 	    putc(c, fd);
 	    reset();
@@ -167,109 +173,81 @@ public:
 	int	taxon_code(const char* sqid, char** taxon);
 };
 
-class Ftable {
-	const	char* tabpath[3];
-	char*	subdir;
-	Gnm2tab*	g2t;
-public:
-	Ftable(const bool cur_dir = true) : subdir(0), g2t(0) {
-	    tabpath[0] = cur_dir? ".": 0;
-	    tabpath[1] = getenv(ALN_TAB);
-	    tabpath[2] = DEF_TAB_PATH;
-	}
-	~Ftable() {delete[] subdir; delete g2t;}
-	void	setSubDir(const char* dir) {
-	    if (!subdir || strcmp(subdir, dir))
-		subdir = strrealloc(subdir, dir);
-	}
-	void	setpath(const char* ps, const char* convtab = 0);
-	char*	getpath(char* fullpath, const char* fname);
-	DIR*	dopen(const char* dname, bool test);
-	FILE*	fopen(const char* fname, const char* mode);
-	FILE*	fopen(const char* fname, const char* envpath, const char* defpath);
-	Gnm2tab*	read_gnm2tab(int field = 5) {
-	    if (!g2t) g2t = new Gnm2tab(field);
-	    return (g2t);
-	}
-#if USE_ZLIB
-	gzFile	gzopen(const char* fname, const char* mode);
-	gzFile	gzopen(const char* fname, const char* envpath, const char* defpath);
-#endif
-};
-
 #ifdef  BSD
 #ifndef SEEK_SET
 enum {SEEK_SET, SEEK_CUR, SEEK_END};
 #endif
 #endif
 
-extern	OUTPRM	OutPrm;
-extern	Ftable	ftable;
-extern	char*	fgets_wocr(char* str, INT maxl, FILE* fd);
+extern	char*	fgets_wocr(char* str, const INT& maxl, FILE* fd);
 extern	char*	topath( char* res, const char* org);
 extern	char*	makefnam(const char* fnam, const char* defn, char* result);
-extern	char*	partfnam( char* part, const char* fname, const char* where);
+extern	char*	partfnam(char* part, const char* fname, const char* where);
 extern	FILE*	fopenpbe(const char* path, const char* name, const char* extent, 
-			const char* opt, int lvl = 0, char* buf = 0);
+			const char* opt, const int& lvl = 0, char* buf = 0);
 extern	FILE*	wfopen(const char* name, const char* mode);
 extern	FILE*	qopen(const char* dfname, const char* mode);
 extern	FILE*	qout(const char* dfn);
 extern	void	qclose();
 extern	void	setintval(const char* mssg, int* pval, int* back, int given);
-extern	void	setdblval(const char* mssg, double* pval, double* back, const double* given);
+extern	void	setdblval(const char* mssg, double* pval, double* back, 
+		const double*& given);
 extern	long	diskspc(char* drive);
-extern	void	setprompt(int prom, int ech);
+extern	void	setprompt(const int& prom, const int& ech);
 extern	int	getprompt();
 extern	void	prompt(const char* s,...);
 extern	int	progetc(const char* frmt,...);
 extern	char*	progets(char* str, const char* frmt,...);
 extern	int	promptin(const char* s,...);
 extern	int	sinputf(const char* s, const char* f,...);
-extern	int	sgetiarray(int* array, int size, const char** pps);
-extern	int	fgetiarray(int* array, int size, FILE* fd);
-extern	int	getiarray(int* array, int size, const char* ps);
-extern	size_t	file_size(FILE* fd);
+extern	int	sgetiarray(int* array, const int size, const char** pps);
+extern	int	fgetiarray(int* array, const int size, FILE* fd);
+extern	int	getiarray(int* array, const int size, const char* ps);
 extern	FILE*	out_fd;
-extern	const	char*	gz_unsupport;
 extern	char*	add_ext(const char* fn, const char* ext, char* buf);
+extern	char*	get_ext(char* text, const char* ext = 0);
 
-inline	size_t	file_size(const char* fn) {
+/*********************************************************************
+*	utilities
+*********************************************************************/
+
+inline	long	file_size(const char* fn) {
 	struct	stat buf;
-	return (stat(fn, &buf)? 0: buf.st_size);
+	return (stat(fn, &buf) == -1? -1L: buf.st_size);
 }
 
 inline	time_t	access_time(const char* fn) {
 	struct	stat buf;
-	return (stat(fn, &buf)? 0: buf.st_atime);
+	return (stat(fn, &buf) == -1? 0: buf.st_atime);
 }
 
 inline	time_t	modify_time(const char* fn) {
 	struct	stat buf;
-	return (stat(fn, &buf)? 0: buf.st_mtime);
+	return (stat(fn, &buf) == -1? 0: buf.st_mtime);
 }
 
 inline	time_t	change_time(const char* fn) {
 	struct	stat buf;
-	return (stat(fn, &buf)? 0: buf.st_ctime);
+	return (stat(fn, &buf) == -1? 0: buf.st_ctime);
 }
 
 inline	bool	is_file(const char* fn) {
 	struct	stat buf;
-	if (stat(fn, &buf)) return (false);
+	if (stat(fn, &buf) == -1) return (false);
 	return (S_ISREG(buf.st_mode));
+}
+
+inline	bool	is_filled_file(const char* fn) {
+	struct	stat buf;
+	if (stat(fn, &buf) == -1) return (false);
+	return (buf.st_size > 0L);
 }
 
 inline	bool	is_dir(const char* fn) {
 	struct	stat buf;
-	if (stat(fn, &buf)) return (false);
+	if (stat(fn, &buf) == -1) return (false);
 	return (S_ISDIR(buf.st_mode));
 }
-
-#if USE_ZLIB
-extern	gzFile	wgzopen(const char* name, const char* mode);
-extern	gzFile	gzopenpbe(const char* path, const char* name, const char* extent, 
-			const char* opt, int lvl = 0, char* buf = 0);
-#endif
 
 inline	FILE* outfd(const char* fn)
 {
@@ -277,12 +255,78 @@ inline	FILE* outfd(const char* fn)
 	return (out_fd);
 }
 
+/*********************************************************************
+*	zlib utilities
+*********************************************************************/
+
+extern	size_t	lgzread(gzFile gzfd, char* buf, size_t sz);
+extern	size_t	lgzwrite(gzFile gzfd, const char* buf, size_t sz);
+
+inline	size_t  fread(void* buf, const size_t& s, const size_t& c, gzFile gzfd) {
+	size_t	sz = s * c;
+	size_t	rv = (sz > size_t(INT_MAX))?
+	    lgzread(gzfd, (char*) buf, sz):
+	    gzread(gzfd, buf, sz);
+	return (rv <= 0? rv: rv / s);
+}
+
+inline	size_t	fwrite(const void* buf, const size_t& s, const size_t& c, gzFile gzfd) {
+	size_t	sz = s * c;
+	size_t	rv = (sz > size_t(INT_MAX))?
+	    lgzwrite(gzfd, (const char*) buf, sz):
+	    gzwrite(gzfd, buf, sz);
+	return (rv <= 0? rv: rv / s);
+}
+
+inline	int fputs(const char* buf, gzFile gzfd) {
+	return (gzputs(gzfd, buf));
+}
+
+inline	char* fgets(char* buf, const int& len, gzFile gzfd) {
+	return (gzgets(gzfd, buf, len));
+}
+
+inline	int fputc(const int& c, gzFile gzfd) {
+	return (gzputc(gzfd, c));
+}
+
+inline	int fgetc(gzFile gzfd) {
+	return (gzgetc(gzfd));
+}
+
+inline	int ungetc(const int& c, gzFile gzfd) {
+	return (gzungetc(c, gzfd));
+}
+
+inline	int rewind(gzFile gzfd) {
+	return (gzrewind(gzfd));
+}
+
+inline	int fseek(gzFile gzfd, const long& offset, const int& whence) {
+	return (gzseek(gzfd, offset, whence));
+}
+
+inline	long ftell(gzFile gzfd) {
+	return (gztell(gzfd));
+}
+inline	int feof(gzFile gzfd) {
+	return (gzeof(gzfd));
+}
+inline	int fclose(gzFile gzfd) {
+	return (gzclose(gzfd));
+}
+
+inline	int fflush(gzFile gzfd) {
+	return (gzflush(gzfd, Z_SYNC_FLUSH));
+}
+
 // Is xxx.gz file?
 
-inline bool is_gz(const char* fn)
+template <typename char_t>
+inline char_t* is_gz(char_t* fn)
 {
-	const	char*	dot = strrchr(fn, '.');
-	return (dot && !strcmp(dot + 1, "gz"));
+	char_t*	dot = (char_t*) strrchr(fn, '.');
+	return ((dot && !strcmp(dot, gz_ext))? dot: 0);
 }
 
 // read through until new line
@@ -295,6 +339,98 @@ int	flush_line(file_t fd)
 	return (c);
 }
 
-/*  End of iolib.h  */
+template <typename file_t>
+char* fgetw(char* buf, const INT& maxl, file_t fd, const char* delm = stddelim)
+{
+	int	c;
+	char*	qs = buf;
+	char*	ts = buf + maxl - 1;
+	while ((c = fgetc(fd)) != EOF && strchr(stddelim, c)) ;
+	do {
+	    *qs++ = c;
+	    c = fgetc(fd);
+	} while (c != EOF && !strchr(stddelim, c) && qs < ts);
+	*qs = '\0';
+	return (buf);
+}
 
-#endif
+extern	gzFile	wgzopen(const char* name, const char* mode);
+extern	gzFile	gzopenpbe(const char* path, const char* name, 
+	const char* extent, const char* opt, 
+	const int& lvl = 0, char* buf = 0);
+
+/*********************************************************************
+*	Classes for read to or write from standard or gzipped file
+*********************************************************************/
+
+struct ReadFile {
+	FILE*	fd = 0;
+	gzFile	gzfd = 0;
+	int	dtype = 0;
+	int	open(const char* fname, const char* extnt = datgz);
+	void	close() {
+	    if (fd && fd != stdin) {fclose(fd); fd = 0;}
+	    if (gzfd) {fclose(gzfd); gzfd = 0;}
+	}
+	ReadFile() {}
+	ReadFile(const char* fname, const char* extnt = datgz) {
+	    if (fname) dtype = open(fname, extnt);
+	}
+	~ReadFile() {close();}
+};
+
+struct WriteFile {
+	FILE*	fd = 0;
+	gzFile	gzfd = 0;
+	void	open(const char* fname, const int& text = 0, 
+		const bool& gzip = true, const char* in_name = 0);
+	void	close() {
+	    if (fd && fd != stdout) {fclose(fd); fd = 0;}
+	    if (gzfd) {fclose(gzfd); gzfd = 0;}
+	}
+	WriteFile() {}
+	WriteFile(const char* fname, const int& text = 0, 
+		const bool& gzip = true, const char* in_name = 0) {
+	    if (fname) open(fname, text, gzip, in_name);
+	    else	fd = stdout;
+	}
+	~WriteFile() {close();}
+};
+
+/*********************************************************************
+*	Ftable class
+*********************************************************************/
+
+class Ftable {
+	const	char* tabpath[3];
+	char*	subdir;
+	Gnm2tab*	g2t;
+public:
+	Ftable(const bool& cur_dir = true) : subdir(0), g2t(0) {
+	    tabpath[0] = cur_dir? ".": 0;
+	    tabpath[1] = getenv(ALN_TAB);
+	    tabpath[2] = DEF_TAB_PATH;
+	}
+	~Ftable() {delete[] subdir; delete g2t;}
+	void	setSubDir(const char* dir) {
+	    if (!subdir || strcmp(subdir, dir))
+		subdir = strrealloc(subdir, dir);
+	}
+	void	setpath(const char* ps, const char* convtab = 0);
+	char*	getpath(char* fullpath, const char* fname);
+	DIR*	dopen(const char* dname, const bool& test);
+	FILE*	fopen(const char* fname, const char* mode);
+	FILE*	fopen(const char* fname, const char* envpath, const char* defpath);
+	int	ropen(ReadFile& fp, const char* fname, const char* extnt);
+	Gnm2tab*	read_gnm2tab(int field = 5) {
+	    if (!g2t) g2t = new Gnm2tab(field);
+	    return (g2t);
+	}
+	gzFile	gzopen(const char* fname, const char* mode);
+	gzFile	gzopen(const char* fname, const char* envpath, const char* defpath);
+};
+
+extern	OUTPRM	OutPrm;
+extern	Ftable	ftable;
+
+#endif	// End of iolib.h

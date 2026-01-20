@@ -25,7 +25,11 @@
 *
 *****************************************************************************/
 
+#ifndef	_ILDPDF_H_
+#define	_ILDPDF_H_
+
 #include "stdtype.h"
+#include "ild_data.h"
 #include "dist2.h"
 #include <math.h>
 #include <vector>
@@ -48,7 +52,7 @@ enum	IldOutMode {PDF, CDF, Penalty};
 
 typedef	double	(*DblDbl)(double x);
 
-struct	LenFrq {int len; double frq;};
+struct	dLfp {int len; double frq;};
 struct	LildPrm {int minfreq, ndiv, minx, maxx, n_qtl, k_order, n_coeff; 
 	double llmt, ulmt, psdcnt, max_qtl;};
 struct	GslPrm {int n_worksp, opt_max_iter, rsl_max_iter; 
@@ -56,9 +60,7 @@ struct	GslPrm {int n_worksp, opt_max_iter, rsl_max_iter;
 struct	FitIndex {double val[3];};
 typedef	std::vector<FitIndex>::iterator	FiiItr;
 
-#if M_THREAD
 	typedef struct drand48_data     Drand48_data;
-#endif
 
 static	const	int	NoDistParam[] = {4, 3, 3, 4, 4, 4};
 static	const	double	sqrt2pi = 2.50662827463;// sqrt(2 * pi)
@@ -86,20 +88,20 @@ extern	IldOutMode	ildoutmode;
 extern	const	char*	gnuplot_terminal(const char* ext);
 
 class Verbout {
-	int	pro_phase;
-	int	iter_no;
+	int	pro_phase = 1;
+	int	iter_no = 0;
 public:
-	Verbout() {pro_phase = 1; iter_no = 0;}
+	Verbout() {}
 	void	set_phase(int phs) {pro_phase = phs; iter_no = 0;}
 	void	printout(int n, const double* p, double fx, const char* spc = 0);
 };
 
 class SpecList : public StrHash<int> {
-	int	n_spec;
+	int	n_spec = 0;
 public:
 	SpecList(int ac, const char** av);
 	~SpecList() {}
-	int	size() {return (n_spec);}
+	int	size() const {return (n_spec);}
 };
 
 // dparam[] = {m1, t1, k1, a1, m2, t2, k2, a2, m3, t3, k3, a3}
@@ -112,11 +114,12 @@ public:
 	int	n_modes = 0;
 	int	m_size = 0;
 	bool	vrtl = false;
-	char*	sname = 0;
+	char*	genspc = 0;
 	int	n_param = 0;
 	double	dparam[paramsize];
+	double	min_aic = DBL_MAX;
 	int	sid = 0;
-	int	n_sample = 0;
+	INT	n_sample = 0;
 	float*	k_th_qtil = 0;
 	double*	cdf_table = 0;
 	int	min_x = 0;
@@ -130,21 +133,29 @@ public:
 	bool	proper();
 	bool	empty() const {return (!n_param);}
 	char*	strget(char* str, char** terms = 0);
-	int	fget(FILE* fd, const char* fn = 0);
+template <typename file_t>
+	int	fget(file_t& fd, const char* fn = 0) {
+	    char    str[MAXL];
+	    char*   ps = 0;
+	    while ((ps = fgets(str, MAXL, fd)))
+		if (*ps != '#') break;
+	    if (!ps) return (EOF);
+	    return (strget(str)? OK: IGNORE);
+	}
 	void	clear() {
 	    if (!vrtl) {
-		delete[] sname; delete[] k_th_qtil; delete[] cdf_table;
+		delete[] genspc; delete[] k_th_qtil; delete[] cdf_table;
 	    }
 	    n_modes = n_param = sid = n_sample = min_x = max_x = 0;
 	    vrtl = false;
-	    sname = 0; k_th_qtil = 0; cdf_table = 0;
+	    genspc = 0; k_th_qtil = 0; cdf_table = 0;
 	}
 	void	complete();
 	int	single_mode(double q123_4[]);
 	void	copy_from(const IldPrm& src) {
-	    char*	sn = sname;
+	    char*	sn = genspc;
 	    *this = src;
-	    sname = sn;
+	    genspc = sn;
 	}
 	bool	reduce_dim() {
 	    if (n_param > m_size) {
@@ -154,11 +165,14 @@ public:
 	    }
 	    return (false);
 	}
-	int	get_IldPrm(char* str, int minsamples = 0, double* tparam = 0);
+	int	get_IldPrm(char* str, const INT& db_min_samples = 0, 
+		double* tparam = 0);
+	bool	good() const {return (n_sample >= min_samples);}
 	bool	convert(StatDist topdf);
 	int	printprm(FILE* fd);
 	void	calc_qtl(int nq);
 	void	calc_cdf();
+	char*	entry() const {return (genspc);}
 	double	aic(double fx) {return(2 * (n_param + fx));}
 	double	bic(double fx) {
 	    return ((n_param * log((double) n_sample)) + 2 * fx);
@@ -173,7 +187,7 @@ public:
 	IldPrm(Ild* inst, StatDist pdf = FRECHET);
 	~IldPrm(){
 	    if (!vrtl) {
-		delete[] sname; sname = 0;
+		delete[] genspc; genspc = 0;
 		delete[] k_th_qtil; k_th_qtil = 0;
 		if (cdf_table) {delete[] (cdf_table + min_x); cdf_table = 0;}
 	    }
@@ -181,38 +195,39 @@ public:
 };
 
 class Ild {
-	double	nfact;
+	double	nfact = 0;
 public:
-	int	sid;
-	bool	vrtl;
-	int	ntotal;
-	double	ftotal;
-const	char*	fname;
-	LenFrq*	intlf;
-	float*	k_th_qtil;
-	bool	empty() {return ftotal == 0;}
+	int	sid = 0;
+	bool	vrtl = false;
+	int	ntotal = 0;
+	double	ftotal = 0;
+const	char*	entry = 0;
+	dLfp*	intlf = 0;
+	float*	k_th_qtil = 0;
+	bool	empty() const {return ftotal == 0;}
 	Ild() {}
-	Ild(const char* fn, int id = 0);
-	Ild(FILE* fd, const char* fn, int id)
-	    : nfact(0), sid(id), vrtl(false), ntotal(0), 
-		ftotal(0), fname(fn), intlf(0), k_th_qtil(0) {
+	Ild(const char* fn, int id = 0) : sid(id) {
+	    FILE*	fd = 0;
+	    fget(fd, fn);
+	}
+template <typename file_t>
+	Ild(file_t fd, const char* fn, int id) : sid(id) {
 	    fget(fd, fn);
 	}
 	Ild(Ild& src) {
 	    *this = src;
 	    vrtl = true;
 	}
-#if M_THREAD
 	Ild(Ild* src, Drand48_data* drand_buff);
-	Ild(IldPrm* ildprm, int nsample, Drand48_data* drand_buff, const char* snm = 0);
-#else
-	Ild(Ild* src);	// bootstrap resampling
-	Ild(IldPrm* ildprm, int nsample, const char* snm = 0);	// simulated ild
-#endif
-	~Ild();
-	LenFrq*	begin() {return intlf;}
-	LenFrq*	end() {return intlf + ntotal;}
-	int	fget(FILE* fd, const char* fn = 0);
+	Ild(IldPrm* ildprm, const INT& nsample, 
+		Drand48_data* drand_buff, const char* snm = 0);
+	~Ild() {
+	    if (!vrtl) {delete[] entry; delete[] intlf; delete[] k_th_qtil;}
+	}
+	dLfp*	begin() {return intlf;}
+	dLfp*	end() {return intlf + ntotal;}
+template <typename file_t>
+	int	fget(file_t& fd, const char* fn = 0);
 	void	print_lf(const char* fn = 0);
 	double	rmsd(IldPrm* dp);
 	double	mean(double* v = 0);
@@ -224,26 +239,65 @@ const	char*	fname;
 	void	normalize(double to = 1.);
 	int	fitild(IldPrm* dp, double* pfx = 0);
 	void	calc_qtl(int nq);
-	int	n_samples() {return (int(ftotal));}
-	int	minx() {return (intlf->len);}
-	int	maxx() {return (intlf[ntotal - 1].len);}
+	INT	n_samples() {return (INT(ftotal));}
+	int	minx() const {return (intlf->len);}
+	int	maxx() const {return (intlf[ntotal - 1].len);}
+	bool	good() const {return (ftotal >= min_samples);}
 };
+
+// compatibile with CalcServer::VarLoader
+
+template <typename file_t>
+int Ild::fget(file_t& dmyfd, const char* fn)
+{
+	if (dmyfd) {
+	    fclose(dmyfd);
+	    dmyfd = 0;
+	}
+	Ild_data	ild_dt(fn);
+	char	str[LINE_MAX];
+	strcpy(str, fn);
+	char*	sl = strrchr(str, '/');
+	char*	dot = strchr(str, '.');
+	sl = sl? sl + 1: str;
+	if (dot) *dot = '\0';
+	entry = strrealloc(0, sl);
+	ntotal = ild_dt.size();
+	intlf = new dLfp[ntotal + 1];
+	dLfp*	wlf = intlf;
+	sLfp*	ilf = ild_dt.lenfrq;
+	sLfp*	elf = ilf + ntotal;
+	for (ntotal = 0; ilf < elf; ++ilf) {
+	    if (ilf->len > lildprm.minx && ilf->len <= lildprm.maxx) {
+		wlf->len = ilf->len;
+		(wlf++)->frq = ilf->frq;
+		++ntotal;
+		ftotal += ilf->frq;
+	    }
+	}
+	if (ntotal < lildprm.minfreq && ftotal < lildprm.minfreq) {
+	    delete[] intlf; intlf = 0;
+	    return (IGNORE);
+	}
+	if (lildprm.n_qtl) calc_qtl(lildprm.n_qtl);
+	return (OK);
+}
 
 // fit data to B-spline
 
 class Bspline {
 protected:
-	int	k_order;
-	int	n_breaks;
-	int	n_coeffs;
+	int	k_order = 0;
+	int	n_breaks = 0;
+	int	n_coeffs = 0;
 	gsl_bspline_workspace*	bsws;
 #if GSL_MAJOR_VERSION == 1
 	gsl_bspline_deriv_workspace*	bsdws;
 #endif
-	gsl_vector*	Bk;
-	gsl_matrix*	dB;
-	gsl_vector*	coeff;
-	gsl_matrix*	cov;
+	gsl_vector*	Bk = 0;
+	gsl_matrix*	dB = 0;
+	gsl_vector*	coeff = 0;
+	gsl_matrix*	cov = 0;
 public:
 	Bspline(PutIntoBins& bins, double* dt, 
 		int ko = 4, int nc = 12, int n_th_d = 0);
@@ -265,44 +319,81 @@ public:
 
 class Lild : public PutIntoBins {
 friend	class	GnuPlotLild;
-	Bspline*	bsp;
+	Bspline*	bsp = 0;
 public:
-	int	sid;
-	double	ftotal;
-const	char*	fname;
+	int	sid = 0;
+	double	ftotal = 0;
+const	char*	entry = 0;
 	Lild(DblDbl t = log10, DblDbl r = exp10)
-	    : PutIntoBins(lildprm.ndiv, lildprm.llmt, lildprm.ulmt, t, r),
-		bsp(0), sid(0), ftotal(0), fname(0) {}
+	    : PutIntoBins(lildprm.ndiv, lildprm.llmt, lildprm.ulmt, t, r)
+	{}
 	Lild(Lild& src) : PutIntoBins(src) { *this = src; }
 	Lild(Ild& ild, DblDbl t = log10, DblDbl r = exp10);
-	Lild(FILE* fd, const char* fn, DblDbl t = log10, DblDbl r = exp10)
+	Lild(const char* fn, const int& sd, DblDbl t = log10, DblDbl r = exp10);
+template <typename file_t>
+	Lild(file_t fd, const char* fn, DblDbl t = log10, DblDbl r = exp10)
 	    :  PutIntoBins(lildprm.ndiv, lildprm.llmt, lildprm.ulmt, t, r),
-		bsp(0), sid(0), ftotal(0), fname(fn) {
+		bsp(0), sid(0), ftotal(0) {
 	    fget(fd, fn);
 	}
-	~Lild() {delete bsp;}
-	int	fget(FILE* fd, const char* fn = 0);
+	~Lild() {delete bsp; delete[] entry;}
+template <typename file_t>
+	int	fget(file_t& fd, const char* fn = 0);
 	void	fit2bspline(int ko, int n_coef, int n_th_d = 0) {
 	    bsp = new Bspline(*this, begin(), n_coef, n_th_d);
 	}
 	void	smooth();
 	int	estimate_n_mode();
+	bool	good() const {return (true);}
 };
 
+// compatibile with CalcServer::VarLoader
+
+template <typename file_t>
+int Lild::fget(file_t& dmyfd, const char* fn)
+{
+	if (dmyfd) {
+	    fclose(dmyfd);
+	    dmyfd = 0;
+	}
+	Ild_data	ild_dt(fn);
+	reset();
+	char	str[LINE_MAX];
+	strcpy(str, fn);
+	char*	sl = strrchr(str, '/');
+	char*	dot = strchr(str, '.');
+	sl = sl? sl + 1: str;
+	if (dot) *dot = '\0';
+	entry = strrealloc(0, sl);
+	int	ntotal = ild_dt.size();
+	sLfp*	ilf = ild_dt.lenfrq;
+	sLfp*	elf = ilf + ntotal;
+	for ( ; ilf < elf; ++ilf)
+	    accumulate(ilf->len, (double) ilf->frq);
+	normalize(1., lildprm.psdcnt);
+	ftotal = samples();
+	if (ftotal < lildprm.minfreq) {
+	    ftotal = 0;
+	    erase();
+	    return (IGNORE);
+	}
+	return (OK);
+}
+
 class GnuPlotLild : public PutIntoBins {
-	int	n_lild;
-	int	n_fitf;
-	int	n_clmns;
-	int	n_rows;
-	int	clmn;
-	double**	data;
-	double	normal_factor;
-	void	initialize(IldPrm* dprm = 0, bool ildents = 0); 
-	void	add(IldPrm* dprm, bool ildents = 0);
+	int	n_lild = 0;
+	int	n_fitf = 0;
+	int	n_clmns = 0;
+	int	n_rows = 0;
+	int	clmn = 0;
+	Strlist	sname;
+	double**	data = 0;
+	double	normal_factor = 1.;
+	void	initialize(IldPrm* dprm = 0, bool ildents = false); 
+	void	add(IldPrm* dprm, bool ildents = false);
 	void	add(Ild* lild);
 	void	add(Lild* lild);
 public:
-	Strlist	sname;
 	void	plot(const char* oform = 0, Strlist* iname = 0, 
 		StrHash<int>* phyl_code = 0, IldPrm* dprm = 0);
 	GnuPlotLild(int c = 1, int f = 0, DblDbl t = log10, DblDbl r = exp10) 
@@ -581,3 +672,4 @@ extern double dist_ilds(Lild* a, Lild* b, DistMethod mthd);
 extern SpecList* make_speclist(int nn, const char** mm);
 extern void delete_speclist();
 
+#endif	// _ILDPDF_H_

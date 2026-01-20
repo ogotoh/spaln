@@ -209,7 +209,8 @@ public:
 #endif
 	    black_Rvulmn{nevsel, end_of_ulk, 
 		SHORT(a->left), SHORT(a->right), b->right},
-	    buf_size(wdw.width + 6 * nelem)
+	    buf_size((wdw.width + 2 + 7 * nelem) / nelem * nelem)
+//	    buf_size((wdw.width + 3 + 6 * nelem + nelem - 1) / nelem * nelem)
 {
 
 #define	Add(a, b)	this->add(a, b)
@@ -236,10 +237,10 @@ public:
 *	  5	 0 + 0	 0 + 0	12 + 3	12 + 3	0 + 0	vmf2
 ******************************************************************/
 
-	    size_t		abufsiz  = 52 * Np1 + 12 * nelem;
-	    if (mode > 1)	abufsiz += 24 * Np1 + 18 * nelem;
+	    size_t	abufsize  = 52 * Np1 + 12 * nelem;
+	    if (mode > 1)	abufsize += 24 * Np1 + 18 * nelem;
 
-	    abuf = new var_t[abufsiz];
+	    abuf = new var_t[abufsize];
 	    sm_a = abuf;
 	    cp_a[0] = sm_a + Np1;
 	    s5_a[0] = cp_a[0] + 3 * Np1;
@@ -547,8 +548,10 @@ void SimdAln2h1::
 fhinitH1(Anti_rhomb_coord<TBU_t>* trb)
 {
 	vec_set(vbuf, nevsel, 2 * buf_size);
-const	int	rl = b->left - 3 * a->left;
 const	bool	usec = mode > 1;
+const	int	rl = b->left - 3 * a->left;
+const	int	rr = std::min(wdw.up, b->right - 3 * a->left);
+const	int	rz = rr + (trb? 0: 6 * nelem + 3);
 	TBU_t*	row0 = trb? trb->set_point(a->left, b->left): 0;
 
 	if (vmf) {	// ordinary traceback
@@ -560,11 +563,11 @@ const	bool	usec = mode > 1;
 		var_t	upb;
 		var_t	lwb = i_s2(&upb, ptr);
 	 	if (a->inex.exgl) {
-		    vec_clear(hc + rl, wdw.up - rl);
-		    vec_clear(hd + rl, wdw.up - rl);
+		    vec_clear(hc + rl, rz - rl);
+		    vec_clear(hd + rl, rz - rl);
 		} else {
-		    vec_set(hc + rl, lwb, wdw.up - rl);
-		    vec_set(hd + rl, upb, wdw.up - rl);
+		    vec_set(hc + rl, lwb, rz - rl);
+		    vec_set(hd + rl, upb, rz - rl);
 		}
 		if (b->inex.exgl) {
 		    vec_clear(hc + wdw.lw, rl - wdw.lw);
@@ -575,9 +578,9 @@ const	bool	usec = mode > 1;
 		}
 	    } else {
 		if (a->inex.exgl) 
-		    vec_clear(hc + rl, wdw.up - rl);
+		    vec_clear(hc + rl, rz - rl);
 		else
-		    vec_set(hc + rl, var_t(ptr), wdw.up - rl);
+		    vec_set(hc + rl, var_t(ptr), rz - rl);
 		if (b->inex.exgl)
 		    vec_clear(hc + wdw.lw, rl - wdw.lw);
 		else
@@ -588,10 +591,10 @@ const	bool	usec = mode > 1;
 	} else if (usec) {			// Hirschberg
 	    vec_set(bbuf, var_t(a->left), 2 * buf_size);
 	    int	r = wdw.lw;
-	    int	rr = a->inex.exgl? rl: wdw.up;
+	    int	ru = a->inex.exgl? rl: rr;
 	    var_t*	c = usec? hc + r: 0;
 	    var_t*	d = used? hd + r: 0;
-	    while (r < rr)
+	    while (r < ru)
 		*c++ = i_s2(d? d++: 0, r++);
 	    for (int i = 0, r = rl; r >= wdw.lw; --r)
 		hb[r] = a->left + (i++ / 3);	// ml
@@ -604,8 +607,6 @@ const	bool	usec = mode > 1;
 	    if (usec) fc[rl] = i_s2(fd? fd + rl: 0, rl);
 	}
 
-	int	rr = b->right - 3 * a->left;
-	if (wdw.up < rr) rr = wdw.up;
 	int	r = rl;
 // global
 	if (!a->inex.exgl) {
@@ -619,9 +620,9 @@ const	bool	usec = mode > 1;
 	    hv[r++] = pwd->GapW2;
 	    hv[r++] = pwd->GapW3;
 	    if (pwd->BasicGEP) {
-		int	x = (nevsel - pwd->GapW3) / pwd->BasicGEP + r;
-		if (x < rr) rr = x;
-		for ( ; r < rr; ++r)
+		int	ru = (nevsel - pwd->GapW3) / pwd->BasicGEP + r;
+		if (rr < ru) ru = rr;
+		for ( ; r < ru; ++r)
 		    hv[r] = hv[r - 3] + pwd->BasicGEP;
 	    } else if (rr > r)
 		vec_set(hv + r, hv[r - 1], rr - r);
@@ -679,7 +680,8 @@ const	    int	gl = r - lend[p];
 		    *e = 1;
 		} else if (usec)
 		    *c = i_s2(d, r);
-	    } else if (row0) *row0 = static_cast<TBU_t>(TraceBackCode::HORI);
+	    } else if (row0)
+		*row0 = static_cast<TBU_t>(TraceBackCode::HORI);
 ;	// HORI
 	    if (c) ++c;
 	    if (d) ++d;
@@ -747,14 +749,15 @@ const		var_t	sig5 = (Local && bb->sig5 > 0)? bb->sig5: 0;
 	    }
 	} else {
 	    bb += h9 - h;
-const	    var_t	y = h9[-3] + bb->sigT;
+const	    var_t	y = h9[-3] + bb[-2].sigT;
 	    if (y > *h9) {
 		*h9 = y;
 		maxr = rr - 3;
 	    }
 	}
 	if (b->inex.exgr) {
-	    rw = std::min(wdw.up - 1, b->right - 3 * a->left);
+	    if (vmf) rw = std::min(wdw.up - 1, b->right - 3 * a->left);
+	    else	rw = rr;
 	    var_t	g[3] = {nevsel, nevsel, nevsel};
 	    h = hv + rw - 3;
 	    for (int p = 0; h > h9; --h, --rw, p = next_p[p]) {
@@ -842,7 +845,7 @@ const	int	md = checkpoint(0);
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + 3 * ml);
-const	    int	n9 = std::min(b->right, wdw.up + 3 * (ml + j9) + 1) + 3 * j9;
+const	    int	n9 = std::min(b->right, wdw.up + 3 * (ml + j9)) + 3 * j9;
 	    int	n0 = n - 3 * j8;
 const	    int	mp1 = ml + 1;
 	    int	q = (n + 3 * mp1) % 6;
@@ -1054,7 +1057,7 @@ const		    int	kp1 = k + 1;
 		}
 
 //	intron 5' boundary forward phase
-		if (spj && donor_q[p]->remain()) {
+		if (spj && donor_q[p]->remain() && n > 1) {
 		    if (donor_q[p]->head() < n0) donor_q[p]->pull();
 		    if (donor_q[p]->remain())
 			to_spj(*donor_q[p], ml, n, q);
@@ -1133,7 +1136,7 @@ regist_v	hd_v, fd_v, ed_v, qd_v;	// used only when used == true
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + 3 * ml);
-	    int	n9 = std::min(b->right, wdw.up + 3 * (ml + j9) + 1) + 3 * j9;
+	    int	n9 = std::min(b->right, wdw.up + 3 * (ml + j9)) + 3 * j9;
 	    int	n0 = n - 3 * j8;
 	    int	mp1 = ml + 1;
 	    int	q = modN<6>(n + 3 * mp1);
@@ -1365,7 +1368,7 @@ const			int	kp1 = k + 1;
 		}
 
 //	intron 5' boundary forward phase
-		if (spj && donor_q[p]->remain()) {
+		if (spj && donor_q[p]->remain() && n > 1) {
 		    if (used) Store(qd_a[p], qd_v);
 		    if (donor_q[p]->head() < n0) donor_q[p]->pull();
 		    if (donor_q[p]->remain())

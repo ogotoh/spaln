@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.7
-#### Last updated: 2025-05-22
+#### Present Version 3.0.8
+#### Last updated: 2026-01-20
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -34,7 +34,8 @@ modifications. The accessory program **sortgrcd** sorts the gene loci found
 by **spaln** in the order of chromosomal position and orientation. From version
 2.3.2, **spaln** and **sortgrcd** can handle gzipped genome/database files and
 'block' files without prior expansion. From version 2.3.2a, compressed query 
-sequence file(s) may also be accepted. From version 2.4.0, multiple files 
+sequence file(s) may also be accepted, although not preferably recommended 
+(see [Execution](#Exec)). From version 2.4.0, multiple files 
 corresponding to different output forms can be generated at a single run. 
 In version 3.0.0, multi-intermediate unidirectional Hirschberg method is adopted. 
 Together with simd-based vectorization, the new algorithm contributes to 
@@ -115,8 +116,7 @@ Formatting is optional for amino acid sequence database search.
 
 1. `% cd seqdb`
 2. Download or copy genomic sequences or protein database sequence in multi-fasta 
-format. If **spaln** is [compiled](#compile) accordingly, gzipped file need not 
-be uncompressed (the file name must be _X_.gz).
+format. Gzipped file need not be uncompressed (the file name must be _X_.gz).
 3. To use 'makeidx.pl' command, chromosomal sequences must be concatenated into 
 a single file. The extension of the genomic sequence file must be '.mfa' or '.gf', 
 and protein database sequence must be '.faa', to render 'make' command effective. 
@@ -152,13 +152,19 @@ not specified, *MAX_GENE* is also estimated from the genome size.
    * -Xb*N*: Block size (inferred from genome size)
    * -Xk*N*: Word size (inferred from block size)
    * -Xs*N*: Distance between neighboring seeds (= *k*)
+ * Comment:
+   For a very large genome (e.g. > 10G bp), X.seq file is better to be uncompressed. 
+As gzipped files are loaded into memory, a large sequence can exhaust (virtual) memory, 
+leading to severe slowdown of the execution rate due to frequent swapping.
 
 ## <a name="Exec">Execution</a>
 
 1. Prepare protein, cDNA, or genomic segment sequence(s) in (multi-)fasta format
 (denoted by *query* below). From 2.3.2a, gzipped fasta file(s) may be used as 
-the query without prior expansion. (**Warning**: under multi-thread environment, 
-gzipped query may severalfold reduce execution rate.)
+the query without prior expansion. (**Warning:** However, gzipped query may 
+severalfold reduce execution rate, particularly under multi-thread environment. 
+Moreover, there is a report that gzipped query causes segmentation fault under
+some computer system.)
 2. Store *query* to _work_.
 3. `% cd work`
 4. Run **spaln** in one of the following four modes. **Spaln**
@@ -302,20 +308,21 @@ or more comment lines starting with ';C', such as
       to a conserved intron position (10)
      * -yL *N*:	Minimum intron length (30, 30)
      * -yM *N*:	Maxmum intron length (unset)
-     * -yQ *N*: Number of categories of coarse grained ILD (5)
+     * -yQ *N*: Number of categories of coarse grained ILD (10)
      * -yS *N*:	*N* specifies the percentile
       contribution of the species-specific splice signal. The other part is
       derived from the universal signal given to the dinucleotides at the ends
       of an intron. An omission of *N* implies *N* = 100.
      * -yX *N*:	*N* = 0: set parameter values for intra-species comparison.
-      *N* = 1: set parameter values for cross-species comparison. The default value for *N* is 0 or 1 for DNA or protein query, respectively.
+      *N* = 1: set parameter values for cross-species comparison. *N* = 2: 
+      set parameter values for remote cross-species comparison. (1).
      * -yY *N*:	Relative contribution of length-dependent part of intron penalty (8)
-     * -yZ *N*:	Relative contribution of oligomer composition within an intron (0)
+     * -yZ *N*:	Relative contribution of intron potential (0)
 
 5. **Sortgrcd**
   * **Sortgrcd** is used to recover the output of **spaln** with -O12 option, to apply some filtering, and also to rearrange the output of multiple **spaln** runs.
   * Run **sortgrcd** as follows:  
-      `% sortgrcd [options] xxx.grd(.gz)`
+      `% sortgrcd [options] [path/]xxx.qrd(.gz)`
   * Options:
     * -C _N_: Minimum cover rate = % nucleotides in predicted exons / length of *query* (x 3 if query is protein) (0-100)
     * -E _N_: Report only the best (*N*=1) or all (*N*=2) results per gene locus (1)
@@ -334,7 +341,7 @@ or more comment lines starting with ';C', such as
     * -u _N_:	Maximum number of unpaired (gap) sites within 20 bp from the nearest exon-intron boundary
   * By default, no filter listed above is applied.
   * When the output of **spaln** is separated into several files, the combined
-results are subjected to the sorting. Although xxx.grd (or xxx.grd.gz) files are assigned as the
+results are subjected to the sorting. Although xxx.qrd (or xxx.qrd.gz) files are assigned as the
 argument, there must be corresponding xxx.erd and xxx.qrd (or xxx.erd.gz and
 xxx.qrd.gz) files in the same directory.
   * In the default output format, the gene structure corresponding to each
@@ -359,6 +366,28 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.8
+1. Recover a serious bug concerning with saturated 
+addition/subtraction that sneaked in ver.3.0.5. 
+2. Statistical models of Intron-length distribution in IldModel.txt 
+are more than doubled (from 1869 to 4212 species). Spaln now uses ILD model 
+specific to individual species rather than that specific to a species group 
+such as "Tetrapod". Other parameters are still taken from species groups. 
+3. pthread and zlib libraries are now mandatory. Conditional compilation 
+with respect to presence/absence of these libraries has been abolished. 
+4. Species-specific parameter files (CodePotTab, IntronPotTab, Splice3, 
+and Splice5) are accessible in text, binary (.dat), or gzipped binary (.dgz) 
+format. 
+A gzipped binary file occupies 3~14 times less disk space than the 
+corresponding text file. Moreover, a compact file can be more rapidly 
+loaded into memory than a text file. 
+5. In this relation, the scripts and relevant utilities used for generating 
+species-specific parameter files are updated, [see](makessp.md). 
+6. Miscellaneous refinements of the codes have been added for better 
+performance and maintenance. As a results, most performance indices have
+been improved (particularly with -A1 and -A2 options) from those 
+reported in [Ref 7](#Ref7).
+
 ## Changes in version 3.0.7
 1. Update simd_functions.h. A few functions that are not included 
 in some x86intrin.h header file are replaced by other equivalent ones.
@@ -586,4 +615,4 @@ Spaln3: improvement in speed and accuracy of genome mapping and spliced alignmen
 
 * * *
 
-Copyright (c) 1997-2024 Osamu Gotoh (gotoh.osamu.67a@st.kyoto-u.ac.jp) All Rights Reserved.
+Copyright (c) 1997-2026 Osamu Gotoh (gotoh.osamu.67a@st.kyoto-u.ac.jp) All Rights Reserved.

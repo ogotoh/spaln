@@ -39,6 +39,7 @@ enum	GslAlg {ASIS, CONJ_FR, CONJ_PR, BFGS1, BFGS2, NMSIMP1, NMSIMP2, NMRAND};
 
 typedef	double (*Dbl2DblFunc)(double);
 
+static	const	int	date = 260112;
 static	const	double Frechet_mn_step[4] = {10., 10., 1., 0.1};
 static	const	double LogNormal_mn_step[3] = {1., 0.1, 0.1};
 static	const	double Geometric_mn_step[3] = {0.01, 10, 0.1};
@@ -51,9 +52,9 @@ static	const	double	long_quantile = 0.995;
 static	int	verbs = 0;
 static	char*	specid = 0;
 static	int	nDistParam = NoDistParam[0];
-static	int	minsamples = 1000;
 static	double	max_kappa = 30;
 static	int	given_n_modes = 0;
+static	INT	dbminsamples = 1000;
 
 class GslOptim {
 	GslAlg	fdf_alg;
@@ -128,7 +129,7 @@ static double evaluate(void* instance, const double* p, double* g,
 	if (a < 0.) return (OutOfRange);
 	Ild*	inst = (Ild*) instance;
 	double	fx = 0.0;
-	LenFrq* ptr = inst->intlf;
+	dLfp* ptr = inst->intlf;
 	if (g) vclear(g, n);
 	double*	numer = g? new double[n + 1]: 0;
 	for (int i = 0; i < inst->ntotal; ++i, ++ptr) {
@@ -224,14 +225,12 @@ static double evaluate(void* instance, const double* p, double* g,
 }
 
 IldPrm::IldPrm(const char* ip_stat, Ild* inst, const char* choose)
-	: ildpdf(FRECHET), m_size(NoDistParam[ildpdf]), vrtl(false), 
-	  sname(0), n_param(0), sid(0), n_sample(0), k_th_qtil(0), cdf_table(0)
+	: ildpdf(FRECHET), m_size(NoDistParam[ildpdf]) 
 {
 	FILE*	fd = ftable.fopen(ip_stat, "r");
 	if (!fd) fatal("%s not found !\n", ip_stat);
-	double	min_aic = FLT_MAX;
 	char	str[MAXL];
-	char	genspc[MAXL] = "";
+	char	sbuf[MAXL] = "";
 	double	tparam[paramsize];
 	StatDist	savepdf = defpdf;
 	defpdf = ildpdf;
@@ -248,21 +247,21 @@ IldPrm::IldPrm(const char* ip_stat, Ild* inst, const char* choose)
 		}
 		continue;
 	    } else if (choose && wordcmp(str, choose)) continue;
-	    int	n = get_IldPrm(str, minsamples, tparam);
+	    int	n = get_IldPrm(str, dbminsamples, tparam);
 	    if (!n) continue;
 	    if (given_n_modes && given_n_modes != n_modes) continue;
 	    double	halfaic = n + evaluate((void*) inst, tparam, 0, n);
 	    if (0 < halfaic && halfaic < min_aic) {
 		vcopy(dparam, tparam, n);
-		car(genspc, str);
+		car(sbuf, str);
 		n_param = n;
 		min_aic = halfaic;
 	    }
 	}
 	fclose(fd);
 	if (!n_param) fatal("no entry in %s !\n", ip_stat);
-	sname = new char[strlen(genspc) + 1];
-	strcpy(sname, genspc);
+	genspc = new char[strlen(sbuf) + 1];
+	strcpy(genspc, sbuf);
 	complete();
 	defpdf = savepdf;
 }
@@ -426,14 +425,19 @@ int Ild::fitild(IldPrm* dp, double* pfx)
 *
 **************************************************************************/
 
+static	const	char*	version = "1.0.1";
+
 void usage()
 {
-	fputs("Usage:\n\tfitild [options] -d IpTable xxx.ild\n", stderr);
+	fprintf(stderr, "\n*** Fitild version %s <%d> ***\n\n", version, date);
+	fputs("Usage:\n", stderr);
+	fputs("\tfitild [options] -d IldModel.txt xxx.ild[.dat[.gz]]\n", stderr);
 	fputs(" or\tfitild [options] xxx.ild Init_params\n", stderr);
 	fputs("\nOptions:\n", stderr);
 	fputs("\t-h\t: display this help\n", stderr);
 	fputs("\t-q\t: supress progress message\n", stderr);
 	fputs("\t-a\t: as is: no optimization\n", stderr);
+	fputs("\t-T\t: best fit template, no optimization\n", stderr);
 	fputs("\t-m\t: multiple methods (default)\n", stderr);
 #if USE_BFGS
 	fputs("\t-b\t: BFGS (Broyden-Fletcher-Golodfarb-Shanno)\n", stderr);
@@ -449,8 +453,8 @@ void usage()
 	fputs("\t-r#\t: max number of iterations (1000)\n", stderr);
 	fputs("\t-s#\t: step size in GSL minimization function (1e-2)\n", stderr);
 	fputs("\t-H#\t: skip template with less than # samples\n", stderr);
-	fputs("\t-L#\t: lower bound of data (0)\n", stderr);
-	fputs("\t-U#\t: upper bound of data (inf)\n", stderr);
+	fputs("\t-L#\t: lower bound of intron length (0)\n", stderr);
+	fputs("\t-U#\t: upper bound of intron length (inf)\n", stderr);
 	fputs("\t-X\t: X-axis in linear scale (log10 scale)\n\n", stderr);
 	fputs("\t-g[out]\t: graphic output\n", stderr);
 	fputs("\t-l#\t: lower bound of plot (in log_10 (1) unless -X)\n", stderr);
@@ -483,6 +487,7 @@ static	const	char*	graph_out = 0;
 	GslAlg	alg = NMSIMP1;		// default
 	bool	identifier = false;	// choose template by id
 	bool	x_axis_in_log_scale = true;
+	bool	tempinfo = false;
 
 	while (--argc && **++argv == '-') {
 	  gsl_alg = *argv + 1;
@@ -547,7 +552,7 @@ static	const	char*	graph_out = 0;
 		break;
 	    case 'H':
 		if ((pn = getarg(argc, argv, true)))
-		    minsamples = atoi(pn);
+		    dbminsamples = INT(atoi(pn));
 		break;
 	    case 'L':
 		if ((pn = getarg(argc, argv, true)))
@@ -566,6 +571,7 @@ static	const	char*	graph_out = 0;
 		if ((pn = getarg(argc, argv, true)))
 		    lildprm.psdcnt = atof(pn);
 		break;
+	    case 'T': tempinfo = true; optim = NOOP; break;
 	    case 'V':
 		verbs = (pn = getarg(argc, argv, true))? atoi(pn): 3;
 		break;
@@ -605,6 +611,9 @@ const	char*	flename = *argv++;
 		(--argc? new IldPrm(argc, argv, defpdf):// from command line
 		new IldPrm(&intdist, defpdf));		// single component
 	nDistParam = NoDistParam[defpdf];
+	if (ip_stat && tempinfo) {
+	    printf("%-10s\t%s\t%11.4e\n", specid, dp->genspc, dp->min_aic);
+	}
 
 	if (!dp->convert(defpdf)) fatal("Fail to convert !\n");
 	double*    resrv = new double[dp->n_param];

@@ -46,7 +46,7 @@ sub usage {
 }
 
 my $debug = 3;
-my $sp_opt = "-Q7 -O12 -yX0 -LS -pq";
+my $sp_opt = "-Q7 -KD -O12 -yX0 -LC -pq";
 my $gnmd;
 my $tgt;
 my $alp = "AlnParam";
@@ -58,7 +58,10 @@ while ($_ = $ARGV[0], /^-/) {
 	elsif (/^-d(\S*)/) {&Util::getoptarg(\$gnmd, $1);}
 	elsif (/^-o(\S*)/) {&Util::getoptarg(\$tgt, $1);}
 	elsif (/^-q/) {$debug = 1;}
-	else {$sp_opt .= " $_";}
+	elsif (/^(-\w)(\S*)/) {
+	    if ($2) {$sp_opt .= " $_";}
+	    else {$sp_opt .= " $1 " . shift;}
+	}
 }
 my $qry = join(' ', @ARGV);
 &usage unless ($gnmd && $qry);

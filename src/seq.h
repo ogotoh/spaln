@@ -66,6 +66,7 @@ static	const	char	GBKID = '$';		/* GenBank Seq.		*/
 #include "utilseq.h"
 
 static	const	int	DEFSEQLEN = 1024;
+static	const	int	RESERVE_AREA = 32 * KILO;
 static	const	int	MAXCR = 512;
 static	const	int	BUFLEN = MAXL;
 static	const	int	CPY_SEQ = 1;	/* Copy seq		*/
@@ -133,7 +134,7 @@ static	const	int	datacolumn = 21;
 static	const	int	MinPctNucChar = 75;
 static	const	int	MinPctTronChar = 5;
 static	const	INT	MaxTestChar = 1000;
-static  const   char   NoSeqSpace[] = "No space for sequence!\n";
+static  const   char	NoSeqSpace[] = "%s: No space for sequence %d KB!\n";
 
 struct	SEQ_CODE {
 	int	max_code;	// # of alphabets
@@ -236,9 +237,7 @@ protected:
 template <typename file_t>
 	char*	readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd);
 	void	estimate_len(FILE* fd, const int& nos, const SeqDb* dbf = 0);
-#if USE_ZLIB
 	void	estimate_len(gzFile fd, const int& nos, const SeqDb* dbf = 0);
-#endif
 	void	header_nat_aln(const int& n, const FTYPE& sumwt);
 	CHAR*	seq_realloc();
 	int	calcResNum(const int& i);
@@ -277,6 +276,7 @@ mutable	INEX	inex;		// internally used flags
 	void	restseqwt(const FTYPE* tmpwt);// retore weight vector
 	void	copyweight(Seq* dest) const;
 #endif
+const	Seq*	consenseq() const {return (const Seq*) this;}
 	int	isAmb(const CHAR& r) const;
 	bool	isGap(const CHAR& r) const {return r == gap_code || r == nil_code;}
 	bool	isGap(const CHAR* s) const {
@@ -324,7 +324,7 @@ const	char*	sqname(bool fpri = false) const {
 	void	fullrange() {left = 0; right = len;}
 	void	saverange(RANGE* rng) const {rng->left = left; rng->right = right;}
 	void	restrange(const RANGE* rng) const {left = rng->left; right = rng->right;}
-	void	refresh(const int& num = 0, const int& length = 0);
+	void	refresh(const int& num = 0, const int length = 0);
 	void	exg_seq(int gl, int gr);
 	CHAR*	at(const int n) const {return seq_ + many * n;}
 	void	rev_attr();
@@ -392,11 +392,7 @@ template <typename file_t>
 	FTYPE*	composition(FTYPE* cmps) const;
 	void	printseq(FILE* fdi, int);
 	void	fpmem_len(FILE* fd);
-#if USE_ZLIB
-	FILE*	openseq(const char* str, gzFile* gzfd = 0);// read from named file
-#else
-	FILE*	openseq(const char* str);
-#endif
+	bool	openseq(const char* str, ReadFile& fp);// read from named file
 	int	calcnbr(int gp, int i);
 	void	listseq(FILE* fd = 0, int j = 0, bool sub = false);
 	void	num2pos(int which, int* array) const;
@@ -515,7 +511,7 @@ const   char*   attrs[3] = {attr, attr2, 0};
 	    }
 	}
 
-	int     nos = len = 0;
+	int     nos = 0;
 	char    str[MAXL];
 	long    fpos = 0L;
 // skip comment lines
@@ -1160,10 +1156,7 @@ class SeqServer {
 	int	argc0;
 const	char**	argv;
 const	char**	argv0;
-	FILE*	fd[2];
-#if USE_ZLIB
-	gzFile	gzfd[2];
-#endif
+	ReadFile	fp[2];
 	FILE*	fc;
 	int	nfrom[2] = {0, 0};
 	int	nto[2] = {INT_MAX, INT_MAX};
@@ -1174,6 +1167,9 @@ const	char**	argv0;
 	int	molc[2];
 	char*	attr[2] = {0, 0};
 	int	atsz[2] = {0, 0};
+template<typename file_t>
+	InSt	read_mfasta(Seq* sd, file_t& fd, int which);
+	InSt	test_range(Seq* sd, int which = 0);
 public:
 	InputMode	input_form;
 	int	input_ns;
@@ -1183,8 +1179,6 @@ public:
 	    const char* catalog = 0, const int& mq = UNKNOWN, 
 	    const int& mt = UNKNOWN);
 	~SeqServer() {
-	    if (fd[0]) fclose(fd[0]);
-	    if (fd[1]) fclose(fd[1]);
 	    if (fc) fclose(fc);
 	    delete[] attr[0]; delete[] attr[1];
 	    delete[] cfrom[0]; delete[] cfrom[1];
@@ -1332,7 +1326,8 @@ public:
 	    pos = n;
 	    return (*this);
 	}
-	SeqItr(Seq* sd = 0, int n = 0) {res = 0; reset(n, sd);}
+	SeqItr(Seq* sd = 0, int n = 0)
+	    {res = 0; reset(n, sd);}
 	SeqItr(SeqItr& src) {*this = src;}
 };
 

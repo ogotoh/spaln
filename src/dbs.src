@@ -40,7 +40,6 @@ static	const	char	LUN_EXT[] = ".lun";
 static	const	char	LUP_EXT[] = ".lup";
 static	const	char	LXN_EXT[] = ".lxn";
 static	const	char	LXP_EXT[] = ".lxp";
-#if USE_ZLIB
 static	const	char	SGZ_EXT[] = ".seq.gz";
 static	const	char 	IDZ_EXT[] = ".idx.gz";
 static	const	char 	ENZ_EXT[] = ".ent.gz";
@@ -50,7 +49,6 @@ static	const	char	NGZ_EXT[] = ".bkn.gz";
 static	const	char	PGZ_EXT[] = ".bkp.gz";
 static	const	char	LNZ_EXT[] = ".lun.gz";
 static	const	char	LPZ_EXT[] = ".lup.gz";
-#endif
 
 #ifndef	DBS_DIR
 #define	DBS_DIR		"#alndbs_dir#"
@@ -128,30 +126,25 @@ friend	class	SrchBlk;
 	DbsRec*	bisearch(const char* key) const;
 	void	readseq(const char* fn);
 	size_t	readgrp(FILE* fgrp);
-#if USE_ZLIB
 template <typename file_t>
 	void	readentry(file_t fent, const char* fn);
 template <typename file_t>
 	void	readodr(file_t fodr, const char* fn);
 template <typename file_t>
 	DbsRec*	readidx(file_t fidx, const char* fn);
-#else
-	void	readentry(FILE* fent, const char* fn);
-	void	readodr(FILE* fodr, const char* fn);
-	DbsRec*	readidx(FILE* fidx, const char* fn);
-#endif	// USE_ZLIB
 
 public:
 const	char*	dbsid = 0;
 	SeqDb*  curdb = 0;
 	FILE*	fseq = 0;
 	DbsGrp* dbsgrp = 0;
+	size_t	ress = 0;
 	int     numgrp = 0;
 	INT	numidx = 0;
 	INT	ent_space = 0;
 	void	clean();
 	DbsDt(int c = 0, int molc = UNKNOWN);
-	DbsDt(const char* form);
+	DbsDt(const char* form, int molc = UNKNOWN);
 	~DbsDt();
 	int	grpno(DbsGrp* grp) const {return (grp - dbsgrp);}
 	int	recno(const DbsRec* rec) const {return (rec - recidx);}
@@ -195,7 +188,6 @@ inline bool space_digit(const char* ps)
 	return (true);
 }
 
-#if USE_ZLIB
 template <typename file_t>
 void DbsDt::readentry(file_t fent, const char* fn)
 {
@@ -252,10 +244,4 @@ SeqDb*	whichdb(char* ps, file_t fd = 0)
 	return (whichdb(ps));
 }
 
-#else
-
-extern	char* dbs_header(char* str, FILE* fin);
-extern	SeqDb*	whichdb(char* ps, FILE* fd);
-
-#endif	// USE_ZLIB
 #endif	// _DBS_

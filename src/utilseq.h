@@ -23,31 +23,30 @@
 #ifndef _UTILSEQ_H_
 #define _UTILSEQ_H_ 1
 
+#include "seq.h"
+
 extern	CHAR	gencode[];
 class	EiJuncSeq;
 
-enum class Iefp {IF, IP, IB, EF, EP, EB, CF, CP, CB, GF, NG};
+enum class Iefp {IF, IP, IB, EF, EP, EB, CF, CP, CB, CU, GF, NG};
 
 static	const	int	itn_lm = 6;	// intron 5' immune margin
 static	const	int	itn_rm = 16;	// intron 3' immune margin
-static	const	char	CODEPOT[] = "CodePotTab";
-static	const	char	INTRONPOT[] = "IntronPotTab";
-static	const	char	EXONPOT[] = "ExonPotTab";
 static	const	int	CP_NTERM = 4;
+static	const	int	ID_SIZE = 10;
 static	const	int	STOP = INT_MAX;
 static	const	float	maxtonic = 5.;
 static	const	CHAR	max_add_size = 24;	// capacity of additional bytes
-static	const	char	text_ext[] = ".txt";	// text file
-static	const	char	data_ext[] = ".dat";	// binary data file
-static	const	char	patmat_ext[] = ".psm";	// extension to binary pssm file
-static	const	char	iefp_ext[11][8] = 
-	{".ifq", ".ipt", ".ifp", ".efq", ".ept", ".efp", 
-	 ".cfq", ".cdp", ".cfp", ".gfq", ""};
-static	const	char	iefp_tid[11][16] = 
+static	const	char	text_ext[] = "txt";	// text file
+static	const	char	data_ext[] = "dat";	// binary data file
+static	const	char	iefp_ext[12][4] = 	// these are also binary
+	{"ifq", "ipt", "ifp", "efq", "ept", "efp", 
+	 "cfq", "cdp", "cfp", "cus", "gfq", ""};
+static	const	char	iefp_tid[12][16] = 
 	{"IntronFrqTab", "IntronPotTab", "IntronFpPTab", 
 	 "ExonFrqTab", "ExonPotTab", "ExonFpPTab", 
-	 "CodeFrqTab", "CodePotTab", "CodeFpPTab", "GenomeFrqTab", ""};
-static	const	char	incompatible[] = "%s is incompatible !\n";
+	 "CodeFrqTab", "CodePotTab", "CodeFpPTab", 
+	 "CodonUsage", "GenomeFrqTab", ""};
 
 struct	PAT_MATRIX {
 	int	rows, cols, offset;
@@ -60,6 +59,120 @@ struct PatMatHead {
 	CHAR	vtype, vsize, nelm, add;	// 0/1:int/float, sizeof, 4/20/23
 	int	rows, cols;
 };
+
+class CodonUse {
+template <typename file_t>
+	bool	read_binaryCu(file_t fd);
+template <typename file_t>
+	bool	read_textCu(file_t fd);
+template <typename file_t>
+	bool	write_binaryCu(file_t fd);
+template <typename file_t>
+	bool	write_textCu(file_t fd);
+public:
+	char	id[ID_SIZE];
+	float	usage[64];
+	long	ncodons = 0;
+	CodonUse() {vclear(id, ID_SIZE);}
+	CodonUse(const char* fname, bool from_file = true);
+template <typename file_t>
+	int	fget(file_t& fd, const char* fn);
+	void	to_file(const char* oname, int text);
+	void	normalize();
+};
+
+template <typename file_t>
+bool CodonUse::read_binaryCu(file_t fd)
+{
+	int	nrd = fread(this, sizeof(CodonUse), 1, fd);
+	return (nrd == 1);
+}
+
+template <typename file_t>
+bool CodonUse::read_textCu(file_t fd)
+{
+	char	str[MAXL];
+	char*	ps = str;
+	float*	u = usage;
+	float*	ut = u + 64;
+	do {
+	    if (!fgets(str, MAXL, fd)) return (false);
+	} while (isBlankLine(str));
+	if (*str == '>') {
+	    sscanf(str, "%*s [%ld:%*d]", &ncodons);
+	    strncpy(id, str + 1, ID_SIZE - 1);
+	} else {
+	    for ( ; !*ps; ps = cdr(ps))
+		*u++ = (float) atof(ps) / 100.;
+	}
+	while (u < ut && *(ps = fgetw(str, MAXL, fd)))
+	    *u++ = (float) atof(ps);
+	return (u - usage == 64);
+}
+
+template <typename file_t>
+int CodonUse::fget(file_t& dmyfd, const char* fn)
+{
+	if (dmyfd) {
+	    fclose(dmyfd);
+	    dmyfd = 0;
+	}
+	ReadFile	fp(fn);
+	if (fp.fd) {
+	    if (fp.dtype == 1) read_textCu(fp.fd); else
+	    if (fp.dtype == 2) read_binaryCu(fp.fd); 
+	} else if (fp.gzfd) {
+	    if (fp.dtype == 1) read_textCu(fp.gzfd); else
+	    if (fp.dtype == 2) read_binaryCu(fp.gzfd);
+	} else
+	    fatal(not_found, fn);
+	return (fp.dtype);
+}
+
+template <typename file_t>
+bool CodonUse::write_binaryCu(file_t fd)
+{
+	int	nrd = fwrite(this, sizeof(CodonUse), 1, fd);
+	return (nrd == 1);
+}
+
+template <typename file_t>
+bool CodonUse::write_textCu(file_t ofd)
+{
+static	const	char	acgt[] = {'A', 'C', 'G', 'T'};
+	char	str[MAXL];
+	sprintf(str, ">%s [%ld:%d]\n", id, ncodons, 64);
+	fputs(str, ofd);
+	char*	ps = str;
+	if (algmode.nsa & 4) {
+	    *ps++ = '#';
+	    for (int i = 0; i < 4; ++i) {
+		sprintf(ps, "\t%5c", acgt[i]);
+		ps += strlen(ps);
+	    }
+	    *ps++ = '\n';
+	    *ps = '\0';
+	    fputs(str, ofd);
+	}
+	float*	u = usage;
+	for (int f = 0; f < 4; ++f) {
+	    for (int s = 0; s < 4; ++s) {
+		char*	ps = str;
+		if (algmode.nsa & 4) {
+		    *ps++ = acgt[f];
+		    *ps++ = acgt[s];
+		}
+		for (int t = 0; t < 4; ++t) {
+		    sprintf(ps, "\t%7.4f", 100. * *u++);
+		    ps += strlen(ps);
+		}
+		*ps++ = '\n';
+		*ps = '\0';
+		fputs(str, ofd);
+	    }
+	}
+	return (true);
+}
 
 class PatMat {
 public:
@@ -75,8 +188,10 @@ public:
 	PatMat(const char* fname = 0);
 	PatMat(const int r, const int c, const int o = 0, float* m = 0);
 	~PatMat() {delete[] mtx;}
-	void	readPatMat(FILE* fd);
-	void	readBinPatMat(FILE* fd);
+template <typename file_t>
+	void	read_text(file_t fd);
+template <typename file_t>
+	void	read_binary(file_t fd, const char* fname);
 	float	pwm_score(const Seq* sd, const CHAR* ps, const CHAR* redctab = 0) const;
 	float*	calcPatMat(const Seq* sd) const;
 	int	order() const {return (morder);}
@@ -97,32 +212,34 @@ protected:
 	int	lm = 0;
 	int	rm = 0;
 	float	total = 0;	// total # of foreground kmers
-	float	avpot = 0;	// average of nsupport self scores
+	float	avpot = 0;	// mean of nsupport self scores
+	float	sdpot = 0;	// SD of self scores
 	float	avlen = 0;	// average length of nsupport introns
 	float	ess = 0;	// expected mean of self scores
 	float*	data = 0;
-	float*	read_wdfq(const char* wdfq, const bool& conditional);
 	void	count_kmers_1(const Seq* sd, float* fq);
-	void	count_kmers_3(const Seq* sd, float* fq);
+	void	count_kmers_3(const Seq* sd, float* fq, CodonUse* cu);
 	void	reform_1(float* bkg = 0);
 	void	reform_3();
 	float*	calcScr_1(const Seq* sd, float* scr = 0) const;
 	float*	calcScr_3(const Seq* sd, float* scr = 0) const;
 public:
-	ExinPot(const int& ein, const int& mo, const int& nf = 1) :
+	ExinPot(const int& ein, const int& mo, const int& nf = 1, const int it = 0) :
 	    exin(ein), morder(mo), nphase(nf), ndata(ipower(4, mo + 1)), 
-	    lm(ein / 3? 0: itn_lm), rm(ein / 3? 0: itn_rm) {
-	    if (static_cast<Iefp>(exin) != Iefp::NG)
-		readFile(iefp_tid[exin]);
-	    else
-		fatal("Invalid exin code (%d) !\n", exin);
+	    lm(ein / 3? 0: itn_lm), rm(ein / 3? 0: itn_rm)
+	{
+	    if (it && static_cast<Iefp>(exin) != Iefp::NG)
+		from_file(iefp_tid[exin]);
 	}
 	ExinPot(const char*& fname) {
-	    readFile(fname);
+	    from_file(fname);
+	    lm = exin / 3? 0: itn_lm;
+	    rm = exin / 3? 0: itn_rm;
 	}
-	ExinPot(const int& exn) : exin(exn) {
+	ExinPot(const int& exn) : exin(exn), 
+	    lm(exin / 3? 0: itn_lm), rm(exin / 3? 0: itn_rm) {
 	    if (static_cast<Iefp>(exin) != Iefp::NG)
-		readFile(iefp_tid[exin]);
+		from_file(iefp_tid[exin]);
 	    else
 		fatal("Invalid exin code (%d) !\n", exin);
 	}
@@ -138,18 +255,23 @@ const	    Iefp	iefp = static_cast<Iefp>(exin);
 	    return (iefp == Iefp::IB || iefp == Iefp::EB || 
 		    iefp == Iefp::CB);
 	}
-	int	size() const {return (ndata);}
-	int	dsize() const {
+	INT	size() const {return (ndata);}
+	size_t	dsize() const {
 	    return (nphase * ndata + (isfpp()? nphase * ndata: 0));
 	}
-	bool	readFile(const char* fname);
+	bool	from_file(const char* fname);
 	float*	getKmers(const char* wdfq, const bool foregrd = true);
-	float*	getKmers(EiJuncSeq* eijseq);
-	float*	getKmers(int argc, const char** argv);
+	float*	getKmers(EiJuncSeq* eijseq, CodonUse* cu = 0);
+	float*	getKmers(int argc, const char** argv, CodonUse* cu = 0);
 	void	reform(float* background = 0);
 	bool	makeExinPot(const float* gfq);
-	bool	readBinary(const char* fname, FILE* fd = 0);
-	bool	writeBinary(const char* oname);
+template <typename file_t>
+	bool	read_binary(file_t fd, const char* fname);
+template <typename file_t>
+	bool	read_text(file_t fd, const char* fname);
+template <typename file_t>
+	bool	write_binary(file_t fd);
+	void	writeBinary(const char* oname, bool gzip = false);
 	float*	begin() const {return (data);}
 	float*	end() const {return (data + nphase * ndata);}
 	float*	fbegin() const {
@@ -162,6 +284,7 @@ const	    Iefp	iefp = static_cast<Iefp>(exin);
 	    return ((nphase == 1)? calcScr_1(sd, scr): calcScr_3(sd, scr));
 	}
 	VTYPE	intpot(const SGPT6* b5,const  SGPT6* b3) const;
+//	VTYPE	intpot(const SGPT2* b5,const  SGPT2* b3) const;
 	VTYPE	avrpot(float f = 1.) const {return (VTYPE) (f * avpot);}
 	VTYPE	self_score() const {return (ess);}
 };

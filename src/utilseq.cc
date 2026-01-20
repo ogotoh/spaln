@@ -20,8 +20,8 @@
 *
 *****************************************************************************/
 
-#include "seq.h"
 #include "eijunc.h"
+#include "kmers.h"
 
 enum Triplet {AAA = 0, AGA = 8, AGG = 10, AUA = 12, 
 	CUA = 28, CUC, CUG, CUU,
@@ -499,6 +499,68 @@ void Seq::passcom(FILE* fo) const
 	fclose(fi);
 }
 
+void CodonUse::normalize()
+{
+	float	sum = 0.;
+	float*	c = usage;
+	float*	t = c + 64;
+	while (c < t) sum += *c++;
+	ncodons = (long) (sum + 0.5);
+	if (ncodons == 0L) {
+	    prompt("%s is empty !\n", id);
+	    return;
+	}
+	c = usage;
+	while (c < t) *c++ /= sum;
+}
+
+void CodonUse::to_file(const char* oname, int text) {
+	char	str[MAXL];
+	char*	dot = 0;
+	if (oname) {
+	    strcpy(str, oname);
+	    if (str[8] == '_') str[8] = '\0';
+	    else if ((dot = strrchr(str, '.'))) {
+		if (!strcmp(dot + 1, iefp_ext[static_cast<int>(Iefp::CU)]) ||
+		    !strcmp(dot + 1, iefp_ext[static_cast<int>(Iefp::CP)]))
+		    *dot = '\0';
+	    }
+			// add 	"cus"
+	    strcat(str, ".");
+	    strcat(str, iefp_ext[static_cast<int>(Iefp::CU)]);
+	} else
+	    text = 1;
+	WriteFile	fp(oname? str: 0, text, false);	// not compress
+	bool	ok = false;
+	if (fp.gzfd) {
+	    if (text)	ok = write_textCu(fp.gzfd);
+	    else	ok = write_binaryCu(fp.gzfd);
+	} else if (fp.fd) {
+	    if (text)	ok = write_textCu(fp.fd);
+	    else	ok = write_binaryCu(fp.fd);
+	} else
+	    fatal(no_file, str);
+	if (!ok) fatal(write_error, str);
+}
+
+CodonUse::CodonUse(const char* fname, bool from_file) : ncodons(0)
+{
+	if (from_file) {	// read from file
+	    FILE*	fd = 0;
+	    fget(fd, fname);
+	} else {		// prepare for output
+	    vclear(id, ID_SIZE);
+	    vclear(usage, 64);
+	    char	str[MAXL];
+	    strcpy(str, fname? fname: "");
+	    char*	sl = strrchr(str, '/');
+	    sl = sl? sl + 1: str;
+	    char*	dot = strchr(sl, '.');
+	    if (dot) *dot = '\0';
+	    strncpy(id, sl, ID_SIZE - 1);
+	}
+}
+
 Seq* Seq::translate(Seq* aas, ORF& orf) const
 {
 const	CHAR*	ns = at(orf.pos + 3 - (orf.pos - orf.frm) % 3);
@@ -734,7 +796,8 @@ int setCodonUsage(int gc)
 	return getCodonUsage(str);
 }
 
-void PatMat::readPatMat(FILE* fd)
+template <typename file_t>
+void PatMat::read_text(file_t fd)
 {
 	int	t = 0;
 	int	skip = 0;
@@ -750,42 +813,44 @@ void PatMat::readPatMat(FILE* fd)
 	    rows <= 0 || cols <= 0) return;
 	tonic = mmm.min;
 	if (-tonic > maxtonic) tonic = -maxtonic;
-const	size_t	mtxsize = rows * cols;
+const	int	mtxsize = rows * cols;
 	mtx = new float[mtxsize];
 	while (skip-- > 0) {
 	    int rc;
 	    while ((rc = fgetc(fd)) != EOF && rc != '\n') ;
 	}
 	float*	wk = mtx;
-	for (INT rc = 0; rc < mtxsize; ++rc, ++wk) {
-	    if (fscanf(fd, "%f", wk) <= 0) {
-		fputs("Insufficient data!\n", stderr);
-		delete[] mtx; mtx = 0;
-		return;
-	    }
+	float*	emtx = mtx + mtxsize;
+	char*	ps;
+	for ( ; wk < emtx && *(ps = fgetw(str, MAXL, fd)); ++wk) {
+	    *wk = atof(ps);
 	    if (*wk < min_elem) min_elem = *wk;
+	}
+	if (wk < emtx) {
+	    prompt("Insufficient data %d < %d !\n", wk - emtx, mtxsize);
+	    delete[] mtx; mtx = 0;
+	    return;
 	}
 	if (t) std::swap(rows, cols);
 	if (rows % 23 == 0) nalpha = 23;
 	else if (rows % 4 == 0) nalpha = 4;
 	else	nalpha = rows;
 	morder = 0;
-	for (int d = nalpha; d < rows; d = d * (d + 1))
-	    ++morder;
-	while ((skip = getc(fd)) != EOF && skip != '\n');
+	for (int d = nalpha; d < rows; d = d * (d + 1)) ++morder;
 }
 
-void PatMat::readBinPatMat(FILE* fd)
+template <typename file_t>
+void PatMat::read_binary(file_t fd, const char* fname)
 {
 	if (fread(this, sizeof(PatMat), 1, fd) != 1)
-	    fatal("incompatible !\n");
+	    fatal(read_error);
 	if (transvers) std::swap(rows, cols);
 	tonic = mmm.min;
 	if (-tonic > maxtonic) tonic = -maxtonic;
 const	size_t	mtxsize = rows * cols;
 	mtx = new float[mtxsize];
 	if (fread(mtx, sizeof(float), mtxsize, fd) != mtxsize)
-	    fatal("incompatible !\n");
+	    fatal(read_error, fname);
 }
 
 PatMat& PatMat::operator=(const PatMat& src)
@@ -831,38 +896,35 @@ const	size_t	mtx_size = r * c;
 	min_elem = *vmin(mtx, mtx_size);
 }
 
-PatMat::PatMat(FILE* fd, bool binary)
+PatMat::PatMat(FILE* fd, bool text)
 {
-	if (binary) readBinPatMat(fd);
-	else	readPatMat(fd);
+	if (text) read_text(fd);
+	else	read_binary(fd, "");
 }
 
 PatMat::PatMat(const char* fname)
 {
 	char	str[LINE_MAX];
-	FILE*	fd = 0;
+	ReadFile	fp;
 retry:
 	if (fname && *fname) {
 	    strcpy(str, fname);
-	    fname = 0;
 	} else
 	    progets(str, "pattern file name? ");
 	if (!*str || *str == '\n') return;
 
-	char*	dot = strrchr(str, '.');
-const	bool	binary = dot && 
-		(!strcmp(dot, patmat_ext) || !strcmp(dot, data_ext));
-	if (!binary) strcat(str, data_ext);
-	fd = ftable.fopen(str, "rb");
-	if (fd) readBinPatMat(fd);	// binary
-	else {				// text
-	    dot = strrchr(str, '.');
-	    *dot = '\0';
-	    fd = ftable.fopen(str, "r");
-	    if (fd) readPatMat(fd);
+	int	dtype = ftable.ropen(fp, fname, datgz);
+	if (dtype == 0) {
+	    if (fname && *fname) fatal(not_found, fname);
+	    goto retry;
 	}
-	if (fd) fclose(fd);
-	else goto retry;
+	if (fp.gzfd) {
+	    if (dtype == 1) read_text(fp.gzfd);
+	    else	read_binary(fp.gzfd, fname);
+	} else if (fp.fd) {
+	    if (dtype == 1) read_text(fp.fd);
+	    else	read_binary(fp.fd, fname);
+	}
 }
 
 CHAR* PatMat::setredctab(const Seq* sd) const
@@ -1039,130 +1101,74 @@ int fname2exin(const char* fname, int& file_type)
 {
 const	int	ng = static_cast<int>(Iefp::NG);
 const	int	write_mode = file_type;
+	file_type = 0;
 	char	str[MAXL];
 	strcpy(str, fname);
-	file_type = 0;
-	char*	dot = strrchr(str, '.');
+// deplete .dat and .gz extensions
+	char*	dot = strstr(str, dgz_ext);	// .dgz
 	if (dot) {
-	    if (!strcmp(dot, text_ext)) {
+	    file_type = 2;
+	    *dot = '\0';
+	    dot = strrchr(str, '.');
+	} else {
+	    dot = strrchr(str, '.');		// .dat.gz
+	    while (dot && strstr(datgz, dot)) {
 		*dot = '\0';
-		file_type = 1;		// text
 		dot = strrchr(str, '.');
 	    }
-	    for (int exn = 0; exn < ng; ++exn) {
-		if (!strcmp(dot, iefp_ext[exn])) {
-		    if (!file_type) file_type = 2;
-		    return (exn);	// binary
-		}
-	    }
-	    if (write_mode) {
-		fputs("Error: extension must be one of:\n\t", stderr);
-		for (int exn = 0; exn < ng; ++exn)
-		    fprintf(stderr, "%s ", iefp_ext[exn]);
-		fputc('\n', stderr);
-		exit (1);
-	    }
+	    file_type = (!dot || strcmp(dot, dat_ext))? 1: 2;
 	}
-
-	file_type = 0;
-	FILE*	fd = ftable.fopen(fname, "r");
-	if (!fd) {
-	    prompt(not_found, fname);
-	    return (ng);
+// examine known extensions
+	if (dot) {
+	    for (int exn = 0; exn < ng; ++exn)
+		if (!strcmp(dot + 1, iefp_ext[exn])) return (exn);
+	    *dot = '\0';
 	}
-	if (!fgets(str, MAXL, fd)) return (ng);
+	dot = strrchr(str, '.');
+	if (dot) {
+	    for (int exn = 0; exn < ng; ++exn)
+		if (!strcmp(dot + 1, iefp_ext[exn])) return (exn);
+	}
+	if (write_mode) return (0);	// same as input file
+	if (dot) *dot = '\0';
+// examine predefined file names
+	char*	sl = strrchr(str, '/');
+	sl = sl? sl + 1: str;
 	int	exn = 0;
-	for ( ; exn < static_cast<int>(Iefp::NG); ++exn) {
-	    if (!wordcmp(str, iefp_tid[exn])) {
-		file_type = 1;
-		break;			// text
-	    }
-	}
-	fclose(fd);
+	for ( ; exn < ng; ++exn)
+	    if (!strcmp(sl, iefp_tid[exn])) break;
+	if (exn == ng) file_type = 0;
+	else if (!file_type) file_type = 1;
 	return (exn);
 }
 
-bool ExinPot::readFile(const char* fname)
+bool ExinPot::from_file(const char* fname)
 {
-	int	file_type = 0;
-	FILE*	fd = 0;
-	char	str[MAXL];
-	strcpy(str, fname);
-	char*	dot = strrchr(str, '.');
-	if (dot && !strcmp(dot, iefp_ext[exin])) file_type = 2;
-	else {
-	    strcat(str, data_ext);
-	    fd = ftable.fopen(str, "rb");
-	    if (fd) {
-		file_type = 2;
-	    } else if (exin == fname2exin(fname, file_type)) {
-		strcpy(str, fname);
-	    } else {
-		file_type = 0;
-	    }
-	}
-	if (file_type == 2) return readBinary(str, fd);	// binary
-	else if (file_type == 0) {
-	    prompt(incompatible, fname);
-	    return (false);
-	}
-	fd = ftable.fopen(fname, "r");
-	if (!fd) {
-	    prompt(not_found, fname);
-	    return false;
-	}
-
-	int	sz = 1;
-	float*	pot = 0;
-	if (!fgets(str, MAXL, fd)) goto fail_to_read;
-	if (sscanf(str, "%*s %d %d %*f %f %*f %*d %d %d %f", 
-	     &nphase, &ndata, &avpot, &lm, &rm, &avlen) < 1) goto fail_to_read;
-	nphase = (nphase >= 3)? 3: 1;
-	avlen -= (lm + rm);
-	pot = data = new float[dsize()];
-	for (morder = -1; sz < ndata; sz *= CP_NTERM) ++morder;
-	if (sz != ndata) goto fail_to_read;
-	while (fgets(str, MAXL, fd)) {
-	    int	i = 0;
-	    char* ps = isalpha(*str)? cdr(str): str;
-	    for ( ; i++ < nphase && ps; ps = cdr(ps))
-		*pot++ = atof(ps);
-	    if (i < nphase) break;
-	}
-fail_to_read:
-	fclose(fd);
-	if (pot && (pot - data) == dsize()) return true;
-	prompt(incompatible, fname);
-	return false;
+	int	dtype = 0;
+	exin = fname2exin(fname, dtype);
+	ReadFile	fp;
+	dtype = ftable.ropen(fp, fname, datgz);
+	bool	ok = false;
+	if (fp.gzfd) {
+	    if (dtype == 1)	ok = read_text(fp.gzfd, fname);
+	    else if (dtype == 2) ok = read_binary(fp.gzfd, fname);
+	} else if (fp.fd) {
+	    if (dtype == 1)	ok = read_text(fp.fd, fname);
+	    else if (dtype == 2) ok = read_binary(fp.fd, fname);
+	} else	prompt(not_found, fname);
+	return (ok);
 }
 
 // from wdfq file specific to nphase == 1
 
 float* ExinPot::getKmers(const char* wdfq, const bool foregrd)
 {
-	FILE*	fd = fopen(wdfq, "r");
-	if (!fd) {
-	    prompt(not_found, wdfq);
-	    return (0);
-	}
+	Kmers	kmers(wdfq);
 const	int	plus = (foregrd && isfpp())? ndata: 0;
 	float*	frq = new float[ndata + plus];
 	float*	fq = frq + plus;
 	if (foregrd) data = frq;
-	char	str[MAXL];
-	char	kmer[16];
-	vclear(fq, ndata);
-	int	n = 0;
-	while (fgets(str, MAXL, fd)) {
-	    int	freq;
-	    if (sscanf(str, "%s %d", kmer, &freq) < 2) break;
-	    int	k = strlen(kmer);
-	    if (--k > morder) break;
-	    if (k < morder) continue;
-	    *fq++ = freq;
-	    if (n++ == ndata) break;
-	}
-	fclose(fd);
+	kmers.get(fq, morder);
 	return (frq);
 }
 
@@ -1188,7 +1194,7 @@ const	CHAR*   redctab = sd->istron()? tnredctab: ncredctab;
 	}
 }
 
-void ExinPot::count_kmers_3(const Seq* sd, float* fq)
+void ExinPot::count_kmers_3(const Seq* sd, float* fq, CodonUse* cu)
 {
 	if (minorf) {
 	    ORF*	orfs = sd->getorf();
@@ -1213,13 +1219,16 @@ const	CHAR*   redctab = sd->istron()? tnredctab: ncredctab;
 		w = 0;
 		x = 6;
 	    }
-	    if (!x) ++fq[3 * w + p];
+	    if (!x) {
+		++fq[3 * w + p];
+		if (cu && p == 0) ++cu->usage[w % 64];
+	    }
 	}
 }
 
-float* ExinPot::getKmers(EiJuncSeq* eijseq)
+float* ExinPot::getKmers(EiJuncSeq* eijseq, CodonUse* cu)
 {
-const	int	vsize = ndata * nphase;
+const	int	vsize = ndata * nphase + (nphase == 3? 64: 0);
 const	int	plus = isfpp()? vsize: 0;
 	data = new float[vsize + plus];
 	float*	fq = data + plus;
@@ -1228,14 +1237,14 @@ const	int	plus = isfpp()? vsize: 0;
 	    Seq*	sd = eijseq->nextseq();
 	    if (!sd) continue;
 	    if (nphase == 1)	count_kmers_1(sd, fq);
-	    else		count_kmers_3(sd, fq);
+	    else		count_kmers_3(sd, fq, cu);
 	} while (eijseq->goahead());
 	return (data);
 }
 
-float* ExinPot::getKmers(int argc, const char** argv)
+float* ExinPot::getKmers(int argc, const char** argv, CodonUse* cu)
 {
-const	int	vsize = ndata * nphase;
+const	int	vsize = ndata * nphase + (nphase == 3? 64: 0);
 const	int	plus = isfpp()? vsize: 0;
 	data = new float[vsize + plus];
 	float*	fq = data + plus;
@@ -1246,7 +1255,7 @@ const	int	plus = isfpp()? vsize: 0;
 	while ((inst = sqsvr.nextseq(&sd, 0)) != IS_END) {
 	    if (inst == IS_ERR) continue;
 	    if (nphase == 1)	count_kmers_1(&sd, fq);
-	    else		count_kmers_3(&sd, fq);
+	    else		count_kmers_3(&sd, fq, cu);
 	}
 	return (data);
 }
@@ -1330,53 +1339,74 @@ const	    float	potl = log10(freq / *bkg);
 	return (true);
 }
 
-bool ExinPot::readBinary(const char* fname, FILE* fd)
+template <typename file_t>
+bool ExinPot::read_text(file_t fd, const char* fname)
 {
-	if (!fd) {
-	    fd = ftable.fopen(fname, "rb");
-	    if (!fd) {
-		prompt(not_found, fname);
-		return (false);
-	    }
+	int	sz = 1;
+	float*	pot = 0;
+	char	str[MAXL];
+	if (!fgets(str, MAXL, fd)) goto EOR;
+	if (sscanf(str, "%*s %d %d %*f %f %*f %d %d %d %f", 
+	     &nphase, &ndata, &avpot, &nsupport, &lm, &rm, &avlen) < 1)
+		goto EOR;
+	nphase = (nphase >= 3)? 3: 1;
+	avlen -= (lm + rm);
+	pot = data = new float[dsize()];
+	for (morder = -1; sz < ndata; sz *= CP_NTERM) ++morder;
+	if (sz != ndata) goto EOR;
+	while (fgets(str, MAXL, fd)) {
+	    int	i = 0;
+	    char* ps = isalpha(*str)? cdr(str): str;
+	    for ( ; i++ < nphase && ps; ps = cdr(ps))
+		*pot++ = atof(ps);
+	    if (i < nphase) break;
 	}
-	if (fread(this, sizeof(ExinPot), 1, fd) != 1) {
-	    prompt(incompatible, fname);
-	    return (false);
-	}
-	data = new float[dsize()];
-	if (fread(data, sizeof(float), dsize(), fd) != size_t(dsize())) {
-	    prompt(incompatible, fname);
-	    return (false);
-	}
-	fclose(fd);
-	return (true);
+EOR:
+	if (pot && (pot - data) == (long) dsize()) return true;
+	prompt(read_error, fname);
+	return false;
 }
 
-bool ExinPot::writeBinary(const char* oname)
+template <typename file_t>
+bool ExinPot::read_binary(file_t fd, const char* fname)
 {
-	int	file_type = 0;
-	int	exn = fname2exin(oname, file_type);
-	if (file_type == 0) exn = exin;
+	bool	ok = fread(this, sizeof(ExinPot), 1, fd) == 1;
+	if (ok) {
+const	    size_t	dts = dsize();
+	    data = new float[dts];
+	    ok = fread(data, sizeof(float), dts, fd) == dts;
+	}
+	if (!ok) prompt(read_error, fname);
+	return (ok);
+}
+
+template <typename file_t>
+bool ExinPot::write_binary(file_t fd)
+{
+	bool	ok = fwrite(this, sizeof(ExinPot), 1, fd) == 1;
+	if (ok) {
+const	    float*	pot = begin();
+	    ok = fwrite(pot, sizeof(float), dsize(), fd) == dsize();
+	}
+	return (ok);
+}
+
+void ExinPot::writeBinary(const char* oname, bool gzip)
+{
+	int	dtype = 1;
+	int	exn = fname2exin(oname, dtype);
+	if (dtype == 0) exn = exin;
 	else	std::swap(exn, exin);
-	char	str[MAXL];
-const	char*	fn = file_type? oname: add_ext(oname, iefp_ext[exin], str);
-	FILE*	fd = fopen(fn, "wb");
-	if (!fd) {
-	    prompt(no_file, str);
-	    return (false);
-	}
-	if (fwrite(this, sizeof(ExinPot), 1, fd) != 1) {
-	    prompt(no_file, str);
-	    return (false);
-	}
-	float*	pot = begin();
-	if (fwrite(pot, sizeof(float), dsize(), fd) != size_t(dsize())) {
-	    prompt(no_file, str);
-	    return (false);
-	}
-	fclose(fd);
+	char	str[LINE_MAX];
+	strcpy(str, oname);
+	char*	fn = dtype? str: add_ext(oname, iefp_ext[exin], str);
+	WriteFile	wfp(fn, 0, gzip);
+	bool	ok = false;
+	if (wfp.fd)	ok = write_binary(wfp.fd);
+	else if (wfp.gzfd) ok = write_binary(wfp.gzfd);
+	else	fatal(no_file, fn);
+	if (!ok) fatal(write_error, fn);
 	std::swap(exn, exin);
-	return (true);
 }
 
 // calculate "instaneous" exonic or "cumulative" intronic potential
@@ -1412,7 +1442,7 @@ const	    float	pt = x? 0: pot[w];
 		*rest = epot? pt: float(acc);
 	    }
 	}
-	vclear(rest, result + len - rest);
+	while (rest < result + len) *rest++ = 0;
 	if (scr)
 	    *scr = epot? float(acc): (result[len - 1 - rm] - result[lm]);
 	return (result);
@@ -1455,7 +1485,7 @@ double	acc = 0.;
 		if (scr && p == 1) acc += val;
 	    }
 	}
-	vclear(rest, result + len - rest);
+	while (rest < result + len) *rest++ = 0;
 	if (scr) *scr = float(acc);
 	return (result);
 }
@@ -1466,6 +1496,14 @@ VTYPE ExinPot::intpot(const SGPT6* b5, const SGPT6* b3) const
 	b3 -= rm;
 	if (b5 >= b3) return (0);
 	return  (VTYPE) (b3->sigI - b5->sigI);	// unnormalize
-//	return  (VTYPE) (avlen * (b3->sigI - b5->sigI) / (b3 - b5)):
 }
 
+/*
+VTYPE ExinPot::intpot(const SGPT2* b5, const SGPT2* b3) const
+{
+	b5 += lm;
+	b3 -= rm;
+	if (b5 >= b3) return (0);
+	return  (VTYPE) (b3->sigI - b5->sigI);	// unnormalize
+}
+*/

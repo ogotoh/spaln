@@ -309,7 +309,7 @@ const	int	cutlen = cutrng? (cutrng->right - cutrng->left): 0;
 const	VTYPE	longgep = pwd->BasicGEP * cutlen / 3;
 const	VTYPE	longgep2 = pwd->LongGEP * cutlen / 3;
 
-const	int	width = wdw.width - cutlen;
+const	int	width = wdw.width + 3 - cutlen;
 const	size_t	bufsiz = pwd->Noll * width;
 	RVPD*	buf = new RVPD[bufsiz];
 	vset(buf, black_vpd, bufsiz);
@@ -341,7 +341,7 @@ const	    SGPT6*	bb = b->exin->score_p(n);
 	    RVPD*&	h = hf[0] = hh[k++] + r;
 	    RVPD*&	f = hf[2] = hh[k++] + r;
 	    RVPD*&	f2 = hf[4] = dagp? hh[k++] + r: 0;
-const	    VTYPE*	qprof[2] = {			// sim2(as, .)
+const	    short*	qprof[2] = {			// sim2(as, .)
 		pwd->simmtx->mtx[*as], pwd->simmtx->mtx[as[1]]
 	    };
 	    vset((RVPDJ*) &hl, black_vpdj, 3 * (NCAND + 1));
@@ -1098,7 +1098,8 @@ const	Rvdwmlj*	maxphl[NOD];
 	int     LocalR = Local && a->inex.exgr && b->inex.exgr;
 	int	rlst[3] = {INT_MAX, INT_MAX, INT_MAX};
 
-const	size_t	bufsiz = pwd->Noll * wdw.width;
+const	int	width = wdw.width + 3;
+const	size_t	bufsiz = pwd->Noll * width;
 	Rvdwml*	wbuf = new Rvdwml[bufsiz];
 	int	r = b->left - 3 * a->right;
 	Rvdwml	black_vdwml = {NEVSEL, 0, r, r, 0, end_of_ulk};
@@ -1106,7 +1107,7 @@ const	size_t	bufsiz = pwd->Noll * wdw.width;
 	Rvdwml*	blackvdwuj = wbuf + bufsiz - 1;	// assume to be const
 	hhg[0] = wbuf - wdw.lw + 3;
 	for (int k = 1; k < pwd->Noll; ++k)
-	    hhg[k] = hhg[k-1] + wdw.width;
+	    hhg[k] = hhg[k-1] + width;
 
 	hinitH_ng(hhg, wdw);
 
@@ -1138,7 +1139,7 @@ const	    SGPT6*	bb = b->exin->score_p(n);
 	    Rvdwml*&	h = hf[0] = hhg[k++] + r;
 	    Rvdwml*&	f = hf[2] = hhg[k++] + r;
 	    Rvdwml*&	f2 = hf[4] = dagp? hhg[k++] + r: blackvdwuj;
-const	    VTYPE*	qprof[2] = {			// sim2(as, .)
+const	    short*	qprof[2] = {			// sim2(as, .)
 		pwd->simmtx->mtx[*as], pwd->simmtx->mtx[as[1]]
 	    };
 	    vset((Rvdwmlj*) &hl, black_vdwmlj, 3 * (NCAND + 1));
@@ -1316,12 +1317,12 @@ const			Rvdwmlj*	phl = maxphl[maxk];
 			  for (int c = 1, d = 1; c < pwd->Noll; ++c, d += 2) {
 			    if ((phl = maxphl[d]) &&
 				hf[d]->val > mx->val + pwd->GOP[c]) {
-				hf[d]->ulk = r + c * wdw.width;
+				hf[d]->ulk = r + c * width;
 				imd->hlnk[c][r] = phl->ulk;
 			    }
 			    if (maxphl[d + 1] &&
 				hf[d + 1]->val > mx->val + pwd->GOP[c]) {
-				hf[d + 1]->ulk = r + c * wdw.width;
+				hf[d + 1]->ulk = r + c * width;
 			    }
 			  }
 			}
@@ -1431,7 +1432,7 @@ const			bool	crossspj = phs == 1 && k == 0;
 			imd->lwrb[k][r] = std::min(r, from->lwr);
 			imd->uprb[k][r] = std::max(r, from->upr);
 			from->lwr = from->upr = r;
-			from->ulk = r + k * wdw.width;
+			from->ulk = r + k * width;
 		    }
 		}	// was intermediate
 		for (int k = 0; k < pwd->Noll; ++k) {
@@ -1476,7 +1477,7 @@ const	    Rvdwml*	mx = hlastH_ng(hhg, wdw);
 	int	d = 0;
 	for ( ; i >= 0 && (imd = udhimds[i])->mi > maxh.ml; --i) {
 	    int	c = 0;
-	    for (d = 0; r > wdw.up; r -= wdw.width) ++d;
+	    for (d = 0; r > wdw.up; r -= width) ++d;
 	    if (imd->vlnk[d][r] < end_of_ulk) {	// cross intermediate
 		cpos[i][c++] = imd->mi;
 		cpos[i][c++] = (d > 0)? 1: 0;
@@ -1495,7 +1496,7 @@ const		int	mm3 = 3 * imd->mi;
 	    } else
 		cpos[i][0] = end_of_ulk;	// don't cross center
 	}
-	for ( ; r > wdw.up; r -= wdw.width) ;
+	for ( ; r > wdw.up; r -= width) ;
 	if (LocalL) {
 	    a->left = maxh.ml;
 	    b->left = r + 3 * maxh.ml;
@@ -1624,7 +1625,7 @@ const	    SGPT6*	bb = b->exin->score_p(n);
 #endif
 	    int	peak = 0;
 	    int	q = 0;		// queue pointer
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 	    while (--n >= n9) {
 		VTYPE	x, y;
 		--bs; --r; --h; --f;
@@ -1814,7 +1815,7 @@ const	    SGPT6*	bb = b->exin->score_p(n);
 
 	    int		peak = 0;
 	    int		q = 0;		// queue pointer
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 	    for ( ; ++n <= n9; ++bs) {
 		VTYPE	x, y;
 		++r; ++bb; ++h; ++f;
@@ -2448,10 +2449,13 @@ bool Aln2h1::indelfreespjH(int agap, VTYPE& iscr, const bool& write_skl)
 {
 	SKL	skl = {0, 0};
 const	int	dgap = b->right - b->left - 3 * agap;
+	if (b->exin->rplay(b->left + dgap) < 0) return (false);
 const	int	d5 = b->left + 3 * agap - 2;	// donor 5' end
 const	int	d3 = b->left + 2;		// donor 3' end
 const	int	a5 = b->right - 2;		// accpt 5' end
 const	int	ntry = (algmode.crs || agap)? 1: 2;
+const	int	nu = std::min(d3 + 1, b->right - dgap);
+	if (b->exin->lplay(nu) < 0) return (false);
 	agap = 2 - agap;
 	int	n = min3(a->left, b->left / 3, agap + expected_overlap_ext);
 	VTYPE*	bw = (n + 1 > expected_max_overlap)? new VTYPE[n + 1]: backward;

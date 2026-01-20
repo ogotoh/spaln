@@ -25,19 +25,20 @@
 class	ExinPot;
 
 struct SGPT2 {
-	STYPE   sig5;
-	STYPE   sig3;
+	STYPE  sig5;
+	STYPE  sig3;
+//	STYPE  sigI;
 	char   phs5;
 	char   phs3;
 };
 
 struct SGPT6 {
-	STYPE   sig5;
-	STYPE   sig3;
-	STYPE   sigS;
-	STYPE   sigT;
-	STYPE   sigE;
-	STYPE   sigI;
+	STYPE  sig5;
+	STYPE  sig3;
+	STYPE  sigS;
+	STYPE  sigT;
+	STYPE  sigE;
+	STYPE  sigI;
 	char   phs5;
 	char   phs3;
 };
@@ -45,6 +46,7 @@ struct SGPT6 {
 static	const	SGPT2	ZeroSGPT2 = {0, 0, char(-2), char(-2)};
 static	const	SGPT6	ZeroSGPT6 = {0, 0, 0, 0, 0, 0, char(-2), char(-2)};
 static	const	float	rlmt_quant = 0.8;
+extern	float	ild_up_quantile;
 
 struct INT53 {
 	INT	dinc5:	4;
@@ -204,16 +206,36 @@ const	CHAR*	spjseq(int n5, int n3);
 
 // intron penalty
 
-struct INTRONPEN {
-	float	ip, fact, mean;
-	int	llmt, mu, rlmt, elmt, tlmt, minl, maxl, mode, nquant;
-	STYPE	sip;
-	float	a1, m1, t1, k1, m2, t2, k2, a2, m3, t3, k3;
-	INT	hard_minl:	1;
-	INT	hard_maxl:	1;
+struct IntPrm {
+	float	ip = FQUERY;	// base line
+	float	fact = FQUERY;	// 
+	float	mean = -2.767;	// mean intron penalty
+	int	llmt = 20;	// lower bound in table 
+	int	mu = 224;	// mode of intron length
+	int	rlmt = 825;	// upper boound in table 
+	int	elmt = 2;	// minimum exon length
+	int	tlmt = 5;	// 
+	int	minl = 20;	// shortest allowed intron length
+	int	maxl = 0;	// longest allowed intron length
+	int	mode = 0;
+	int	nquant = 10;	// number of quantile
+	STYPE	sip = 0;	// SHORT(ip)
+	float	a1 = 0;
+	float	m1 = 0;
+	float	t1 = 0;
+	float	k1= 0;
+	float	m2 = 0;
+	float	t2 = 0;
+	float	k2 = 0;
+	float	a2 = 0;
+	float	m3 = 0;
+	float	t3 = 0;
+	float	k3 = 0;
+	void	from_str(const char* str);
+	void	from_ildmodel(const char* genspc);
 };
 
-extern	INTRONPEN IntronPrm;
+extern	IntPrm IntronPrm;
 
 struct LenPen {
 	SHORT	len;	// intron length
@@ -241,7 +263,7 @@ public:
 	STYPE	Penalty() const {return (GapWI);}
 	STYPE	Penalty(const int& n) const {
 	    if (n < IntronPrm.llmt) return (SHRT_MIN); else
-	    if (IntronPrm.hard_maxl && n > IntronPrm.maxl) return (SHRT_MIN);
+	    if (n > IntronPrm.maxl) return (SHRT_MIN);
 	    if (n < IntronPrm.rlmt && table) return (table[n]); else
 	    return (STYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)));
 	}
@@ -262,9 +284,9 @@ public:
   table: length-dependent term
 **********/
 
-extern	void	makeStdSig53();
+extern	void	makeStdSig53(const int dvsp);
 extern	void	EraStdSig53();
-extern	INT	max_intron_len(float p, const char* fn = 0);
+extern	INT	max_intron_len(float p);
 
 /*****************************************************
 	Frechet Distribution

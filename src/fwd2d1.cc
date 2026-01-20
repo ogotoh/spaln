@@ -45,7 +45,7 @@ const 	Seq*&	b;
 	VTYPE	lastD();
 const 	CHAR*	as;
 const 	CHAR*	bs;
- 	VTYPE**	mtx;
+ 	short**	mtx;
 	VTYPE	uu;
 	VTYPE	vv;
 public:
@@ -200,7 +200,7 @@ const 	Seq*&	b;
 	VTYPE	lastD(int* ends);
 const 	CHAR*	as;
 const 	CHAR*	bs;
- 	VTYPE**	mtx;
+ 	short**	mtx;
 	VTYPE	uu;
 	VTYPE	vv;
 public:

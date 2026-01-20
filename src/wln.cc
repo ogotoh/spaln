@@ -32,11 +32,11 @@ static	int	cmphcl(const HSP** a, const HSP** b);
 static	JUXT*	jxtsort(JUXT* jxt, const int& n, const int& key);
 
 static	const	int	min_hit = 3;
-static	const	int	def_afact = 10;
 static	WLPRM	wlprms[MaxWlpLevel + 1] = {{0}, {0}, {0}, {0}};
 static	HSPPRM	hspprm = {20, 10};
 static	Wlprms*	wlparams = 0;
-static	int	afact = 0;
+static	int	afact = 5;
+static	int	maxnjxt = 4096;
 static	const	char*	WlnDefBitPat[MaxBitPat] = {"", "1", "101", "1101",
 	"11011","1101101", "110011011", "1101101011", "110010110111",
 	"11101100101011", "110110010110111", "1111011001011011"};
@@ -175,7 +175,6 @@ const	char&	opt = argv[0][2];
 	if (!opt) return;
 	bool	num = !(opt == 'B' || opt == 'R' || opt == 'b' || opt == 'r');
 const	char*	vl = getarg(argc, argv, num, 3);
-	if (opt == 'a' && !vl) afact = def_afact;
 	if (!vl) return;
 	WLPRM*	wlp0 = wlprms;
 	WLPRM*	wlp1 = wlprms + 1;
@@ -196,6 +195,7 @@ const	char*	vl = getarg(argc, argv, num, 3);
 	  case 'd': hspprm.RepPen = atof(vl); break;
 	  case 'g': wlp1->gain = atoi(vl); break;
 	  case 'h': wlp1->thr = atoi(vl); break;
+	  case 'j': maxnjxt = atoi(vl); break;
 	  case 'k': wlp1->tpl = atoi(vl); break;
 	  case 'r': 
 	    if (isdigit(*vl)) resetwlprm(wlp1, atoi(vl));
@@ -231,41 +231,32 @@ Wlp::Wlp(const Seq* seqs[], const PwdB* _pwd, const int level)
 	header = lookup(position, mm);
 }
 
-Wlp::Wlp(Seq* seqs[]) : 
-	a(seqs[0]), b(seqs[1]), mm(a->right - a->left), wlprm(setwlprm(0)), 
-	awspan(wlprm->width - 1), ixtd{{0}, {0}, {0}, 0, 0}, min_lnkscr(0)
-{
-	if (!afact) return;
-	position = foldseq();
-	INT*	cnt = kmercount();
-	RANGE*	masked = lowic(cnt);	// low information content
-	if (masked) {
-	    if (masked->left > a->right - masked->right) {
-		a->right = masked->left;
-	    } else {
-		a->left = masked->right;
-	    }
-	}
-	delete[] cnt;
-	delete[] masked;
-}
-
 INT* Wlp::lookup(INT* s, int kk)
 {
 	if (!s) return (0);
 	INT	m = wlprm->mask;
 	INT*	t = new INT[m];
+	INT*	c = new INT[m];
 
 	vclear(t, m);
+	vclear(c, m);
 	kk -= wlprm->width - 1;
 	for (int k = 0; k++ < kk; ) {
 	    if (*s < wlprm->mask) {
+		++c[*s];
 		m = t[*s];
 		t[*s] = k;
 		*s++ = m;
-	    } else
+	    } else {
 		*s++ = 0;
+	    }
 	}
+	if (afact) {
+	    for (m = 0; m < wlprm->mask; ++m) {
+		if ((int) c[m] > afact) t[m] = 0;	// mask too many kmers
+	    }
+	}
+	delete[] c;
 	return (t);
 }
 
@@ -317,40 +308,6 @@ const	    INT	c = wlprm->ConvTab[*ps++];
 	}
 	kmer[nk] = kmer[0];
 	return (kmer);
-}
-
-RANGE* Wlp::lowic(const INT* cnt)
-{
-	if (afact <= 0 || mm <= awspan) return (0);
-const	int	nk = mm - awspan;
-const	INT*	ps = position;
-const	INT*	ts = position + nk;
-const	INT	cthr = INT(ttl / afact);
-
-	int	scr = 0;
-	int	maxscr = 0;
-	int	ml = a->left;
-	int	mr = a->left;
-	int	ms = a->left;
-	for (int m = a->left; ps < ts; ++ps, ++m) {
-	    if (*ps <= wlprm->mask && cnt[*ps] > cthr) {
-		if (++scr > maxscr) {
-		    maxscr = scr;
-		    mr = m;
-		    ml = ms;
-		}
-	    } else if (--scr < 0) {
-		scr = 0;
-		ms = m;
-	    }
-	}
-	RANGE*	rng = 0;
-	if (maxscr > int(cthr)) {
-	    rng = new RANGE[1];
-	    rng->left = ml + 1;
-	    rng->right = mr + wlprm->width;
-	}
-	return (rng);
 }
 
 // extend maching region if possible and calculate matching score
@@ -685,16 +642,15 @@ const	int	dd = std::min(ncl->lx - mcl->rx, ncl->ly - mcl->ry);
 
 	if (dr < 0) dr = -dr;
 	else if (dr && algmode.lsg) {
-	    if ((IntronPrm.hard_maxl && dr > IntronPrm.maxl) || 
-		(IntronPrm.hard_minl && dr < IntronPrm.minl))
-		return (scr);
-	    scr = pwd->IntPen->PenaltyPlus(dr);	// spliced
+	    if (dr > IntronPrm.maxl) return (scr);	// too long
+	    if (dr >= IntronPrm.minl) 			// may be intron
+		scr = pwd->IntPen->PenaltyPlus(dr);	// spliced
 	}
 	dr /= bbt;
 	VTYPE	pen = pwd->GapPenalty(dr);	// ordinay gap
 	if (pen > scr) scr = pen;
 	if (dd < 0)	// overlapping segment 
-	    scr += (mcl->jscr + ncl->jscr) * dd / (mcl->len + ncl->len);
+	    scr += (mcl->jscr + ncl->jscr) * 2 * dd / (mcl->len + ncl->len);
 	return (scr);
 }
 
@@ -825,14 +781,14 @@ const	VTYPE	maxh = (!algmode.lsg && algmode.mlt < 2)?
 	delete[] *jxt;
 	wbf.jxt = *jxt = new JUXT[num + irno];
 	JUXT*	wjx = wbf.jxt;
-	while (qcl && qcl->sscr >= maxh) {
+	for ( ; qcl && qcl->sscr >= maxh; qcl = *whcl++) {
 	    for (ncl = qcl; qcl && qcl->sscr > 0; qcl = qcl->ulnk)
 		wjx++;		// count
 	    if (qcl) {		// partial overlap
 		for (qcl = ncl; qcl && qcl->sscr > 0; qcl = qcl->ulnk)
 		    qcl->sscr = 0;
 		wjx = wbf.jxt;
-		goto nextchain;
+		continue;
 	    }
 	    wbf.num = wjx - wbf.jxt;	// count legitimate segments
 	    wjx->jx = a->right;
@@ -854,8 +810,6 @@ const	VTYPE	maxh = (!algmode.lsg && algmode.mlt < 2)?
 	    }
 	    wmfd.write(&wbf);
 	    wbf.jxt = wjx += wbf.num + 1;
-nextchain:
-	    qcl = *whcl++;
 	}
 	vclear(&wbf);
 	wmfd.write(&wbf);
@@ -908,6 +862,7 @@ nextchain:
 			    break;
 			}
 		    }
+		    if (jxtr < jxtl) wlul->num = 0;
 		    break;
 		}
 	    }
@@ -949,6 +904,7 @@ const	    JUXT	jbuf = {a->right - a->left, b->right - b->left, 0};
 	    mfd->write(&jbuf);
 	    jxt = (JUXT*) mfd->flush();
 	}
+	delete[] jxtd;
 	return (jxt);
 }
 
@@ -978,20 +934,29 @@ WLUNIT* Wlp::willip(JUXT** ptop, int& nwlu, JUXT* jxt)
 }
 
 Wilip::Wilip(const Seq* seqs[], const PwdB* pwd, const int level)
-	: int_wlp(true)
 {
 	Wlp	wln(seqs, pwd, level);
 	if (wln.ng()) return;
 	JUXT*	jxt = wln.run_dmsnno(nwlu);
 	if (!jxt) return;
+	if (nwlu > maxnjxt) {
+	    delete[] jxt;
+	    nwlu = 0;
+	    return;
+	}
 	wlu = wln.willip(&top, nwlu, jxt);
 }
 
 Wilip::Wilip(const Seq* seqs[], Wlp* wln)
-	: int_wlp(false)
 {
+	wln->reset(seqs[1]);
 	JUXT*	jxt = wln->run_dmsnno(nwlu);
 	if (!jxt) return;
+	if (nwlu > maxnjxt) {
+	    delete[] jxt;
+	    nwlu = 0;
+	    return;
+	}
 	wlu = wln->willip(&top, nwlu, jxt);
 }
 
@@ -1027,6 +992,7 @@ int geneorient(Seq* seqs[], const PwdB* pwd)
 	INT	level = 0;
 	Seq**	b = seqs + 1;
 	Seq**	c = seqs + 2;
+	(*b)->comrev(c);
 	for ( ; level < MaxWlpLevel; ++level) {
 	    wl[0] = new Wilip((const Seq**) seqs, pwd, level);
 	    WLUNIT*	wlu0 = wl[0]->begin();

@@ -105,25 +105,24 @@ static	const	INT	i32permute[8] = {0, 4, 1, 5, 2, 6, 3, 7};
 	nn = n - nn; \
 	if (nn) store(d - Nelem + nn, c_v);
 
+// in the following two macros, array d must be a multiple of Nelem
+// larger than or equal to n
+
 #define VecAdd_c(d, c, n) \
-	size_t	nn = n / Nelem * Nelem; \
 	var_v	c_v = splat(c); \
-	for (var_t* e = d + nn; d < e; d += Nelem) { \
+	for (var_t* e = d + (n + Nelem - 1)/ Nelem * Nelem; \
+		d < e; d += Nelem) { \
 var_v	    v_v = add(load(d), c_v); \
 	    store(d, v_v); \
-	} \
-	nn = n - nn; \
-	while (nn--) *d++ += c;
+	}
 
 #define VecSub_c(d, c, n) \
-	size_t	nn = n / Nelem * Nelem; \
 	var_v	c_v = splat(c); \
-	for (var_t* e = d + nn; d < e; d += Nelem) { \
+	for (var_t* e = d + (n + Nelem - 1)/ Nelem * Nelem; \
+		d < e; d += Nelem) { \
 var_v	    v_v = sub(load(d), c_v); \
 	    store(d, v_v); \
-	} \
-	nn = n - nn; \
-	while (nn--) *d++ -= c;
+	}
 
 // O(log_2(Nelem)) algorithm
 #define VecMax(d, n) \

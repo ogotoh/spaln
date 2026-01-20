@@ -25,6 +25,7 @@
 
 #include "divseq.h"
 #include "seq.h"
+#include "dist2.h"
 
 class mSeq;
 
@@ -79,19 +80,16 @@ struct LIST {
 	int     idx;
 };
 
-struct DistMat {
-	int	numb;
+struct DistMat : public Dist2<FTYPE> {
 	DistCal	realign;
-	Strlist*	sname;
-	double	bias;
-	FTYPE*	dist;
-	ScrRng*	scrrng;
+	double	bias = 0;
 	DistMat(FILE* fd);
 	DistMat(int argc, const char** argv, 
 	    const char* catalog = 0, DistCal realin = Composition);
 	DistMat(Seq** seqs, int nn);
 	DistMat(mSeq** seqs, int nn, DistCal realin = DynAln);
-	~DistMat();
+	DistMat(const char* fname) : Dist2<FTYPE>(fname) {}
+	~DistMat() {}
 };
 
 struct Tnode {
@@ -145,11 +143,11 @@ struct  Knode {
 template <class node_t>
 class Btree {
 public:
-	int	members;	// mumber of leaves
-	char**	mname;
-	char*	mnbuf;
-	node_t*	root;
-	node_t*	lead;		// array top
+	int	members = 0;	// mumber of leaves
+	char**	mname = 0;
+	char*	mnbuf = 0;
+	node_t*	root = 0;
+	node_t*	lead = 0;		// array top
 	void	GetNHtree(FILE* fd);
 	void	GetTXtree(FILE* fd);
 	void	fill_tname();
@@ -162,10 +160,6 @@ public:
 template <class node_t>
 Btree<node_t>::Btree(const char* fname)
 {
-        root = lead = 0;
-        mname = 0;
-        mnbuf = 0;
-        members = 0;
         FILE*   fd = fopen(fname, "r");
         if (!fd) return;
         int     c;
@@ -227,7 +221,6 @@ void Btree<node_t>::GetNHtree(FILE* fd)
 	mnbuf = new char[mnsize + members];
 	char*	lenbuf = maxlen? new char[maxlen + 1]: 0;
 	lead = new node_t[2 * members - 1];
-	vclear(lead, 2 * members - 1);
 	root = lead;
 	Stack<node_t*>   cstk;
 
@@ -315,7 +308,6 @@ void Btree<node_t>::GetTXtree(FILE* fd)
 	lead = new node_t[2 * members];
 	mname = new char*[members + 1];
 	mnbuf = new char[nmsize + members];
-	vclear(lead, 2 * members);
 
 	rewind(fd);
 	Stack<node_t*>   ctck;
@@ -402,21 +394,21 @@ void fill_ndecent(node_t* nd)
 
 class Ktree {
 protected:
-	int	members;	// mumber of leaves
-	LEAF*	leaves;		// leaves
-	int	leaf_no;	// leaf identifier
+	int	members = 0;	// mumber of leaves
+	LEAF*	leaves = 0;	// leaves
+	int	leaf_no = 0;	// leaf identifier
 #if USE_WEIGHT
-	FTYPE*	pwt;		// pair weight temporary variable
-	FTYPE	bwt;		// basal weight
+	FTYPE*	pwt = 0;	// pair weight temporary variable
+	FTYPE	bwt = 0;	// basal weight
 #endif
-	SigII*	sgi;
+	SigII*	sgi = 0;
 	LEAF*	repairwt(Knode* node);
 	void	plant(DistTree& dt);
 	void	dollo_1st(Knode* node, int j);
 	void	dollo_2nd(Knode* node, bool peist);
 public:
-	Knode*	lead;	// array top
-	Knode*	root;	// root
+	Knode*	lead = 0;	// array top
+	Knode*	root = 0;	// root
 	Ktree(int mem = 0, Knode* led = 0);
 	Ktree(DistMat* dmat, TreeMet tmethod = Def_METHOD, Knode* led = 0);
 	Ktree(Seq* sd, Subset* ss = 0, TreeMet 
@@ -436,20 +428,20 @@ public:
 
 class DistTree : public Ktree {
 protected:
-	FTYPE*	dist;
-	int*	row;
-	int*	nnbr;
-	bool	newdmat;
-	char**	mname;
-	char*	mnbuf;
-	int	ntimes;
-	double	lwhi;
+	FTYPE*	dist = 0;
+	int*	row = 0;
+	int*	nnbr = 0;
+	bool	newdmat = false;
+	char**	mname = 0;
+	char*	mnbuf = 0;
+	int	ntimes = 0;
+	double	lwhi = 0;
 	FTYPE	dminidx(int& i, int members);
 	int	dminrow(int i, int members);
 	void	lowesthi(Knode* node, double hi);
 	double	recalhi(Knode* node, double hi);
 public:
-	FTYPE*	mtrx;
+	FTYPE*	mtrx = 0;
 	DistTree(DistMat* dmat, TreeMet tmethod = Def_METHOD, Knode* led = 0);
 	DistTree(Seq* sd, Subset* ss = 0, TreeMet tmethod = Def_METHOD,
 	    Knode* led = 0, bool nm = false);
@@ -471,17 +463,17 @@ public:
 
 class PpPrm : public DistTree {
 	char	str[MAXL];
-	FILE*	fo;
-	int	minelem, lastelem, datp;
-	int	otulen, clmpos;
-	double	factor;
-	double	bias;
-	double	maxhi;
+	FILE*	fo = 0;
+	int	minelem = 0, lastelem = 0, datp = 0;
+	int	otulen = 0, clmpos = 0;
+	double	factor = 0.;
+	double	bias = 0.;
+	double	maxhi = 0.;
 	LIST	list[MAXELEM];
 	char	sfrmt[10];
 	char	ffrmt[10];
-	char*	linebuf;
-	char*	baseline;
+	char*	linebuf = 0;
+	char*	baseline = 0;
 	void	fillstr(int cha, int from, int to);
 	void	printcur(Knode* node);
 //	Gnm2tab*	g2t;

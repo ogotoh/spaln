@@ -26,6 +26,17 @@
 #include "stdtype.h"
 #include <math.h>
 
+static	const	short	SNEVSEL = (SHRT_MIN / 16 * 15);
+static	const	int	INEVSEL = (INT_MIN / 16 * 7);
+static	const	long	LNEVSEL = (LONG_MIN / 16 * 7);
+static	const	float	FNEVSEL = (-FLT_MAX / 16 * 15);
+static	const	double	DNEVSEL = (-DBL_MAX / 16 * 15);
+
+static	const	int	IInfinit = INT_MAX;
+static	const	long	LInfinit = LONG_MAX;
+static	const	float	FInfinit = FLT_MAX;
+static	const	double	DInfinit = DBL_MAX;
+
 #ifndef FVAL
 #define	FVAL	0
 #endif
@@ -53,11 +64,11 @@ typedef	FTYPE	STYPE;
 typedef	float	PVTYPE;	// printf
 static	const	FTYPE	VABORT = -FLT_MAX;
 static	const	FTYPE	fepsilon = 1.e-7f;
-static	const	VTYPE	fInfinit = FLT_MAX;
+static	const	VTYPE	fInfinit = FInfinit;
 #if DVAL
-static	const	VTYPE	NEVSEL = -(DBL_MAX / 16 * 7);
+static	const	VTYPE	NEVSEL = DNEVSEL;
 #else
-static	const	VTYPE	NEVSEL = -(FLT_MAX / 16 * 7);
+static	const	VTYPE	NEVSEL = FNEVSEL;
 #endif
 inline	VTYPE vabs(VTYPE x) {return (fabs(x));}
 inline	bool gt(FTYPE a, FTYPE b) {return (a >  (b + fepsilon * MAX(1., fabs(b))));}
@@ -71,13 +82,13 @@ inline	bool le(FTYPE a, FTYPE b) {return (a <= (b + fepsilon * MAX(1., fabs(b)))
 #if LVAL
 typedef	long 	VTYPE;
 typedef	int	STYPE;
-static	const	VTYPE	NEVSEL = (LONG_MIN / 16 * 7);
-static	const	VTYPE	fInfinit = LONG_MAX;
+static	const	VTYPE	NEVSEL = LNEVSEL;
+static	const	VTYPE	fInfinit = LInfinit;
 #else	// !LVAL
 typedef	int	VTYPE;
 typedef	short	STYPE;
-static	const	VTYPE	NEVSEL = (INT_MIN / 16 * 7);
-static	const	VTYPE	fInfinit = INT_MAX;
+static	const	VTYPE	NEVSEL = INEVSEL;
+static	const	VTYPE	fInfinit = IInfinit;
 #endif	// LVAL
 typedef	int	PVTYPE;
 static	const	FTYPE	fepsilon = 0;

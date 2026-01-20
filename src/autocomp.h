@@ -273,11 +273,7 @@ InSt SeqLoader<seq_t>::nextseq(seq_t** sd, bool readin)
 			if (svr->input_mode == IM_MULT) attr2 = "M";
 			first = true;
 			if (**this->mname == DBSID) break;
-#if USE_ZLIB
-			this->fd = (*sd)->openseq(*this->mname, &this->gzfd);
-#else
-			this->fd = (*sd)->openseq(*this->mname);
-#endif
+			(*sd)->openseq(*this->mname, this->fp);
 			if (this->fixedin != 1) {
 			    if (!this->active_file())
 				prompt("%s not found !\n", *this->mname);
@@ -285,16 +281,14 @@ InSt SeqLoader<seq_t>::nextseq(seq_t** sd, bool readin)
 			} else if (!this->active_file()) return (IS_END);
 		    }
 		}
-		if (*this->mname && **this->mname == DBSID) {	// Get from Database File */
+		if (*this->mname && **this->mname == DBSID) {	// Get from Database File
 		    Seq*	sdb = (*sd)->getdbseq(dbs, *this->mname, -1, readin);
 		    if (this->fixedin != 1) ++this->mname;
 		    else if (!sdb) return (IS_END);
 		    break;
 		} else {
-		    if (this->fd && (*sd)->fgetseq(this->fd, attr, attr2)) break;
-#if USE_ZLIB
-		    if (this->gzfd && (*sd)->fgetseq(this->gzfd, attr, attr2)) break;
-#endif
+		    if (this->fp.fd && (*sd)->fgetseq(this->fp.fd, attr, attr2)) break;
+		    if (this->fp.gzfd && (*sd)->fgetseq(this->fp.gzfd, attr, attr2)) break;
 		    this->close_file();
 		    if (this->fixedin == 1) return (IS_END);
 		    if (first) return (IS_ERR);			// empty or absent
@@ -302,7 +296,7 @@ InSt SeqLoader<seq_t>::nextseq(seq_t** sd, bool readin)
 	    }
 	}
 	++this->var_no;
-	return ((*sd)->many? IS_OK: IS_ERR);
+	return ((*sd)->many || (*sd)->len? IS_OK: IS_ERR);
 }
 
 template <class seq_t>
@@ -528,13 +522,11 @@ static	int	visit = 0;
 		  default: break;
 		}
 		break;
-#if M_THREAD
 	      case 'q':
 		if ((val = getarg(argc, argv, true)))
 		    max_queue_num = atoi(val);
 		else	max_queue_num = 0;
 		break;
-#endif
 	      case 'Q':
 		if ((val = getarg(argc, argv, true)))
 		    algmode.qck = atoi(val);
@@ -559,12 +551,10 @@ static	int	visit = 0;
 		    {algmode.mns = atoi(*++argv); --argc;}
 		else algmode.mns = 0;
 		break;
-#if M_THREAD
 	      case 't':
 	        thread_num = (val = getarg(argc, argv, true))?
 		    atoi(val): -1;
 		break;
-#endif
 	      case 'T':
 		if ((val = getarg(argc, argv, false)))
 		    ftable.setpath(val, gnm2tab);
@@ -714,10 +704,8 @@ int AlnServer<seq_t>::auto_comp(bool multhr)
 	} while (inst_a == IS_ERR || inst_b == IS_ERR);
 	int	nprocessed = 0;
 	if (this->setup_job) this->setup_job(this);
-#if M_THREAD
 	if (multhr && thread_num && !this->njumble) 
 	    nprocessed  = this->MasterWorker(); else
-#endif
 	nprocessed = serialJob();
 	if (this->cleanup_job) this->cleanup_job(this);
 	return (nprocessed);

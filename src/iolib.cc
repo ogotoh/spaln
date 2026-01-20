@@ -40,16 +40,6 @@
 FILE*	out_fd = stdout;
 static	const	int	NEG = -1;
 
-const	char*	no_file = "\'%s\' cannot be created!\n";
-const	char*	not_found = "\'%s\' is not found!\n";
-const	char*	read_error = "\'%s\' read error!\n";
-const	char*	write_error = "\'%s\' write error!\n";
-const	char*	gz_unsupport = "compressed %s is not supported!\n";
-const	char*	bad_file = "Bad binary file : %s !\n";
-const	char*	gnm2tab = "gnm2tab";
-const	char*	esc_code = "\x1b[";
-const	char*	font_end = "</font></b>";
-
 	       //lpw blk Nout MaxOut eij ovl fnm rm lg spj 
 OUTPRM	OutPrm = {60, 0, 16, 1, 4, 10, 5, 0, 1, 3, 1};
 
@@ -59,18 +49,13 @@ static  const   char*   font_tag[3] = {
 	"<b><font color=\"%s\" style=\"background-color:%s\">"
 };
 
-static	void	make_fn(const char* fnam, const char* ss[]);
-static	void	scanfrmt( char* p, const char* s);
+static	void	make_fn(const char* fname, const char* ss[]);
+static	void	scanfrmt(char* p, const char* s);
 static	int	frmtc(const char** ss, char* pb);
 static	void	frmts(char* ps);
 static	int	raw_scn(char* str, char* format, va_list args);
 static	void	display(const char* s, va_list args);
 static	INTERACT	crt = {1, 0};
-
-
-#if LEAKTRACE
-//leaktracer::LeakTrace	leak_trace;
-#endif
 
 char* fgets_wocr(char* str, INT maxl, FILE* fd)
 {
@@ -86,7 +71,7 @@ char* fgets_wocr(char* str, INT maxl, FILE* fd)
 
 static void make_fn(const char* fnam, const char* ss[])
 {
-	ss[0] = (char*) fnam;
+	ss[0] = fnam;
 	ss[1] = ss[2] = ss[3] = ss[4] = 0;
 	if (!fnam) return;
 	while (*fnam) {
@@ -103,13 +88,11 @@ static void make_fn(const char* fnam, const char* ss[])
 	ss[4] = fnam;
 }
 
-char* topath( char* res, const char* org)
+char* topath(char* res, const char* org)
 {
-	char* trm;
-
 	if (!org) *res = '\0';
 	else	strcpy(res, org);
-	trm = res + strlen(res) - 1;
+	char*	trm = res + strlen(res) - 1;
 	if (*res && *trm != PATHDELM && *trm != ':')
 	    *++trm = PATHDELM;
 	*++trm = '\0';
@@ -191,14 +174,36 @@ char* add_ext(const char* fn, const char* ext, char* buf)
 	strcpy(buf, fn);
 	if (!ext || !*ext) return (buf);
 	if (*ext == '.') ++ext;
-	char*	dot = strrchr(buf, '.');
+	char*	sls = strrchr(buf, '/');
+	if (!sls) sls = buf;
+	char*	dot = strrchr(sls, '.');
 	if (dot && !strcmp(dot + 1, ext)) return (buf);
+	if (dot && !strcmp(dot + 1, "gz")) {	// .ext.gz
+const	    char*	e = ext + strlen(ext);
+	    bool	eq = true;
+	    while (--dot > buf && --e > ext && *dot != '.') 
+		if (!(eq = *dot == *e)) break;
+	    if (eq) return(buf);
+	}
 	if (!dot || strlen(dot) > 1) strcat(buf, ".");
 	return (strcat(buf, ext));
 }
 
-FILE* fopenpbe(const char* path, const char* name, 
-	const char* extent, const char* opt, int lvl, char* str)
+char* get_ext(char* txt, const char* ext)
+{
+const	char*	e = ext? ext + strlen(ext): 0;
+	char*	sls = strrchr(txt, '/');
+	if (!sls) sls = txt;
+	char*	dot = strrchr(sls, '.');
+	char*	t = (dot && !strcmp(dot + 1, "gz"))?
+	    dot: (txt + strlen(txt));
+	while (--t > sls && *t != '.')
+	    if (ext && --e >= ext && *t != *e) break;
+	return (((ext && e == ext) || *t == '.')? t: 0);
+}
+
+FILE* fopenpbe(const char* path, const char* name, const char* extent, 
+	const char* opt, const int& lvl, char* str)
 {
 	char	buf[LINE_MAX];
 	if (!str) str = buf;
@@ -263,6 +268,166 @@ FILE* qopen(const char* dfname, const char* mode)
 	return (fd);
 }
 
+gzFile wgzopen(const char* name, const char* mode)
+{
+	char	str[LINE_MAX];
+	strcpy(str, name);
+	if (!is_gz(name)) strcat(str, gz_ext);
+	if (is_file(str)) {
+	    int	c = 'y';
+	    if (OutPrm.overwrite == 0) {
+		INT	p = crt.prompt;
+		crt.prompt = 1;
+		c = progetc("Overwrite existing file \"%s\"? [y/n] ", str);
+		crt.prompt = p;
+	    } else if (OutPrm.overwrite > 1)
+		c = 'n';
+	    if (tolower(c) != 'y') return (0);
+	}
+	return (gzopen(str, mode));
+}
+
+gzFile gzopenpbe(const char* path, const char* name, 
+	const char* extent, const char* opt, const int& lvl, char* str)
+{
+	char	buf[LINE_MAX];
+	if (!str) str = buf;
+
+	gzFile	fd = 0;
+	char*	ps;
+const 	char*	pt = path? path: "";
+
+	do {
+	    for (ps = str; *pt; *ps++ = *pt++) {
+		if (*pt == ';') {
+		    pt++;
+		    break;
+		}
+	    }
+	    if (ps > str && ps[-1] != PATHDELM)
+		*ps++ = PATHDELM;
+	    *ps = '\0';
+	    if (extent && *extent) {
+		partfnam(str + strlen(str), name, "b");
+		if (*extent != '.') strcat(str, ".");
+		strcat(str, extent);
+	    } else
+		partfnam(str + strlen(str), name, "be");
+	    if ((fd = gzopen(str, opt))) return (fd);
+	} while (*pt);
+
+	if (lvl >= 0)
+	    fprintf(stderr, "%s: cannot be open!\n", str);
+	if (lvl > 0) exit (lvl);
+	return (0);
+}
+
+size_t lgzread(gzFile gzfd, char* buf, size_t sz)
+{
+	char*	tq = buf + sz;
+	for (char* sq = buf; sq < tq; sq += INT_MAX) {
+const	    int	n = std::min(long(INT_MAX), tq - sq);
+	    int	actural_read = gzread(gzfd, sq, n);
+	    if (actural_read <= 0) {
+		int	z_errnum = 0;
+		fatal("gz_read_error %s!\n", gzerror(gzfd, &z_errnum));
+	    }
+	}
+	return (sz);
+}
+
+size_t lgzwrite(gzFile gzfd, const char* buf, size_t sz)
+{
+const	char*	tq = buf + sz;
+	for (const char* sq = buf; sq < tq; sq += INT_MAX) {
+const	    int	n = std::min(long(INT_MAX), tq - sq);
+	    int	actural_write = gzwrite(gzfd, sq, n);
+	    if (actural_write <= 0) {
+		int	z_errnum = 0;
+		fatal("gz_write_error %s!\n", gzerror(gzfd, &z_errnum));
+	    }
+	}
+	return (sz);
+}
+
+//	read-only 
+
+int ReadFile::open(const char* fname, const char* extnt)
+{
+	char	str[LINE_MAX];
+	strcpy(str, fname);
+// open fname depending on its extent
+	char*	sls = strrchr(str, '/');
+	if (!sls) sls = str;
+	char*	dat = strstr(sls, dat_ext);
+	char*	dot = strrchr(sls, '.');	// try .dgz
+	if (dot && !strcmp(dot, dgz_ext) && is_filled_file(str) 
+	    && (gzfd = gzopen(str, "r"))) return (dtype = 2);
+	if (dot && !strcmp(dot, gz_ext) && is_filled_file(str) 
+	    && (gzfd = gzopen(str, "r"))) return (dtype = dat? 2: 1);
+	if (dot && !strcmp(dot, dat_ext) && is_filled_file(str) 
+	    && (fd = fopen(str, "r"))) return (dtype = 2);
+	if (is_filled_file(str) && (fd = fopen(str, "r")))
+	    return (dtype = 1);
+
+// add extensions
+	if (dat) dot = dat;
+	if (dot) {
+	    *dot = '\0';
+	    if (is_filled_file(str) && (fd = fopen(str, "r")))
+		return (dtype = 1);
+	} else {
+	    dot = str + strlen(str);
+	}
+	if (extnt) {
+	    char	ext[MAXL];
+	    strcpy(ext, extnt);
+	    dat = strstr(ext, dat_ext);
+	    bool	isgz = is_gz(ext);
+	    if (dat && isgz) {
+		strcpy(dot, dgz_ext);		// try .dgz
+		if (is_filled_file(str) && (gzfd = gzopen(str, "r")))
+		    return (dtype = 2);
+		strcpy(dot, datgz);		// try .dat.gz
+		if (is_filled_file(str) && (gzfd = gzopen(str, "r")))
+		    return (dtype = 2);
+	    } else if (isgz) {
+		strcpy(dot, gz_ext);		// try .gz
+		if (is_filled_file(str) && (gzfd = gzopen(str, "r")))
+		    return (dtype = 1);
+	    } else if (dat) {
+		strcpy(dot, dat_ext);		// try .gz
+		if (is_filled_file(str) && (fd = fopen(str, "r")))
+		    return (dtype = 2);
+	    }
+	}
+	return (dtype = 0);
+}
+
+//	write-only 
+
+void WriteFile::open(const char* fname, const int& text, const bool& gzip, 
+	const char* in_name)
+{
+	char	str[LINE_MAX];
+	strcpy(str, fname);
+const	char*	sls = strrchr(str, '/');
+	if (!sls) sls = str;
+const	char*	dot = strrchr(sls, '.');
+const	bool	is_dgz = dot && !strcmp(dot, dgz_ext);
+const	bool	addat = !is_dgz && !text && (!dot || !strstr(dot, dat_ext));
+const	bool	addgz = !is_dgz && gzip && (!dot || strcmp(dot, gz_ext));
+const	bool	adtxt = text > 1 && (!dot || !strstr(dot, txt_ext));
+	if (addgz && addat) strcat(str, dgz_ext);
+	else if (addat) strcat(str, dat_ext);
+	else if (addgz) strcat(str, gz_ext);
+	else if (adtxt) strcat(str, txt_ext);
+	if (in_name && !strcmp(in_name, str))
+	    prompt("%s is the same name as input !\n", str);
+	if (gzip || is_dgz) gzfd = gzopen(str, "wb");
+	else	fd = fopen(str, "wb");
+}
+
 static int	dvc = 0;
 static FILE*	prn = 0;
 
@@ -302,7 +467,7 @@ void setintval(const char* mssg, int* pval, int* back, int given)
 	else if (given != SILENT)	{*back = *pval; *pval = given;}
 }
 
-void setdblval(const char* mssg, double* pval, double* back, const double* given)
+void setdblval(const char* mssg, double* pval, double* back, const double*& given)
 {
 	int	gvn = (int) *given;
 
@@ -316,22 +481,29 @@ void setdblval(const char* mssg, double* pval, double* back, const double* given
 	}
 }
 
+/*********************************************************************
+*
+*	class members of Ftable 
+*
+*********************************************************************/
+
 FILE*	Ftable::fopen(const char* fname, const char* mode)
 {
 	char	str[LINE_MAX];
 	FILE*	fd = 0;
 	for (int i = 0; i < n_tabpath; ++i) {
-	    if (tabpath[i]) {
-		strcpy(str, tabpath[i]);
-		if (subdir) {
-		    strcat(str, "/");
-		    strcat(str, subdir);
+	    if (!tabpath[i]) continue;
+	    strcpy(str, tabpath[i]);
+	    if (subdir) {
+		strcat(str, "/");
+		strcat(str, subdir);
+		if (is_dir(str)) {
 		    fd = fopenpbe(str, fname, 0, mode, -1);
 		    if (fd) return (fd);
 		}
-		fd = fopenpbe(tabpath[i], fname, 0, mode, -1);
-		if (fd) return (fd);
 	    }
+	    fd = fopenpbe(tabpath[i], fname, 0, mode, -1);
+	    if (fd) return (fd);
 	}
 	return (0);
 }
@@ -340,24 +512,20 @@ FILE*	Ftable::fopen(const char* fname, const char* mode)
 
 char* Ftable::getpath(char* fullpath, const char* fname)
 {
-	FILE*	fd = 0;
 	for (int i = 0; i < n_tabpath; ++i) {
-	    if (tabpath[i]) {
-		if (subdir) {
-		    char  str[LINE_MAX];
-		    strcat(str, tabpath[i]);
-		    strcat(str, "/");
-		    strcat(str, subdir);
-		    fd = fopenpbe(str, fname, 0, "r", -1, fullpath);
-		    if (fd) break;
+	    if (!tabpath[i]) continue;
+	    strcpy(fullpath, tabpath[i]);
+	    strcat(fullpath, "/");
+	    if (subdir) {
+		strcat(fullpath, subdir);
+		if (is_dir(fullpath)) {
+		    strcat(fullpath, "/");
+		    strcat(fullpath, fname);
+		    if (is_file(fullpath)) return (fullpath);
 		}
-		fd = fopenpbe(tabpath[i], fname, 0, "r", -1, fullpath);
-		if (fd) break;
 	    }
-	}
-	if (fd) {
-	    fclose(fd);
-	    return (fullpath);
+	    strcat(fullpath, fname);
+	    if (is_file(fullpath)) return (fullpath);
 	}
 	return (0);
 }
@@ -382,58 +550,146 @@ FILE*	Ftable::fopen(const char* fname, const char* envpath, const char* defpath)
 	return (0);
 }
 
-DIR* Ftable::dopen(const char* dname, bool test)
+DIR* Ftable::dopen(const char* dname, const bool& test)
 {
 	for (int i = 0; i < 3; ++i) {
-	    if (tabpath[i]) {
-		char	str[LINE_MAX];
-		strcpy(str, tabpath[i]);
-		strcat(str, "/");
-		strcat(str, dname);
-		DIR*	dp = opendir(str);
-		if (dp) {
-		    setSubDir(dname);
-		    if (test) closedir(dp);
-		    return (dp);
-		}
+	    if (!tabpath[i]) continue;
+	    char	str[LINE_MAX];
+	    strcpy(str, tabpath[i]);
+	    strcat(str, "/");
+	    strcat(str, dname);
+	    DIR*	dp = opendir(str);
+	    if (dp) {
+		setSubDir(dname);
+		if (test) closedir(dp);
+		return (dp);
 	    }
 	}
 	return (0);
 }
 
-void Ftable::setpath(const char* ps, const char* convtab)
+void Ftable::setpath(const char* ps, const char* gnm2tab)
 {
 	setSubDir(ps);
-	DIR*    dp = dopen(ps, true);
-	if (dp) return;
-	if (!convtab) {
+	if (is_dir(ps)) return;
+	char    str[LINE_MAX];
+// examine dirs
+	for (int i = 0; i < 3; ++i) {
+	    if (!tabpath[i]) continue;
+	    strcpy(str, tabpath[i]);
+	    strcat(str, "/");
+	    strcat(str, ps);
+	    if (is_dir(str)) return;
+	}
+// consult with gnm2tab
+	if (!gnm2tab) {
 	    prompt(not_found, ps);
 	    return;
 	}
-	FILE*   fd = this->fopen(convtab, "r");
+	FILE*   fd = this->fopen(gnm2tab, "r");
 	if (!fd) {
-	    prompt(not_found, convtab);
+	    prompt(not_found, gnm2tab);
 	    return;
 	}
-	char    str[LINE_MAX];
+	bool	found = false;
+	char*	ts = 0;
 	while (fgets(str, LINE_MAX, fd)) {
 	    if (*str == '#') continue;
 	    char*       qs = str;
-	    char*       gs = car(qs);
+	    char*       gs = car(qs);	// identifier
 	    if (!*++qs) continue;
-	    char*	ts = car(qs);
+	    ts = car(qs);		// ssp group
 	    if (strcmp(gs, ps) == 0) {
-		dp = dopen(ts, true);
+		found = true;
 		break;
 	    }
-	    if (!*++qs) continue;
-	    gs = car(qs);
-	    if (strcmp(gs, ps)) continue;
-	    dp = dopen(ts, true);
-	    break;
 	}
 	fclose(fd);
-	if (!dp) prompt(not_found, ps);
+	if (!found) prompt(not_found, ps);
+	setSubDir(ts);
+	if (is_dir(ts)) return;
+	char	sspgrp[MAXL];
+	strcpy(sspgrp, ts);
+	for (int i = 0; i < 3; ++i) {
+	    if (!tabpath[i]) continue;
+	    strcpy(str, tabpath[i]);
+	    strcat(str, "/");
+	    strcat(str, sspgrp);
+	    if (is_dir(str)) return;
+	}
+	prompt(not_found, sspgrp);
+}
+
+gzFile Ftable::gzopen(const char* fname, const char* mode)
+{
+	char	str[LINE_MAX];
+	gzFile	fd = 0;
+const	char*	ext = is_gz(fname)? 0: gz_ext;
+	for (int i = 0; i < n_tabpath; ++i) {
+	    if (!tabpath[i]) continue;
+	    strcpy(str, tabpath[i]);
+	    if (subdir) {
+		strcat(str, "/");
+		strcat(str, subdir);
+		if (is_dir(str)) {
+		    fd = gzopenpbe(str, fname, ext, mode, -1);
+		    if (fd) return (fd);
+		}
+	    }
+	    fd = gzopenpbe(tabpath[i], fname, ext, mode, -1);
+	    if (fd) return (fd);
+	}
+	return (0);
+}
+
+gzFile Ftable::gzopen(const char* fname, const char* envpath, const char* defpath)
+{
+	gzFile	fd = this->gzopen(fname, "r");
+	if (fd) return (fd);
+const	char*	ext = is_gz(fname)? 0: gz_ext;
+
+	char	str[LINE_MAX];
+	char*	path = envpath? getenv(envpath): 0;
+	if (path) {
+	    strcpy(str, path);
+	    fd = gzopenpbe(str, fname, ext, "r", -1);
+	    if (fd) return (fd);
+	}
+	if (defpath) {
+	    strcpy(str, defpath);
+	    fd = gzopenpbe(str, fname, ext, "r", -1);
+	    if (fd) return (fd);
+	}
+	return (0);
+}
+
+// open for read
+
+int Ftable::ropen(ReadFile& fp, const char* fname, const char* extnt)
+{
+	fp.open(fname, extnt);
+	if (fp.dtype) return (fp.dtype);
+	char	str[LINE_MAX];
+	for (int i = 0; i < n_tabpath; ++i) {
+	    if (!tabpath[i]) continue;
+	    strcpy(str, tabpath[i]);
+	    if (subdir) {
+		strcat(str, "/");
+		strcat(str, subdir);
+		if (is_dir(str)) {
+		    strcat(str, "/");
+		    strcat(str, fname);
+		    fp.open(str, extnt);
+		    if (fp.dtype) return (fp.dtype);
+		}
+		strcpy(str, tabpath[i]);
+	    }
+	    strcat(str, "/");
+	    strcat(str, fname);
+	    fp.open(str, extnt);
+	    if (fp.dtype) return (fp.dtype);
+	}
+	return (0);
 }
 
 Ftable ftable;
@@ -444,7 +700,7 @@ Ftable ftable;
 *
 *********************************************************************/
 
-void setprompt(int prom, int ech)
+void setprompt(const int& prom, const int& ech)
 {
 	crt.prompt = prom;
 	crt.echo   = ech;
@@ -455,7 +711,7 @@ int getprompt()
 	return (crt.prompt);
 }
 
-static void scanfrmt( char* p, const char* s)
+static void scanfrmt(char* p, const char* s)
 {
 	int  flag = 0;
 
@@ -724,7 +980,7 @@ int	sgetiarray(int* array, int size, const char** pps)
 	return (flg == NEG? -n: n);
 }
 
-int	fgetiarray(int* array, int size, FILE* fd)
+int	fgetiarray(int* array, const int size, FILE* fd)
 {
 static	char	buf[MAXL] = {'\0'};
 static	char*	ps = buf;
@@ -754,7 +1010,7 @@ static	char*	ps = buf;
 	return (n);
 }
 
-int	getiarray(int* array, int size, const char* ps)
+int	getiarray(int* array, const int size, const char* ps)
 {
 	FILE*	fd = 0;
 
@@ -767,7 +1023,7 @@ int	getiarray(int* array, int size, const char* ps)
 	return (fgetiarray(array, size, fd));
 }
 
-void EscCharCtl::putctl(int fg, int bg, int attr)
+void EscCharCtl::putctl(const int& fg, const int& bg, const int& attr)
 {
 	int	nterm = 0;
 	if (fg) {
@@ -814,7 +1070,7 @@ HtmlCharCtl::~HtmlCharCtl()
 	fputs("</pre>\n</p>\n</body>\n", fd);
 }
 
-Gnm2tab::Gnm2tab(int field) : StrHash<int>()
+Gnm2tab::Gnm2tab(const int field) : StrHash<int>()
 {
 	FILE*	fd = ftable.fopen(gnm2tab, "r");
 	if (!fd) fatal("Can't open %s !\n", gnm2tab);
@@ -852,133 +1108,4 @@ int Gnm2tab::taxon_code(const char* sqid, char** taxon)
 	if (taxon) *taxon = kv? domphy->strkey(kv->val): 0;
 	return (kv? kv->val: ERROR);
 }
-
-#if USE_ZLIB
-
-gzFile wgzopen(const char* name, const char* mode)
-{
-	char	str[LINE_MAX];
-	strcpy(str, name);
-	if (!is_gz(name)) strcat(str, gz_ext);
-	if (is_file(str)) {
-	    int	c = 'y';
-	    if (OutPrm.overwrite == 0) {
-		INT	p = crt.prompt;
-		crt.prompt = 1;
-		c = progetc("Overwrite existing file \"%s\"? [y/n] ", str);
-		crt.prompt = p;
-	    } else if (OutPrm.overwrite > 1)
-		c = 'n';
-	    if (tolower(c) != 'y') return (0);
-	}
-	return (gzopen(str, mode));
-}
-
-gzFile gzopenpbe(const char* path, const char* name, 
-	const char* extent, const char* opt, int lvl, char* str)
-{
-	char	buf[LINE_MAX];
-	if (!str) str = buf;
-
-	gzFile	fd = 0;
-	char*	ps;
-const 	char*	pt = path? path: "";
-
-	do {
-	    for (ps = str; *pt; *ps++ = *pt++) {
-		if (*pt == ';') {
-		    pt++;
-		    break;
-		}
-	    }
-	    if (ps > str && ps[-1] != PATHDELM)
-		*ps++ = PATHDELM;
-	    *ps = '\0';
-	    if (extent && *extent) {
-		partfnam(str + strlen(str), name, "b");
-		if (*extent != '.') strcat(str, ".");
-		strcat(str, extent);
-	    } else
-		partfnam(str + strlen(str), name, "be");
-	    if ((fd = gzopen(str, opt))) return (fd);
-	} while (*pt);
-
-	if (lvl >= 0)
-	    fprintf(stderr, "%s: cannot be open!\n", str);
-	if (lvl > 0) exit (lvl);
-	return (0);
-}
-
-size_t lgzread(gzFile gzfd, char* buf, size_t sz)
-{
-	char*	tq = buf + sz;
-	for (char* sq = buf; sq < tq; sq += INT_MAX) {
-const	    int	n = std::min(long(INT_MAX), tq - sq);
-	    int	actural_read = gzread(gzfd, sq, n);
-	    if (actural_read <= 0) {
-		int	z_errnum = 0;
-		fatal("gz_read_error %s!\n", gzerror(gzfd, &z_errnum));
-	    }
-	}
-	return (sz);
-}
-
-size_t lgzwrite(gzFile gzfd, const char* buf, size_t sz)
-{
-const	char*	tq = buf + sz;
-	for (const char* sq = buf; sq < tq; sq += INT_MAX) {
-const	    int	n = std::min(long(INT_MAX), tq - sq);
-	    int	actural_write = gzwrite(gzfd, sq, n);
-	    if (actural_write <= 0) {
-		int	z_errnum = 0;
-		fatal("gz_write_error %s!\n", gzerror(gzfd, &z_errnum));
-	    }
-	}
-	return (sz);
-}
-
-gzFile Ftable::gzopen(const char* fname, const char* mode)
-{
-	char	str[LINE_MAX];
-	gzFile	fd = 0;
-const	char*	ext = is_gz(fname)? 0: gz_ext;
-	for (int i = 0; i < n_tabpath; ++i) {
-	    if (tabpath[i]) {
-		strcpy(str, tabpath[i]);
-		if (subdir) {
-		    strcat(str, "/");
-		    strcat(str, subdir);
-		    fd = gzopenpbe(str, fname, ext, mode, -1);
-		    if (fd) return (fd);
-		}
-		fd = gzopenpbe(tabpath[i], fname, ext, mode, -1);
-		if (fd) return (fd);
-	    }
-	}
-	fatal("%s not found! Confirm whether ALN_TAB is correctly set!\n", fname);
-	return (0);
-}
-
-gzFile Ftable::gzopen(const char* fname, const char* envpath, const char* defpath)
-{
-	gzFile	fd = this->gzopen(fname, "r");
-	if (fd) return (fd);
-const	char*	ext = is_gz(fname)? 0: gz_ext;
-
-	char	str[LINE_MAX];
-	char*	path = envpath? getenv(envpath): 0;
-	if (path) {
-	    strcpy(str, path);
-	    fd = gzopenpbe(str, fname, ext, "r", -1);
-	    if (fd) return (fd);
-	}
-	if (defpath) {
-	    strcpy(str, defpath);
-	    fd = gzopenpbe(str, fname, ext, "r", -1);
-	    if (fd) return (fd);
-	}
-	return (0);
-}
-
-#endif	// USE_ZLIB
 

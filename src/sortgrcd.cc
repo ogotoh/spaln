@@ -26,12 +26,10 @@
 
 #include "sortgrcd.h"
 
-#if M_THREAD
 
 static	void*	worker_func(void* targ);
 static	void	MasterWorker(GRFn* grcd, int* uppr, INT nchr);
 
-#endif	// M_THREAD
 
 DbsDt*&	gdbs = dbs_dt[0];
 DbsDt*&	qdbs = dbs_dt[1];
@@ -91,7 +89,7 @@ static void usage()
 	fputs("\t-Sc:\tsort chromosomes in the order of apparence in the genome db\n", stderr);
 	fputs("\t-Sr:\tsort records mapped on minus strand in the reverse order of genomic positions\n", stderr);
 	fputs("\t-UN:\tMaximum total number of unpaired bases in gaps\n", stderr);
-	fputs("\t-VN:\ttMaximum memory size used for core sort (16M)\n", stderr);
+	fputs("\t-VN:\tMaximum memory size used for core sort (16M)\n", stderr);
 	fputs("\t-dS:\tSpecify the directory/genome_id (inferred from input)\n", stderr);
 	fputs("\t-lN:\tNumber of residues per line for -O6 or -O7 (60)\n", stderr);
 	fputs("\t-mN:\tMaximum allowed missmatches at both exon boundaries\n", stderr);
@@ -815,25 +813,19 @@ ExonRecord* Sortgrcd::ReadRcd(int ac, const char** av)
 
 	for (ExonRecord* ewrk = ercd; ac--; ++nwrk) {
 	    int	nth = 1;
-#if USE_ZLIB
 	    if (is_gz(*av)) nth = 2;
-#endif
 	    FILE*	fe = fopen(fname(str, *av++, erext, nth), "r");
 	    if (fe) {
 		if (fread(ewrk, sizeof(ExonRecord), nwrk->ern, fe) != nwrk->ern) 
 		    fatal(refmt, str);
 		fclose(fe);
 	    } else {
-#if USE_ZLIB
 		strcat(str, gz_ext);
 		gzFile	gzfe = gzopen(str, "rb");
 		if (!gzfe) fatal(not_found, str);
 		if (fread(ewrk, sizeof(ExonRecord), nwrk->ern, gzfe) <= 0)
 		    fatal(refmt, str);
 		fclose(gzfe);
-#else
-		fatal(not_found, str);
-#endif
 	    }
 	    ewrk += nwrk->ern;
 	}
@@ -866,29 +858,22 @@ ExonRecord* Sortgrcd::ReadChrRcd(int ac, const char** av,
 
 	for (INT fn = 0; ac--; ++fn) {
 	    int	nth = 1;
-#if USE_ZLIB
 	    if (is_gz(av[fn])) nth = 2;
-#endif
 	    FILE* fe = fopen(fname(str, av[fn], erext, nth), "r");
 	    if (fe) {
 		read_chr_rec(fe, ewrk, frcd, grn, fn);
 		fclose(fe);
 	    } else {
-#if USE_ZLIB
 		strcat(str, gz_ext);
 		gzFile	gzfe = gzopen(str, "rb");
 		if (gzfe) read_chr_rec(gzfe, ewrk, frcd, grn, fn);
 		else	fatal(refmt, str);
 		fclose(gzfe);
-#else
-		fatal(refmt, str);
-#endif
 	    }
 	}
 	return (ercd);
 }
 
-#if M_THREAD
 
 static void* worker_func(void* arg)
 {
@@ -930,7 +915,6 @@ static void MasterWorker(GRFn* grcd, int* occr, INT nchr)
 	delete[] targ;
 	delete[] worker;
 }
-#endif
 
 // assort G-records by chromosome
 void Sortgrcd::assort_by_chr(Chash* hh)
@@ -961,11 +945,9 @@ void Sortgrcd::assort_by_chr(Chash* hh)
 	}
 
 // sort G-records within each chromosome
-#if M_THREAD
 	uppr[-1] = 0;
 	if (thread_num) MasterWorker(grcd, uppr - 1, nchr);
 	else
-#endif
 	{
 	    ngrd = 0;
 	    for (INT i = 0; i < nchr; ngrd = uppr[i++])
@@ -980,9 +962,7 @@ static int count_record(const char* bdy, const char* ext, size_t rcdsize)
 const	char*	errmsg = "%s may be obolete or corrupted!\n";
 	char	str[LINE_MAX];
 	int	nth = 1;
-#if USE_ZLIB
 	if (is_gz(bdy)) nth = 2;
-#endif	    
 	FILE*	fd = fopen(fname(str, bdy, ext, nth), "r");
 	if (fd) {
 	    fseek(fd, 0L, SEEK_END);
@@ -991,7 +971,6 @@ const	char*	errmsg = "%s may be obolete or corrupted!\n";
 	    fclose(fd);
 	    return (fsz / rcdsize);
 	}
-#if USE_ZLIB
 	strcat(str, gz_ext);
 	gzFile	gzfd = gzopen(str, "rb");
 	if (gzfd) {
@@ -1004,7 +983,6 @@ const	char*	errmsg = "%s may be obolete or corrupted!\n";
 	char*	dot = strrchr(str, '.');
 	if (dot) *dot = '\0';
 	strcat(str, "(.gz)");
-#endif
 	fatal(not_found, str);
 	return (0);
 }
@@ -1020,23 +998,17 @@ Sortgrcd::Sortgrcd(int ac, const char** av) : argc(ac), grdname(*av)
 	    gerNo.grn = count_record(*av, grext, sizeof(GeneRecord));
 	    gerNo.ern = count_record(*av, erext, sizeof(ExonRecord));
 	    int	nth = 1;
-#if USE_ZLIB
 	    if (is_gz(*av)) nth = 2;
-#endif
 	    FILE*	fd = fopen(fname(str, *av, qrext, nth), "r");
 	    if (fd) {
 		gerNo.sname = new Strlist(fd, gerNo.grn);
 		fclose(fd);
 	    } else {
-#if USE_ZLIB
 		strcat(str, gz_ext);
 		gzFile	gzfd = gzopen(str, "rb");
 		if (!gzfd) fatal(refmt, str);
 		gerNo.sname = new Strlist(gzfd, gerNo.ern);
 		fclose(gzfd);
-#else
-		fatal(refmt, str);
-#endif
 	    }
 	    mfd.write(&gerNo);
 	    gerNo.gcn += gerNo.grn;
@@ -1046,13 +1018,7 @@ Sortgrcd::Sortgrcd(int ac, const char** av) : argc(ac), grdname(*av)
 	ngrcd = gerNo.gcn;
 	nercd = gerNo.ecn;
 	if (!gdbs) gdbs = new DbsDt((*gerNo.sname)[0]);
-	strcpy(str, gdbs->dbsid);
-	strcat(str, ".grp");
-	FILE*	fd = fopen(str, "r");
-	if (!fd) fatal("%s not found !\n", str);
-	while (fgets(str, MAXL, fd)) ;
-	fclose(fd);
-	HashSize = atoi(cdr(str));	// read from the last line
+	HashSize = gdbs->numidx;
 }
 
 Sortgrcd::~Sortgrcd()
@@ -1065,15 +1031,13 @@ void Sortgrcd::readGrcd(int ac, const char** av)
 {
 // readn G-records
 	Chash*	hh = new Chash(HashSize);
-	grcd = new GRFn[ngrcd];
+	grcd = new GRFn[ngrcd + 1];
 	GRFn*	grfn = grcd;
 	char	str[LINE_MAX];
 
 	for (INT fn = 0; ac--; ++fn, ++av) {
 	    int	nth = 1;
-#if USE_ZLIB
 	    if (is_gz(*av)) nth = 2;
-#endif
 	    FILE* fd = fopen(fname(str, *av, grext, nth), "r");
 	    if (fd) {
 		while (fread(&grfn->gr, sizeof(GeneRecord), 1, fd) == 1) {
@@ -1085,7 +1049,6 @@ void Sortgrcd::readGrcd(int ac, const char** av)
 		}
 		fclose(fd);
 	    } else {
-#if USE_ZLIB
 		strcat(str, gz_ext);
 		gzFile	gzfd = gzopen(str, "rb");
 		while (fread(&grfn->gr, sizeof(GeneRecord), 1, gzfd) > 0) {
@@ -1096,9 +1059,6 @@ void Sortgrcd::readGrcd(int ac, const char** av)
 		    (grfn++)->fn = fn;
 		}
 		fclose(gzfd);
-#else
-		fatal(not_found, str);
-#endif
 	    }
 	}
 
@@ -1219,7 +1179,7 @@ const	  char*	val = argv[0] + 2;
 		  break;
 	    case 'd':
 		if ((val = getarg(argc, argv)))		// gdbs id
-		    {gdbs = new DbsDt(val);}
+		    {gdbs = new DbsDt(val, DNA);}
 		break;
 	    case 'l':
 		if ((val = getarg(argc, argv)))		// max number of mismatches
@@ -1238,13 +1198,11 @@ const	  char*	val = argv[0] + 2;
 		if ((val = getarg(argc, argv)))		// max number of mismatches
 		    {OutPrm.out_file = val;}
 		break;
-#if M_THREAD
 	    case 't':
 		if ((val = getarg(argc, argv)))		// number of thread
 		    {thread_num = atoi(val);}
 		else {thread_num = -1;}
 		break;
-#endif
 	    case 'u':
 		if ((val = getarg(argc, argv)))		// max total number of gaps
 		    {filter.bunp = atoi(val);}		// near each junction

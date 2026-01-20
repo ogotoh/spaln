@@ -348,7 +348,6 @@ size_t DbsDt::readgrp(FILE* fgrp)
 	DbsGrp	grp;
 	grplbl = new Strlist();
 
-	size_t	ress = 0;
 	numidx = 0;
 	while (fgets(str, MAXL, fgrp)) {
 	    Strlist stl(str, stddelim);
@@ -393,7 +392,7 @@ const	CHAR*	ps = dbsseq;
 	    if (c < MAXCODE) ++n;
 	}
 	if (fseq) rewind(fseq);
-	return (n < i * 3 / 4)? DNA: PROTEIN;
+	return (n < i * 9 / 10)? DNA: PROTEIN;
 }
 
 void DbsDt::clean()
@@ -447,67 +446,11 @@ DbsDt::DbsDt(int c, int molc)
 
 static	const	char*	dbstab[3] = {".", getenv(ALN_DBS), DBS_DIR};
 
-#if !USE_ZLIB
-void DbsDt::readentry(FILE* fent, const char* fn)
-{
-	if (ent_space == 0) {
-	    fseek(fent, 0L, SEEK_END);
-	    ent_space = (INT) ftell(fent);
-	}
-	if (ent_space == 0) {
-	    int	c;
-	    while ((c = fgetc(fent)) != EOF) ++ent_space;
-	}
-	rewind(fent);
-	entry = new char[ent_space];
-	if (fread(entry, sizeof(char), ent_space, fent) != ent_space)
-	    fatal("%s: Bad entry file!", fn);
-	fclose(fent);
-}
-
-void DbsDt::readodr(FILE* fodr, const char* fn)
-{
-	recodr = new INT[numidx];
-	rewind(fodr);
-	if (fread(recodr, sizeof(INT), numidx, fodr) != numidx)
-	    fatal("%s: Bad order file!", fn);
-	fclose(fodr);
-}
-
-DbsRec*	DbsDt::readidx(FILE* fidx, const char* fn)
-{
-	recidx = new DbsRec[numidx];
-	rewind(fidx);
-	if (fread(recidx, sizeof(DbsRec), numidx, fidx) != numidx)
-	    fatal("%s: Index file may be corrupted!\n", fn);
-	fclose(fidx);
-	return (recidx);
-}
-
-char* dbs_header(char* str, FILE* fin)
-{
-	char*	ps = str;
-	while (*ps == _LCOMM || space_digit(ps))
-	    if (!fin || !(ps = fgets(str, MAXL, fin)))
-		return (0);
-	return (ps);
-}
-
-SeqDb*	whichdb(char* ps, FILE* fd)
-{
-	if (fd) ps = dbs_header(ps, fd);
-	return (whichdb(ps));
-}
-
-#endif	// !USE_ZLIB
-
 char* path2dbf(char* str, const char* fn, const char* ext)
 {
-#if USE_ZLIB
 	char	extgz[10];
 	strcpy(extgz, ext);
 	strcat(extgz, gz_ext);
-#endif
 	char	buf[LINE_MAX];
 	char*	form = strcpy(buf, fn);
 const	char*	path = 0;
@@ -524,17 +467,15 @@ const	char*	path = 0;
 		fclose(fd);
 		return (str);
 	    }
-#if USE_ZLIB
 	    if (FILE* fd = fopenpbe(path, form, extgz, "r", -1, str)) {
 		fclose(fd);
 		return (str);
 	    }
-#endif
 	}
 	return (0);
 }
 
-DbsDt::DbsDt(const char* form) : dbsid(form)
+DbsDt::DbsDt(const char* form, int molc) : dbsid(form)
 {
 static 	const	char	openmsg[] = 
 	    "Form [F]asta/[E]mbl/[S]wiss/[N]brf/[G]bk/[P]db/[C]lose : ";
@@ -557,8 +498,11 @@ static 	const	char	openmsg[] =
 	  }
 	} else		curdb = SeqDBs + FASTA;
 
+	curdb->defmolc = molc;
 	if (curdb->DbName) form = curdb->DbName;
 
+const	char*	sl = strrchr(form, '/');
+	if (sl) dbsid = sl + 1;
 const	char*	path = 0;
 	if (form != buf) strcpy(buf, form);
 	char* sls = strrchr(buf, '/');
@@ -574,12 +518,11 @@ const	char*	path = 0;
 // read "grp" file
 	    FILE*	fd = fopenpbe(path, form, GRP_EXT, "r", -1, str);
 	    if (!fd) continue;
-	    size_t	rss = readgrp(fd);
+	    readgrp(fd);
 	    fclose(fd);
 
 // read "index" file
 	    fd = fopenpbe(path, form, IDX_EXT, "r", -1, str);
-#if USE_ZLIB
 	    gzFile	gzfd = 0;
 	    if (!fd) {
 		gzfd = gzopenpbe(path, form, IDZ_EXT, "r", -1, str);
@@ -615,31 +558,12 @@ const	char*	path = 0;
 		if (!gzfd) continue;
 		pseq = strrealloc(0, str);
 
-		dbsseq = new CHAR[rss];
+		dbsseq = new CHAR[ress];
 		if (!dbsseq) fatal(no_space);
-		if (fread(dbsseq, sizeof(CHAR), rss, gzfd) <= 0)
+		if (fread(dbsseq, sizeof(CHAR), ress, gzfd) <= 0)
 		    fatal("Fail to read .seq.gz file !\n");
 		fclose(gzfd);
 	    }
-#else
-	    bool	gzfd = false;
-	    if (!fd) continue;
-	    DbsRec*	ridx = readidx(fd, str);
-	    if (!ridx) continue;
-// read "entry" file
-	    fd = fopenpbe(path, form, ENT_EXT, "r", -1, str);
-	    if (!fd) continue;
-	    readentry(fd, str);
-// read "order" file
-	    fd = fopenpbe(path, form, ODR_EXT, "r", -1, str);
-	    if (fd)	readodr(fd, str);
-// read "seq" file
-	    fseq = fopenpbe(path, form, SEQ_EXT, "r", -1, str);
- 	    if (fseq) {
-		pseq = strrealloc(0, str);
-		if (algmode.dim) readseq(str);	// seq dat in memory
-	    } else continue;
-#endif
 	    if (curdb->defmolc == UNKNOWN)
 		curdb->defmolc = guessmolc();
 	    return;

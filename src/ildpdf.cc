@@ -109,7 +109,7 @@ const	int*	order = param_order[m_size - 3];
 
 IldPrm::IldPrm(Ild* inst, StatDist pdf)
 	: ildpdf(pdf), n_modes(1), m_size(NoDistParam[ildpdf]), 
-	  n_param(m_size - 1), n_sample(int(inst->ftotal))
+	  n_param(m_size - 1), n_sample(INT(inst->ftotal))
 {
 	dparam[n_param] = 1.;
 	if (ildpdf == GEOMETRIC) {
@@ -137,14 +137,14 @@ IldPrm::IldPrm(Ild* inst, StatDist pdf)
 	if (lildprm.n_qtl) calc_qtl(lildprm.n_qtl);
 }
 
-int IldPrm::get_IldPrm(char* ps, int minsamples, double* tparam)
+int IldPrm::get_IldPrm(char* ps, const INT& db_min_samples, double* tparam)
 {
 	if (!tparam) tparam = dparam;
 	Strlist	terms(ps, stddelim);
 	int	n_terms = terms.size() - n_skip_term - 3;	// 3 indicators
 	if (n_terms < m_size) return (0);	// no param
-	n_sample = atoi(terms[2]);
-	if (n_sample < minsamples) return (0);  // unreliable
+	n_sample = INT(atoi(terms[2]));
+	if (n_sample < db_min_samples) return (0);  // unreliable
 	min_x = atoi(terms[3]);
 	max_x = atoi(terms[5]);
 const	int*	order = param_order[m_size - 3];
@@ -190,8 +190,8 @@ IldPrm::IldPrm(const char* ip_stat, const char* gs)
 	fclose(fd);
 	if (n) {
 	    complete();
-	    sname = new char[strlen(gs) + 1];
-	    strcpy(sname, gs);
+	    genspc = new char[strlen(gs) + 1];
+	    strcpy(genspc, gs);
 	} else {
 	    prompt("%s not found in %s\n", gs, ip_stat);
 	}
@@ -389,10 +389,10 @@ char* IldPrm::strget(char* str, char** terms)
 	char*	ps = str;
 	char*   qs = car(ps); if (!qs || !*++ps) return (0);
 	if (speclist && !speclist->find(qs)) return (0);
-	sname = new char[strlen(qs) + 1]; strcpy(sname, qs);
+	genspc = new char[strlen(qs) + 1]; strcpy(genspc, qs);
 	if (!(qs = car(ps)) || !*++ps) return (0);
 	if (!(qs = car(ps)) || !*++ps) return (0);
-	if ((n_sample = atoi(qs)) < lildprm.minfreq) return (0);
+	if ((n_sample = INT(atoi(qs))) < min_samples) return (0);
 	if (!(qs = car(ps)) || !*++ps) return (0);
 	else {min_x = atoi(qs);}
 	if (!(qs = car(ps)) || !*++ps) return (0);
@@ -415,15 +415,7 @@ const	int*	order = param_order[m_size - 3];
 	return (rs);
 }
 
-int IldPrm::fget(FILE* fd, const char* fn)
-{
-	char    str[MAXL];
-	char*   ps = 0;
-	while ((ps = fgets(str, MAXL, fd)))
-	    if (*ps != '#') break;
-	if (!ps) return (EOF);
-	return (strget(str)? OK: IGNORE);
-}
+// compatibile with CalcServer::VarLoader
 
 void IldPrm::complete()
 {
@@ -619,7 +611,7 @@ double Bspline::derivative(double x)
 *
 ***********************************************************************************/
 
-static int lcompf(const LenFrq* a, const LenFrq* b)
+static int lcompf(const dLfp* a, const dLfp* b)
 {
 	return (a->len - b->len);
 }
@@ -628,7 +620,7 @@ void Ild::calc_qtl(int nq)
 {
 	k_th_qtil = new float[nq];
 	double	sum = 0.;
-	double	delta = 1. / (double) nq;
+	double	delta = ftotal / (double) nq;
 	double	y = delta;
 	int	k = 0;
 	for (int i = 0; i < ntotal; ++i) {
@@ -640,43 +632,6 @@ void Ild::calc_qtl(int nq)
 		y += delta;
 	    }
 	}
-}
-
-Ild::Ild(const char* fn, int id)
-	: nfact(0), sid(0), vrtl(false), ntotal(0), 
-	  ftotal(0), fname(fn), intlf(0), k_th_qtil(0)
-{
-	FILE*	fd = fopen(fn,"r");
-	char	str[MAXL];
-	if (!fd) {
-	    strcpy(str, fname);
-	    strcat(str, ".ild");
-	    fd = fopen(str, "r");
-	    if (!fd) fatal("Can't open %s\n", str);
-	}
-	int	len;
-	double	frq;
-	while (fgets(str, MAXL, fd)) {
-	    int	nr = sscanf(str,"%d %lf", &len, &frq);
-	    if (nr == 2 && len > lildprm.minx && frq > 0 && len <= lildprm.maxx) {
-		ftotal += frq; 
-		++ntotal;
-	    }
-	}
-	if (ntotal) {
-	    intlf = new LenFrq[ntotal + 1];
-	    rewind(fd);
-	    LenFrq*	ptr = intlf;
-	    while (fgets(str, MAXL, fd)) {
-		int	frq;
-		int	nr = sscanf(str, "%d %d", &ptr->len, &frq);
-		if (nr == 2 && ptr->len > lildprm.minx && frq > 0 &&  ptr->len <= lildprm.maxx)
-		    (ptr++)->frq = frq;
-	    }
-	}
-	qsort((UPTR) intlf, ntotal, sizeof(LenFrq), (CMPF) lcompf);
-	fclose(fd);
-	if (lildprm.n_qtl) calc_qtl(lildprm.n_qtl);
 }
 
 /***********************************************************************************
@@ -699,29 +654,22 @@ static	int cmpi(const int* a, const int* b)
 	return (*a - *b);
 }
 
-#if M_THREAD
-Ild::Ild(IldPrm* ildprm, int n_sample, Drand48_data* drnad_buff, const char* snm)
-#else
-Ild::Ild(IldPrm* ildprm, int n_sample, const char* snm)
-#endif
+Ild::Ild(IldPrm* ildprm, const INT& n_sample, 
+	Drand48_data* drnad_buff, const char* snm)
 	: nfact(0), sid(0), vrtl(false), ntotal(0), 
-	  ftotal(0), fname(snm), intlf(0), k_th_qtil(0)
+	  ftotal(0), entry(snm), intlf(0), k_th_qtil(0)
 {
 	double*	uniform = new double[n_sample];
 
 // generage a uniform distribution [0, 1)
 
-	for (int i = 0; i < n_sample; ++i) {
-#if M_THREAD
+	for (INT i = 0; i < n_sample; ++i) {
 	    drand48_r(drnad_buff, &uniform[i]);
-#else
-	    uniform[i] = drand48();
-#endif
 	}
-	qsort((UPTR) uniform, (INT) n_sample, sizeof(double), (CMPF) cmpd);
+	qsort((UPTR) uniform, n_sample, sizeof(double), (CMPF) cmpd);
 	if (!ildprm->cdf_table) ildprm->calc_cdf();
 	int	x = ildprm->min_x;
-	int	n = 0;
+	INT	n = 0;
 	double	p = 0.;
 	Dhash<int, double>	lf(ildprm->max_x, 0.);
 	while (uniform[n] < ildprm->cdf_table[ildprm->min_x]) ++n;
@@ -742,21 +690,16 @@ Ild::Ild(IldPrm* ildprm, int n_sample, const char* snm)
 	    lf.incr(x);
 	    ++n; ++ftotal;
 	}
-	intlf = (LenFrq*) lf.squeeze(&ntotal);
-	qsort((UPTR) intlf, ntotal, sizeof(LenFrq), (CMPF) lcompf);
+	intlf = (dLfp*) lf.squeeze(&ntotal);
+	qsort((UPTR) intlf, ntotal, sizeof(dLfp), (CMPF) lcompf);
 	if (lildprm.n_qtl) calc_qtl(lildprm.n_qtl);
 	delete[] uniform;
 }
 
 // bootstrap resampling
 
-#if M_THREAD
 Ild::Ild(Ild* src, Drand48_data* drnad_buff)
-#else
-Ild::Ild(Ild* src)
-#endif
-	: nfact(0), sid(0), vrtl(false), ntotal(0), 
-	  ftotal(src->ftotal), fname(0), intlf(0), k_th_qtil(0)
+	: ftotal(src->ftotal)
 {
 	INT	n_sample = (INT) src->ftotal;
 	int*	ordinal = new int[n_sample];
@@ -764,20 +707,16 @@ Ild::Ild(Ild* src)
 // generage a uniform distribution [0, 1)
 	for (INT i = 0; i < n_sample; ++i) {
 	    double	u;
-#if M_THREAD
 	    drand48_r(drnad_buff, &u);
-#else
-	    u = drand48();
-#endif
 	    ordinal[i] = int(src->ftotal * u);
 	}
 	qsort((UPTR) ordinal, n_sample, sizeof(int), (CMPF) cmpi);
 	INT	n = 0;
 	double	cumulative = 0.;
-	LenFrq*	tlf = src->intlf + src->ntotal;
-	intlf = new LenFrq[src->ntotal];
-	LenFrq*	nlf = intlf;
-	for (LenFrq* slf = src->intlf; slf < tlf; ++slf) {
+	dLfp*	tlf = src->intlf + src->ntotal;
+	intlf = new dLfp[src->ntotal];
+	dLfp*	nlf = intlf;
+	for (dLfp* slf = src->intlf; slf < tlf; ++slf) {
 	    nlf->len = slf->len;
 	    int	nn = 0;
 	    cumulative += slf->frq;
@@ -789,44 +728,9 @@ Ild::Ild(Ild* src)
 	delete[] ordinal;
 }
 
-Ild::~Ild()
-{
-	if (!vrtl) {delete[] intlf; delete[] k_th_qtil;}
-}
-
-int Ild::fget(FILE* fd, const char* fn)
-{
-	fname = fn;
-	Mfile	mfd(sizeof(LenFrq));
-	LenFrq	wrk;
-	char	str[MAXL];
-	for (ftotal = 0; fgets(str, MAXL, fd); ) {
-	    char*	ps = str;
-	    while (*ps && isspace(*ps)) ++ps;
-	    if (!isdigit(*ps)) continue;
-	    if (sscanf(ps, "%d %lf", &wrk.len, &wrk.frq) != 2) break;
-	    if (wrk.len <= lildprm.minx || wrk.len > lildprm.maxx) continue;
-	    ftotal += wrk.frq;
-	    mfd.write(&wrk);
-	}
-	ntotal = mfd.size();
-	wrk.len = INT_MAX; wrk.frq = 0; 
-	mfd.write(&wrk);
-	intlf = (LenFrq*) mfd.flush();
-	if (ntotal < lildprm.minfreq && ftotal < lildprm.minfreq) {
-	    delete[] intlf; intlf = 0;
-	    return (IGNORE);
-	}
-	qsort((UPTR) intlf, ntotal, sizeof(LenFrq), (CMPF) lcompf);
-	for (int n = 0; n < ntotal; ++n) intlf[n].frq /= ftotal;
-	nfact = 1. / ftotal;
-	if (lildprm.n_qtl) calc_qtl(lildprm.n_qtl);
-	return (OK);
-}
-
 double Ild::rmsd(IldPrm* dp)
 {
-	LenFrq*	ptr = intlf;
+	dLfp*	ptr = intlf;
 	double	var = 0.;
 	for (int i = 0; i < ntotal; ++i, ++ptr) {
 	    double	len = ptr->len;
@@ -840,7 +744,7 @@ double Ild::rmsd(IldPrm* dp)
 double Ild::mean(double* v)
 {
 	if (!ftotal) return (0);
-	LenFrq*	ptr = intlf;
+	dLfp*	ptr = intlf;
 	double	av = 0;
 	double	vr = 0;
 	for (int i = 0; i < ntotal; ++i, ++ptr) {
@@ -858,7 +762,7 @@ double Ild::mean(double* v)
 double Ild::logmean(double* avvr)	// geometric mean
 {
 	if (!ftotal) return (0);
-	LenFrq*	ptr = intlf;
+	dLfp*	ptr = intlf;
 	double	av = 0;
 	double	vr = 0;
 	for (int i = 0; i < ntotal; ++i, ++ptr) {
@@ -880,23 +784,20 @@ double Ild::logmean(double* avvr)	// geometric mean
 double Ild::quantile(double y)
 {
 	if (!ftotal || y <= 0.) return (0);
-	LenFrq*	ptr = intlf;
-	double	f = 1;
+	y *= ftotal;
+	dLfp*	ptr = intlf;
 	double	sum = 0.;
-	for (int i = 0; sum < y && i < ntotal; ++i, ++ptr) {
-	    f = ptr->frq;
-	    if (nfact == 0) f /= ftotal;
-	    sum += f;
-	}
-	LenFrq*	prv = ptr - 1;
-	return (ptr->len - (ptr->len - prv->len) * (sum - y) / f);
+	for (int i = 0; sum < y && i < ntotal; ++i, ++ptr)
+	    sum += ptr->frq;
+	dLfp*	prv = ptr - 1;
+	return (ptr->len - (ptr->len - prv->len) * (sum - y) / ptr->frq);
 }
 
 void Ild::normalize(double to)
 {
 	if (!ftotal || nfact == (to /= ftotal)) return;
 	nfact = to;
-	LenFrq* ptr = intlf;
+	dLfp* ptr = intlf;
 	for (int i = 0; i < ntotal; ++i, ++ptr)
 	    ptr->frq *= nfact;
 }
@@ -904,7 +805,7 @@ void Ild::normalize(double to)
 double Ild::kolmo_smir(IldPrm* dp)
 {
 	if (!ftotal) return (0);
-	LenFrq*	ptr = intlf;
+	dLfp*	ptr = intlf;
 	double	ks = 0.;
 	double	sum = 0;
 	double	f;
@@ -921,10 +822,10 @@ double Ild::kolmo_smir(IldPrm* dp)
 double Ild::kolmo_smir(Ild* b)
 {
 	if (!ftotal || !b->ftotal) return (0);
-	LenFrq* lfa = intlf;
-	LenFrq* lfb = b->intlf;
-	LenFrq* tfa = lfa + ntotal;
-	LenFrq* tfb = lfb + b->ntotal;
+	dLfp* lfa = intlf;
+	dLfp* lfb = b->intlf;
+	dLfp* tfa = lfa + ntotal;
+	dLfp* tfb = lfb + b->ntotal;
 	double  ks = 0.;
 	double	asum = 0;
 	double	bsum = 0;
@@ -954,8 +855,8 @@ void Ild::print_lf(const char* fn)
 	FILE*    fd = fopen(fn,"w");
 	if (!fd) fd = stdout;
 	fputs("len\tfreq\n", fd);
-	LenFrq*	lf = intlf;
-	LenFrq*	tf = lf + ntotal;
+	dLfp*	lf = intlf;
+	dLfp*	tf = lf + ntotal;
 	for ( ; lf < tf; ++lf) {
 	    if (nfact == 0)
 		fprintf(fd, "%d\t%d\n", lf->len, (int) lf->frq);
@@ -971,35 +872,19 @@ void Ild::print_lf(const char* fn)
 *
 ***********************************************************************************/
 
-int Lild::fget(FILE* fd, const char* fn)
+Lild::Lild(const char* fn, const int& id, DblDbl t, DblDbl r) :
+	PutIntoBins(lildprm.ndiv, lildprm.llmt, lildprm.ulmt, t, r), sid(id)
 {
-	fname = fn;
-	char    str[MAXL];
-	reset();
-	while (fgets(str, MAXL, fd)) {
-	    char*       ps = str;
-	    while (*ps && isspace(*ps)) ++ps;
-	    if (!isdigit(*ps)) continue;
-	    int len; double frq;
-	    if (sscanf(ps, "%d %lf", &len, &frq) != 2) break;
-	    accumulate(len, frq);
-	}
-	normalize(1., lildprm.psdcnt);
-	ftotal = samples();
-	if (ftotal < lildprm.minfreq) {
-	    erase();
-	    return (IGNORE);
-	}
-	return (OK);
+	FILE*	fd = 0;
+	fget(fd, fn);
 }
 
 Lild::Lild(Ild& ild, DblDbl t, DblDbl r) 
-	: PutIntoBins(lildprm.ndiv, lildprm.llmt, lildprm.ulmt, t, r),
-	  bsp(0), sid(0), ftotal(0), fname(ild.fname)
+	: PutIntoBins(lildprm.ndiv, lildprm.llmt, lildprm.ulmt, t, r)
 {
-	LenFrq*	tlf = ild.end();
+	dLfp*	tlf = ild.end();
 	reset();
-	for (LenFrq* ilf = ild.begin(); ilf < tlf; ++ilf) 
+	for (dLfp* ilf = ild.begin(); ilf < tlf; ++ilf) 
 	    accumulate(ilf->len, ilf->frq);
 	normalize();
 	ftotal = samples();
@@ -1161,7 +1046,7 @@ double l2norm(IldPrm* a)
 	gsl_integration_workspace_free(w);
 	if (status) {
 	    prompt("%s : ERROR %d: %s\n",
-		a->sname, status, gsl_strerror(status));
+		a->genspc, status, gsl_strerror(status));
 	}
 	return (result);
 }
@@ -1202,7 +1087,7 @@ double dist_ilds(IldPrm* a, IldPrm* b, DistMethod mthd)
 	gsl_integration_workspace_free(w);
 	if (status) {
 	    prompt("%s %s : ERROR %d: %s\n",
-		a->sname, b->sname, status, gsl_strerror(status));
+		a->genspc, b->genspc, status, gsl_strerror(status));
 	}
 	double	aa, bb;
 	switch (mthd) {
@@ -1233,10 +1118,10 @@ double dist_ilds(IldPrm* a, IldPrm* b, DistMethod mthd)
 // unique area
 double compild_UA(Ild* a, Ild* b)
 {
-	LenFrq* lfa = a->intlf;
-	LenFrq* lfb = b->intlf;
-	LenFrq* tfa = lfa + a->ntotal;
-	LenFrq* tfb = lfb + b->ntotal;
+	dLfp* lfa = a->intlf;
+	dLfp* lfb = b->intlf;
+	dLfp* tfa = lfa + a->ntotal;
+	dLfp* tfb = lfb + b->ntotal;
 	double  abc = 0.;
 	while (lfa < tfa && lfb < tfb) {
 	    if (lfa->len == lfb->len) {
@@ -1254,10 +1139,10 @@ double compild_UA(Ild* a, Ild* b)
 // Jaccard distance
 double compild_JA(Ild* a, Ild* b)
 {
-	LenFrq* lfa = a->intlf;
-	LenFrq* lfb = b->intlf;
-	LenFrq* tfa = lfa + a->ntotal;
-	LenFrq* tfb = lfb + b->ntotal;
+	dLfp* lfa = a->intlf;
+	dLfp* lfb = b->intlf;
+	dLfp* tfa = lfa + a->ntotal;
+	dLfp* tfb = lfb + b->ntotal;
 	double  abc = 0.;
 	while (lfa < tfa && lfb < tfb) {
 	    if (lfa->len == lfb->len) {
@@ -1275,10 +1160,10 @@ double compild_JA(Ild* a, Ild* b)
 //  Euclid distance
 double compild_EC(Ild* a, Ild* b, bool sqr = true)
 {
-	LenFrq* lfa = a->intlf;
-	LenFrq* lfb = b->intlf;
-	LenFrq* tfa = lfa + a->ntotal;
-	LenFrq* tfb = lfb + b->ntotal;
+	dLfp* lfa = a->intlf;
+	dLfp* lfb = b->intlf;
+	dLfp* tfa = lfa + a->ntotal;
+	dLfp* tfb = lfb + b->ntotal;
 	double  abc = 0.;
 	while (lfa < tfa && lfb < tfb) {
 	    if (lfa->len == lfb->len) {
@@ -1307,10 +1192,10 @@ double compild_EC(Ild* a, Ild* b, bool sqr = true)
 //  Mantattan distance
 double compild_MH(Ild* a, Ild* b)
 {
-	LenFrq* lfa = a->intlf;
-	LenFrq* lfb = b->intlf;
-	LenFrq* tfa = lfa + a->ntotal;
-	LenFrq* tfb = lfb + b->ntotal;
+	dLfp* lfa = a->intlf;
+	dLfp* lfb = b->intlf;
+	dLfp* tfa = lfa + a->ntotal;
+	dLfp* tfb = lfb + b->ntotal;
 	double  abc = 0.;
 	while (lfa < tfa && lfb < tfb) {
 	    if (lfa->len == lfb->len) {
@@ -1338,10 +1223,10 @@ double compild_MH(Ild* a, Ild* b)
 // Cosine distance
 double compild_CS(Ild* a, Ild* b)
 {
-	LenFrq* lfa = a->intlf;
-	LenFrq* lfb = b->intlf;
-	LenFrq* tfa = lfa + a->ntotal;
-	LenFrq* tfb = lfb + b->ntotal;
+	dLfp* lfa = a->intlf;
+	dLfp* lfb = b->intlf;
+	dLfp* tfa = lfa + a->ntotal;
+	dLfp* tfb = lfb + b->ntotal;
 	double  abc = 0.;
 	double  aa = 0;
 	double  bb = 0;
@@ -1377,10 +1262,10 @@ double compild_CS(Ild* a, Ild* b)
 
 double compild_JS(Ild* a, Ild* b)
 {
-	LenFrq* lfa = a->intlf;
-	LenFrq* lfb = b->intlf;
-	LenFrq* tfa = lfa + a->ntotal;
-	LenFrq* tfb = lfb + b->ntotal;
+	dLfp* lfa = a->intlf;
+	dLfp* lfb = b->intlf;
+	dLfp* tfa = lfa + a->ntotal;
+	dLfp* tfb = lfb + b->ntotal;
 	double  js = 0.;
 	while (lfa < tfa && lfb < tfb) {
 	    if (lfa->len == lfb->len) {
@@ -1419,10 +1304,10 @@ double compild_JS(Ild* a, Ild* b)
 // Kullback-Leibler distance
 double compild_KL(Ild* a, Ild* b)
 {
-	LenFrq* lfa = a->intlf;
-	LenFrq* lfb = b->intlf;
-	LenFrq* tfa = lfa + a->ntotal;
-	LenFrq* tfb = lfb + b->ntotal;
+	dLfp* lfa = a->intlf;
+	dLfp* lfb = b->intlf;
+	dLfp* tfa = lfa + a->ntotal;
+	dLfp* tfb = lfb + b->ntotal;
 	double  kl = 0.;
 	while (lfa < tfa && lfb < tfb) {
 	    if (lfa->len == lfb->len) {
@@ -1659,19 +1544,13 @@ void GnuPlotLild::add(IldPrm* dprm, bool ildents)
 		data[c++][n] = log10(dprm->pdf_function(dx));
 	    }
 	}
-	sname.push(dprm->sname);
+	sname.push(dprm->genspc);
 	clmn = c;
 }
 
 void GnuPlotLild::add(Lild* lild)
 {
-const	char*	sl = strrchr(lild->fname, '/');
-	if (!sl) sl = lild->fname;
-	char	str[MAXL];
-	char*	ps = str;
-	while (*sl && *sl != '.') *ps++ = *sl++;
-	*ps = '\0';
-	sname.push(str);
+	sname.push(lild->entry);
 	if (ildoutmode == IldOutMode::CDF) {
 	    double  cdf = 0;
 	    int	n = -1;
@@ -1684,15 +1563,9 @@ const	char*	sl = strrchr(lild->fname, '/');
 
 void GnuPlotLild::add(Ild* ild)
 {
-const	char*	sl = strrchr(ild->fname, '/');
-	if (!sl) sl = ild->fname;
-	char	str[MAXL];
-	char*	ps = str;
-	while (*sl && *sl != '.') *ps++ = *sl++;
-	*ps = '\0';
-	sname.push(str);
+	sname.push(ild->entry);
 	double	cdf = 0;
-	for (LenFrq* lf = ild->begin(); lf < ild->end(); ++lf) {
+	for (dLfp* lf = ild->begin(); lf < ild->end(); ++lf) {
 	    int	n = (lf->len - int(llmt)) / ndiv;
 	    if (n < 0) n = -1;
 	    if (n > ulmt) n = int(ulmt);
@@ -1761,7 +1634,7 @@ GnuPlotLild::GnuPlotLild(Ild** ilds, int num)
 {
 	initialize();
 	for (int i = 0; i < num; ++i, ++clmn) {
-	    for (LenFrq* lf = ilds[i]->begin(); lf < ilds[i]->end(); ++lf) {
+	    for (dLfp* lf = ilds[i]->begin(); lf < ilds[i]->end(); ++lf) {
 		int	n = (lf->len - int(llmt)) / ndiv;
 		if (n < 0) n = -1;
 		if (n > ulmt) n = int(ulmt);

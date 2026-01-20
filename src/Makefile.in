@@ -8,11 +8,13 @@ CXX  = g++
 # for MACOS uncomment below line
 #CXX  = clang++ -std=c++11
 CFLAGS = -O3 -march=native
+#CFLAGS = -g -O0 -march=native
+#CFLAGS = -g -O0 -Wall -march=native -fsanitize=address -fno-omit-frame-pointer
 RANLIB = ranlib
 LD  = g++
 AR = ar ru
 DEL = rm -f
-DEFLT = -DM_THREAD=1
+DEFLT = 
 
 CXX := $(CXX) $(CFLAGS) $(DEFLT)
 
@@ -20,7 +22,7 @@ CXX := $(CXX) $(CFLAGS) $(DEFLT)
 
 PROG_B = spaln sortgrcd makmdm makdbs
 PROG_A = dvn exinpot kmers npssm rdn utn
-PROG_F = fitild compild decompild plotild
+PROG_F = fitild compild decompild eij2ild plotild
 PROG = $(PROG_B) $(PROG_A) $(PROG_F)
 # for MACOS uncomment below line
 #PROG = $(PROG_B) $(PROG_A)
@@ -31,8 +33,9 @@ CLIB = clib.a
 #CLIB = clib.a
 SLIB = sblib.a $(CLIB)
 ULIB = ublib.a $(SLIB)
+ILIB = iblib.a $(CLIB)
 LLIB = -lpthread -lm -lz
-GLIB = -L/usr/local/lib -lgsl -lgslcblas $(LLIB)
+GLIB = $(LLIB) -L/usr/local/lib -lgsl -lgslcblas
 
 BINDIR = $(DESTDIR)$(exec_prefix)
 TABDIR = $(DESTDIR)$(table_dir)
@@ -53,7 +56,7 @@ clean:
 clear:
 	$(DEL) $(PROG) *.exe *.o *.a
 clearall:
-	$(DEL) $(PROG) core *.o *.a *.exe *% *BAK Makefile iolib.h
+	$(DEL) $(PROG) core *.o *.a *.exe *% *BAK Makefile dbs.h iolib.h
 
 install:
 	test -d $(BINDIR) || mkdir -p $(BINDIR)
@@ -107,23 +110,25 @@ dvn:	dvn.cc autocomp.h $(ULIB)
 	$(CXX) -o $@ dvn.cc $(ULIB) $(LLIB)
 exinpot: exinpot.cc codepot.h utilseq.h eijunc.h $(SLIB)
 	$(CXX) -o $@ exinpot.cc $(SLIB) $(LLIB)
-kmers: kmers.cc $(SLIB)
-	$(CXX) -o $@ kmers.cc $(SLIB) $(LLIB)
-npssm:	npssm.cc $(SLIB)
-	$(CXX) -o $@ npssm.cc $(SLIB) $(LLIB)
+kmers: kmers.cc kmers.h $(SLIB)
+	$(CXX) -o $@ -DMAIN kmers.cc $(SLIB) $(LLIB)
+npssm:	npssm.cc npssm.h $(SLIB)
+	$(CXX) -o $@ npssm.cc -DMAIN $(SLIB) $(LLIB)
 rdn:	rdn.cc 	$(ULIB)
 	$(CXX) -o $@ rdn.cc $(ULIB) $(LLIB)
 utn:	utn.o $(ULIB)
 	$(CXX) -o $@ utn.o $(ULIB) $(LLIB)
 
-compild: compild.cc calcserv.h ildpdf.o $(CLIB)
-	$(CXX) -o compild compild.cc ildpdf.o $(CLIB) $(GLIB)
-decompild: decompild.o ildpdf.o fitild.o $(CLIB)
-	$(CXX) -o decompild decompild.o ildpdf.o fitild.o $(CLIB) $(GLIB)
-fitild: fitild.cc ildpdf.o $(CLIB)
-	$(CXX) -o $@  -DMAIN fitild.cc ildpdf.o $(CLIB) $(GLIB)
-plotild: plotild.cc ildpdf.o $(CLIB)
-	$(CXX) -o plotild plotild.cc ildpdf.o $(CLIB) $(GLIB)
+compild: compild.cc calcserv.h dist2.h $(ILIB)
+	$(CXX) -o $@ compild.cc $(ILIB) $(GLIB)
+decompild: decompild.cc $(ILIB)
+	$(CXX) -o $@ decompild.cc $(ILIB) $(GLIB)
+eij2ild: eij2ild.cc ild_data.h $(ILIB)
+	$(CXX) -o $@ $< $(ILIB) $(LLIB)
+fitild: fitild.cc ildpdf.h $(ILIB)
+	$(CXX) -o $@ -DMAIN fitild.cc $(ILIB) $(GLIB)
+plotild: plotild.cc $(ILIB)
+	$(CXX) -o plotild plotild.cc $(ILIB) $(GLIB)
 
 clib.o:		clib.cc		stdtype.h
 iolib.o:	iolib.cc	stdtype.h
@@ -153,6 +158,9 @@ fwd2s1.o: fwd2s1.cc aln.h wln.h vmf.h boyer_moore.h udh_intermediate.h \
 	fwd2s1_simd.cc
 gaps.o:	    gaps.cc  gaps.h  seq.h
 gsinfo.o:	gsinfo.cc	seq.h
+ildpdf.o: ildpdf.cc ildpdf.h ild_data.h
+ild_data.o:	ild_data.h ild_data.cc 
+kmers.o: kmers.cc kmers.h
 seq.o:	seq.cc	seq.h		aln.h	dbs.h
 simmtx.o:	simmtx.cc seq.h aln.h mdm.h
 sqpr.o:	sqpr.cc	seq.h		dbs.h
@@ -160,11 +168,11 @@ utilseq.o:	utilseq.cc	seq.h
 vmf.o:	vmf.cc vmf.h $(STDH)
 wln.o:	wln.cc	seq.h	    aln.h	wln.h
 
-sblib.a: aln2.o dbs.o gaps.o  codepot.o divseq.o gsinfo.o \
+sblib.a: aln2.o dbs.o gaps.o  codepot.o divseq.o kmers.o gsinfo.o \
 	fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o eijunc.o \
 	seq.o simmtx.o sqpr.o utilseq.o vmf.o wln.o boyer_moore.o
-	$(AR) sblib.a aln2.o dbs.o gaps.o  codepot.o divseq.o gsinfo.o \
-	fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o eijunc.o \
+	$(AR) sblib.a aln2.o dbs.o gaps.o  codepot.o divseq.o kmers.o \
+	gsinfo.o fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o eijunc.o \
 	seq.o simmtx.o sqpr.o utilseq.o vmf.o wln.o boyer_moore.o
 	$(RANLIB) sblib.a
 
@@ -179,6 +187,10 @@ ublib.a: autocomp.o extcds.o montseq.o pattern.o resite.o
 	$(AR) ublib.a autocomp.o extcds.o \
 	montseq.o pattern.o resite.o
 	$(RANLIB) ublib.a
+
+iblib.a: ildpdf.o ild_data.o fitild.o
+	$(AR) iblib.a ildpdf.o ild_data.o fitild.o
+	$(RANLIB) iblib.a
 
 cmn.h:	$(STDH) 
 	touch cmn.h

@@ -38,11 +38,9 @@
 #include "autocomp.h"
 #include "divseq.h"
 
-#if M_THREAD
 #include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
-#endif
 
 enum method {jc, p2, tn, end};
 enum base {Ad, Ci, Gu, Th};
@@ -95,7 +93,8 @@ struct Member
 	bool	vrtl;
 	Member(int id = 0) : sid(id), vrtl(false) {}
 	void	setids(int id, int pd) {sid = id; pid = pd;}
-	int	fget(FILE* fd, const char* fn = 0) {return (0);}
+template <typename file_t>
+	int	fget(file_t fd, const char* fn = 0) {return (0);}
 };
 
 struct Species : public Member

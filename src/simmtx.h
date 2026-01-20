@@ -28,30 +28,46 @@
 
 enum ComPmt {DxD, PxT, TxP, PxP, TxT, CxC, AxA};
 
-static	const int	max_simmtxes = 3;
-extern	const char*	mdm_file[max_simmtxes];
+static	const	int	max_simmtxes = 4;
+extern	const	char*	mdm_file[max_simmtxes];
+static	const	int	WlnPamNo = 3;
+static	const	int	WlpPam = 50;
 
 struct	DefPrm {float u, v, n, b; int p;};
 
+template <typename var_t>
+var_t** SquareMtx(const int dim)
+{
+	var_t** mtx = new var_t*[dim];
+	var_t*	wmtx = new var_t[dim * dim];
+	for (int i = 0; i < dim; ++i, wmtx += dim)
+	    mtx[i] = wmtx;
+	return mtx;
+}
+
 class Simmtx {
+using	sim_t = short;
+const	float	scl;
 	DefPrm*	param;
 	float	nrmlf, avtrc;
-	VTYPE	drange, minscr;
-	VTYPE** SquareMtx();
+	sim_t	drange, minscr;
 public:
 	int	dim;
 	int	rows;
 	int	cols;
 	ComPmt	AxB;
 const	char*	simfile;
-	VTYPE**	mtx;
-	VTYPE*	simunp;
+	sim_t**	mtx;
+	sim_t*	simunp;
 	Simmtx(ComPmt ab, DefPrm* dp);
 	Simmtx(ComPmt ab, const char* fname, DefPrm* dp);
-	~Simmtx() {delete[] *mtx; delete[] mtx;}
+	~Simmtx() {
+	    delete[] *mtx; delete[] mtx;
+	}
 	int	simgrade(int aa, int bb) const;
 	float	Nrmlf() const {return nrmlf;}
 	float	AvTrc() const {return avtrc;}
+	void	mtx2imtx();
 	void	Nmtx();
 	void	Nmtx(const char* fname);
 	void	Pmtx();

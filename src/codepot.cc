@@ -35,24 +35,13 @@
 enum {Ad, Cy, Gu, Ty};
 enum {AA, AC, AG, AT, CA, CC, CG, CT, GA, GC, GG, GT, TA, TC, TG, TT};
 
-INTRONPEN IntronPrm = {FQUERY, FQUERY, -2.767, 20, 224, 825, 2, 
-//		     	ip 	fact	mean  llmt  mu rlmt minexon 
-	5,   20,   0,   0,    5,     0,
-//	tlmt minl maxl mode  nquant sip
-	0.2767, -22.80, 83.35, 5.488, 21.870, 223.95, 0.7882,
-//	a1      m1      t1     k1     m2      t2      k2
-	0, 0, 0, 0,
-//	a2 m3 t3 k3
-	0, 0};
-//	hl hr
+IntPrm	IntronPrm;
 
 struct ALSP {
 	VTYPE	scr;
 	RANGE*	rng;
 	INT	eij;
 };
-
-struct DefPrm2 {float y, Y;};
 
 // exon-intron junction signals
 
@@ -62,14 +51,51 @@ struct Sig53 {
 	~Sig53();
 };
 
-// [Dvsp][crs]
-static	DefPrm2	defprm2[2] = {{4., 4.}, {8., 8.}};
+void IntPrm::from_str(const char* str)
+{
+	a1 = 1.; a2 = 0.;
+	sscanf(str, "%d %d %f %f %f %f %f %f %f %f %f %f %f %f", 
+	&llmt, &rlmt, &mean, &a1, &m1, &t1, &k1, &m2, &t2, &k2,
+	&a2, &m3, &t3, &k3);
+}
+
+void IntPrm::from_ildmodel(const char* genspc)
+{
+	FILE*	fd = ftable.fopen(ipstat, "r");
+	if (!fd) return;
+	char	str[MAXL];
+	while (fgets(str, MAXL, fd)) {
+	    if (wordcmp(str, genspc)) continue;
+	    Strlist	stl(str, stddelim);
+const	    int	n = stl.size() - 3;
+	    if (atoi(stl[2]) < 1000) break;	// too few samples
+	    llmt = atoi(stl[3]);
+	    mu = atof(stl[4]);
+	    rlmt = atof(stl[5]);
+	    mean = atof(stl[6]);
+	    a1 = atof(stl[7]);
+	    m1 = atof(stl[8]);
+	    t1 = atof(stl[9]);
+	    k1 = atof(stl[10]);
+	    if (n < 13) break;
+	    m2 = atof(stl[11]);
+	    t2 = atof(stl[12]);
+	    k2 = atof(stl[13]);
+	    if (n < 17) break;
+	    a2 = atof(stl[14]);
+	    m3 = atof(stl[15]);
+	    t3 = atof(stl[16]);
+	    k3 = atof(stl[17]);
+	    break;
+	}
+	fclose(fd);
+}
+
 static  float	avrsig53[2] = {2.446, 4.807};
 
+float	ild_up_quantile = 0.996;
 static	Sig53*	stdSig53 = 0;
 static	FTYPE	stdfS = 0.;
-
-inline	VTYPE	GapPenalty(int k) {return VTYPE(alprm.u * k + alprm.v);}
 
 VTYPE SpJunc::spjscr(int n5, int n3) {
 	return (pwd->IntPen->Penalty(n3 - n5) + 
@@ -126,13 +152,11 @@ const	Seq*&	b = seqs[1];
 
 IntronPenalty::IntronPenalty(VTYPE f, int dvsp, EijPat* eijpat, ExinPot* exinpot)
 {
-	if (IntronPrm.fact == FQUERY) IntronPrm.fact = defprm2[dvsp > 0].Y;
-	if (alprm2.y == FQUERY) alprm2.y = defprm2[dvsp > 0].y;
 	if (IntronPrm.ip == FQUERY) IntronPrm.ip = dvsp? 15: 12;
 	IntronPrm.sip = (STYPE) (f * IntronPrm.ip);
 
 	if (IntronPrm.maxl <= 0)
-	    IntronPrm.maxl = max_intron_len(0.99);	// 99% quantile
+	    IntronPrm.maxl = max_intron_len(ild_up_quantile);
 
 	double	expsig = 0;
 	double	fy = f * alprm2.y;
@@ -175,8 +199,9 @@ const	float	q_interval = 1. / IntronPrm.nquant;
 	double	gep = f * alprm.u;
 	double	gappen = -(f * alprm.v + IntronPrm.llmt * gep);
 	IntronPrm.minl = 0;
+	int	q99 = max_intron_len(0.99);	// 99% quantile
 
-	for (int n = IntronPrm.llmt; n <= IntronPrm.maxl; ++n) {
+	for (int n = IntronPrm.llmt; n <= q99; ++n) {
 	    double z = ProbDist(n, IntronPrm.m1, IntronPrm.t1, IntronPrm.k1);
 	    if (a2 > 0.) {
 		z *= IntronPrm.a1;
@@ -236,19 +261,13 @@ EijPat::EijPat(int dvsp)
 {
 const	char*	fn;
 
-	if (alprm2.y == FQUERY) alprm2.y = defprm2[dvsp > 0].y;
-	if (alprm2.y > 0.) {
-	    pattern5 = new PatMat(fn = SPLICE5PAT);
-	    if (!pattern5->mtx) fatal("Can't open %s file!", fn);
-	    pattern3 = new PatMat(fn = SPLICE3PAT);
-	    if (!pattern3->mtx) fatal("Can't open %s file!", fn);
-	    tonic3 = (FTYPE) pattern3->tonic;
-	    tonic5 = (FTYPE) pattern5->tonic;
-	    pattern3->tonic = pattern5->tonic = 0;
-	} else {
-	    pattern5 = pattern3 = 0;
-	    tonic3 = tonic5 = 0;
-	}
+	pattern5 = new PatMat(fn = SPLICE5PAT);
+	if (!pattern5->mtx) fatal("Can't open %s file!", fn);
+	pattern3 = new PatMat(fn = SPLICE3PAT);
+	if (!pattern3->mtx) fatal("Can't open %s file!", fn);
+	tonic3 = (FTYPE) pattern3->tonic;
+	tonic5 = (FTYPE) pattern5->tonic;
+	pattern3->tonic = pattern5->tonic = 0;
 	if (alprm2.bti > 0.) {
 	    patternI = new PatMat(fn = INITIATPAT);
 	    if (!patternI->mtx) fatal("Can't open %s file!", fn);
@@ -289,25 +308,25 @@ const	float	fs = fS * (1. - alprm2.sss);
 	FILE*	fd = ftable.fopen(fname, "r");
 	if (!fd) goto abort;
 
-	ptmt = new PatMat(fd);	/* INT5PAT */
+	ptmt = new PatMat(fd, true);	/* INT5PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 16; ++i)
 	    sig53tab[0][i] = (STYPE) (fs * ptmt->mtx[i]);
 	delete ptmt;
 
-	ptmt = new PatMat(fd);	/* INT3PAT */
+	ptmt = new PatMat(fd, true);	/* INT3PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 16; ++i)
 	    sig53tab[1][i] = (STYPE) (fs * ptmt->mtx[i]);
 	delete ptmt;
 
-	ptmt = new PatMat(fd);	/* INT53PAT */
+	ptmt = new PatMat(fd, true);	/* INT53PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 256; ++i)
 	    sig53tab[2][i] = (STYPE) (fs * ptmt->mtx[i]);
 	delete ptmt;
 
-	ptmt = new PatMat(fd);	/* INT35PAT */
+	ptmt = new PatMat(fd, true);	/* INT35PAT */
 	if (!ptmt->mtx) goto abort;
 	for (int i = 0; i < 256; ++i)
 	    sig53tab[3][i] = (STYPE) (fs * ptmt->mtx[i]);
@@ -346,7 +365,7 @@ Sig53::~Sig53()
 
 void EraStdSig53() {delete stdSig53;}
 
-void makeStdSig53()
+void makeStdSig53(const int dvsp)
 {
 	if (!stdSig53) {
 	    stdfS = (FTYPE) (alprm2.y * alprm.scale);
@@ -426,10 +445,15 @@ STYPE Exinon::sig53(int m, int n, INTENDS c) const
 		break;
 	}
 	if (alprm2.Z > 0) {
-	    if (c == IE53 || c == IE5P3) 
-		sig += intnpot->intpot(data_p + m, data_p + n);
-	    else if (c == IE35) 
-		sig += intnpot->intpot(data_p + n, data_p + m);
+	    if (c == IE53 || c == IE5P3) {
+		sig += data_n? 0:
+//		   intnpot->intpot(data_n + m, data_n + n):
+		   intnpot->intpot(data_p + m, data_p + n);
+	    } else if (c == IE35) {
+		sig += data_n? 0:
+//		    intnpot->intpot(data_n + n, data_n + m):
+		    intnpot->intpot(data_p + n, data_p + m);
+	    }
 	}
 	return (sig);
 }
@@ -645,7 +669,7 @@ const	INT53	zero53 = {0, 0, 0, 0};
 	sd->restrange(&rng);
 }
 
-INT max_intron_len(float p, const char* fn)
+INT max_intron_len(float p)
 {
 	INT	observed = 0;
 	double	mu = IntronPrm.m2;
@@ -660,26 +684,6 @@ INT max_intron_len(float p, const char* fn)
 	    th = IntronPrm.t1;
 	    ki = IntronPrm.k1;
 	}
-	if (fn) {
-	    FILE*	fd = ftable.fopen(ipstat, "r");
-	    if (!fd) goto ild_model;
-	    const	char*	sl = strrchr(fn, '/');
-	    if (sl) fn = sl + 1;
-	    char	str[LINE_MAX];
-	    while (fgets(str, LINE_MAX, fd)) {
-		if (strncmp(str, fn, 8)) continue;
-		Strlist	stl(str, stddelim);
-		if (atoi(stl[2]) < 1000) break;
-		observed = atoi(stl[5]);
-		int	n = stl.size() - 6;
-		mu = atof(stl[n]);
-		th = atof(stl[n + 1]);
-		ki = atof(stl[n + 2]);
-		break;
-	    }
-	    fclose(fd);
-	}
-ild_model:
 	INT	q99 = (INT) frechet_quantile(p, mu, th, ki);
 	return (max(observed, q99));
 }

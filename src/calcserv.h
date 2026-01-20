@@ -40,8 +40,6 @@ static	const	char	no_group_2[] = "Specify 2nd group !\n";
 
 class	DbsDt;
 
-#if M_THREAD
-
 #include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
@@ -136,20 +134,6 @@ void ThQueue<var_t>::fill()
 	while (vars < vart) *vars++ = new var_t;
 }
 
-#else	// M_THREAD
-
-template <class var_t>
-class ThQueue {
-	var_t dummy;
-};
-
-template <class var_t>
-void m_thread_Lock(ThQueue<var_t>* q) {}
-
-template <class var_t>
-void m_thread_Unlock(ThQueue<var_t>* q) {}
-
-#endif	// M_THREAD
 
 struct InFiles {
 	int	membersize = 0;
@@ -243,9 +227,7 @@ class CalcServer {
 protected:
 	int	idx_a, idx_b, idx_g;
 	bool	interactive;
-#if M_THREAD
 	int	MasterWorker();
-#endif
 	int	serialJob();
 	void	getoptions(int& argc, const char**& argv); 
 	void	initvars(var_t** vars, int n);
@@ -296,21 +278,19 @@ virtual	int	nextvars();
 	int	getgrp22() {return (memb? memb->idx_g2: idx_g);}
 	void	fpavsd(double val);
 	void	set_catalog(const char* cg) {catalog = (cg && *cg)? cg: CATALOG;}
-	int	memsize(VarLoader<var_t>* ldr = 0)
-	  {
+	int	memsize(VarLoader<var_t>* ldr = 0) {
 	    if (!ldr) return (memb? memb->membersize: vararray_no);
 	    InSt	inst;
 	    do {
 		var_t	tmp;
 		var_t*	ptmp = &tmp;
-		inst = ldr->nextvar(&ptmp);
+		inst = ldr->nextvar(&ptmp, false);
 	    } while (inst != IS_END);
 	    int	rv = ldr->var_no;
 	    ldr->reset();
 	    return (rv);
-	  }
-	int	calcsize(int num, int cm = IM_NONE) 
-	  {
+	}
+	int	calcsize(int num, int cm = IM_NONE) {
 	    if (cm == IM_NONE) cm = calc_mode;
 	    switch (cm) {
 		case IM_ALTR: case IM_PARA: num /= 2; break;
@@ -319,9 +299,8 @@ virtual	int	nextvars();
 		default: break;
 	    }
 	    return (num);
-	  }
-	int	calcnbr(int a, int b)
-	  {
+	}
+	int	calcnbr(int a, int b) {
 	    int	nn = 0;
 	    switch (calc_mode) {
 		case IM_ALTR: nn = a / 2; break;
@@ -331,22 +310,21 @@ virtual	int	nextvars();
 		default: nn = a; break;
 	    }
 	    return (nn);
-	  }
-	void	change_job(int (*mj)(CalcServer<var_t>*, var_t**, ThQueue<var_t>*))
-	  {
+	}
+	void	change_job(int (*mj)(CalcServer<var_t>*, var_t**, ThQueue<var_t>*)) {
 		if (ldr1) ldr1->reset();
 		if (ldr2) ldr2->reset();
 		main_job = mj;
-	  }
+	}
 	CalcServer(int im, void* p,
 	    int		(*mj)(CalcServer<var_t>*, var_t**, ThQueue<var_t>*),
 	    void	(*uj)(CalcServer<var_t>*) = 0,
 	    void	(*cj)(CalcServer<var_t>*) = 0,
-	    var_t** vars = 0, int nos = 0, int nos2 = 0, bool ldr = true) :
+	    var_t** vars = 0, int nos = 0, int nos2 = 0, 
+	    bool ldr = true, bool of = true) :
 	    idx_g(nos2), input_mode(im), calc_mode(im), prm(p), 
 	    vararray(vars), vararray_no(nos), 
-	    main_job(mj), setup_job(uj), cleanup_job(cj)
-	  {
+	    main_job(mj), setup_job(uj), cleanup_job(cj) {
 	    initialize();
 	    switch (input_mode) {
 		case IM_GRUP: if (!idx_g) fatal(no_group_2);
@@ -358,18 +336,17 @@ virtual	int	nextvars();
 		default:
 		    input_ns = 1; break;
 	    }
-	    if (ldr) ldr1 = new VarLoader<var_t>(this, 0, 0, idx_g);
-	  }
+	    if (ldr) ldr1 = new VarLoader<var_t>(this, 0, 0, idx_g, of);
+	}
 	CalcServer(int& argc, const char**& argv, int im, int defim, void* p = 0,
 	    int		(*mj)(CalcServer<var_t>*, var_t**, ThQueue<var_t>*) = 0,
 	    int 	(*oj)(int& ac, const char**& av) = 0,
 	    void	(*uj)(CalcServer<var_t>*) = 0,
 	    void	(*cj)(CalcServer<var_t>*) = 0,
-	    int nos = 0, int nos2 = 0) :
+	    int nos = 0, int nos2 = 0, bool of = true) :
 	    idx_g(nos2), calc_mode(defim), prm(p), 
 	    vararray(0), vararray_no(nos), 
-	    main_job(mj), optn_job(oj), setup_job(uj), cleanup_job(cj)
-	  {
+	    main_job(mj), optn_job(oj), setup_job(uj), cleanup_job(cj) {
 	    initialize();
 	    getoptions(argc, argv);
 	    if (im) input_mode = im;
@@ -381,67 +358,51 @@ virtual	int	nextvars();
 		default: input_ns = 1; break;
 	    }
 	    memb = new InFiles(catalog, argc, argv, input_mode, calc_mode);
-	    ldr1 = new VarLoader<var_t>(this, fin, 0, idx_g);
-	  }
-virtual	~CalcServer()
-	  {
+	    ldr1 = new VarLoader<var_t>(this, fin, 0, idx_g, of);
+	}
+virtual	~CalcServer() {
 	    delete memb; delete ldr1; delete ldr2;
 	    clearvars(in_face, 3, !vararray);
-	  }
+	}
 };
 
 template <class var_t>
 class VarLoader {
 protected:
 	CalcServer<var_t>* svr;
-	char**	members;	// list of file names
-	char**	mname;		// working members
-	int	fixedin;	// input from a fixed file
-	int	baseno;		// > 0 for group2
-	int	ceilno;
-	const	char*	fname;
-	FILE*	fd;
-#if USE_ZLIB
-	gzFile	gzfd;
-#endif
+	char**	members = 0;	// list of file names
+	char**	mname = 0;	// working members
+	char**	lastmem = 0;	// last + 1 member
+const	int	fixedin = 0;	// input from a fixed file
+const	int	baseno = 0;		// > 0 for group2
+	int	ceilno = 0;
+const	bool	openfile = true;
+	const	char*	fname = 0;
+	ReadFile	fp;
 	void	close_file() {
 	    fname = 0;
-	    if (fd) {fclose(fd); fd = 0;}
-#if USE_ZLIB
-	    if (gzfd) {fclose(gzfd); gzfd = 0;}
-#endif
+	    fp.close();
 	}
 public:
-	int	var_no;
+	int	var_no = 0;
 	void	reset();
-	VarLoader(CalcServer<var_t>* cs, int fin = 0, int bs = 0, int cl = 0) 
-	    : svr(cs), fixedin(fin), baseno(bs), ceilno(cl), fname(0), fd(0)
-#if USE_ZLIB
-		, gzfd(0)
-#endif
+	VarLoader(CalcServer<var_t>* cs, int fin = 0, 
+		int bs = 0, int cl = 0, bool of = true) 
+	    : svr(cs), fixedin(fin), baseno(bs), ceilno(cl), openfile(of)
 	{
 	    if (!svr->memb) mname = members = 0;
 	    if (!ceilno) ceilno = svr->memsize();
 	    reset();
+	    lastmem = members + ceilno;
 	}
-	~VarLoader() {
-	    if (fd) fclose(fd);
-#if USE_ZLIB
-	    if (gzfd) fclose(gzfd);
-#endif
-	}
+	~VarLoader() {}
 	bool	active_file() {
-#if USE_ZLIB
-	    return (fd || gzfd);
-#else
-	    return (fd);
-#endif
+	    return (fp.fd || fp.gzfd);
 	}
 	InSt	at(int sid, var_t** inface = 0);
-	InSt	nextvar(var_t** var);
+	InSt	nextvar(var_t** var, bool of = true);
 };
 
-#if M_THREAD
 
 template <class var_t>
 struct thread_arg_t {
@@ -558,20 +519,17 @@ int CalcServer<var_t>::MasterWorker()
 	return (thread_num);
 }
 
-#endif	//	M_THREAD
 
 template <class var_t>
 void VarLoader<var_t>::reset()
 {
-	if (fd) {fclose(fd); fd = 0;} var_no = 0;
-#if USE_ZLIB
-	if (gzfd) {fclose(gzfd); gzfd = 0;} var_no = 0;
-#endif
+	fp.close();
+	var_no = 0;
 	if (svr->memb) {
 	    if (baseno && svr->memb->grp2) {
 		members = svr->memb->grp2;
 	    } else {
-		 members = svr->memb->name;
+		members = svr->memb->name;
 		if (fixedin) members += fixedin - 1;
 	    }
 	    mname = members;
@@ -581,41 +539,55 @@ void VarLoader<var_t>::reset()
 }
 
 template <class var_t>
-InSt VarLoader<var_t>::nextvar(var_t** var)
+InSt VarLoader<var_t>::nextvar(var_t** var, bool of)
 {
 	bool	first = false;
+	of = openfile && of;
 	if (svr->vararray) {
 	    if (var_no >= ceilno) return (IS_END);
 	    *var = svr->vararray[var_no];
-	} else if (fd == stdin) {	// read from file
-	    if ((*var)->fget(fd, 0) == EOF) return (IS_END);
+	} else if (fp.fd == stdin) {	// read from file
+	    if ((*var)->fget(fp.fd, 0) == EOF) return (IS_END);
 	} else {
 	    int	rv = EOF;
+	    bool	exist = false;
 	    while (rv == EOF) {
-		while (!fd) {
+		while (!fp.fd && !fp.gzfd && !exist && mname < lastmem) {
 		    if (!(mname && *mname)) return (IS_END);
 		    fname = *mname;
-		    if (!**mname) {	// blank line
+		    if (!*fname) {	// blank line
 			if (svr->input_mode == IM_GRUP) return (IS_END);
 			svr->setgrp2();
 			++mname;
 		    } else {
-			fd = fopen(fname, "r");
+			if (of) fp.open(fname);
+			else if	(is_file(fname)) {
+			    ++mname;
+			    ++var_no;
+			    return (IS_OK);
+			}
 			if (fixedin != 1) {
 			    ++mname;
 			    first = true;
-			    if (!fd) prompt("%s not found !\n", fname);
-			} else if (!fd) return (IS_END);
+			    if (!fp.dtype)
+				prompt("%s not found !\n", fname);
+			} else if (!fp.dtype) return (IS_END);
 		    }
 		}
-		if (fd && fname) {
-		    rv = (*var)->fget(fd, fname);
-		    if (feof(fd)) close_file();
+		if ((fp.dtype || exist) && fname) {
+		    if (fp.fd) {
+			rv = (*var)->fget(fp.fd, fname);
+			if (fp.fd && feof(fp.fd)) close_file();
+		    } else if (fp.gzfd) {
+			rv = (*var)->fget(fp.gzfd, fname);
+			if (fp.gzfd && feof(fp.gzfd)) close_file();
+		    }
 		}
 		if (rv == EOF) {
-		    close_file();
-		    if (fixedin == 1) return (IS_END);
-		    if (first) return (IS_ERR);		// empty or absent
+		    if (of) close_file();
+		    if (fixedin == 1 || mname == lastmem) return (IS_END);
+		    if (first) return (IS_ERR);	// empty or absent
+		    else	break;
 		} else if (rv == IGNORE) {
 		    return (IS_ERR);
 		}
@@ -855,10 +827,8 @@ int CalcServer<var_t>::auto_comp(bool multhr)
 	} while (inst_a == IS_ERR || inst_b == IS_ERR);
 	int	nprocessed = 0;
 	if (setup_job) setup_job(this);
-#if M_THREAD
 	if (multhr && thread_num)
 	    nprocessed = MasterWorker(); else
-#endif
 	nprocessed = serialJob();
 	if (cleanup_job) cleanup_job(this);
 	return (nprocessed);

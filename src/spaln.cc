@@ -28,16 +28,9 @@
 #include "vmf.h"
 #include "wln.h"
 #include "blksrc.h"
-
-#ifndef	M_THREAD
-#define	M_THREAD	1
-#endif
-
-#if M_THREAD
 #include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
-#endif
 
 #define	TESTRAN		0
 #define	QDEBUG	0
@@ -48,7 +41,6 @@ static	const	int	MAX_ARGS = 128;
 static	const	int	MAX_ARGTEXT = 4096;
 static	const	int	InsPam = 100;	// intra species
 static	const	int	CrsPam = 150;	// cross species
-static	const	int	WlpPam = 50;	// HSP search
 static	const	int	DefOrfLen = 75;
 static	const	int	def_max_extend_gene_rng = 3;
 static	const	long	MaxWordNoSpace = 1 << 30;	// 1GB
@@ -65,7 +57,6 @@ public:
 	~HalfGene() {delete[] sname;}
 };
 
-#if M_THREAD
 
 class ThQueue {
 	int	rp, wp;
@@ -107,9 +98,6 @@ static	void*	master_func(void* targ);
 static	void*	mistress_func(void* arg);
 static	void*	worker_func(void* targ);
 static	void 	MasterWorker(Seq** sqs, SeqServer* svr, void* prm);
-#else
-class	ThQueue;
-#endif	// M_THREAD
 
 static	void	usage(const char* messg);
 static	int	getoption(int argc, const char** argv, const int visit = 0);
@@ -135,8 +123,6 @@ static	const	char*	cdnadb = 0;
 
 static	QvsD	QRYvsDB = CvsG;
 static	InputMode	input_form = IM_SNGL;
-static	int	extra_seq = 1;
-static	int	b_intr = 0;
 static	bool	WriteMolc = false;
 static	int	QryMolc = UNKNOWN;
 static	int	TgtMolc = UNKNOWN;
@@ -145,8 +131,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "3.0.7";
-static	const	int	date = 250522;
+static	const	char*	version = "3.0.8";
+static	const	int	date = 260119;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -266,7 +252,7 @@ const	    char*	val = argv[0] + 2;
 		    algmode.dim = 0;
 		    if ((val = getarg(argc, argv))) {
 			delete *dbs;
-			*dbs = new DbsDt(aadbs = val);
+			*dbs = new DbsDt(aadbs = val, PROTEIN);
 		    }
 		    break;
 		case 'A':
@@ -276,18 +262,18 @@ const	    char*	val = argv[0] + 2;
 			else {
 			    algmode.dim = 1;	// on memory dbs
 			    delete *dbs;
-			    *dbs = new DbsDt(aadbs = val);
+			    *dbs = new DbsDt(aadbs = val, PROTEIN);
 			}
 		    }
 		    break;
 		case 'd': case 'D': 
 		    algmode.dim = c == 'D';
 		    if ((val = getarg(argc, argv)))
-			{delete *dbs; *dbs = new DbsDt(genomedb = val);}
+			{delete *dbs; *dbs = new DbsDt(genomedb = val, DNA);}
 		    break;
 		case 'c':
 		    if ((val = getarg(argc, argv)))
-			{delete *dbs; *dbs = new DbsDt(cdnadb = val);}
+			{delete *dbs; *dbs = new DbsDt(cdnadb = val, DNA);}
 		    break;
 		case 'C':
 		    if ((val = getarg(argc, argv, true)))
@@ -445,13 +431,11 @@ const	    char*	val = argv[0] + 2;
 			algmode.blk = q >> 2;
 		    } else	algmode.qck = 1;
 		    break;
-#if M_THREAD
 		case 'q':
 		    if ((val = getarg(argc, argv, true)))
 			max_queue_num = atoi(val);
 		    else max_queue_num = 0;
 		    break;
-#endif
 		case 'R':
 		    if ((val = getarg(argc, argv)))
 			ReadBlock = val;
@@ -474,16 +458,16 @@ const	    char*	val = argv[0] + 2;
 			{q_mns = atoi(*++argv); --argc;}
 		    else algmode.slv = 1;	// salvage mode | read annotation
 		    break;
-#if M_THREAD
 		case 't':
 		    if ((val = getarg(argc, argv, true)))
 			thread_num = atoi(val);
 		    else thread_num = -1;
 		    break;
-#endif
 		case 'T':
-		    if ((val = getarg(argc, argv)))
+		    if ((val = getarg(argc, argv))) {
 			ftable.setpath(val, gnm2tab);
+			IntronPrm.from_ildmodel(val);
+		    }
 		    break;
 		case 'u': case 'v': case 'w': 
 		    readalprm(argc, argv); break;
@@ -505,7 +489,10 @@ const	    char*	val = argv[0] + 2;
 		    rv = setQ4prm(opt + 1, val);
 		    if (rv) {++argv; --argc;}
 		    break;
-		case 'y': readalprm(argc, argv, 2); break;
+		case 'y':
+		    if (opt[1] != 'I' || (visit == 0 || IntronPrm.k1 == 0))
+			readalprm(argc, argv, 2);
+		    break;
 		case 'z': setexprm_z(argc, argv); break;
 		default: break;
 	    }
@@ -665,6 +652,8 @@ static	RANGE*	skl2exrng(SKL* skl)
 
 static int spalign2(Seq* sqs[], PwdB* pwd, Gsinfo* GsI, int ori)
 {
+	if (pwd->DvsP != 3)
+	    genomicseq(sqs + 1, pwd, ori);
 	switch (QRYvsDB) {
 	  case AvsG: 
 	  case GvsA: GsI->skl = alignH_ng((const Seq**) sqs, pwd, GsI); break;
@@ -736,21 +725,6 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	if (gsquery) std::swap(sqs[0], sqs[1]);
 	Seq*&	a = sqs[0];
 	Seq*&	b = sqs[1];
-	Seq*&	c = sqs[2];
-
-	INT	ori = a->inex.ori;
-	b->inex.intr = b_intr;
-	if (pwd->DvsP == 0) {
-	    if (!c->len) b->comrev(sqs + 2);
-	    if (!b->exin) b->exin = new Exinon(b, pwd, ori == 3);
-	    if (!c->exin) c->exin = new Exinon(c, pwd, ori == 3);
-	} else if (pwd->DvsP == 1) {
-	    if (!c->len) b->comrev(sqs + 2);
-	    b->nuc2tron();
-	    c->nuc2tron();
-	    if (!b->exin) b->exin = new Exinon(b, pwd, ori == 3);
-	    if (!c->exin) c->exin = new Exinon(c, pwd, ori == 3);
-	}
 
 	int	dir = a->isprotein() + 2 * b->isprotein();
 	if (dir != pwd->DvsP)
@@ -764,6 +738,8 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	    b->exg_seq(algmode.lcl & 1, algmode.lcl & 2);
 	}
 
+	if (QRYvsDB == GvsA || QRYvsDB == AvsG) b->inex.intr = algmode.lsg;
+	INT	ori = a->inex.ori;
 	int	nparalog = 0;
 	if (pwd->DvsP == 3) nparalog = 1;
 	else {
@@ -822,13 +798,11 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	    if (gsquery) std::swap(sqs[0], sqs[1]);
 	    if (algmode.nsa == BED_FORM)
 		gsinf->rscr = selfAlnScr(a, pwd->simmtx);
-#if M_THREAD
 	    if (q) {
 		pthread_mutex_lock(&q->mutex);
 		outputs.alnoutput(sqs, gsinf);
 		pthread_mutex_unlock(&q->mutex);
 	    } else
-#endif
 		outputs.alnoutput(sqs, gsinf);
 	    if (gsquery) std::swap(sqs[0], sqs[1]);
 	    if (k) std::swap(b, gener[k - 1]);
@@ -839,7 +813,7 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	}
 	delete[] GsI; delete[] odr;
 	if (gsquery) std::swap(sqs[0], sqs[1]);
-	cleanseq(sqs + 2 + extra_seq, nparalog - extra_seq, 1);
+	cleanseq(sqs + 2, nparalog, 1);
 	return (dir);
 }
 
@@ -851,6 +825,7 @@ static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q)
 	RANGE	frng = {INT_MAX, 0};
 	Seq*&	a = sqs[0];
 	Seq*&	b = sqs[1];
+const	int	b_intr = b->inex.intr;
 
 	if (gsquery) {
 	    a->saverange(&grng);
@@ -983,18 +958,15 @@ const	int	basis = gener - sqs;
 	    }
 	    if (algmode.nsa == BED_FORM)
 		gsinf->rscr = selfAlnScr(a, bks->pwd->simmtx);
-#if M_THREAD
 	    if (q) {
 		pthread_mutex_lock(&q->mutex);
 		outputs.alnoutput(sqs, gsinf);
 		pthread_mutex_unlock(&q->mutex);
 	    } else
-#endif
 		outputs.alnoutput(sqs, gsinf);
 	    if (gsquery) std::swap(sqs[0], sqs[1]);
 	    std::swap(b, gener[k]);
 	}
-#if M_THREAD
 	if (q && q->mfd) {
 	    pthread_mutex_lock(&q->mutex);
 	    hfg.sname = strrealloc(0, a->sqname());
@@ -1007,7 +979,6 @@ const	int	basis = gener - sqs;
 	    q->mfd->write(&hfg);
 	    pthread_mutex_unlock(&q->mutex);
 	}
-#endif
 	delete[] GsI; delete[] odr;
 	cleanseq(sqs + 2, basis + nparalog - 1, 1);
 	return (hfg.right);
@@ -1046,7 +1017,6 @@ static SrchBlk* getblkinf(Seq* sqs[], const char* dbs, MakeBlk* mb)
 	    b->inex.intr = algmode.lsg;
 	    a->inex.intr = 0;
 	} 
-	b_intr = b->inex.intr;
 	b->byte = b->many = 1;
 	if (ap && bp)	{QRYvsDB = AvsA; algmode.lsg = 0;}
 	else if (ap)	QRYvsDB = AvsG;
@@ -1160,7 +1130,6 @@ static void spaln_job(Seq* sqs[], void* prm, ThQueue* q)
 	if (a->isdrna() && !gsquery && q_mns)	 	// cDNA
 	    a->inex.ori = polyA.rmpolyA(a, a->sigII? 1: q_mns);
 	else	a->inex.ori = q_mns? q_mns: 3;
-	if (algmode.crs) Wlp	wlp(sqs);		// mask low ic region
 	if (algmode.blk) (void) quick4(sqs, (SrchBlk*) prm, q);
 	else	match_2(sqs, pwd, q);
 }
@@ -1217,7 +1186,6 @@ static void put_genome_entries()
 	}
 }
 
-#if M_THREAD
 ThQueue::ThQueue(Seq** sqs) : sinp(sqs)
 {
 	sque = new Seq*[max_queue_num];
@@ -1466,7 +1434,6 @@ static void MasterWorker(Seq** sqs, SeqServer* svr, void* prm)
 	delete[] targ;
 	delete[] worker;
 }
-#endif
 
 static void setdefparam()
 {
@@ -1534,13 +1501,13 @@ const	char*	insuf = "No input seq file !\n";
 	    return (0);
 	}
 	if (!catalog && argc <= 0) usage(insuf);
-#if M_THREAD
 	cpu_num = sysconf(_SC_NPROCESSORS_CONF);
 	if (thread_num < 0) thread_num = cpu_num;
 	if (max_queue_num == 0) max_queue_num = int(FACT_QUEUE * thread_num);
-#endif	// M_THREAD
 	if (QryMolc == TRON) QryMolc = PROTEIN;
 	if (!algmode.mlt) OutPrm.MaxOut = 1;
+	if (!OutPrm.MaxOut2)
+	    OutPrm.MaxOut2 = (QryMolc == DNA)? 1: MAX_PARALOG;
 	if (OutPrm.MaxOut > OutPrm.MaxOut2) OutPrm.MaxOut2 = OutPrm.MaxOut;
 	setup_output(CDS_FORM, 0, false);	// output format
 	int	nseqs = no_seqs += OutPrm.MaxOut2 + 1;
@@ -1556,9 +1523,9 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 		delete[] seqs;
 		usage(insuf);
 	    }
+	    if (QryMolc == UNKNOWN) QryMolc = infermolc(argv[1]);
 	    if (!TgtMolc) {
 		TgtMolc = infermolc(argv[0]);
-	    	QryMolc = infermolc(argv[1]);
 		if (TgtMolc != PROTEIN && QryMolc == PROTEIN)
 		    TgtMolc = TRON;
 	    }
@@ -1577,18 +1544,15 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 		SrchBlk*	bprm = getblkinf(seqs, dbs, mb);
 		delete mb;
 		no_seqs = OutPrm.MaxOut2 + bprm->NoWorkSeq + 2;	// query + last
-		if (a->inex.intr || b->inex.intr) makeStdSig53();
+		if (a->inex.intr || b->inex.intr) makeStdSig53(bprm->pwd->DvsP);
 		set_max_extend_gene_rng(def_max_extend_gene_rng);
 		if (bprm->pwd->DvsP == 3) OutPrm.SkipLongGap = 0;
 		if (algmode.nsa == SAM_FORM) put_genome_entries();
-#if M_THREAD
 		if (thread_num) MasterWorker(seqs, &svr, (void*) bprm); else
-#endif
 		all_in_func(seqs, &svr, (void*) bprm);
 		delete bprm;
 	    }
 	} else {
-	    extra_seq = svr.input_ns == 2? 0: 1;
 	    no_seqs = OutPrm.MaxOut2 + 2;
 	    if (svr.nextseq(b, 1) == IS_END) {
 		messg = "Can't open genomic sequence !\n";
@@ -1599,25 +1563,11 @@ const	char*	dbs = genomedb? genomedb: (aadbs? aadbs: cdnadb);
 		goto postproc;
 	    }
 	    PwdB*	pwd = SetUpPwd(seqs);
-	    b_intr = b->inex.intr;
-	    if (a->inex.intr || b->inex.intr) makeStdSig53();
 	    if (pwd->DvsP == 3) OutPrm.SkipLongGap = 0;
-	    else if (svr.input_ns == 1) {
-		INT	ori = q_mns? q_mns: 3;
-		Seq*&	c = seqs[2];
-		b->comrev(seqs + 2);
-		if (pwd->DvsP == 1) {
-		    b->nuc2tron();
-		    c->nuc2tron();
-		    if (!b->exin) b->exin = new Exinon(b, pwd, ori == 3);
-		    if (!c->exin) c->exin = new Exinon(c, pwd, ori == 3);
-		}
-	    }
+	    if (a->inex.intr || b->inex.intr) makeStdSig53(pwd->DvsP);
 	    set_max_extend_gene_rng(0);
 	    if (outputs.setup(a->spath)) {
-#if M_THREAD
 		if (thread_num) MasterWorker(seqs, &svr, (void*) pwd); else
-#endif
 		all_in_func(seqs, &svr, (void*) pwd);
 	    }
 	    delete pwd;

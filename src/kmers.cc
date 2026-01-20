@@ -21,125 +21,118 @@
 *
 *****************************************************************************/
 
-#include "seq.h"
-#include "dbs.h"
-#include "eijunc.h"
-#include <math.h>
+#include "kmers.h"
 
-#define	SKIP	0xff
-
-static	CHAR	ntconv[26] =
-	{0,4,1,4,7,7,2,4,7,7,4,7,4,4,7,4,7,4,4,3,3,4,4,7,4,7};
-static	CHAR	aaconv[26];
-static	INT	left_m = 0;
 static	INT	right_m = 0;
 static	bool	no_amb = false;
 static	bool	homopoly = false;
-static	bool	uptow = true;
 static	const	char*	catalog;
+static	bool	gzip = false;
 
-static	void	Usage();
-
-static void Usage()
+void	Kmers::make_nok()
 {
-	fputs("Usage:\n", stderr);
-	fputs("\tkmers -K[D|P] [-options] [-d dbs.seq | fasta]\n", stderr);
-	fputs("\tkmers -d dbs -K[D|P] [-options] -e xxx.eij\n", stderr);
-	fputs("Options:\n", stderr);
-	fputs("\t-h (print this message)\n", stderr);
-	fputs("\t-H (homo oligomer only)\n", stderr);
-	fputs("\t-K[P|D] (protein|DNA)\n", stderr);
-	fputs("\t-l LeftMargin\n", stderr);
-	fputs("\t-r RightMarging\n", stderr);
-	fputs("\t-w MaxWordLen (upto w)\n", stderr);
-	fputs("\t-W MaxWordLen (only w)\n", stderr);
-	exit (1);
-}
-
-class Kmers {
-	INT	letter;
-	INT	width;
-	INT	mask;
-	INT	words;
-	INT*	counts;
-	INT**	results;
-	INT	xx;
-	INT	ww;
-	INT	sp;
-	INT	ok, amb;
-public:
-	Kmers(INT a, INT k);
-	~Kmers() {
-	    delete[] counts; delete[] results;
-	}
-	void	fromText(FILE* fd, CHAR* encoder);
-	void	fromSeq(Seq* sd);
-template <typename file_t>
-	void	fromNucDbs(file_t fd);
-template <typename file_t>
-	void	fromAaDbs(file_t fd);
-template <typename file_t>
-	void	readCount(file_t fd, const int& molc);
-	void	readCount(const char* eij, const char* dbs = 0);
-	void	readCount(int argc, const char** argv, const int& molc);
-	void	outputCount(char* decode);
-	void	count(INT c);
-	void	reset();
-};
-
-Kmers::Kmers(INT a, INT kk) : letter(a), width(kk)
-{
-	mask = ipower(letter, width);
-	INT	words = homopoly? letter * width:
-		(mask * letter - 1) / (letter - 1);
-	counts = new INT[words];
-	results = new INT*[width];
+	if (!nok) nok = new INT[hdr.maxk];
+	if (hdr.mink) vclear(nok, hdr.mink);
 	INT	n = 1;
-	INT	m = 0;
-	for (INT k = 0; k < width; ++k) {
-	    results[k] = counts + m;
-	    m += (homopoly? letter: (n *= letter));
-	}
-	vclear(counts, words);
-	ok = amb = 0;
-	reset();
+	for (INT j = hdr.mink; j < hdr.maxk; ++j)
+	    nok[j] = (n *= hdr.letter);
 }
 
-void Kmers::reset()
+Kmers::Kmers(INT a, INT xkk, INT nkk) : 
+	supw(ipower(a, xkk)), molc(a == 4? DNA: PROTEIN),
+	decoder(molc == DNA? Nucl: Amin)
 {
-	sp = xx = ww = 0;
+	hdr.letter = a;
+	hdr.maxk = xkk;
+	hdr.mink = nkk;
+	INT	n = ipower(hdr.letter, hdr.mink);
+	hdr.lnwords = homopoly? hdr.letter * hdr.maxk:
+		hdr.letter * (supw - n) / (hdr.letter - 1);
+	lcounts = new INT[hdr.lnwords];
+	lresults = new INT*[hdr.maxk + 1];
+	make_nok();
+	for (INT j = 0; j < hdr.mink; ++j)
+	    lresults[j] = lcounts;
+	INT	m = 0;
+	for (INT j = hdr.mink; j < hdr.maxk; ++j) {
+	    lresults[j] = lcounts + m;
+	    m += (homopoly? hdr.letter: nok[j]);
+	}
+	lresults[hdr.maxk] = lcounts + m;
+	vclear(lcounts, hdr.lnwords);
+
+	hdr.snwords = nok[0] + nok[1];
+	if (hdr.snwords) {
+	    m = 0;
+	    hdr.max_sk = 2;	// tentative
+	    scounts = new long[hdr.snwords];
+	    sresults = new long*[3];
+	    for (INT j = hdr.mink; j < hdr.max_sk; ++j) {
+		sresults[j] = scounts + m;
+		m += nok[j];
+	    }
+	    sresults[hdr.maxk] = scounts + m;
+	    vclear(scounts, hdr.snwords);
+	}
 }
 
-void Kmers::count(INT c)
+Kmers::Kmers(const char* fname)
+{
+	ReadFile	fp(fname);
+	int	nread = 0;
+	if (fp.gzfd) {
+	    if (fp.dtype == 1) nread = read_text(fp.gzfd, fname); else
+	    if (fp.dtype == 2) nread = read_binary(fp.gzfd, fname);
+	} else if (fp.fd) {
+	    if (fp.dtype == 1) nread = read_text(fp.fd, fname); else
+	    if (fp.dtype == 2) nread = read_binary(fp.fd, fname);
+	} else
+	    fatal(not_found, fname);
+	if (!nread) fatal(read_error, fname);
+	molc = hdr.letter == 4? DNA: PROTEIN;
+	decoder = molc == DNA? Nucl: Amin;
+	make_nok();
+}
+
+void KmersFe::count(INT c)
 {
 	INT	w = 0;
-	if (c >= letter) {	// ambcode
+	if (c >= hdr.letter) {	// ambcode
 	    ++amb;
 	    xx = 0;
 	} else if (homopoly) {
 	    ++ok;
 	    w = c;
 	    if (xx == 0 || w == ww) {
-		if (xx < width - 1) ++xx;
+		if (xx < INT(hdr.maxk - 1)) ++xx;
 	    } else xx = 0;
 	} else {
-	    ++ok;		// good letter
-	    if (xx < width) ++xx;
-	    w = (letter * ww + c) % mask;
+	    ++ok;		// good hdr.letter
+	    if (xx < hdr.maxk) ++xx;
+	    w = (hdr.letter * ww + c) % supw;
 	}
 	ww = w;
 	if (homopoly) {
-	    for (INT k = 0; k <= xx; ++k)
-		results[k][w]++;
-	} else {
-	    INT	n = letter;
-	    for (INT k = 0; k < xx; ++k, n *= letter)
-		results[k][w % n]++;
+	    for (INT j = 0; j <= xx; ++j)
+		lresults[j][w]++;
+	} else if (xx > hdr.mink) {
+	    for (INT j = hdr.mink; j < xx; ++j) {
+		if (j < hdr.max_sk) sresults[j][w % nok[j]]++;
+		lresults[j][w % nok[j]]++;
+	    }
 	}
 }
 
-void Kmers::fromText(FILE* fd, CHAR* encoder)
+void KmersFe::fromText(FILE* fd)
 {
+static	CHAR	ntconv[26] =
+	{0,4,1,4,7,7,2,4,7,7,4,7,4,4,7,4,7,4,4,3,3,4,4,7,4,7};
+static	CHAR	aaconv[26];
+	CHAR*	encoder = ntconv;
+	if (molc == PROTEIN) {
+	    for (int i = 0; i < 26; ++i) aaconv[i] = aacode[i] - ALA;
+	    encoder = aaconv;
+	}
 	char	str[MAXL];
 	while (char* ps = fgets(str, MAXL, fd)) {
 	    if (*str == '>') {
@@ -153,73 +146,26 @@ void Kmers::fromText(FILE* fd, CHAR* encoder)
 		if (c == ';' || c == '#') break;// comments
 		if (!isalpha(c)) continue;	// ignore
 		c = encoder[tolower(c)-'a'];
-		if (c <= letter && ++sp > left_m)
+		if (c <= hdr.letter && ++sp > llmt)
 		    count(c);
 	    }
 	}
 }
 
-void Kmers::fromSeq(Seq* sd)
+void KmersFe::fromSeq(Seq* sd)
 {
 	reset();
-	CHAR*	ps = sd->at(left_m);
+	CHAR*	ps = sd->at(llmt);
 	CHAR*	ts = sd->at(sd->right - right_m);
 	CHAR*	encode = sd->isprotein()? aaredctab: ncredctab;
 
 	for ( ; ps < ts; ++ps) {
 	    INT	c = encode[*ps];
-	    if (c <= letter) count(c);
+	    if (c <= hdr.letter) count(c);
 	}
 }
 
-
-template <typename file_t>
-void Kmers::fromNucDbs(file_t fd)
-{
-			/*     - A C M G R S V T W Y H K D B N */
-static	int	nc16to4[]  = {15,0,1,4,2,4,4,4,3,4,4,4,4,4,4,4};
-	int	parity = 0;
-	int	c;
-
-	while (true) {
-	    int	a;
-	    if (!parity) {
-		c = fgetc(fd);
-		if (c == EOF) break;
-		a = (c >> 4) & 15;
-	    } else {
-		a = c & 15;
-	    }
-	    if ((a = nc16to4[a]) <= 4 && ++sp > left_m) {
-		count(a);
-		parity = 1 - parity;
-	    } else {
-		reset();
-		parity = 0;
-	    }
-	}
-}
-
-template <typename file_t>
-void Kmers::fromAaDbs(file_t fd)
-{
-	while (true) {
-	    int	c = fgetc(fd);
-	    if (c == EOF) break;
-	    if (c == SEQ_DELIM) reset();
-	    else if (++sp > left_m)
-		count((c >= ALA && c <= VAL)? c - ALA: 20);
-	}
-}
-
-template <typename file_t>
-void Kmers::readCount(file_t fd, const int& molc)
-{
-	if (molc == DNA)	fromNucDbs(fd);
-	else			fromAaDbs(fd);
-}
-
-void Kmers::readCount(int argc, const char** argv, const int& molc)
+void KmersFe::readCount(int argc, const char** argv)
 {
 	SeqServer	svr(argc, argv, IM_SNGL, catalog, molc);
 	Seq	sd(1);
@@ -227,9 +173,10 @@ void Kmers::readCount(int argc, const char** argv, const int& molc)
 	InSt	ist;
 	while ((ist = svr.nextseq(&sd)) != IS_END) 
 	    if (ist == IS_OK) fromSeq(&sd);
+	prompt("No. res = %ld, amb = %d\n", ok, amb);
 }
 
-void Kmers::readCount(const char* eij, const char* dbs)
+void KmersFe::readCount(const char* eij, const char* dbs)
 {
 	EiJuncSeq	eijseq(INTRON, eij, dbs);
 	do {
@@ -237,40 +184,98 @@ void Kmers::readCount(const char* eij, const char* dbs)
 	    if (!sd || (no_amb && sd->inex.ambs)) continue;
 	    fromSeq(sd);
 	} while (eijseq.goahead());
+	prompt("No. res = %ld, amb = %d\n", ok, amb);
 }
-	
-void Kmers::outputCount(char* decoder)
-{
-	prompt("No. res = %d, amb = %d\n", ok, amb);
-	INT	k = uptow? 0: (width -  1);
-	if (homopoly) {
-	    for ( ; k < width; ++k) {
-		for (INT j = 0; j < letter; ++j) {
-		    for (INT m = 0; m <= k; ++m)
-			putchar(decoder[j]);
-		    printf("\t%7d\n", results[k][j]);
-		}
-	    }
+
+void Kmers::get(float* dest, const INT& j, bool normalize)
+{				// get (k=j+1)-mer
+	float*	dst = dest;
+	float	total = 0;
+	if (j < hdr.max_sk) {
+	    long*	cnt = sresults[j];
+	    long*	tcn = cnt + nok[j];
+	    while (cnt < tcn) total += (*dst++ = (float) *cnt++);
+	    if (!normalize) return;
+	    while (dest < dst) *dest++ /= total; 
 	} else {
-	    INT	n = letter;
-	    for ( ; k < width; ++k, n *= letter) {
-		for (INT j = 0; j <  n; ++j) {
-		    INT	c = j;
-		    for (INT m = n; m /= letter; ) {
-			putchar(decoder[c / m]);
-			c %= m;
-		    }
-		    printf("\t%7d\n", results[k][j]);
+	    INT*	cnt = lresults[j];
+	    INT*	tcn = cnt + nok[j];
+	    while (cnt < tcn) total += (*dst++ = (float) *cnt++);
+	    if (!normalize) return;
+	    while (dest < dst) *dest++ /= total; 
+	}
+	cvrate = total / nok[j];
+}
+
+void Kmers::outputCount(const char* outf, const int& text)
+{
+	if (homopoly) {
+	    FILE*	afd = stdout;
+	    if (outf) {
+		afd = fopen(outf, "w");
+		if (!afd) fatal(no_file, outf);
+	    }
+	    for (INT j = hdr.mink; j < hdr.maxk; ++j) {
+		for (INT i = 0; i < hdr.letter; ++i) {
+		    for (INT m = 0; m <= j; ++m) fputc(decoder[i], afd);
+		    fprintf(afd, "\t%7d\n", lresults[j][i]);
 		}
 	    }
+	    if (outf) fclose(afd);
+	    return;
 	}
+	WriteFile	fp(outf, text, gzip);
+	if (fp.gzfd) {
+	    if (text)	write_text(fp.gzfd);
+	    else	write_binary(fp.gzfd, outf);
+	} else if (fp.fd) {
+	    if (text)	write_text(fp.fd);
+	    else	write_binary(fp.fd, outf);
+	} else
+	    fatal(no_file, outf);
+}
+
+#ifdef MAIN
+
+static	void	Usage();
+static	INT	left_m = 0;
+static	bool	convert = false;
+static	bool	binary = false;
+
+static void Usage()
+{
+	fputs("Description:\n", stderr);
+	fputs("\tCreate k-mer table from DNA/protein sequences\n", stderr);
+	fputs("\toptionally with exon-intron junction information (.eij)\n", stderr);
+	fputs("\t\tor\n", stderr);
+	fputs("\tConvert between text and binary forms\n", stderr);
+	fputs("Usage:\n", stderr);
+	fputs("\tkmers -K[D|P] [-options] [-d dbs | fasta]\n", stderr);
+	fputs("\tkmers -K[D|P] [-options] -d dbs -e X.eij\n", stderr);
+	fputs("\tkmers -g -b X.wdfq -c X.wdfq (text -> binary)\n", stderr);
+	fputs("\tkmers [-c X.wdfq] X.wdfq[.dat|.dgz] (binary -> text)\n", stderr);
+	fputs("Options:\n", stderr);
+	fputs("\t-b Binary_out (\".dat\" may be added)\n", stderr);
+	fputs("\t-f [OutFile] (Convert binary <-> text)\n", stderr);
+	fputs("\t-g: gzipped output (\".gz\" may be added)\n", stderr);
+	fputs("\t  if -b option is also set \".dgz\" may be added\n", stderr);
+	fputs("\t-h (print this message)\n", stderr);
+	fputs("\t-H (homo oligomer only)\n", stderr);
+	fputs("\t-K[P|D] (protein|DNA)\n", stderr);
+	fputs("\t-l LeftMargin within intron\n", stderr);
+	fputs("\t-r RightMargin within intron\n", stderr);
+	fputs("\t-w WordLen (from 1 to w)\n", stderr);
+	fputs("\t-W WordLen (only w)\n", stderr);
+	exit (1);
 }
 
 int main(int argc, const char** argv)
 {
 	int	wd = -1;
 	int	molc = DNA;
+	bool	uptow = true;
 const	char*	dbs = 0;
+const	char*	outf = 0;
 const	char*	eij = 0;
 	char	str[LINE_MAX] = {'\0'};
 
@@ -280,6 +285,10 @@ const	char*	eij = 0;
 	    if (!*cmd) break;	/* stdin */
 	    switch (*cmd) {
 		case '?': case 'h': Usage();
+		case 'b': binary = true;
+		    if ((pn = getarg(argc, argv)))
+			outf = pn;
+		    break;
 		case 'd':
 		    if ((pn = getarg(argc, argv)))
 			dbs = pn;
@@ -288,6 +297,11 @@ const	char*	eij = 0;
 		    if ((pn = getarg(argc, argv)))
 			eij = pn;
 		    break;
+		case 'f': convert = true;
+		    if (argc > 2 && (pn = getarg(argc, argv)))
+			outf = pn;
+		    break;
+		case 'g': gzip = true; break;
 		case 'i':
 		    if ((pn = getarg(argc, argv)))
 			catalog = *pn == ':'? pn + 1: pn;
@@ -296,12 +310,16 @@ const	char*	eij = 0;
 		    if ((pn = getarg(argc, argv)))
 			left_m = atoi(pn);
 		    break;
+		case 'o':
+		    if ((pn = getarg(argc, argv)))
+			outf = pn;
+		    break;
 		case 'r':
 		    if ((pn = getarg(argc, argv)))
 			right_m = atoi(pn);
 		    break;
 		case 'w':
-		   if ((pn = getarg(argc, argv)))
+		    if ((pn = getarg(argc, argv)))
 			wd = atoi(pn);
 		    break;
 		case 'W':
@@ -318,30 +336,31 @@ const	char*	eij = 0;
 		default: break;
 	    }
 	}
+	if (convert && argc) {	// convert binary <-> text
+	    Kmers	kmers(argv[0]);
+	    if (binary && !outf) outf = argv[0];
+	    kmers.outputCount(outf, binary? 0: 2);
+	    return (0);
+	}
 	if (wd < 0) wd = molc == DNA? 8: 5;
 	if (wd < 1) fatal("Wordlen must be positive!");
-	if (!dbs && molc == PROTEIN)
-	    for (int i = 0; i < 26; ++i) aaconv[i] = aacode[i] - ALA;
-	char*	strdbs = dbs? path2dbf(str, dbs, ".seq"): 0;
-	Kmers	kmers(molc == DNA? 4: 20, (INT) wd);
-	if (eij) kmers.readCount(eij, dbs);
+	char*	strdbs = 0;
+	if (dbs) {
+	    strdbs = path2dbf(str, dbs, ".seq");
+	    if (!strdbs) fatal(not_found, str);
+	}
+	KmersFe	kfe(molc == DNA? 4: 20, (INT) wd, uptow? 0: wd - 1, left_m);
+	if (eij) kfe.readCount(eij, dbs);
 	else if (strdbs) {
-	    if (is_gz(strdbs)) {
-#if USE_ZLIB
-		gzFile_s*	gzfd = gzopen(strdbs, "rb");
-		if (!gzfd) fatal(not_found, strdbs);
-		kmers.readCount(gzfd, molc);
-#else
-		fatal(gz_unsupport, strdbs);
-#endif
-	    } else {
-		FILE*	fd = fopen(strdbs, "rb");
-		if (!fd) fatal(not_found, strdbs);
-		kmers.readCount(fd, molc);
-	    }
+	    ReadFile	fp(strdbs, gz_ext);
+	    if (fp.gzfd) kfe.readCount(fp.gzfd, molc);
+	    else if (fp.fd) kfe.readCount(fp.fd, molc);
+	    else	fatal(not_found, strdbs);
 	} else if (argc == 0) 
-	    kmers.fromText(stdin, molc == DNA? ntconv: aaconv);
-	else kmers.readCount(argc, argv, molc);
-	kmers.outputCount(molc == DNA? Nucl: Amin);
+	    kfe.fromText(stdin);
+	else kfe.readCount(argc, argv);
+	kfe.outputCount(outf, binary? 0: 2);
 	return(0);
 }
+
+#endif	// MAIN

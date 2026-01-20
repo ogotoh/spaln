@@ -35,7 +35,7 @@ VTYPE	SpbFact;
 
 VTYPE	spb_fact() {return (SpbFact = (VTYPE) (alprm.scale * alprm2.spb));}
 
-PfqItr::PfqItr(const Seq* sd, int n) :
+PfqItr::PfqItr(const Seq* sd, const int n) :
 	pfqnum(sd->sigII? sd->sigII->pfqnum: 0),
 	lstnum(sd->sigII? sd->sigII->lstnum: 0),
 	step(sd->sigII? sd->sigII->step: 0),
@@ -49,13 +49,13 @@ PfqItr::PfqItr(const Seq* sd, int n) :
 }
 
 #if USE_WEIGHT
-PfqItr::PfqItr(SigII& sgi, int n, FTYPE* wt) :
+PfqItr::PfqItr(SigII& sgi, const int& n, const FTYPE* wt) :
 	    pfqnum(sgi.pfqnum), lstnum(sgi.lstnum), step(sgi.step),
 	    pfq(sgi.pfq), lst(sgi.lst), tfq(pfq + pfqnum), weight(wt) {
 		reset(n);
 }
 #else
-PfqItr::PfqItr(SigII& sgi, int n) :
+PfqItr::PfqItr(SigII& sgi, const int& n) :
 	    pfqnum(sgi.pfqnum), lstnum(sgi.lstnum), step(sgi.step),
 	    pfq(sgi.pfq), lst(sgi.lst), tfq(pfq + pfqnum) {
 		reset(n);
@@ -662,7 +662,7 @@ VTYPE Iiinfo::StoreIIinfo(int m, int n)
 #endif
 		*cpi->wfq++ = pfqbf;
 	    }
-	    if (anend && apos <= bpos) {
+	    if (anend && (apos <= bpos || !bnend)) {
 		if (cpi) {
 		    if (api->wst) {
 			for (int j = 0; j < api->wfq->num; ++j)
@@ -674,7 +674,7 @@ VTYPE Iiinfo::StoreIIinfo(int m, int n)
 		++(*api);
 		anend = !api->end() && *api < m;
 	    }
-	    if (bnend && bpos <= apos) {
+	    if (bnend && (bpos <= apos || !anend)) {
 		if (cpi) {
 		    if (bpi->wst) {
 			for (int j = 0; j < bpi->wfq->num; ++j) {

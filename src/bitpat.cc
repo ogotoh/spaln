@@ -81,7 +81,7 @@ ReducWord::ReducWord(const Seq* sd, INT elms, const char* ap) :
 	    else {
 		aConvTab[toupper(*ap) - 'A'] = Nalpha;
 		int	c = en_code(*ap, sd->code);
-		if (c >= sd->code->base_code && c < sd->code->ceil_code) 
+		if (c >= sd->code->base_code && c < sd->code->max_code) 
 		    iConvTab[c] = Nalpha;
 	    }
 	}

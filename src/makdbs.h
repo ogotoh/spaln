@@ -42,9 +42,7 @@ class Makdbs {
 	char	str[MAXL];
 	char	prv[MAXL];
 	bool	halfway;
-#if USE_ZLIB
 	gzFile	gzseq;
-#endif
 	int	encode(int c);
 	char*	getDbEntry(DbsRec* rec, int idf);
 template <typename file_t, typename ofile_t>
@@ -69,9 +67,7 @@ public:
 	void	wrtgrp(const char* ps) {
 	    long	fpos = 0L;
 	    if (fseq)	fpos = ftell(fseq);
-#if USE_ZLIB
 	    else	fpos = ftell(gzseq);
-#endif
 	    fprintf(fgrp, "%8ld %u %s\n", fpos, (INT) recnbr, ps);
 	}
 };

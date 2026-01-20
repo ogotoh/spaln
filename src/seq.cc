@@ -75,11 +75,11 @@ CHAR complcod[] = {___,_,T,G,K,C,Y,S,B,A,W,R,D,M,H,V,N};
 /*		  -  - X A R N D C Q E G H I L K M F P S T W Y V S * */
 CHAR aa2nuc[] = {___,_,N,C,G,A,A,G,A,A,G,A,T,T,A,T,T,C,C,C,G,A,T,G,G,A};
 
-/* max_code, amb_code, base_code, ceil_code, gap_prof, encode, decode, redctab */
+/* max_code, amb_code, base_code, ceil_code, encode, decode, redctab */
 static	SEQ_CODE str_code = {28, 1, 2, 28, 0, alphab, 0};
-static	SEQ_CODE nts_code = {NSIMD, N, A, N, nccode, nucl, ncredctab};
-static	SEQ_CODE trc_code = {TSIMD, AMB, ALA, TSIMD, trccode, acodon, 0};
-static	SEQ_CODE aas_code = {ASIMD, AMB, ALA, ASIMD, aacode, amino, aaredctab};
+static	SEQ_CODE nts_code = {NSIMD, N, A, 6, nccode, nucl, ncredctab};
+static	SEQ_CODE trc_code = {TSIMD, AMB, ALA, 26, trccode, acodon, 0};
+static	SEQ_CODE aas_code = {ASIMD, AMB, ALA, 23, aacode, amino, aaredctab};
 static	const	INEX	def_inex = {0};
 
 void setdfn(const char* newdfn) {topath(seqdfn, newdfn);}
@@ -167,10 +167,6 @@ SeqServer::SeqServer(int ac, const char** av, const InputMode& infm,
 	    } else
 		target_dbf = query_dbf = dbs_dt[0];
 	}
-	vclear(fd, 2);
-#if USE_ZLIB
-	vclear(gzfd, 2);
-#endif
 	fc = catalog? fopen(catalog, "r"): 0;
 }
 
@@ -178,12 +174,8 @@ void SeqServer::reset()
 {
 	argc = argc0;
 	argv = argv0;
-	if (fd[0]) {fclose(fd[0]); fd[0] = 0;}
-	if (fd[1]) {fclose(fd[1]); fd[1] = 0;}
-#if USE_ZLIB
-	if (gzfd[0]) {fclose(gzfd[0]); gzfd[0] = 0;}
-	if (gzfd[1]) {fclose(gzfd[1]); gzfd[1] = 0;}
-#endif
+	fp[0].close();
+	fp[1].close();
 	if (fc) rewind(fc);
 	nfrom[0] = nfrom[1] = counter[0] = counter[1] = 0;
 	nto[0] = nto[1] = INT_MAX;
@@ -192,6 +184,32 @@ void SeqServer::reset()
 	delete[] cto[0]; cto[0] = 0;
 	delete[] cto[1]; cto[1] = 0;
 	sw[0] = sw[1] = false;
+}
+
+template<typename file_t>
+InSt SeqServer::read_mfasta(Seq* sd, file_t& fd, int which) {
+	while (sd->fgetseq(fd, attr[which])) {
+	    if (molc[which] == UNKNOWN) {
+		molc[which] = sd->inex.molc;
+		strcat(attr[which], molc[which] == PROTEIN? "P": "D");
+	    }
+	    if (sw[which] && cto[which] && (!*cto[which] || 
+		(sd->sname && !wordcmp(cto[which], (*sd->sname)[0])))) {
+		sw[which] = false; delete[] cto[which]; cto[which] = 0;
+	    }
+	    if (cfrom[which] && sd->sname && 
+		!wordcmp(cfrom[which], (*sd->sname)[0])) {
+		sw[which] = true; delete[] cfrom[which]; cfrom[which] = 0;
+	    }
+	    if (!cfrom[which] && nfrom[which] == counter[which]) sw[which] = true;
+	    ++counter[which];
+	    if (sw[which] && counter[which] <= nto[which]) return IS_OK;
+	    if (sw[which] && counter[which] > nto[which]) return IS_END;
+	    else	continue;
+	}
+	fclose(fd);
+	fd = 0;
+	return IS_ERR;
 }
 
 InSt SeqServer::nextseq(Seq* sd, int which)
@@ -208,12 +226,7 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 	}
 
 	while (true) {
-#if USE_ZLIB
-	  if (!fd[which] && !gzfd[which]) 
-#else
-	  if (!fd[which])
-#endif
-	  {
+	  if (!fp[which].fd && !fp[which].gzfd) {
 	    const	char*	fn = *argv++;
 	    if (argc-- <= 0) return IS_END;
 
@@ -265,13 +278,8 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 		    cto[which] = strrealloc(0, "");
 		}
 	    }
-#if USE_ZLIB
-	    fd[which] = sd->openseq(str, gzfd + which);
-	    if (!fd[which] && !gzfd[which]) fatal(not_found, str);
-#else
-	    fd[which] = sd->openseq(str);
-	    if (!fd[which]) fatal(not_found, str);
-#endif
+	    bool ok = sd->openseq(str, fp[which]);
+	    if (!ok) fatal(not_found, str);
 	    int	attrsize = strlen(cdr(fn)) + 8;
 	    if (attrsize > atsz[which]) {
 		delete[] attr[which];
@@ -285,54 +293,10 @@ InSt SeqServer::nextseq(Seq* sd, int which)
 	  }
 
 // read from mulitple seq. files
- 	  if (fd[which]) {
-	   while (sd->fgetseq(fd[which], attr[which])) {
-	    if (molc[which] == UNKNOWN) {
-		molc[which] = sd->inex.molc;
-		strcat(attr[which], molc[which] == PROTEIN? "P": "D");
-	    }
-	    if (sw[which] && cto[which] && (!*cto[which] || 
-		(sd->sname && !wordcmp(cto[which], (*sd->sname)[0])))) {
-		sw[which] = false; delete[] cto[which]; cto[which] = 0;
-	    }
-	    if (cfrom[which] && sd->sname && 
-		!wordcmp(cfrom[which], (*sd->sname)[0])) {
-		sw[which] = true; delete[] cfrom[which]; cfrom[which] = 0;
-	    }
-	    if (!cfrom[which] && nfrom[which] == counter[which]) sw[which] = true;
-	    ++counter[which];
-	    if (sw[which] && counter[which] <= nto[which]) return IS_OK;
-	    if (sw[which] && counter[which] > nto[which]) return IS_END;
-	    else	continue;
-	   }
-	   fclose(fd[which]);
-	   fd[which] = 0;
-	  }
-#if USE_ZLIB
-	  else if (gzfd[which]) {
-	   while (sd->fgetseq(gzfd[which], attr[which])) {
-	    if (molc[which] == UNKNOWN) {
-		molc[which] = sd->inex.molc;
-		strcat(attr[which], molc[which] == PROTEIN? "P": "D");
-	    }
-	    if (sw[which] && cto[which] && (!*cto[which] || 
-		(sd->sname && !wordcmp(cto[which], (*sd->sname)[0])))) {
-		sw[which] = false; delete[] cto[which]; cto[which] = 0;
-	    }
-	    if (cfrom[which] && sd->sname && 
-		!wordcmp(cfrom[which], (*sd->sname)[0])) {
-		sw[which] = true; delete[] cfrom[which]; cfrom[which] = 0;
-	    }
-	    if (!cfrom[which] && nfrom[which] == counter[which]) sw[which] = true;
-	    ++counter[which];
-	    if (sw[which] && counter[which] <= nto[which]) return IS_OK;
-	    if (sw[which] && counter[which] > nto[which]) return IS_END;
-	    else	continue;
-	   }
-	   fclose(gzfd[which]);
-	   gzfd[which] = 0;
-	  }
-#endif
+	  InSt	ist = IS_ERR;
+ 	  if (fp[which].fd) ist = read_mfasta(sd, fp[which].fd, which); else
+	  if (fp[which].gzfd) ist = read_mfasta(sd, fp[which].gzfd, which); 
+	  if (ist == IS_OK || ist == IS_END) return (ist);
 	  delete[] cfrom[which]; cfrom[which] = 0;
 	  delete[] cto[which]; cto[which] = 0;
 	  nfrom[which] = 0; nto[which] = INT_MAX;
@@ -355,7 +319,7 @@ size_t SeqServer::total_seq_len(Seq* sd, int* many)
 	return (tsz);
 }
 
-void Seq::refresh(const int& num, const int& length)
+void Seq::refresh(const int& num, const int length)
 {
 	if (!num && !seq_) return;
 	if (!is_eldest()) {
@@ -388,7 +352,7 @@ void Seq::refresh(const int& num, const int& length)
 		delete descr; descr = 0;
 	    }
 	}
-	left = right = len = base_ = 0;
+	left = right = base_ = 0;
 	jscr = 0;  vrtl = 0; anti_ = 0;
 	inex = def_inex; sigII = 0; 
 	delete[] jxt; jxt = 0; CdsNo = 0;
@@ -401,7 +365,7 @@ void Seq::refresh(const int& num, const int& length)
 	    if (sname)	sname->reset(num);
 	    else	sname = new Strlist(num);
 	} else {
-	    many = 0;
+	    many = len = 0;
 	}
 }
 
@@ -505,7 +469,7 @@ void Seq::seqalloc(const int& num, int length, const bool& keep)
 {
 	if (!length) length = DEFSEQLEN;
 	int	area = num * (length + 2);
-	if (seq_ && area <= area_) {
+	if (seq_ && area <= area_ && area_ < RESERVE_AREA) {
 	    if (num != many) {
 		seq_ += num - many;
 		end_ -= num - many;
@@ -522,7 +486,7 @@ void Seq::seqalloc(const int& num, int length, const bool& keep)
 	try {
 	    ss = new CHAR[area];
 	} catch (std::bad_alloc& ba) {
-	    fatal(NoSeqSpace);
+	    fatal(NoSeqSpace, (*this->sname)[0], area/1024);
 	}
 	if (seq_ && keep) {
 	    seq_ -= many;
@@ -544,7 +508,7 @@ CHAR* Seq::seq_realloc()
 	try {
 	    ss = new CHAR[area_];
 	} catch (std::bad_alloc& ba) {
-	    fatal(NoSeqSpace);
+	    fatal(NoSeqSpace, (*this->sname)[0], area/1024);
 	}
 	memcpy(ss, seq_ -= many, area);
 	delete[] seq_;
@@ -587,21 +551,13 @@ Seq::Seq(const char* fname)
 {
 	initialize();
 	if (!fname) return;
-	FILE*	fd = 0;
-#if USE_ZLIB
-	gzFile  gzfd = 0;
-	fd = openseq(fname, &gzfd);
-	if (gzfd) {
-	    if (!fgetseq(gzfd, cdr(fname))) fatal("%s is empty !\n", fname);
-	    fclose(gzfd);
-	    return;
-	}
-#else
-	fd = openseq(fname);
-#endif
-	if (!fd) fatal("%s not found !\n", fname);
-	if (!fgetseq(fd, cdr(fname))) fatal("%s is empty !\n", fname);
-	fclose(fd);
+	ReadFile	fp;
+	if (!openseq(fname, fp))
+	    fatal(not_found, fname);
+	if (fp.gzfd && !fgetseq(fp.gzfd, cdr(fname)))
+	    fatal("%s is empty !\n", fname);
+	else if (fp.fd && !fgetseq(fp.fd, cdr(fname)))
+	    fatal("%s is empty !\n", fname);
 }
 
 Seq::Seq(Seq& sd, const int* which, const int& snl)
@@ -635,43 +591,18 @@ const char* Seq::path2fn(const char* pname) const
 	return ns;
 }
 
-#if USE_ZLIB
-FILE* Seq::openseq(const char* str, gzFile* gzfd)
-#else
-FILE* Seq::openseq(const char* str)
-#endif
+bool Seq::openseq(const char* str, ReadFile& fp)
 {
 	char	qname[LINE_MAX];
 	char	pname[LINE_MAX];
 
 	car(qname, str);
 	makefnam(qname, seqdfn, pname);
-	if (is_gz(pname)) {
-#if USE_ZLIB
-	    *gzfd = gzopen(pname, "r");
-	    if (*gzfd) {
-		spath = strrealloc(spath, pname);
-		return (0);
-	    }
-#else
-	    fatal(gz_unsupport, pname);
-#endif
-	}
-	FILE*	fd = fopen(pname, "r");
-	if (fd) {
+	if (fp.open(pname, gz_ext)) {
 	    spath = strrealloc(spath, pname);
-	    return (fd);
+	    return (true);
 	}
-#if USE_ZLIB
-	strcpy(qname, pname);
-	strcat(qname, ".gz");
-	*gzfd = gzopen(qname, "r");
-	if (*gzfd) {
-	    spath = strrealloc(spath, qname);
-	    return (0);
-	}
-#endif
-	return (0);
+	return (false);
 }
 
 void Seq::comple()
@@ -1376,24 +1307,11 @@ CHAR* tosqcode(CHAR* ns, const SEQ_CODE* code)
 int infermolc(const char* fname)
 {
 	Seq	sd(1);
-	char	str[MAXL];
-	if (is_gz(fname)) {
-#if USE_ZLIB
-	    gzFile	gzfd = gzopen(fname, "r");
-	    if (!gzfd) fatal("%s not found !\n", fname);
-	    if (!fgets(str, MAXL, gzfd)) fatal("%s is empty !\n", fname);
-	    sd.infermolc(gzfd, str);
-	    fclose(gzfd);
-#else
-	    fatal(gz_unsupport, fname);
-#endif
-	} else {
-	    FILE*	fd = fopen(fname, "r");
-	    if (!fd) fatal("%s not found !\n", fname);
-	    if (!fgets(str, MAXL, fd)) fatal("%s is empty !\n", fname);
-	    sd.infermolc(fd, str);
-	    fclose(fd);
-	}
+	char	str[MAXL] = {'\0'};
+	ReadFile	fp(fname);
+	if (fp.fd)	sd.infermolc(fp.fd, str); else
+	if (fp.gzfd)	sd.infermolc(fp.gzfd, str);
+	else	fatal(not_found, fname);
 	return (sd.inex.molc);
 }
 
@@ -1615,7 +1533,6 @@ void Seq::estimate_len(FILE* fd, const int& nos, const SeqDb* dbf)
 	fseek(fd, fpos, SEEK_SET);
 }
 
-#if USE_ZLIB
 void Seq::estimate_len(gzFile gzfd, const int& nos, const SeqDb* dbf)
 {
 	long	fpos = ftell(gzfd);
@@ -1624,7 +1541,8 @@ void Seq::estimate_len(gzFile gzfd, const int& nos, const SeqDb* dbf)
 	    if (*str == _NHEAD || *str == _CHEAD || *str == _EOS ||
 		*str == _COMM || *str == _LCOMM || *str == _WGHT) {
 		if ((strlen(str) + 1) == MAXL) flush_line(gzfd);
-		continue;
+		if (nos == 1) break;
+		else	continue;
 	    }
 	    if (nos == 1 || (dbf && dbf->FormID == FASTA)) {
 		len += strlen(str) - 1;
@@ -1638,15 +1556,11 @@ void Seq::estimate_len(gzFile gzfd, const int& nos, const SeqDb* dbf)
 	len /= nos;
 	fseek(gzfd, fpos, SEEK_SET);
 }
-#endif
 
 Seq* Seq::getseq(const char* str, DbsDt* dbf)
 {
-	FILE*	fd = 0;
-#if USE_ZLIB
-	gzFile	gzfd = 0;
-#endif
 	char	input[MAXL];
+	ReadFile	fp;
 
 	if (!str) {		//  Interactive	mode
 	    for (;;) {
@@ -1658,13 +1572,7 @@ Seq* Seq::getseq(const char* str, DbsDt* dbf)
 		    if (getdbseq(dbf, str)) return attrseq(cdr(str));
 		    else continue;
 		}
-#if USE_ZLIB
-		fd = openseq(str, &gzfd);
-		if (fd || gzfd) break;
-#else
-		fd = openseq(str);
-		if (fd) break;
-#endif
+		if (fp.open(str)) break;
 	    }
 	} else {
 	    while (isspace(*str)) ++str;
@@ -1672,29 +1580,18 @@ Seq* Seq::getseq(const char* str, DbsDt* dbf)
 	    if (*str == DBSID) 	/* Get from Database File */
 		return getdbseq(dbf, str);
 	    if (!strcmp(str, "-")) {
-		fd = stdin;
 		snprintf(input, MAXL, "std%d", sid);
 		spath = strrealloc(spath, input);
 		if (sname) sname->assign(input);
 		else	sname = new Strlist(&input[0], "");
+		fp.open(0);	// stdin
 	    } else {
-#if USE_ZLIB
-		fd = openseq(str, &gzfd);
-#else
-		fd = openseq(str);
-#endif
+		fp.open(str);
 	    }
 	}
-#if USE_ZLIB
-	if (gzfd) {
-	    Seq*	sd = fgetseq(gzfd, cdr(str));
-	    fclose(gzfd);
-	    return (sd);
-	}
-#endif
-	if (!fd) return (0);
-	Seq*	sd = fgetseq(fd, cdr(str));
-	if (fd != stdin) fclose(fd);
+	Seq*	sd = 0;
+	if (fp.fd)	sd = fgetseq(fp.fd, cdr(str)); else
+	if (fp.gzfd)	sd = fgetseq(fp.gzfd, cdr(str));
 	return (sd);
 }
 

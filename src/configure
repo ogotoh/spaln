@@ -51,8 +51,7 @@ case `(uname -sr || echo unknown) 2>/dev/null` in
 #UNIX_SV\ 4.2MP)  CFLAGS=${CFLAGS-"-O"} ;;
 #CYGWIN*) CXX="g++"; CFLAGS=${CFLAGS-"-O3"}  ;;
 Linux*) CFLAGS=${CFLAGS-"-O3 -march=native"}; 
-	CLIB=${CLIB-"clib.a"}; 
-	ILIB=${ILIB-"-lpthread -lm -lz"} ;;
+	CLIB=${CLIB-"clib.a"} ;; 
 Darwin*) CFLAGS=${CFLAGS-"-O3 -std=c++11"}; 
 	CLIB=${CLIB-"clib.a libz.a"} ;;
 *)	CFLAGS=${CFLAGS-"-O3"} ;;
@@ -85,7 +84,6 @@ sed < Makefile.in "
 /^CXX *=/s%=.*%= $CXX%
 /^CFLAGS *=/s%=.*%= $CFLAGS%
 /^CLIB *=/s%=.*%= $CLIB%
-/^ILIB *=/s%=.*%= $ILIB%
 /^LD *=/s%=.*%= $LD%
 /^AR *=/s%=.*%= $AR%
 /^RANLIB *=/s%=.*%= $RANLIB%

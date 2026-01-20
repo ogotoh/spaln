@@ -40,11 +40,13 @@ my $uniq = 1;
 my %count;
 my ($Dbs, $nlen, $wing, $stepup, $chrnbr);
 my $test_seq_len;
+my $binary;
 
 sub usage {
-	print STDERR "Usage:\teijnc.pl -[3|5|j|b|i|c] [-dG_g] [-a] xxx.eij\n";
-	print STDERR "\t3: 3', 5: 5', j: 5'+3', b: bp, i: intron, c: composition\n";
+	print STDERR "Usage:\teijnc.pl -[3|5|j|B|i|c] [-dG_g] [-B] [-a] xxx.eij\n";
+	print STDERR "\t3: 3', 5: 5', j: 5'+3', B: bp, i: intron, c: composition\n";
 	print STDERR "\ta: don't remove redundancy\n";
+	print STDERR "\tb: output packed binary composition data\n";
 	exit (1);
 }
 
@@ -52,6 +54,7 @@ while ($_ = $ARGV[0], /^-/) {
         shift;
         last if /^-$/;
 	/^-a/ && ($uniq = 0);
+	/^-b/ && ($binary = 1);
 	/^-d(\S+)/ && ($Dbs = $1);
 	/^-d$/ && ($Dbs = shift);
 	/^-C/ && ($stepup = 1);
@@ -60,7 +63,7 @@ while ($_ = $ARGV[0], /^-/) {
 	/^-5/ && ($Bndry = $Don);
 	/^-j/ && ($Bndry = $Join);
 	/^-i/ && ($Bndry = $Intron);
-	/^-b/ && ($Bndry = $Branch);
+	/^-B/ && ($Bndry = $Branch);
 	/^-c/ && ($Bndry = $Compos);
 	/^-h/ && (&usage());
 	/^-w(\d+)/ && ($wing = $1);
@@ -169,6 +172,7 @@ sub output {
     }
 
     my $nrcd = 0;
+    my @ilgc;
     open(UTN, "$cmd |") or die "Can't run $cmd !\n";
     while (<UTN>) {
 	if ($Bndry == $Intron) {
@@ -180,7 +184,12 @@ sub output {
 	} elsif ($Bndry == $Compos) {
 	    my @a = split;
 	    my $sid = sprintf("%s.%d", $a[0], ++$nrcd);
-	    printf "%-23s\t%7d\t%7.2f\t%7.2f\n", $sid, $a[3], $a[4], $a[5];
+	    if ($binary) {
+		my $packed = pack("Lff", $a[3], $a[4], $a[5]);
+		push(@ilgc, $packed);
+	    } else {
+		printf "%-23s\t%7d\t%7.2f\t%7.2f\n", $sid, $a[3], $a[4], $a[5];
+	    }
 	} elsif (/^>(\S+)/) {
 	    ++$nrcd;
 	    $chr = $1;
@@ -193,6 +202,12 @@ sub output {
     }
     close(UTN);
     unlink($catalog);
+    if ($binary) {
+	print pack("L", 0 + @entries);
+	foreach my $lgc (sort by_ilen @ilgc) {
+	    print $lgc;
+	}
+    }
     @entries = ();
 }
 
@@ -219,3 +234,8 @@ if (@data) {
     }
 }
 
+sub by_ilen {	# in assending order of intron length
+	my ($alen, $agc, $aag) = unpack("Lff", $a);
+	my ($blen, $bgc, $bag) = unpack("Lff", $b);
+	$alen <=> $blen;
+}

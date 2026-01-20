@@ -50,7 +50,6 @@ static	const	int	ENTSIZE = 23;	// for back compatibility
 	multi-threads
 ************************************************************/
 
-#if M_THREAD
 
 #include <pthread.h>
 #include <sched.h>
@@ -79,7 +78,6 @@ struct Targ {
 	BlkQueue*	next_q;
 };
 
-#endif
 
 /*****************************************************
 	MakeDbs
@@ -100,7 +98,6 @@ const	bool	isaa;
 	FILE*	fidx = 0;
 	FILE*	fent = 0;
 	char*	dbname = 0;
-#if USE_ZLIB
 	gzFile	gzseq = 0;
 	gzFile	gzidx = 0;
 	gzFile	gzent = 0;
@@ -108,12 +105,6 @@ const	bool	isaa;
 		if (gzseq)	fputc(c, gzseq);
 		else	 	fputc(c, fseq);
 	}
-#else
-	bool	gzseq = false;
-	bool	gzidx = false;
-	bool	gzent = false;
-	void	putsq(int c) {fputc(c, fseq);}
-#endif
 public:
 	MakeDbs(const char* dbname, int molc);
 	~MakeDbs() {
@@ -121,11 +112,9 @@ public:
 		if (fseq) fclose(fseq);
 		if (fidx) fclose(fidx);
 		if (fent) fclose(fent);
-#if USE_ZLIB
 		if (gzseq) fclose(gzseq);
 		if (gzidx) fclose(gzidx);
 		if (gzent) fclose(gzent);
-#endif
 		delete[] dbname;
 		delete[] write_path;
 	}
@@ -153,24 +142,17 @@ template <typename file_t>
 	void	wrtgrp(const char* ps) {
 		long	fpos = 0L;
 		long	epos = 0L;
-#if USE_ZLIB
 		if (gzseq)	fpos = ftell(gzseq);
 		else	 	fpos = ftell(fseq);
 		if (gzent)	epos = ftell(gzent);
 		else		epos = ftell(fent);
-#else
-		fpos = ftell(fseq);
-		epos = ftell(fent);
-#endif
 		fprintf(fgrp, "%8ld %u %u %s\n", 
 		    fpos, (INT) recnbr, (INT) epos, ps);
 	}
 	void stamp21() {
 		DbsRec	rec21 = {magicver21, false, 0};
 		if (fidx) fwrite(&rec21, sizeof(DbsRec), 1, fidx);	// header record
-#if USE_ZLIB
 		else	fwrite(&rec21, sizeof(DbsRec), 1, gzidx);
-#endif
 	}
 
 };
@@ -256,7 +238,6 @@ public:
 	void	c2w6_pp(int n);
 	Block(const Seq* sq, INT blklen, bool mk_blk = true);
 	~Block() {delete ch;}
-#if M_THREAD
 protected:
 	int	cps;	// chromosomal position
 	INT	prelude;
@@ -278,7 +259,6 @@ public:
 	Block(Block& src, char* s);
 friend	class	MakeBlk;
 friend	void*	worker(void* arg);
-#endif	// M_THREAD
 };
 
 /*****************************************************
@@ -312,7 +292,6 @@ const	int	s_size;
 friend	class	Chash;
 friend	class	SrchBlk;
 friend	class	AdjacentMat;
-#if M_THREAD
 	int	did;
 	int	c_qsize;	// circular queue size
 	BlkQueue**	bq;
@@ -320,7 +299,6 @@ friend	class	AdjacentMat;
 	char*	seqbuf;
 	void	harvest(Block* blk, bool first);
 friend	void*	worker(void* arg);
-#endif	// M_THREAD
 
 public:
 	MakeBlk(const Seq* sd, DbsDt* dd = 0, MakeDbs* mkdbs = 0, bool mk_blk = true);
@@ -340,11 +318,9 @@ template <typename file_t>
 template <typename file_t>
 	void	writeBlkInfo(file_t fd, const char* fn);
 
-#if M_THREAD
 template <typename file_t>
 	void	m_scan_genome(file_t fd, bool first);
 	void	m_idxblk(int argc, const char** argv);
-#endif	// M_THREAD
 };
 
 /*****************************************************
@@ -494,6 +470,7 @@ class SrchBlk {
 	Seq**	gener;
 	Seq**	lstgr;
 	Seq**	curgr;
+	Wlp*	wlp;
 	int	kk;
 	int	DRNA;
 	bool	gnmdb;

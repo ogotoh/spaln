@@ -20,87 +20,12 @@
 *
 *****************************************************************************/
 
-#include "seq.h"
+#include "kmers.h"
+#include "npssm.h"
 #include <math.h>
 
-static	const	int	int_size = (int) sizeof(int);
-static	const	int	nelm = 4;
-static	const	int	nelmx2 = nelm * nelm;
-static	const	int	nelmx3 = nelm * nelmx2;
-static	const	int	bias[4] = {0, nelm, nelm + nelmx2, nelm + nelmx2 + nelmx3};
-
-static	int	left = -1;
-static	int	right = -1;
-static	int	jnk = -1;
-static	float	depsilon = -1;
-static	const	char*	wdfq = 0;
-static	const	char*	trim_out = 0;
-static	const	char*	pssm_in = 0;
-static	const	char*	trim_in = 0;
-static	bool	entropy = false;
 static	bool	binary = false;
-static	float	sig_thr = 0.025;	// 
-static	FILE*	ofd = stdout;
-
-static void usage()
-{
-	fputs("Usage:\n", stdout);
-	fputs("\tnpssm [-m[0-2]] [-r X.wdfq] [-f X.triN] [-b] [other options] X.SPNx[.gz]\n", stdout);
-	fputs("Options:\n", stdout);
-	fputs("\t-b [S]\t: binary output\n", stdout);
-	fputs("\t-e [S]\t: output (relative) entropy\n", stdout);
-	fputs("\t-f S\t: existing X.tri[3|5]\n", stdout);
-	fputs("\t-h\t: display this\n", stdout);
-	fputs("\t-H F\t: noise level (0.025)\n", stdout);
-	fputs("\t-i S\t: existing pat_mat[.psm]\n", stdout);
-	fputs("\t-j N\t: signal position\n", stdout);
-	fputs("\t-l N\t: lower boundary\n", stdout);
-	fputs("\t-m N\t: m(0|1|2)-th order MM\n", stdout);
-	fputs("\t-o S\t: output file name\n", stdout);
-	fputs("\t-q F\t: pseudocount\n", stdout);
-	fputs("\t-r S\t: reference.wdfq\n", stdout);
-	fputs("\t-t S\t: trimer output\n", stdout);
-	fputs("\t-u N\t: upper boundary\n", stdout);
-	exit(1);
-}
-
-class TriFreq {
-	int	morder = 0;
-	int	sites = 0;
-	int	lod_size = 0;
-	int	nsupport = 0;
-	INT*	trimbuf = 0;		// trimer count
-	float	sumi;
-	float*	scomp = 0;
-	float*	rcomp = 0;
-	float**	sdifq = 0;
-	float**	rdifq = 0;
-	float***	strif = 0;
-	float***	rtrif = 0;
-	ExpectMmm	mmm = {FLT_MAX, 0, -FLT_MAX};
-	float*	klds = 0;		// relative entropy (KLD)
-	float*	lods = 0;		// log odds
-	float	maxkld =0;		// max KLD value
-	int	nmaxkld = 0;		// max KLD site
-	int	nmaxg = 0;		// G-richest site
-	int	nmaxt = 0;		// T-richest site
-	char*	sname = 0;		// seq identifier
-public:
-	TriFreq(const int mo, const Seq* sd);
-	TriFreq(const char* pssm_in);
-	~TriFreq();
-	void	read_trimer();
-	void	count_trimer(Seq& sd);
-	void	background3();
-	void	ref_normalize();
-	void	rel_frequency(const int n);
-	void	markovmodel(const int phase);
-	void	setrange();
-	void	calculate_mmm(Seq& sd);
-	void	output();
-	void	ascii_output();
-	void	binary_output();
-};
+static	float	sig_thr = 0.025;
 
 TriFreq::TriFreq(const int mo, const Seq* sd)
 	: morder(std::max(0, mo)), sites(sd? sd->len: 0)
@@ -113,34 +38,31 @@ const	    char*	sl = strrchr(sn, '/');
 	}
 	if (trim_in) read_trimer();
 	else	trimbuf = new INT[sites * nelmx3];
-	scomp = new float[2 * nelm];
-	rcomp = scomp + nelm;
-	vclear(scomp, 2 * nelm);
+	lod_size = bias[morder + 1];
+	scomp = new float[2 * lod_size];
+	rcomp = scomp + lod_size;
+	vclear(scomp, 2 * lod_size);
 	if (jnk < 0 || left < 0 || right < 0)
 	    klds = new float[sites];
-	lod_size = nelm;
-	if (morder > 0) lod_size += nelmx2;
-	if (morder > 1) lod_size += nelmx3;
 	lods = new float[lod_size * sites];
 	if (morder < 1) return;
 
 	sdifq = new float*[2 * nelm];
 	rdifq = sdifq + nelm;
-	*sdifq = new float[2 * nelmx2];
-	*rdifq = *sdifq + nelmx2;
+	*sdifq = scomp + bias[1];
+	*rdifq = rcomp + bias[1];
 	for (int k = 1; k < nelm; ++k) {
 	    sdifq[k] = sdifq[k - 1] + nelm;
 	    rdifq[k] = rdifq[k - 1] + nelm;
 	}
-	vclear(*sdifq, 2 * nelmx2);
 	if (morder < 2) return;
 
 	strif = new float**[2 * nelm];
 	rtrif = strif + nelm;
 	*strif = new float*[2 * nelmx2];
 	*rtrif = *strif + nelmx2;
-	**strif = new float[2 * nelmx3];
-	**rtrif = **strif + nelmx3;
+	**strif = scomp + bias[2];
+	**rtrif = rcomp + bias[2];
 	for (int k = 0; k < nelm; ++k) {
 	    if (k) {
 		strif[k] = strif[k - 1] + nelm;
@@ -153,12 +75,11 @@ const	    char*	sl = strrchr(sn, '/');
 		rtrif[k][i] = rtrif[k][i - 1] + nelm;
 	    }
 	}
-	vclear(**strif, 2 * nelmx3);
 }
 
-TriFreq::TriFreq(const char* pssm_in)
+TriFreq::TriFreq(const char* fname)
 {
-	Strlist	sl(pssm_in, " ,");
+	Strlist	sl(fname, " ,");
 	for (INT i = 0; i < sl.size(); ++i) {
 	    PatMat	pm(sl[i]);
 	    if (i) {
@@ -177,6 +98,7 @@ TriFreq::TriFreq(const char* pssm_in)
 	    nsupport = pm.nsupport;
 	    if (!wdfq) std::swap(lods, pm.mtx);
 	}
+	if (depsilon < 0) depsilon = 1./((float) nsupport);
 }
 
 TriFreq::~TriFreq() {
@@ -186,55 +108,29 @@ TriFreq::~TriFreq() {
 	delete[] lods;
 	delete[] sname;
 	if (morder < 1 || !sdifq) return;
-	delete[] *sdifq;
 	delete[] sdifq;
 	if (morder < 2 || !strif) return;
-	delete[] **strif;
 	delete[] *strif;
 	delete[] strif;
 }
 
 void TriFreq::read_trimer()
 {
-static	const	char imcompatible[] = "%s is incompatible !\n";
-
-	INT*	tmpbuf = 0;
 	Strlist	sl(trim_in, " ,");
 	for (INT i = 0; i < sl.size(); ++i) {
-	    PatMatHead	header;
-	    FILE* 	fd = fopen(sl[i], "rb");
-	    if (!fd || fread(&header, sizeof(PatMatHead), 1, fd) != 1 ||
-		header.vsize != int_size || header.nelm != nelm ||
-		header.cols != nelmx3) fatal(imcompatible, sl[i]);
-	    if (!sites) sites = header.rows;
-	    else if (sites != header.rows) fatal(imcompatible, sl[i]);
-	    INT	dsize = sites * nelmx3;
-	    union {
-		char	str[MAXL];
-		int	many;
-	    };
-	    if (fread(str, sizeof(char), header.add, fd) != (INT) header.add)
-		fatal(imcompatible, sl[i]);
-	    str[header.add] = '\0';
-	    if (!nsupport) nsupport = many;
-	    if (!sname) sname = strrealloc(sname, str + int_size);
-	    if (i == 0) {
-		trimbuf = new INT[dsize];
-		if (fread(trimbuf, int_size, dsize, fd) != dsize)
-		    fatal(imcompatible, sl[i]);
-	    } else {
-	        if (!tmpbuf) tmpbuf = new INT[dsize];
-		if (fread(tmpbuf, int_size, dsize, fd) != dsize)
-		    fatal(imcompatible, sl[i]);
-		for (INT n = 0; n < dsize; ++n)
-		    trimbuf[n] += tmpbuf[n];
-	    }
+	    ReadFile	fp(sl[i]);
+	    if (fp.fd)	read_trimer(fp.fd, sl[i], i); else 
+	    if (fp.gzfd) read_trimer(fp.gzfd, sl[i], i);
+	    else	prompt(not_found, sl[i]);
 	}
-	delete[] tmpbuf;
 }
+
+static	const	char*	rwdfq = 0;
+static	const	char*	trim_out = 0;
 
 void TriFreq::count_trimer(Seq& sd)
 {
+	Buf	buf;
 	INT*	trimer = trimbuf;
 	srand((INT) time(0));
 const	CHAR*	ss = sd.at(0);
@@ -255,22 +151,20 @@ const		CHAR*	r = s + sd.many;
 	if (!trim_out) return;
 
 // write trimer frequecy table
-
-	ofd = fopen(trim_out, "wb");
-	if (!ofd) fatal(no_file, trim_out);
-	PatMatHead	header = {0, int_size, nelm, 0, sd.len, nelmx3};
-	struct	Buf	{int many; char sname[MAXL];} buf;
 	buf.many = sd.many;
 const	char*	sn = sd.sqname();
 const	char*	sl = strrchr(sn, '/');
 	if (sl) sn = sl + 1;
 	strcpy(buf.sname, sn);
 	buf.sname[max_add_size - int_size] = 0;	//	 truncate
+	PatMatHead	header = {0, int_size, nelm, 0, sd.len, nelmx3};
 	header.add = CHAR(int_size + (strlen(buf.sname) + 3) / 4 * 4);
-	fwrite(&header, sizeof(PatMatHead), 1, ofd);
-	fwrite(&buf, sizeof(char), header.add, ofd);
-	fwrite(trimbuf, sizeof(int), sites * nelmx3, ofd);
-	fclose(ofd);
+
+	WriteFile	tfp(trim_out, 0, true);
+	bool	ok = false;
+	if (tfp.gzfd)	ok = write_binary(tfp.gzfd, buf, header);
+	else	fatal(no_file, trim_out);
+	if (!ok) fatal(write_error, trim_out);
 }
 
 void TriFreq::ref_normalize()
@@ -307,44 +201,40 @@ void TriFreq::ref_normalize()
 	}
 }
 
-void TriFreq::background3()
+void TriFreq::background3(const char* wdf)
 {
-	Strlist	sl(wdfq, " ,");
+	Strlist	sl(wdf, " ,");
 	for (INT i = 0; i < sl.size(); ++i) {
-	    FILE*	fd = fopen(sl[i], "r");
-	    if (!fd) fatal("%s can't open !\n", sl[i]);
-	    char	kmer[16];
-	    INT 	freq;
-	    char	str[MAXL];
-	    int 	code[3] = {0, 0, 0};
-	    while (fgets(str, MAXL, fd)) {
-		sscanf(str, "%s %u", kmer, &freq);
-		int	k = strlen(kmer);
-		if (--k > morder) break;
-		switch (k) {
-		    case 0: rcomp[code[0]++] += freq; break;
-		    case 1: (*rdifq)[code[1]++] += freq; break;
-		    case 2: (**rtrif)[code[2]++] += freq; break;
+const	    char*	fname = sl[i];
+	    Kmers	kmers(fname);
+	    for (int j = 0; j <= morder; ++j) {
+		switch (j) {
+		    case 0: kmers.get(rcomp, j); break;
+		    case 1: kmers.get(*rdifq, j); break;
+		    case 2: kmers.get(**rtrif, j); break;
 		}
 	    }
-	    fclose(fd);
 	}
 	ref_normalize();
 }
 
-void TriFreq::rel_frequency(const int n)
+template <typename file_t>
+void TriFreq::rel_frequency(file_t ofd, const int n)
 {
 static	const	float	maxh = log(4.);
 const	int	np1 = n + 1;
 	float	h = 0;
 	float*	lod = lods + n * lod_size;
+	char	str[MAXL];
 	for (int i = 0; i < nelm; ++i) {
 	    float	r = scomp[i] / sumi;
 	    if (entropy) h += (r > 0? r * log(r): 0);
 	    else	*lod++ = r;
 	}
-	if (entropy && morder == 0)
-	    fprintf(ofd, "%d\t%9.5lf %9.5lf ", np1, -h, maxh + h);
+	if (entropy && morder == 0) {
+	    sprintf(str, "%d\t%9.5lf %9.5lf ", np1, -h, maxh + h);
+	    fputs(str, ofd);
+	}
 	if (morder > 0) {
 	    h = 0;
 	    for (int i = 0; i < nelm; ++i)
@@ -353,8 +243,10 @@ const	int	np1 = n + 1;
 		    if (entropy) h += (r > 0? r * log(r): 0);
 		    else	*lod++ = r;
 		}
-	    if (entropy &&  morder == 1)
-		fprintf(ofd, "%d\t%9.5lf %9.5lf ", np1, -h, 2 * maxh + h);
+	    if (entropy &&  morder == 1) {
+		sprintf(str, "%d\t%9.5lf %9.5lf ", np1, -h, 2 * maxh + h);
+		fputs(str, ofd);
+	    }
 	}
 	if (morder > 1) {
 	  h = 0;
@@ -365,109 +257,20 @@ const	int	np1 = n + 1;
 		if (entropy) h += (r > 0? r * log(r): 0);
 		else	*lod++ = r;
 	      }
-	  if (entropy &&  morder == 2)
-		fprintf(ofd, "%d\t%9.5lf %9.5lf ", np1, -h, 3 * maxh + h);
+	  if (entropy &&  morder == 2) {
+		sprintf(str, "%d\t%9.5lf %9.5lf ", np1, -h, 3 * maxh + h);
+		fputs(str, ofd);
+	  }
 	}
 	if (entropy) fputc('\n', ofd);
 }
 
-void TriFreq::markovmodel(const int phase)
+void TriFreq::markovmodel(WriteFile& wfp, const int phase, const char* outf)
 {
-	if (phase == 0 && !klds && !entropy) return;
-	if (entropy)
-	    fprintf(ofd, ">%s [%d:%d]\n", sname, nsupport, sites);
-	float	maxg = 0;
-	float	maxt = 0;
-	INT*	trimer = trimbuf;
-	int	mo = 0;
-const	int	mm = phase? morder: 0;
-	float*	lod = lods;
-	for (int n = 0; n < sites - 2 || (mm + mo++) < 2; ++n) {
-const	    int	np1 = n + 1;
-	    vclear(scomp, nelm);
-	    if (morder > 0) vclear(*sdifq, nelmx2);
-	    if (morder > 1) vclear(**strif, nelmx3);
-	    for (int i = 0, m = 0; i < nelm; ++i) {
-		for (int j = 0; j < nelm; ++j) {
-		    for (int k = 0; k < nelm; ++k, ++m) {
-			if (mo == 0) {
-			    scomp[i] += trimer[m];
-			    if (morder > 0) sdifq[i][j] += trimer[m];
-			    if (morder > 1) strif[i][j][k] += trimer[m];
-			} else if (mo == 1) {
-			    scomp[j] += trimer[m];
-			    if (morder > 0) sdifq[j][k] += trimer[m];
-			} else if (mo == 2) {
-			    scomp[k] += trimer[m];
-			}
-		    }
-		}
-	    }
-	    sumi = 0;
-	    for (int i = 0; i < nelm; ++i) sumi += scomp[i];
-	    if (n < sites - 3) trimer += nelmx3;
-	    if (!wdfq) {
-		rel_frequency(n);
-		continue;
-	    }
-	    float	h = 0;
-	    for (int i = 0; i < nelm; ++i) {
-		float	p = scomp[i] / sumi;
-		float  r = p / rcomp[i];
-		h += (p > 0? p * log(r): 0);
-		if (phase) {
-const		    float	sig = log10((r + depsilon) / (1 + depsilon));
-		    *lod++ = sig;
-		}
-	    }
-	    if (entropy) {
-		fprintf(ofd, "%d\t%15.7le", np1, h);
-		for (int i = 0; i < nelm; ++i) {
-		    fprintf(ofd, "\t%7d", int(scomp[i]));
-		}
-	    } else if (phase == 0) {
-		klds[n] = h;
-		if (h > maxkld) {maxkld = h; nmaxkld = n;}
-		if (scomp[2] > maxg) {maxg = scomp[2]; nmaxg = n;}
-		if (scomp[3] > maxt) {maxt = scomp[3]; nmaxt = n;}
-		continue;
-	    }
-	    if (morder > 0) {
-		h = 0;
-		for (int i = 0; i < nelm; ++i) {
-		    float  ww = (scomp[i] > 0)? rcomp[i] / scomp[i]: 0.;
-		    for (int j = 0; j < nelm; ++j) {
-			float p = sdifq[i][j] / sumi;
-			float r = ww? ww * sdifq[i][j] / rdifq[i][j]: 0;
-			if (entropy) h += (p > 0? p * log(p / rdifq[i][j]): 0);
-	    		else {
-const			    float	sig = log10((r + depsilon) / (1 + depsilon));
-			    *lod++ = sig;
-			}
-		    }
-		}
-	        if (entropy && morder == 1) fprintf(ofd, "%d\t%15.7le ", np1, h);
-	    }
-	    if (morder > 1) {
-		h = 0;
-		for (int i = 0; i < nelm; ++i) {
-		  for (int j = 0; j < nelm; ++j) {
-		    float	ww = (sdifq[i][j] > 0)? rdifq[i][j] / sdifq[i][j]: 0;
-		    for (int k = 0; k < nelm; ++k) {
-			float p =  strif[i][j][k] / sumi;
-			float r = ww? ww * strif[i][j][k] / rtrif[i][j][k]: 0;
-			if (entropy) h += (p > 0? p * log(p / rtrif[i][j][k]): 0);
-			else {
-const			    float	sig = log10((r + depsilon) / (1 + depsilon));
-			    *lod++ = sig;
-			}
-		    }
-		  }
-		}
-		if (entropy && morder == 2) fprintf(ofd, "%d\t%15.7le ", np1, h);
-	    }
-	    if (entropy) fputc('\n', ofd);
-	}
+	if ((phase == 0 && !klds && !entropy)) return;
+	if (wfp.gzfd) markovmodel(wfp.gzfd, phase);
+	else if (wfp.fd) markovmodel(wfp.fd, phase);
+	else	fatal(no_file, outf);
 }
 
 void TriFreq::setrange()
@@ -481,7 +284,7 @@ void TriFreq::setrange()
 		if (klds[left] >= sig_thr) break;
 	}
 	if (right < 0) {
-	    for (right = sites; --right > nmaxkld; --right)
+	    for (right = sites; --right > nmaxkld; )
 		if (klds[right] >= sig_thr) break;
 	    ++right;
 	}
@@ -527,43 +330,68 @@ const	float*	send = score + sd.many;
 	delete[] score;
 }
 
-void TriFreq::ascii_output()
+void TriFreq::calculate_mean(TriFreq* ref)
 {
-	if (wdfq)
-	    fprintf(ofd, "%d %d %d 1 0 %7.3f %7.3f %7.3f %d\n",
-		right - left, lod_size, jnk - left + 1, 
-		mmm.min, mmm.mean, mmm.max, nsupport);
+const	bool	self = !ref;
+	float*	rrcomp = 0;
+	if (ref && rwdfq) {
+	    ref->background3(rwdfq);
+	    rrcomp = ref->rcomp;
+	}
+	if (self) ref = this;
 	float*	lod = lods + left * lod_size;
-	for (int n = left; n < right; ++n) {
-	    for (int i = 0; i < lod_size; ++i)
-		fprintf(ofd, "%9.5f ", *lod++);
-	    putc('\n', ofd);
+	float*	led = lods + right * lod_size;
+	float*	rod = self? lod: ref->lods;
+	float*	red = self? led: ref->lods + ref->sites * ref->lod_size;
+const	int	mm1 = std::min(morder, ref->morder) + 1;
+	if (depsilon < 0) depsilon = 1./(float(nsupport));
+	float	repsilon = 1./(float(ref->nsupport));
+
+	float	scrf = 0;
+	float	scrp = 0;
+	for (; lod < led && rod < red; lod += lod_size, rod += ref->lod_size) {
+	    for (int i = 0; i < bias[mm1]; ++i) {
+		float	rf = rcomp[i] * (exp10((double) lod[i]) 
+		    * (1. + depsilon) - depsilon);
+		scrf += rf * rod[i];
+		if (!rrcomp) continue;
+		rf = rrcomp[i] * (exp10((double) rod[i]) 
+		    * (1. + repsilon) - repsilon);
+		scrp += rf * lod[i];
+	    }
 	}
+	mmm.mean = scrf;
+	if (self) return;
+
+/***	output extimated score values	***/
+
+	char	str[MAXL];
+	strcpy(str, sname);
+	char*	sl = strrchr(str, '/');
+	sl = sl? sl + 1: str;
+	char*	dot = strchr(sl, '.');
+	if (dot)	{
+		*dot = '\0';
+		if (dot - sl > 8) sl[8] = '\0';
+	}
+	strcat(sl, ":");
+	int	slen = strlen(sl);
+	char*	ps = sl + slen;
+	strcat(ps, ref->sname);
+	sl = strrchr(ps, '/');
+	sl = sl? sl + 1: ps;
+	dot = strchr(sl, '.');
+	if (dot)	{
+	    *dot = '\0';
+	    if (dot - sl > 8) sl[8] = '\0';
+	}
+	ps += strlen(ps);
+	printf("%s\t%7.3f", str, scrf);
+	if (rrcomp) printf("\t%7.3f", scrp);
+	putchar('\n');
 }
 
-void TriFreq::binary_output()
-{
-static	const	char	write_error[] = "fail to write binary data !\n";
-const	float*	lod = lods + left * lod_size;
-	if (wdfq) {	// pssm
-	    PatMat	pm(lod_size, right - left, jnk - left + 1);
-	    pm.min_elem = *vmin(lod, right - left);
-	    pm.transvers = 0;
-	    pm.nsupport = nsupport;
-	    pm.mmm = mmm;
-	    if (fwrite(&pm, sizeof(PatMat), 1, ofd) != 1)
-		fatal(write_error);
-	} else {	// relative frequency
-	    PatMatHead	header = {1, sizeof(float), nelm, 0, right - left, lod_size};
-	    if (fwrite(&header, sizeof(PatMatHead), 1, ofd) != 1)
-		fatal(write_error);
-	}
-const	size_t	dsize = (right - left) * lod_size;
-	if (fwrite(lod, sizeof(float), dsize, ofd) != dsize)
-	    fatal(write_error);
-}
-
-void TriFreq::output()
+void TriFreq::output(WriteFile& wfp)
 {
 	if (left < 0) left = 0;
 	if (right < 0) right = sites;
@@ -572,14 +400,118 @@ void TriFreq::output()
 		sites, right);
 	    right = sites;
 	}
-	if (binary)	binary_output();
-	else		ascii_output();
+	if (binary) {
+	    if (wfp.fd)	binary_output(wfp.fd);
+	    else	binary_output(wfp.gzfd);
+	} else {
+	    if (wfp.fd)	text_output(wfp.fd);
+	    else	text_output(wfp.gzfd);
+	}
+}
+
+void PsFrqMat::name2id(const char* name)
+{
+	char	str[MAXL];
+	strcpy(str, name);
+	char*	sl = strrchr(str, '/');
+	sl = sl? sl + 1: str;
+	char*	dot = strchr(sl, '.');
+	if (dot) *dot = '\0';
+	strncpy(id, sl, ID_SIZE - 1);
+}
+
+void PsFrqMat::fuse(const char* fname)
+{
+	PsFrqMat	tail(fname);
+	many += tail.many;
+	float	sum = many + tail.many;
+	for (int i = 0; i < nelm * cols; ++i) {
+	    frq[i] = many * frq[i] + tail.many * tail.frq[i];
+	    frq[i] /= sum;
+	}
+	many = (INT) (sum + 0.5);
+}
+
+void PsFrqMat::catenate(const char* fname)
+{
+	PsFrqMat	tail(fname);
+	many = std::min(many, tail.many);
+	vcopy(frq + nelm * cols, tail.frq, nelm * tail.cols);
+	cols += tail.cols;
+}
+
+void PsFrqMat::output(WriteFile& wfp)
+{
+	if (binary) {
+	    if (wfp.fd)	write_binary(wfp.fd);
+	    else	write_binary(wfp.gzfd);
+	} else {
+	    if (wfp.fd)	write_text(wfp.fd);
+	    else	write_text(wfp.gzfd);
+	}
+}
+
+/****************************************************************************
+*	Main
+****************************************************************************/
+
+#ifdef MAIN
+
+static	bool	gzip = false;
+static	const	char*	psfm_in = 0;
+
+static void usage()
+{
+	fputs("Description:\n", stdout);
+	fputs("\tGenerate N-th order position-specific score matrix ", stdout);
+	fputs("(PSSM: Splice[3|5] or X.Nm[3|5])\n", stdout);
+	fputs("\tfrom gap-less MSA around 3' (X.SP3) or 5' (X.SP5) splice junctions ", stdout);
+	fputs("and backgroud\n", stdout);
+	fputs("\tkmer-frequencies, ", stdout);
+	fprintf(stdout, "where column size of MSA must be <= %d\n", max_cols);
+	fputs("\t\tor\n", stdout);
+	fputs("\tConvert between text and binary forms of PSSM files\n", stdout);
+	fputs("Usage:\n", stdout);
+	fputs("\tnpssm -m[0-2] -r X.wdfq [-g -b] PSSM X.SP[3|5]",stdout);
+	fputs(" (MSA -> PSSM)\tor\n", stdout);
+	fputs("\tnpssm -f PSSM[.dgz] [[-g -b| -o] PSSM] (text <-> binary)\n", stdout);
+	fputs("Exapmle:\n", stdout);
+	fputs("\tkmers -KD -w6 -d X_g -g -b X.wdfq\n", stdout);
+	fputs("\tnpssm -m2 -r X.wdfq -g -b Splice3 X.SP3\n", stdout);
+	fputs("\tnpssm -f X.2m3.dgz (read from gzipped binary, output ", stdout);
+	fputs("text form to stdout)\n", stdout);
+	fputs("\tnpssm -f X.2m3 -g -b X.02m[.dgz] (conversion from text to ", stdout);
+	fputs("gzipped binary)\n", stdout);
+	fputs("\tnpssm -p X.pfm.dat (convert binary to text format)\n", stdout);
+	fputs("Options: (*: for private use only)\n", stdout);
+	fputs("\t-b S\t: binary output file nam \n", stdout);
+	fputs("\t-f S\t: existing PSSM w/wo extension\n", stdout);
+	fputs("\t-g\t: gzipped output\n", stdout);
+	fputs("\t-h\t: display this\n", stdout);
+	fputs("\t-H F\t: minimum KL value (minH) for each column to be ", stdout);
+	fputs("regarded as significant (0.025 nat)\n", stdout);
+	fputs("\t-j N\t: signal position within MSA (inferred from MSA)\n", stdout);
+	fputs("\t-l N\t: lower boundary within MSA (inferred from MSA and minH)\n", stdout);
+	fputs("\t-m N\t: N-th order Markov model (N = [0|1|2])\n", stdout);
+	fputs("\t-n* N\t: sample size\n", stdout);
+	fputs("\t-o S\t: text output file name (to stdout if omitted)\n", stdout);
+	fputs("\t-pq\t: suppress warning messages\n", stdout);
+	fputs("\t-p* S\t: existing position-specific frequency matix\n", stdout);
+	fputs("\t-q F\t: pseudocount (1./sample size)\n", stdout);
+	fputs("\t-r S\t: background genomic k-mer frequencies w/wo extension\n", stdout);
+	fputs("\t-t* S\t: trimer output\n", stdout);
+	fputs("\t-u N\t: upper boundary within MSA (inferred from MSA and minH)\n", stdout);
+	exit(1);
 }
 
 int main(int argc, const char** argv)
 {
 	int	mo = -1;
 const	char*	outfn = 0;
+const	char*	infn = 0;
+const	char*	test_pssm = 0;
+static	int	many_in = 0;
+	bool	psfm_out = false;
 	TriFreq*	tfq = 0;
 	while (--argc > 0 && **++argv == OPTCHAR) {
 	    const char* val = argv[0] + 2;
@@ -592,16 +524,19 @@ const	char*	outfn = 0;
 		    if ((val = getarg(argc, argv))) outfn = val;
 		    entropy = true;
 		    break;
-		case 'f':
-		    if ((val = getarg(argc, argv))) trim_in = val;
+		case 'f':	// existing pssm
+		    if ((val = getarg(argc, argv))) {
+			infn = pssm_in = val; psfm_in = 0;
+		    }
 		    break;
+		case 'g': gzip = true; break;
 		case 'h': usage();
 		case 'H':
 		    if ((val = getarg(argc, argv, true))) sig_thr = atof(val);
 		    if (sig_thr > 1.) sig_thr /= 100.;
 		    break;
-		case 'i':	// existing pssm
-		    if ((val = getarg(argc, argv))) pssm_in = val;
+		case 'i':
+		    if ((val = getarg(argc, argv))) infn = trim_in = val;
 		    break;
 		case 'j':	// lower bound
 		    if ((val = getarg(argc, argv, true))) jnk = atoi(val);
@@ -613,14 +548,33 @@ const	char*	outfn = 0;
 		    if ((val = getarg(argc, argv, true)))
 			mo = std::min(atoi(val), 2);
 		    break;
+		case 'n':
+		    if ((val = getarg(argc, argv, true))) many_in = atoi(val);
+		    break;
 		case 'o':
 		    if ((val = getarg(argc, argv))) outfn = val;
+		    break;
+		case 'p':	// existing position-specific freq mtx
+		    if (!strcmp(argv[0], "-pq")) {
+			setprompt(0, 0);
+		    } else {
+			if ((val = getarg(argc, argv))) {
+			    infn = psfm_in = val; pssm_in = 0;
+			}
+			psfm_out = true;
+		    }
 		    break;
 		case 'q':	// psuedocount
 		    if ((val = getarg(argc, argv, true))) depsilon = atof(val);
 		    break;
-		case 'r':
+		case 'r':	// background k-mer frequency
 		    if ((val = getarg(argc, argv))) wdfq = val;
+		    break;
+		case 'R':	// background k-mer frequency of 
+		    if ((val = getarg(argc, argv))) rwdfq = val;
+		    break;
+		case 'F':
+		    if ((val = getarg(argc, argv))) test_pssm = val;
 		    break;
 		case 't':
 		    if ((val = getarg(argc, argv))) trim_out = val;
@@ -630,52 +584,72 @@ const	char*	outfn = 0;
 		    break;
 	    }
 	}
-	if (outfn) {
-	    char	str[MAXL];
-	    strcpy(str, outfn);
-	    if (binary) {
-const		char*	dot = strrchr(str, '.');
-		if (!dot || strcmp(dot, patmat_ext))
-		    strcat(str, patmat_ext);
-	    }
-	    if (pssm_in && !strcmp(pssm_in, str))
-		fatal("Output %s is the same as input !\n", str);
-	    ofd = fopen(str, "w");
-	    if (!ofd) fatal(no_file, str);
-	}
-	if (pssm_in) {			// convert or synthesize existing pssm(s)
+	if (!outfn) {binary = 0; gzip = false;}
+	WriteFile	wfp(outfn, binary? 0: 1, gzip, infn);
+	if (pssm_in && test_pssm) {
+	    tfq = new TriFreq(pssm_in);
+	    TriFreq	tst_tfq(test_pssm);
+	    tfq->calculate_mean(&tst_tfq);
+	    return (0);
+	} else if (pssm_in) {			// convert or synthesize existing pssm(s)
 	    tfq = new TriFreq(pssm_in);
 	    if (trim_in) tfq->read_trimer();
 	    if (wdfq) {
-		tfq->background3();	// Get backgroud data
+		tfq->background3(wdfq);	// Get backgroud data
 		tfq->setrange();
-		tfq->markovmodel(1);
-	    } else
-		wdfq = "";
-	} else if (argc) {		// create pssm from MSA
+		tfq->markovmodel(wfp, 1, outfn);
+	    }
+	} else if (psfm_in) {		// Frequency matrix
+	    PsFrqMat	psfm(psfm_in, many_in);
+	    psfm.output(wfp);
+	} else if (argc) {
 	    Seq	sd(*argv);
-	    tfq = new TriFreq(mo, &sd);
-	    if (!trim_in) tfq->count_trimer(sd);
+	    if (trim_in) {	// read trq
+		tfq = new TriFreq(mo, 0);
+	    } else {		// calculate trq from MSA
+		tfq = new TriFreq(mo, &sd);
+		tfq->count_trimer(sd);
+	    }
 	    if (mo < 0 && trim_out) {
 		delete tfq;
 		return (0);
 	    }
+	    if (!wdfq) {
+		delete tfq;
+		fatal("Set -r wdfq option !\n");
+	    }
 	    if (depsilon < 0) depsilon = 1./((float) sd.many);
-	    if (wdfq) tfq->background3();	// Get backgroud data
-	    tfq->markovmodel(0);
+	    tfq->background3(wdfq);		// Get backgroud data
+	    tfq->markovmodel(wfp, 0, outfn);
 	    if (!entropy && wdfq) {
 		tfq->setrange();
-		tfq->markovmodel(1);
+		tfq->markovmodel(wfp, 1, outfn);
 		tfq->calculate_mmm(sd);	// min, mean, max
 	    }
 	} else if (trim_in) {
 	    tfq = new TriFreq(mo, 0);
-	    if (wdfq) tfq->background3();	// Get backgroud data
-	    tfq->markovmodel(0);
+	    if (depsilon < 0) depsilon = 1./((float) tfq->nsupport);
+	    if (wdfq) {
+		tfq->background3(wdfq);		// Get backgroud data
+		tfq->markovmodel(wfp, 0, outfn);
+		if (!entropy && wdfq) {
+		    tfq->setrange();
+		    tfq->markovmodel(wfp, 1, outfn);
+		    tfq->calculate_mean();
+		}
+	    } else {
+		tfq->markovmodel(wfp, 0, outfn);
+	    }
 	} else	usage();
 
-	if (!entropy) tfq->output();
-	fclose(ofd);
+	if (!entropy && tfq) {
+	    if (psfm_out) {
+		PsFrqMat	psfm(tfq);
+		psfm.output(wfp);
+	    } else
+		tfq->output(wfp);
+	}
 	delete tfq;
 	return (0);
 }
+#endif	// MAIN

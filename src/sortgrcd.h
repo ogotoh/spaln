@@ -26,11 +26,9 @@
 
 #include "aln.h"
 
-#if M_THREAD
 #include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
-#endif
 
 #if MONITOR
 #include <sys/types.h>
@@ -177,7 +175,6 @@ public:
 	~Sortgrcd();
 };
 
-#if M_THREAD
 
 struct thread_arg_t {
 	int	cpuid;
@@ -186,5 +183,4 @@ struct thread_arg_t {
 	INT	nchr;
 };
 
-#endif	// M_THREAD
 

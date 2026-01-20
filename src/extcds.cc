@@ -202,7 +202,7 @@ static int collectcds()
 	    wexon[i]->texon.join = lbound[i] = rbound[i] = 0;
 	    cds_overlap[i] = false;
 	}
-	for ( ; fgets_wocr(str, MAXL, fsrc); ptr = ftell(fsrc)) {
+	for ( ; fgets(str, MAXL, fsrc); ptr = ftell(fsrc)) {
 	  if (*str == 'O' && strmatch(str, "ORIGIN")) break;
 	  switch (*str) {
 	    case 'L':
@@ -316,7 +316,7 @@ static void joinedlist(List* fexon)
 	fseek(fsrc, fexon->from, SEEK_SET);
 	js = jstr;
 	do {
-	    if (!fgets_wocr(str, MAXL, fsrc))
+	    if (!fgets(str, MAXL, fsrc))
 		fatal("%-10s Unexpected EOF", InpRec);
 	    ps =  str + datacolumn;
 	    par += parbalance(ps);

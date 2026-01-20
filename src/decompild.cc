@@ -41,6 +41,7 @@ int main(int argc, const char* argv[])
 	while (--argc > 0 && **++argv == '-') {
 	    if (argv[0][1] == 'N') defpdf = LOGNORMAL; 
 	    if (argv[0][1] == 'G') defpdf = GEOMETRIC; 
+	    if (argv[0][1] == 'h') usage();
 	}
 	FILE* fd = argc? fopen(*argv, "r"): stdin;
 	if (!fd) usage();
@@ -51,9 +52,9 @@ int main(int argc, const char* argv[])
 	    if (*str == '#') continue;
 	    ildp.get_IldPrm(str);
 	    ildp.complete();
-	    Strlist	stl(str, " ");
+	    Strlist	stl(str, "\t ");
 	    int	nterm = stl.size();
-	    if (nterm - 11 < ildp.n_param) continue;
+	    if (nterm - 10 < ildp.n_param) continue;
 	    double*	dp = ildp.dparam;
 	    double	qt = 0.;
 	    int	n_sample = atoi(stl[2]);

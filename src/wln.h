@@ -30,7 +30,6 @@
 enum {ON_SCORE, ON_RDIAG, ON_POSIT};
 
 static	const	INT	MaxWlpLevel = 3;
-static	const	int	WlnPamNo = 2;
 static	int	shortquery = 50;
 
 class	mSeq;
@@ -57,6 +56,23 @@ const	char*	redpat;
 	Wilip
 *****************************************************/
 
+struct JXTD {
+union {
+ 	int	score;
+	int	nhit;
+};
+union {
+	int	mxscr;
+	int	ml;
+};
+union {
+	int	prevj;
+	int	mr;
+};
+	int	lastj;
+	int	maxj;
+};
+
 struct WLUNIT {
 	int	num;
 	int	nid;
@@ -73,12 +89,11 @@ class Wilip {
 	JUXT*	top = 0;
 	int	nwlu = 0;
 	WLUNIT*	wlu = 0;
-	bool	int_wlp = true;
 public:
 	Wilip(const Seq* seqs[], const PwdB* pwd, const int level);
 	Wilip(mSeq* seqs[], const PwdB* pwd, const int level);
 	Wilip(const Seq* seqs[], Wlp* wln);
-	~Wilip() {delete[] top; if (int_wlp) delete[] wlu;}
+	~Wilip() {delete[] top; delete[] wlu;}
 	int	size() const {return nwlu;}
 	WLUNIT*	begin() {return wlu;}
 	WLUNIT*	end() {return (wlu? wlu + nwlu: 0);}
@@ -138,23 +153,6 @@ struct HSPPRM {
 	float	RepPen;	/* Penalty for back-going direction */
 };
 
-struct JXTD {
-union {
- 	int	score;
-	int	nhit;
-};
-union {
-	int	mxscr;
-	int	ml;
-};
-union {
-	int	prevj;
-	int	mr;
-};
-	int	lastj;
-	int	maxj;
-};
-
 class Wlp {
 protected:
 const 	Seq*	a = 0;
@@ -181,7 +179,6 @@ const	bool	dhit = false;
 	INT*	lookup(INT* s, int kk);
 	INT*	foldseq();
 	INT*	kmercount();
-	RANGE*	lowic(const INT* cnt);
 	VTYPE	eval(JUXT* jxt);
 	JUXT*	reeval(JUXT* jxt, int& num);
 	void	enter(const JXTD* wxtd, const int& r, const bool& on_k = false);
@@ -195,10 +192,9 @@ const	bool	dhit = false;
 
 public:
 	Wlp(const Seq* seqs[], const PwdB* _pwd, const int level);
-	Wlp(Seq* seqs[]);
 	~Wlp() {
 	    delete bpp; delete mfd; delete[] header; 
-	    delete[] position; delete[] jxtd;
+	    delete[] position;
 	}
 	bool	ng() const {return (!position);}
 	void	reset(const Seq* g) {b = g; if (mfd) mfd->reset();}

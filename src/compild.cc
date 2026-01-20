@@ -20,19 +20,24 @@
 *
 *****************************************************************************/
 
+#include "calcserv.h"
 #include "dist2.h"
 #include "ildpdf.h"
 
-static	DistMethod distmeth = EC;
+static	DistMethod metrics = KL;
 static	OutMode	omode = DMX;
+static	int	calc_mode = IM_EVRY;
 static	bool	logscale = false;
 static	bool	smooth = false;
 static	const	char*	ip_stat = 0;
 static	const	char*	graph_out = 0;
+static	int	text_out = 1;
+static	bool	gzip = false;
+const	char*	oname = 0;
 
 void usage()
 {
-	fputs("Usage:\tcompild [options] [Ild1..IldN]\n", stderr);
+	fputs("Usage:\tcompild [options] Ild1[.dgz]..IldN[.dgz]\n", stderr);
 	fputs("  or\tcompild [options] -d IldModel.txt\n", stderr);
 	fputs("Options:\n", stderr);
 	fputs("\t-i[a|e|f|g|l|p] (input mode)\n", stderr);
@@ -42,7 +47,7 @@ void usage()
 	fputs("\t\tg: between groups\n",  stderr);
 	fputs("\t\tl: last and others\n",  stderr);
 	fputs("\t\tp: alternative\n",  stderr);
-	fputs("\t-[a|c|e|f|j|k|m|s] (distance measure)\n", stderr);
+	fputs("\t-m[a|c|e|f|j|k|m|s] (metrics)\n", stderr);
 	fputs("\t\ta: disjoint area\n",  stderr);
 	fputs("\t\tc: cosine\n",  stderr);
 	fputs("\t\te: Euclid\n",  stderr);
@@ -51,6 +56,7 @@ void usage()
 	fputs("\t\tk: Kullback-Leibler\n",  stderr);
 	fputs("\t\tm: Manhattan\n",  stderr);
 	fputs("\t\ts: Jensen-Shannon\n",  stderr);
+	fputs("\t-q:  suppress warnig messages\n", stderr);
 	fputs("\t-xN  maximum intron length\n", stderr);
 	fputs("\t-HN  minimum frequency\n", stderr);
 	fputs("\t-L   log scalse x-axis\n", stderr);
@@ -65,39 +71,71 @@ void usage()
 
 static void getoption(int& argc, const char**& argv)
 {
+	const	char*	val;
+	INT	nthr = 0;
 	while (--argc && **++argv == '-') {
 	  switch (argv[0][1]) {
+	    case 'b':
+		gzip = 1;
+		oname = getarg(argc, argv);
+		break;
 	    case 'd': ip_stat = getarg(argc, argv); break;
-	    case 'L': logscale = true; break;
-	    default: break;
-	  }
-	}
-}
-
-int localoption(int& argc, const char**& argv)
-{
-	int	n = 1;
-
-	switch (argv[0][1]) {
-	    case 'a': distmeth = UA; break;
-	    case 'c': distmeth = CS; break;
-	    case 'e': distmeth = EC; break;
-	    case 'f': distmeth = E2; break;
-	    case 'g': graph_out = getarg(argc, argv);
+	    case 'g':
+		val = getarg(argc, argv);
 		if (!graph_out) graph_out = "";
 		else if (!gnuplot_terminal(graph_out)) {
 		    ++argc; --argv; graph_out = "";
 		}
 		break;
 	    case 'h': case '?': usage();
-	    case 'j': distmeth = JA; break;
-	    case 'k': distmeth = KL; break;
-	    case 'm': distmeth = MH; break;
+	    case 'i': 		// input order
+		switch (tolower(argv[0][2])) {
+		  case 'a': case 'j':	// every juxt. pairs
+		    calc_mode = IM_ALTR; break;
+		  case 'e':		// lower-left combinaton
+		    calc_mode = IM_EVRY; break;
+		  case 'f':		// first vs others
+		    calc_mode = IM_FvsO; break;
+		  case 'g':		// group vs group, 1 file
+		    calc_mode = IM_GRUP; break;
+		  case 'i':		// self comparison
+		    calc_mode = IM_SELF; break;
+		  case 'l':		// last vs others
+		    calc_mode = IM_OvsL; break;
+		  case 'p':		// parallel, 2 files
+		    calc_mode = IM_PARA; break;
+		  default:
+		    calc_mode = IM_SNGL; break;
+		}
+		break;
+	    case 'm':
+		switch (argv[0][2]) {
+		    case 'a': metrics = UA; break;
+		    case 'c': metrics = CS; break;
+		    case 'e': metrics = EC; break;
+		    case 'f': metrics = E2; break;
+		    case 'j': metrics = JA; break;
+		    case 'k': metrics = KL; break;
+		    case 'm': metrics = MH; break;
+		    case 's': metrics = JS; break;
+		}
+		break;
+	    case 'o':
+		text_out = 1;
+		oname = getarg(argc, argv);
+		break;
 	    case 'q': setprompt(0, 0); break;
-	    case 's': distmeth = JS; break;
+	    case 't': val = getarg(argc, argv, true);
+	        thread_num = val? atoi(val): -1;
+		break;
 	    case 'x': lildprm.maxx = atoi(getarg(argc, argv, true)); break;
 	    case 'E': gslprm.epsrel = atof(getarg(argc, argv, true)); break;
-	    case 'H': lildprm.minfreq = atoi(getarg(argc, argv, true)); break;
+	    case 'H':
+		nthr = atoi(getarg(argc, argv, true));
+		lildprm.minfreq = nthr;
+		set_min_samples(nthr);
+		break;
+	    case 'L': logscale = true; break;
 	    case 'O': omode = PAIR; break;
 	    case 'P': lildprm.psdcnt = atof(getarg(argc, argv, true)); break;
 	    case 'Q': 
@@ -105,9 +143,9 @@ int localoption(int& argc, const char**& argv)
 		if (lildprm.n_qtl < 2) lildprm.n_qtl = 0;
 		break;
 	    case 'S': smooth = true; break;
-	    default: n = 0; break;
+	    default: break;
+	  }
 	}
-	return (n);
 }
 
 /*************************************************************************
@@ -116,26 +154,12 @@ int localoption(int& argc, const char**& argv)
 *
 *************************************************************************/
 
-int ild_main(CalcServer<Ild>* svr, Ild** ild, ThQueue<Ild>* q = 0)
-{
-	Dist2<Ild>*	icp = (Dist2<Ild>*) svr->prm;
-	Ild*&	ic = ild[0];
-	const	char*	sl = strrchr(ic->fname, '/');
-	m_thread_Lock(q);
-	icp->sname.push(sl? sl + 1: ic->fname);
-	m_thread_Unlock(q);
-	icp->vars[ic->sid] = new Ild;
-	icp->nmidx[ic->sid] = icp->inodr++;
-	swap(icp->vars[ic->sid], ic);
-	return (OK);
-}
-
 int compild_main(CalcServer<Ild>* svr, Ild* ild[], ThQueue<Ild>* q = 0)
 {
 	Ild*&	a = ild[0];
 	Ild*&	b = ild[1];
 	Dist2<Ild>*	icp = (Dist2<Ild>*) svr->prm;
-	double	dst = dist_ilds(a, b, distmeth);
+	FTYPE	dst = def_scale * dist_ilds(a, b, metrics);
 	int	nn = svr->calcnbr(a->sid, b->sid);
 	m_thread_Lock(q);
 	icp->dist[nn] = dst;
@@ -149,28 +173,15 @@ int compild_main(CalcServer<Ild>* svr, Ild* ild[], ThQueue<Ild>* q = 0)
 *
 *************************************************************************/
 
-int lild_main(CalcServer<Lild>* svr, Lild** ild, ThQueue<Lild>* q = 0)
-{
-	Dist2<Lild>*	icp = (Dist2<Lild>*) svr->prm;
-	Lild*&	ic = ild[0];
-	const	char*	sl = strrchr(ic->fname, '/');
-	icp->sname.push(sl? sl + 1: ic->fname);
-	if (smooth) ic->smooth();
-	icp->vars[icp->inodr] = new Lild();
-	swap(icp->vars[icp->inodr], ild[0]);
-	icp->nmidx[ic->sid] = icp->inodr++;
-	return (OK);
-}
-
 int complild_main(CalcServer<Lild>* svr, Lild* ild[], ThQueue<Lild>* q = 0)
 {
 	Lild*&	a = ild[0];
 	Lild*&	b = ild[1];
 	Dist2<Lild>*	icp = (Dist2<Lild>*) svr->prm;
-	double	dst = dist_ilds(a, b, distmeth);
+	FTYPE	dst = def_scale * dist_ilds(a, b, metrics);
 	int	nn = svr->calcnbr(a->sid, b->sid);
 	m_thread_Lock(q);
-	icp->dist[nn] = (FTYPE) dst;
+	icp->dist[nn] = dst;
 	m_thread_Unlock(q);
 	return (OK);
 }
@@ -181,26 +192,15 @@ int complild_main(CalcServer<Lild>* svr, Lild* ild[], ThQueue<Lild>* q = 0)
 *
 *************************************************************************/
 
-static int spd_main(CalcServer<IldPrm>* svr, IldPrm** spd, ThQueue<IldPrm>* q = 0)
-{
-	Dist2<IldPrm>*	icp = (Dist2<IldPrm>*) svr->prm;
-	IldPrm*&	sp = spd[0];
-	icp->sname.push(sp->sname);
-	icp->nmidx[sp->sid] = icp->inodr++;
-	icp->vars[sp->sid] = new IldPrm;
-	swap(icp->vars[sp->sid], sp);
-	return (OK);
-}
-
 static int compspd_main(CalcServer<IldPrm>* svr, IldPrm* ab[], ThQueue<IldPrm>* q = 0)
 {
 	IldPrm*&	a = ab[0];
 	IldPrm*&	b = ab[1];
-	double	result = dist_ilds(a, b, distmeth);
+	FTYPE	dst = def_scale * dist_ilds(a, b, metrics);
 	int	nn = svr->calcnbr(a->sid, b->sid);
 	Dist2<IldPrm>*	icp = (Dist2<IldPrm>*) svr->prm;
 	m_thread_Lock(q);
-	icp->dist[nn] = result;
+	icp->dist[nn] = dst;
 	m_thread_Unlock(q);
 	return (OK);
 }
@@ -209,13 +209,13 @@ static int spd_out2(CalcServer<IldPrm>* svr, IldPrm* spd[], ThQueue<IldPrm>* q =
 {
 	IldPrm*&	a = spd[0];
 	IldPrm*&	b = spd[1];
+	int&	i = a->sid;
+	int&	j = b->sid;
 	Dist2<IldPrm>*	icp = (Dist2<IldPrm>*) svr->prm;
-	double	dst = icp->dist[svr->calcnbr(a->sid, b->sid)];
-	int	i = icp->nmidx[a->sid];
-	int	j = icp->nmidx[b->sid];
-	fprintf(out_fd, "%14.6e\t%d\t%d\t%s\t%s\n", (float) dst, 
+	FTYPE	dst = icp->dist[svr->calcnbr(i, j)];
+	fprintf(out_fd, "%14.6e\t%d\t%d\t%s\t%s\n", dst, 
 	    a->n_sample, b->n_sample,
-	    icp->sname[i], icp->sname[j]);
+	    (*icp->sname)[i], (*icp->sname)[j]);
 	return (OK);
 }
 
@@ -229,13 +229,13 @@ int ild_out(CalcServer<Ild>* svr, Ild* ild[], ThQueue<Ild>* q = 0)
 {
 	Ild*&	a = ild[0];
 	Ild*&	b = ild[1];
+	int&	i = a->sid;
+	int&	j = b->sid;
 	Dist2<Ild>*	icp = (Dist2<Ild>*) svr->prm;
-	double	dst = icp->dist[svr->calcnbr(a->sid, b->sid)];
-	int	i = icp->nmidx[a->sid];
-	int	j = icp->nmidx[b->sid];
-	fprintf(out_fd, "%14.6e\t%.1f\t%.1f\t%s\t%s\n", 100. * dst, 
-	    icp->vars[a->sid]->ftotal, icp->vars[b->sid]->ftotal,
-	    icp->sname[i], icp->sname[j]);
+	FTYPE	dst = icp->dist[svr->calcnbr(i, j)];
+	fprintf(out_fd, "%14.6e\t%.1f\t%.1f\t%s\t%s\n", dst, 
+	    icp->vars[i]->ftotal, icp->vars[j]->ftotal,
+	    (*icp->sname)[i], (*icp->sname)[j]);
 	return (OK);
 }
 
@@ -244,12 +244,12 @@ int lild_out(CalcServer<Lild>* svr, Lild* ild[], ThQueue<Lild>* q = 0)
 	Lild*&	a = ild[0];
 	Lild*&	b = ild[1];
 	Dist2<Lild>*	icp = (Dist2<Lild>*) svr->prm;
-	double	dst = icp->dist[svr->calcnbr(a->sid, b->sid)];
-	int	i = icp->nmidx[a->sid];
-	int	j = icp->nmidx[b->sid];
-	fprintf(out_fd, "%14.6e\t%.1f\t%.1f\t%s\t%s\n", 100. * dst, 
-	    icp->vars[a->sid]->ftotal, icp->vars[b->sid]->ftotal,
-	    icp->sname[i], icp->sname[j]);
+	int&	i = a->sid;
+	int&	j = b->sid;
+	double	dst = icp->dist[svr->calcnbr(i, j)];
+	fprintf(out_fd, "%14.6e\t%.1f\t%.1f\t%s\t%s\n", dst, 
+	    icp->vars[i]->ftotal, icp->vars[j]->ftotal,
+	    (*icp->sname)[i], (*icp->sname)[j]);
 	return (OK);
 }
 
@@ -260,62 +260,48 @@ const	char**	av = argv;
 	getoption(ac, av);
 
 	if (ip_stat) {		// statistical models
-	    if (ac) {
-		make_speclist(ac, av);
-		*av++ = ip_stat;
-		argc = av - argv;
-	    }
-	    Dist2<IldPrm> dist2;
-	    CalcServer<IldPrm> csvr(argc, argv, IM_SNGL, IM_EVRY, &dist2,
-		&spd_main, &localoption);
-	    dist2.prepare(csvr);
-	    CalcServer<IldPrm> ssvr(dist2.calc_mode, &dist2, &compspd_main, 
-		0, 0, dist2.vars, dist2.num, dist2.grp2);
+	    Dist2<IldPrm> dist2(ip_stat, calc_mode);
+	    CalcServer<IldPrm> ssvr(calc_mode, &dist2, &compspd_main, 
+		0, 0, dist2.vars, dist2.mem_num, dist2.grp2, true, false);
 	    int	rv = ssvr.autocomp();
 	    if (rv) return (rv);
-	    if (omode == PAIR || dist2.calc_mode != IM_EVRY) {
+	    if (omode == PAIR || calc_mode != IM_EVRY) {
 		ssvr.change_job(&spd_out2);
 		rv = ssvr.autocomp(false);
-	    } else dist2.outdmx();
+	    } else {
+		dist2.to_file(oname, text_out, gzip);
+	    }
 	    if (graph_out) {
-		GnuPlotLild gp(dist2.vars, dist2.num);
-		gp.plot(*graph_out? graph_out: 0);
+		GnuPlotLild gp(dist2.vars, dist2.mem_num);
+		gp.plot(*graph_out? graph_out: 0, dist2.sname);
 	    }
 	    return (rv);
 	}
-	AddExt	adext(argc, argv, ".ild");
-	const	char**	argild = adext.add_ext();
 	if (logscale) {
-	    Dist2<Lild>	dist2;
-	    CalcServer<Lild> csvr(argc, argild, IM_SNGL, IM_EVRY,
-		 (void*) &dist2, &lild_main, &localoption);
-	    dist2.prepare(csvr);
-	    CalcServer<Lild> ssvr(dist2.calc_mode, &dist2, &complild_main, 
-		0, 0, dist2.vars, dist2.num, dist2.grp2);
+	    Dist2<Lild>	dist2(argc, argv, calc_mode);
+	    CalcServer<Lild> ssvr(calc_mode, &dist2, &complild_main, 
+		0, 0, dist2.vars, dist2.mem_num, dist2.grp2);
 	    int	rv = ssvr.autocomp();
 	    if (rv) return (rv);
-	    if (omode == PAIR || dist2.calc_mode != IM_EVRY) {
+	    if (omode == PAIR || calc_mode != IM_EVRY) {
 		ssvr.change_job(&lild_out);
 		rv = ssvr.autocomp(false);
-	    } else dist2.outdmx();
+	    } else dist2.to_file(oname, text_out, gzip);
 	    if (graph_out) {
-		GnuPlotLild	gp(dist2.vars, dist2.num);
-		gp.plot(*graph_out? graph_out: 0, &dist2.sname);
+		GnuPlotLild	gp(dist2.vars, dist2.mem_num);
+		gp.plot(*graph_out? graph_out: 0, dist2.sname);
 	    }
 	    return (rv);
 	} else {
-	    Dist2<Ild>	dist2;
-	    CalcServer<Ild> csvr(argc, argild, IM_SNGL, IM_EVRY,
-		 &dist2, &ild_main, &localoption);
-	    dist2.prepare(csvr);
-	    CalcServer<Ild> ssvr(dist2.calc_mode, &dist2, &compild_main, 
-		0, 0, dist2.vars, dist2.num, dist2.grp2);
+	    Dist2<Ild>	dist2(argc, argv, calc_mode);
+	    CalcServer<Ild> ssvr(calc_mode, &dist2, &compild_main, 
+		0, 0, dist2.vars, dist2.mem_num, dist2.grp2);
 	    int	rv = ssvr.autocomp();
 	    if (rv) return (rv);
-	    if (omode == PAIR || dist2.calc_mode != IM_EVRY) {
+	    if (omode == PAIR || calc_mode != IM_EVRY) {
 		ssvr.change_job(&ild_out);
 		rv = ssvr.autocomp(false);
-	    } else dist2.outdmx();
+	    } else dist2.to_file(oname, text_out, gzip);
 	    return (rv);
 	}
 }

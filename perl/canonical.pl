@@ -50,11 +50,12 @@ foreach my $fn (@ARGV) {
 }
 
 foreach my $eij (sort keys(%gtag)) {
-	my $sum = ($atac{$eij} + $gcag{$eij} + $gtag{$eij} + $other{$eij}) / 100;
-	print "#genespec\t   ATAC\t   GCAG\t   GTAG\t Others\t";
-	print "   atac\t   gcag\t   gtag\t others\n";
-	printf("%s\t%7d\t%7d\t%7d\t%7d\t%7.3f\t%7.3f\t%7.3f\t%7.3f\n", $eij,
-	    $atac{$eij}, $gcag{$eij}, $gtag{$eij}, $other{$eij},
-	    $atac{$eij}/$sum, $gcag{$eij}/$sum,  $gtag{$eij}/$sum, $other{$eij}/$sum);
+	my $sum = ($atac{$eij} + $gcag{$eij} + $gtag{$eij} + $other{$eij});
+	my $pct = $sum / 100;
+	my $sls = rindex($eij, '/') + 1;
+	printf("%s\t%7d\t%7.4f\t%7.4f\t%7.4f\t%7.4f\n", 
+	    substr($eij, $sls), $sum,
+	    $gtag{$eij}/$pct, $gcag{$eij}/$pct, 
+	    $atac{$eij}/$pct, $other{$eij}/$pct);
 }
 

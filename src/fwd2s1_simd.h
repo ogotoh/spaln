@@ -202,7 +202,8 @@ public:
 	    nevsel((sizeof(var_t) == 2? SHRT_MIN: INT_MIN) + nevsel_play),
 #endif
 	    black_Rvulmn{nevsel, end_of_ulk, a->left, a->right, b->right},
-	    rlst(INT_MAX), buf_size(wdw.width + 2 * nelem)
+	    rlst(INT_MAX), 
+	    buf_size((wdw.width + 3 * nelem - 1) / nelem * nelem)
 {
 
 #define	Add(a, b)	this->add(a, b)

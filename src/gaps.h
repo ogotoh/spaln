@@ -41,7 +41,7 @@ extern	void	swapskl(SKL* skl);
 extern	bool	badskl(const SKL* skl, const Seq** sqs = 0);
 extern	SKL*	stdskl(SKL** pskl);
 extern	SKL*	stdskl3(SKL** pskl);
-extern	SKL*	gap2skl(const GAPS* ga, const GAPS* gb);
+extern	SKL*	gap2skl(const GAPS* ga, const GAPS* gb, const Seq** sqs = 0);
 extern	int	sklpartner(const SKL* skl, int m, int given);
 extern	SKL*	trimskl(const Seq* seqs[], SKL* skl);
 extern	bool	sameskl(const SKL* a, const SKL* b);

@@ -35,15 +35,12 @@
 #include "clib.h"
 #include "iolib.h"
 
-const	char*	no_space = "No more memory !\n";
-const	char*	stddelim = " \t\n\r";
-
 int	thread_num = 0;
 int	cpu_num = 1;
 int	max_queue_num = 0;
 
-ALGMODE	algmode = {1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0};
-//	{nsa, alg, bnd, mlt, aut, lcl, lsg, mns, thr, rng, qck, lvl, blk, any, crs, slv, dim}
+ALGMODE	algmode = {1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2};
+//	{ns, al, bn, ml, au, lc, ls, mn, th, rn, qc, lv, bl, an, cr, sl, di, gp}
 
 int ipower(int x, int n)
 {
@@ -335,20 +332,6 @@ double ktof(const char* str)
 	return (x);
 }
 
-#if !USE_ZLIB
-Strlist::Strlist(FILE* fd)
-{
-	if (fread(this, sizeof(Strlist), 1, fd) != 1)
-	    fatal(fread_error, "Strlist");
-	strbuf = new char[totallen];
-	idxlst = new INT[many];
-	if (fread(strbuf, sizeof(char), totallen, fd) != totallen)
-	    fatal(fread_error, "Strlist");
-	if (fread(idxlst, sizeof(int), many, fd) != many)
-	    fatal(fread_error, "Strlist");
-}
-#endif
-
 Strlist::Strlist(int m, int len) 
 {
 	if (m > 0) {
@@ -436,11 +419,10 @@ Strlist::Strlist(FILE* fd, int m) : many(m)
 	strbuf = new char[sunitsize];
 	fseek(fd, 0L, SEEK_SET);
 	if (fread(strbuf, sizeof(char), totallen, fd) != (INT) totallen)
-	    fatal(fread_error, "Strlist");
+	    fatal(read_error, "Strlist");
 	format();
 }
 
-#if USE_ZLIB
 Strlist::Strlist(gzFile gzfd, int m) : many(m)
 {
 	int	c;
@@ -452,7 +434,6 @@ Strlist::Strlist(gzFile gzfd, int m) : many(m)
 	    fatal("Strlist file may be corupped !\n");
 	format();
 }
-#endif
 
 void Strlist::reset(int m)
 {
@@ -557,16 +538,6 @@ char* Strlist::push(const char* str)
 	delete[] word;
 	totallen = sumlen;
 	return (rv);
-}
-
-void Strlist::write_binary(FILE* fd)
-{
-	if (fwrite(this, sizeof(Strlist), 1, fd) != 1)
-	    fatal(fwrite_error, "Strlist");
-	if (fwrite(strbuf, sizeof(char), totallen, fd) != totallen)
-	    fatal(fwrite_error, "Strlist");
-	if (fwrite(idxlst, sizeof(int), many, fd) != many)
-	    fatal(fwrite_error, "Strlist");
 }
 
 AddExt::AddExt(int argc, const char** argv, const char* ext) 

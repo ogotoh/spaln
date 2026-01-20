@@ -263,7 +263,7 @@ const	    CHAR*	bs = b->at(n);
 	    CHAR*	dir = hdir + r;
 	    CHAR	psp = 0;
 	    e1 = e2 = black_vp;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 	    vset((RVPDJ*) rcd, black_vpdj, NCAND + 1);
 	    for (int l = 0; l <= NCAND; ++l) idx[l] = l;
 	    int	ncand = -1;
@@ -813,7 +813,7 @@ const	    CHAR*	bs = b->at(n);
 	    vset(rcd, black_vdwmlj, NCAND + 1);
 	    for (int l = 0; l <= NCAND; ++l) idx[l] = l;
 	    int	ncand = -1;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
 	    if (OutPrm.debug) {
 		printf("%2d %2d ", m, n);
@@ -1201,7 +1201,7 @@ const	    CHAR*	bs = b->at(n);
 	    vset(rcd, black_vdj, NCAND + 1);
 	    for (int l = 0; l <= NCAND; ++l) idx[l] = l;
 	    int	ncand = -1;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 #if DEBUG
 	    if (OutPrm.debug) {
 		printf("%2d %2d ", m, n);
@@ -1421,7 +1421,7 @@ const	    CHAR*	bs = b->at(n);
 	    CHAR*	dir = hdir + r;
 	    e1 = black_vp;
 	    RVP*	mxd = ((h->val + pwd->Vthr) < maxh.val)? blackvp: h;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 
 #if DEBUG
 	if (OutPrm.debug) {
@@ -1544,7 +1544,7 @@ const	    CHAR*	bs = b->at(n);
 	    CHAR*	dir = hdir + r;
 	    RVP*	mxd = ((h->val + pwd->Vthr) < maxh.val)? blackvp: h;
 	    e1 = black_vp;
-const	    VTYPE*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
+const	    short*	qprof = pwd->simmtx->mtx[*as];		// sim2(as, .)
 
 #if DEBUG
 	if (OutPrm.debug) {
@@ -2003,12 +2003,14 @@ const	CHAR*	bs = b->at(b->left);
 bool Aln2s1::indelfreespjS(int agap, VTYPE& iscr, const bool write_skl)
 {
 const	int	ilen = b->right - b->left - agap;	// intron length
+	if (b->exin->rplay(b->left + ilen) < 0) return (false);
 	if (ilen < IntronPrm.minl) {
 	    iscr = pwd->GapPenalty(ilen);
 	    return (true);
 	}
 	agap = 1 - agap;
 	int	n = min3(a->left, b->left, agap + expected_overlap_ext);
+	if (b->exin->lplay(b->left - n) < 0) return (false);
 	VTYPE*	bw = (n + 1 > expected_max_overlap)? new VTYPE[n + 1]: backward;
 	int	i = 0;
 const	CHAR*	as = a->at(a->left);	// cancel score of
@@ -2022,6 +2024,7 @@ const	int	ntry = algmode.crs? 1: 2;
 	SKL	skl = {a->left - i, b->left - i};
 	iscr = NEVSEL;
 
+const	int	nu = std::min(b->left + 1, b->right - ilen);
 	for (int retry = 0; retry < ntry && iscr == NEVSEL; ++retry) {
 	  int	m = skl.m;
 	  int	n = skl.n;
@@ -2029,7 +2032,7 @@ const	int	ntry = algmode.crs? 1: 2;
 	  PfqItr	api(a, m);
 const	  bool	usespb = api.size() && use_spb();
 	  bs = ds;
-	  for (VTYPE v = i = 0; n <= b->left; ++n, ++i, ++m) {
+	  for (VTYPE v = i = 0; n < nu; ++n, ++i, ++m) {
 const	    bool	a_in_zone = usespb && (api == m);
 const	    int	rc = b->exin->isCanon(n, n + ilen);
 	    if (retry || rc) {		// canonical or revserse canonical
@@ -2413,6 +2416,11 @@ const	int	dgap = bgap - agap;
 const	bool	cont = agap <= 0;			// connect adjacent HSPs
 const	int	wlmt = setwlprm(++level)->width;
 const	bool	no_rec = ovr < wlmt;			// no recurrsion
+const	float	dpspace = fabs((float) agap * (float) bgap) / MEGA;
+const	int	max_agap = (alprm2.desert && (agap > bgap || cmode < 3))?
+	    alprm2.desert * (4 - level): INT_MAX;
+const	bool	recursive = !(LocalC && cmode < 3)
+	    && dpspace < 32 * alprm.maxsp && agap < max_agap;
 	VTYPE	iscore = NEVSEL;
 	VTYPE	scr = 0;
 	Mfile*	save_mfd = 0;
@@ -2490,16 +2498,11 @@ const	bool	no_rec = ovr < wlmt;			// no recurrsion
 	    WINDOW	wdw;
 	    stripe(seqs, &wdw, std::min(alprm.sh, abs(dgap) + 3));
 	    iscore = trcbkalignS_ng(wdw, false);	// ordinary alignment
-	} else if (level < algmode.qck) {		// recursive search
+	} else if (level < algmode.qck && recursive) {	// recursive search
 	    save_mfd = new Mfile(*mfd);
 	    iscore = seededS_ng(level, cmode, bab);
 	}
-const	float	dpspace = fabs((float) agap * (float) bgap) / MEGA;
-const	int	max_agap = (alprm2.desert && (agap > bgap || cmode < 3))?
-	    alprm2.desert * (4 - level): INT_MAX;
-	if (iscore == NEVSEL && (no_rec || level == algmode.qck) &&
-	    dpspace < 32 * alprm.maxsp && agap < max_agap && 
-	    !(LocalC && algmode.qck == 3 && cmode < 3)) {
+	if (iscore == NEVSEL && (no_rec || level == algmode.qck) && recursive) {
 	    RANGE	rng[2];
 	    save_range(seqs, rng, 2);
 	    if (cmode & 1) scr -= creepfwrd(ovr, slmt, bab);
@@ -2540,11 +2543,12 @@ const	int	max_agap = (alprm2.desert && (agap > bgap || cmode < 3))?
 	return (scr + iscore);
 }
 
-WLUNIT* Aln2s1::bestwlu(WLUNIT* wlu, const int nwlu, const int cmode)
+WLUNIT* Aln2s1::
+bestwlu(WLUNIT* wlu, const int nwlu, const int cmode)
 {
 	RANGE	rng[2];
 	save_range(seqs, rng, 2);
-	VTYPE	wlu_s = NEVSEL;
+	IVTYPE	wlu_s = INEVSEL;
 	int	wlu_n = 0;
 	for (int n = 0; n < nwlu; ++n) {
 const	    JUXT*	jxt = wlu[n].jxt;
@@ -2554,8 +2558,8 @@ const	    JUXT*	jxt = wlu[n].jxt;
 	    b->right = jxt->jy;
 	    int	agap = jxt->jx - a->left;
 	    if (agap > 0) continue;
-	    VTYPE	iscore = NEVSEL;
-	    VTYPE	jscore = 0;
+	    IVTYPE	iscore = INEVSEL;
+	    IVTYPE	jscore = 0;
 	    if (cmode == 1)
 		jscore = wlu[n].scr;
 	    else if (indelfreespjS(agap, iscore, false))
@@ -2579,7 +2583,7 @@ const	    JUXT*	jxt = wlu[n].jxt;
 	    }
 	}
 	rest_range(seqs, rng, 2);
-	wlu = wlu_s > NEVSEL? wlu + wlu_n: 0;
+	wlu = wlu_s > INEVSEL? wlu + wlu_n: 0;
 	return (wlu);
 }
 
@@ -2607,8 +2611,8 @@ const	int	wlmt = setwlprm(level)->width;
 	    num = b->CdsNo;
 	} else {
 	    wl = new Wilip(seqs, pwd, level);
-	    int	nwlu = wl->size();
 	    wlu = wl->begin();
+const	    int	nwlu = wl->size();
 const	    int	bgap = b->right - b->left;
 	    if (nwlu > 1 && bgap >= IntronPrm.minl)
 		wlu = bestwlu(wlu, nwlu, cmode);
