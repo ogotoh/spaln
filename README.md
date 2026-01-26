@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.8
-#### Last updated: 2026-01-20
+#### Present Version 3.0.8a
+#### Last updated: 2026-01-26
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -372,19 +372,22 @@ addition/subtraction that sneaked in ver.3.0.5.
 2. Statistical models of Intron-length distribution in IldModel.txt 
 are more than doubled (from 1869 to 4212 species). Spaln now uses ILD model 
 specific to individual species rather than that specific to a species group 
-such as "Tetrapod". Other parameters are still taken from species groups. 
+such as "Tetrapod". For the four model organisms (*A. thaliana*, 
+*C. elegans*, *D. melanogaster*, *H. sapiens*), species-specific parameter 
+sets are added in the *table*, Other parameters are still taken from species 
+groups.
 3. pthread and zlib libraries are now mandatory. Conditional compilation 
 with respect to presence/absence of these libraries has been abolished. 
 4. Species-specific parameter files (CodePotTab, IntronPotTab, Splice3, 
 and Splice5) are accessible in text, binary (.dat), or gzipped binary (.dgz) 
-format. 
-A gzipped binary file occupies 3~14 times less disk space than the 
+format. A gzipped binary file occupies 3~14 times less disk space than the 
 corresponding text file. Moreover, a compact file can be more rapidly 
 loaded into memory than a text file. 
 5. In this relation, the scripts and relevant utilities used for generating 
 species-specific parameter files are updated, [see](makessp.md). 
 6. Miscellaneous refinements of the codes have been added for better 
-performance and maintenance. As a results, most performance indices have
+performance and maintenance. As results, the calculation speeds 
+have been improved by 5~10%, and most accuary indices have
 been improved (particularly with -A1 and -A2 options) from those 
 reported in [Ref 7](#Ref7).
 

@@ -132,7 +132,7 @@ static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
 static	const	char*	version = "3.0.8";
-static	const	int	date = 260119;
+static	const	int	date = 260125;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)

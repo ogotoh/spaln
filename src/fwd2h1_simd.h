@@ -398,10 +398,11 @@ const	bool	is_imd = hb1.imd && (m + 1) == hb1.imd->mi;
 	vclear(maxprd, 3);
 	for (int l = 0; l <= ncand; ++l) {
 const	    Rvlujd*	prd = rcd + idx[l];
+const	    int&	don = prd->jnc;
+	    if (don == 0) continue;
 const	    int	rr = r + prd->phs;
 	    if (rr < hb1.wdw.lw || rr >= hb1.wdw.up) continue;
 const	    Rvlujd*&	mrd = maxprd[prd->dir];
-const	    int&	don = prd->jnc;
 const	    int&	d = prd->dir;
 	    if (d == 2 && prd->phs == 1) continue;
 	    if ((acc - don) < IntronPrm.minl) continue;
@@ -772,8 +773,9 @@ const	    var_t	y = h9[-3] + bb[-2].sigT;
 	    if (vmf) maxh.ulk = vmf->add(a->right, b->right, maxh.ulk);
 	    return (rr);
 	}
-const	int	maxt = mx - hv;
-	if (mode == 2 || mode == 4) hb[maxt] = hb[maxr];
+	int	maxt = mx - hv;
+	if (maxt > rr) maxt = maxr;
+	else if (mode == 2 || mode == 4) hb[maxt] = hb[maxr];
 	maxh.ulk = (mode > 1)? s2_i(hc[maxr], used? hd[maxr]: 0): maxr;
 	int	p = maxr - rr;
 	if (vmf) {

@@ -246,6 +246,7 @@ class IntronPenalty {
 	STYPE	GapWI;
 	STYPE	AvrSig;
 	STYPE	optip = SHRT_MIN;
+	STYPE   maxip = SHRT_MIN;
 	FTYPE	IntEp = 0;
 	FTYPE	IntFx = 0;
 	STYPE*	array = 0;
@@ -263,7 +264,7 @@ public:
 	STYPE	Penalty() const {return (GapWI);}
 	STYPE	Penalty(const int& n) const {
 	    if (n < IntronPrm.llmt) return (SHRT_MIN); else
-	    if (n > IntronPrm.maxl) return (SHRT_MIN);
+	    if (n > IntronPrm.maxl) return (maxip);
 	    if (n < IntronPrm.rlmt && table) return (table[n]); else
 	    return (STYPE) (IntFx + IntEp * log((double)(n - IntronPrm.mu)));
 	}

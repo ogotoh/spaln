@@ -69,12 +69,12 @@ might have to be obtained. For this purpose, run
    * To visualize the observed and fitted intron-length distributions, run  
      `% fitild -g -a -d G.ildp G.ild`  
    * To convert Splice[3|5].[dat|dbz] to readable text form, run  
+     `% npssm -f Splice[3|5].[dat|dbz] > Splice[3|5]`  or  
      `% npssm -f Splice[3|5].[dat|dbz] -o Splice[3|5]`  
-    If the -o option is omitted, the results will go to _stdout_.  
    * Likewise, to convert CodePotTab.[dat|dbz] or IntronPotTab.[dat|dbz] to text form,
      run,  
+     `% exinpot -f [CodePotTab|IntronPotTab].[dat|dbz] > [CodePotTab|IntronPotTab]` or  
      `% exinpot -f [CodePotTab|IntronPotTab].[dat|dbz] -o [CodePotTab|IntronPotTab]`  
-     If the -o option is omitted, the results will go to _stdout_.  
 9. **Spaln** Ver.3.0.8 accepts all forms of parameter files. However, **aln** and
 earlier version of **Spaln** may fail to handle the binary or gzipped binary files. 
 In that case, please take advantage of the above-mentioned conversion procedure.  

@@ -230,6 +230,7 @@ const	float	q_interval = 1. / IntronPrm.nquant;
 		else	gappen -= gep;
 	    }
 	}
+	maxip = STYPE(5 * ipen);
 	if (qm) {
 	    wqm->len = IntronPrm.rlmt;
 	    wqm->pen = STYPE((fmt - qfm) / (cdf - 1. + q_interval));
