@@ -2,7 +2,7 @@
 
 ### Generate species-specific parameter sets
 #### Present Version 1.0.2
-#### Last updated: 2026-01-16
+#### Last updated: 2026-02-28
 
 - [Summary](#Sm)
 - [Preparation](#Pp)
@@ -48,14 +48,14 @@ only a part of the whole genome.
    It is a good idea to use -T option to specify an existing parameter set 
    taxonomically closest to your species. Otherwise, the predefined 
    'generic' parameter set will be used. Other common additional options are 
-   "-t _N_" and "-A _N_".  
+   "-t*N*" and "-A*N*".  
    Confirm that C_c.eij file has been generated. If the file consists of too 
    small a number of lines (number of unique introns), something went wrong. 
    Check the above-mentioned procedures carefully. It is desired that C_c.eij 
    consists of more than 5000 lines.  
-6. `% make_ssp.pl -d G_g -S [-g] C_c.eij`  
+6. `% make_ssp.pl -d G_g -S -g C_c.eij`  
    This command will generate Splice[3|5].dat and IntronPotTab.dat 
-together with a few associated files. The -g option generates gzipped 
+together with a few associated files. The optional -g option generates gzipped 
 files (Splice[3|5].dgz and IntronPotTab.dgz) instead of the binary '.dat' files. 
 'G.cano' shows the numbers of 
 canonical and non-canonical splice junction tetramers. An excessively large 
@@ -63,8 +63,10 @@ percentage of non-canonical tetramers warns that something unusual has happened.
 7. If your species uses non-standard genetic code, or the nucleotide 
 composition of your genome is highly biased, species-specific CodePotTab.[dat|dgz] 
 might have to be obtained. For this purpose, run  
-   `% make_ssp.pl -d G_g -S [-C transl_table_number] -c CDS.fna`,  
-   where 'CDS.fna' is a FASTA file containing CDS sequences.
+   `% make_ssp.pl -d G_g -S -g [-CN] -c CDS.fna`,  
+   where 'CDS.fna' is a FASTA file containing CDS sequences, and *N* is
+   the "transl_table number" defined in 
+   [NCBI transl_table](http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi) (0 by default).
 8. Conventions:
    * To visualize the observed and fitted intron-length distributions, run  
      `% fitild -g -a -d G.ildp G.ild`  
@@ -89,12 +91,12 @@ current directory are preferentially used.
 `-T yourspec` as an option of **Aln** or **Spaln**.
 
 ## <a name="Chng">Changes from previous version</a>
+## Changes in version 1.0.2
+1. In addition to binary .dat form, gzipped binary .dgz form is usable. 
+
 ## Changes in version 1.0.1
 1. In addition to text form, more compact binary form (.dat) of parameter files
 are now generated and accessible.
-
-## Changes in version 1.0.2
-1. In addition to binary .dat form, gzipped binary .dgz form is usable. 
 
 ## <a name="Ref">References</a>
 

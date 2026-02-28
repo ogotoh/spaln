@@ -1,8 +1,8 @@
 # SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.8a
-#### Last updated: 2026-01-26
+#### Present Version 3.0.8b
+#### Last updated: 2026-02-28
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -387,9 +387,11 @@ loaded into memory than a text file.
 species-specific parameter files are updated, [see](makessp.md). 
 6. Miscellaneous refinements of the codes have been added for better 
 performance and maintenance. As results, the calculation speeds 
-have been improved by 5~10%, and most accuary indices have
+have been improved by 5~10%, and most accuracy indices have
 been improved (particularly with -A1 and -A2 options) from those 
 reported in [Ref 7](#Ref7).
+7. Update make_ssp.pl for properly dealing with genomes with non-standard 
+genetic code.
 
 ## Changes in version 3.0.7
 1. Update simd_functions.h. A few functions that are not included 

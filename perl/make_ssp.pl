@@ -65,8 +65,8 @@ my $uncompress_genome = 0;
 
 sub usage {
 	print STDERR "Usage:\n";
-	print STDERR "\tmake_ssp.pl [-dG] [-eN] [-S] [-oS] [-uN] [-I] [-M] [-q] X.eij\n";
-	print STDERR "or\tmake_ssp.pl -dG -S -cC\n";
+	print STDERR "\tmake_ssp.pl [-dG] [-eN] [-S] [-oS] [-uN] [-JN] [-CN] [-I] [-M] [-q] X.eij\n";
+	print STDERR "or\tmake_ssp.pl -dG -S [-JN] [-CN] -cC\n";
 	print STDERR "\nOptions:\n";
 	print STDERR "\t-cC:	CDS (def =  X_m.cf[.gz])\n";
 	print STDERR "\t-dG:	genome db (def = X_g)\n";
@@ -93,6 +93,7 @@ sub usage {
 	print STDERR "\t-q:  quiet mode\n";
 	print STDERR "\t-uN: remove N % similar sequences\n";
 	print STDERR "\t-z:  memory in GB to allocate gzipped whole genomic seq (6)\n";
+	print STDERR "\t-CN: NCBI genetic code (0:universal)\n";
 	print STDERR "\t-I:  reserve intermediate files except MSA\n";
 	print STDERR "\t-JN: minimum ORF length (90)\n";
 	print STDERR "\t-M:  reserve MSA\n";
@@ -126,6 +127,7 @@ my $label;
 my $min_orf = 90;
 my $spaln_f = 0;
 my $gzipped = 0;
+my $gencode = 0;
 
 #################################################################
 #
@@ -141,6 +143,7 @@ while ($_ = $ARGV[0], /^-/) {
 	/^-q/	&& ($debug &= 1);	# quiet
 	/^-M/	&& ($reserve_msa = 1);	# retain MSA
 	/^-S/	&& ($spaln_f = 1);	# used by spaln/aln
+	if (/^-C(\S*)/)	{&Util::getoptarg(\$gencode, $1);}	# genetic code no
 	if (/^-D(\S*)/)	{&Util::getoptarg(\$debug, $1, 2);}	# debug
 	if (/^-c(\S*)/) {&Util::getoptarg(\$cds, $1);}		# CDS
 	if (/^-d(\S*)/) {&Util::getoptarg(\$gnm, $1);}		# genome
@@ -399,7 +402,7 @@ foreach $level (@jobs) {
 	    next if (-s $dcf && -M $dcf < $cdsdate);
 	    expandcds() if (-s $cdsgz);
 	    next unless (-s $cds);
-	    my $cmd = "exinpot -m5 -c -J$min_orf -O5 -b $dcf";
+	    my $cmd = "exinpot -m5 -c -J$min_orf -C$gencode -O5 -b $dcf";
 	    $cmd .= " -g" if ($gzipped);
 	    $cmd .= " $cds";
 	    &System($cmd);
@@ -723,7 +726,7 @@ sub make_cdp {
 		(-s $cdpgz && -M $cdpgz < $cdsdate) ||
 		(-s $cdpdgz && -M $cdpdgz < $cdsdate)));
 	&expandcds() if (-s $cdsgz);
-	my $cmd = "exinpot -m5 -O5 -c -r $wdfq -J$min_orf";
+	my $cmd = "exinpot -m5 -O5 -c -r $wdfq -J$min_orf -C$gencode";
 	$cmd .= " -g" if ($gzipped);
 	$cmd .= " -b $cdp $cds >> cdpscore.txt";
 	&System($cmd);
