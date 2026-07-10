@@ -32,8 +32,6 @@ enum {ON_SCORE, ON_RDIAG, ON_POSIT};
 static	const	INT	MaxWlpLevel = 3;
 static	int	shortquery = 50;
 
-class	mSeq;
-
 using	KV_r_nh = KVpair_lt<int, int>;
 
 struct WLPRM {
@@ -81,6 +79,12 @@ struct WLUNIT {
 	int	ulmt;
 	JUXT*	jxt;
 	VTYPE	scr;
+	int	maxjx() const {
+	    return (jxt? (jxt[num - 1].jx + jxt[num - 1].jlen): 0);
+	}
+	int	maxjy(const int& bbt) const {
+	    return (jxt? (jxt[num - 1].jy + bbt * jxt[num - 1].jlen): 0);
+	}
 };
 
 class Wlp;
@@ -91,7 +95,6 @@ class Wilip {
 	WLUNIT*	wlu = 0;
 public:
 	Wilip(const Seq* seqs[], const PwdB* pwd, const int level);
-	Wilip(mSeq* seqs[], const PwdB* pwd, const int level);
 	Wilip(const Seq* seqs[], Wlp* wln);
 	~Wilip() {delete[] top; delete[] wlu;}
 	int	size() const {return nwlu;}

@@ -496,6 +496,7 @@ static	int	visit = 0;
 			if (val) polyA.setthr(val);
 			else	polyA.setthr(def_polya_thr);
 			break;
+		  case 'b': OutPrm.spjinf = 1 - OutPrm.spjinf; break;
 		  case 'd': OutPrm.descrp = 1; break;
 		  case 'D': OutPrm.debug = 1; break;
 		  case 'e': OutPrm.trimend = !OutPrm.trimend; break;
@@ -503,7 +504,8 @@ static	int	visit = 0;
 		  case 'g': OutPrm.taxoncode = 3; break;	// genus
 		  case 'h': OutPrm.ColorEij = 2; break;
 		  case 'i': OutPrm.ColorEij = 1; break;
-		  case 'j': OutPrm.spjinf = 1 - OutPrm.spjinf; break;
+		  case 'j': OutPrm.gsiinf = 
+				isdigit(val[1])? atoi(val+1): 2; break;
 		  case 'l': logfile = logfn; break;
 		  case 'n': OutPrm.overwrite = 2; break;
 		  case 'o': OutPrm.overwrite = 1; break;

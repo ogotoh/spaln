@@ -40,8 +40,8 @@
 FILE*	out_fd = stdout;
 static	const	int	NEG = -1;
 
-	       //lpw blk Nout MaxOut eij ovl fnm rm lg spj 
-OUTPRM	OutPrm = {60, 0, 16, 1, 4, 10, 5, 0, 1, 3, 1};
+	       //lpw blk Nout MaxOut eij ovl fnm rm lg gsi spjj 
+OUTPRM	OutPrm = {60, 0, 16, 1, 4, 10, 5, 0, 1, 3, 1, 1};
 
 static  const   char*   font_tag[3] = {
 	"<b><font color=\"%s\">",

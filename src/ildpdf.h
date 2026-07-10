@@ -113,7 +113,7 @@ class	IldPrm {
 public:
 	int	n_modes = 0;
 	int	m_size = 0;
-	bool	vrtl = false;
+	bool	sibs = false;
 	char*	genspc = 0;
 	int	n_param = 0;
 	double	dparam[paramsize];
@@ -143,11 +143,11 @@ template <typename file_t>
 	    return (strget(str)? OK: IGNORE);
 	}
 	void	clear() {
-	    if (!vrtl) {
+	    if (!sibs) {
 		delete[] genspc; delete[] k_th_qtil; delete[] cdf_table;
 	    }
 	    n_modes = n_param = sid = n_sample = min_x = max_x = 0;
-	    vrtl = false;
+	    sibs = false;
 	    genspc = 0; k_th_qtil = 0; cdf_table = 0;
 	}
 	void	complete();
@@ -180,13 +180,13 @@ template <typename file_t>
 	IldPrm() {
 	    m_size = NoDistParam[ildpdf = defpdf];
 	}
-	IldPrm(const IldPrm& src) {*this = src; vrtl = true;}
+	IldPrm(const IldPrm& src) {*this = src; sibs = true;}
 	IldPrm(int np, const char** argv, StatDist pdf = FRECHET);
 	IldPrm(const char* ip_stat, Ild* inst, const char* choose = 0);
 	IldPrm(const char* ip_stat, const char* gs);
 	IldPrm(Ild* inst, StatDist pdf = FRECHET);
 	~IldPrm(){
-	    if (!vrtl) {
+	    if (!sibs) {
 		delete[] genspc; genspc = 0;
 		delete[] k_th_qtil; k_th_qtil = 0;
 		if (cdf_table) {delete[] (cdf_table + min_x); cdf_table = 0;}
@@ -198,7 +198,7 @@ class Ild {
 	double	nfact = 0;
 public:
 	int	sid = 0;
-	bool	vrtl = false;
+	bool	sibs = false;
 	int	ntotal = 0;
 	double	ftotal = 0;
 const	char*	entry = 0;
@@ -216,13 +216,13 @@ template <typename file_t>
 	}
 	Ild(Ild& src) {
 	    *this = src;
-	    vrtl = true;
+	    sibs = true;
 	}
 	Ild(Ild* src, Drand48_data* drand_buff);
 	Ild(IldPrm* ildprm, const INT& nsample, 
 		Drand48_data* drand_buff, const char* snm = 0);
 	~Ild() {
-	    if (!vrtl) {delete[] entry; delete[] intlf; delete[] k_th_qtil;}
+	    if (!sibs) {delete[] entry; delete[] intlf; delete[] k_th_qtil;}
 	}
 	dLfp*	begin() {return intlf;}
 	dLfp*	end() {return intlf + ntotal;}
@@ -322,6 +322,7 @@ friend	class	GnuPlotLild;
 	Bspline*	bsp = 0;
 public:
 	int	sid = 0;
+	bool	sibs = false;
 	double	ftotal = 0;
 const	char*	entry = 0;
 	Lild(DblDbl t = log10, DblDbl r = exp10)

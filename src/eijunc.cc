@@ -81,32 +81,32 @@ int main(int argc, const char* argv[])
 	  }
 	}
 
-	EiJuncSeq eijseq(mode, *argv, gnm, wing);
+	EiJuncSeq eijnc(mode, *argv, gnm, wing);
 	int	nrcd = 0;
 	setup_output(4);
 	do {
-	    Seq*	sd = eijseq.nextseq();
+	    Seq*	sd = eijnc.nextseq();
 	    if (!sd || (no_amb && sd->inex.ambs)) continue;
 	    if (!ext) {
 		if (!cdna)
 		    fprintf(fo, ">%s.%d\n", sd->sqname(), ++nrcd);
-		else if (eijseq.new_entry)
-		    fprintf(fo, ">%s %d\n", eijseq.transcript,++nrcd);
+		else if (eijnc.new_entry)
+		    fprintf(fo, ">%s %d\n", eijnc.transcript,++nrcd);
 		sd->typeseq(fo);
-	    } else if (sd->len == eijseq.width) ++nrcd;
-	} while (eijseq.goahead());
+	    } else if (sd->len == eijnc.width) ++nrcd;
+	} while (eijnc.goahead());
 
 	if (ext) {
 	    if (!outf) {
-		strcpy(eijseq.genspc + 8, ext);
-		outf = eijseq.genspc;
+		strcpy(eijnc.genspc + 8, ext);
+		outf = eijnc.genspc;
 	    }
 	    fprintf(fo, ">%s [%d]\n\n", outf, nrcd);
-	    eijseq.reset();
+	    eijnc.reset();
 	    nrcd = 0;
-	    while (eijseq.goahead()) {
-	        Seq*	sd = eijseq.nextseq();
-		if (!sd || sd->inex.ambs || sd->len != eijseq.width) continue;
+	    while (eijnc.goahead()) {
+	        Seq*	sd = eijnc.nextseq();
+		if (!sd || sd->inex.ambs || sd->len != eijnc.width) continue;
 		fputs("      1 ", fo);
 		sd->typeseq(fo, true);
 		fprintf(fo, "| %s.%d\n", sd->sqname(), ++nrcd);
@@ -235,8 +235,8 @@ static	const	char	seqargfrm2[] = "%s %d %d %d %d %c";
 	    snprintf(sid, MAXL, "%s%d.%d", chr, l, r);
 	    break;
 	}
-	Seq*	tmp = eijseq->getseq(seqarg, dbs);
-	if (tmp) tmp->tlen = rl - l;	// from 5' end to left
-	return (tmp);
+	eijseq->getseq(seqarg, dbs);
+	if (eijseq) eijseq->tlen = rl - l;	// from 5' end to left
+	return (eijseq);
 }
 

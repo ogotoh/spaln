@@ -130,7 +130,7 @@ void Ild_data::write_text(file_t ofd)
 	sLfp*	t = w + header.ndsize;
 	char	str[MAXL];
 	for ( ; w < t; ++w) {
-	    sprintf(str, "%d\t%d\n", w->len, w->frq);
+	    snprintf(str, MAXL, "%d\t%d\n", w->len, w->frq);
 	    fputs(str, ofd);
 	}
 }

@@ -40,8 +40,6 @@ extern	ALPRM3	alprm3;
 extern	ALPRM	alprm;
 extern	RANGE	fullrng;
 
-#define	USE_ETHER 	FVAL
-
 static	const	char	_NHEAD = '>';		/* Normal Strand	*/
 static	const	char	_CHEAD = '<';		/* Compl. Strand	*/
 static	const	char	_APPN = '+';		/* Append on 		*/
@@ -56,19 +54,19 @@ static	const	char	I_DLM = '/';		/* Intron Number	*/
 static	const	char	_PROF = '%';		/* Profile expres.	*/
 static	const	char	_DELG = '#';		/* Eliminate del sites	*/
 static	const	char	_LABL = '|';		/* Label to seq.	*/
-static	const	char	_WGHT = '%';		/* Weight	       */
+static	const	char	_WGHT = '%';		/* Weight		*/
 static	const	char	GBKID = '$';		/* GenBank Seq.		*/
 
 #include "dbs.h"
-#include "gsinfo.h"
 #include "gaps.h"
+#include "gsinfo.h"
 #include "codepot.h"
 #include "utilseq.h"
 
 static	const	int	DEFSEQLEN = 1024;
 static	const	int	RESERVE_AREA = 32 * KILO;
 static	const	int	MAXCR = 512;
-static	const	int	BUFLEN = MAXL;
+static	const	int	BUFLEN = LINE_MAX;
 static	const	int	CPY_SEQ = 1;	/* Copy seq		*/
 static	const	int	CPY_NBR	= 2;	/* Copy nbr		*/
 static	const	int	CPY_LBL = 4;	/* Copy lbl		*/
@@ -78,6 +76,7 @@ static	const	int	RLT_SBI	= 16;	/* renumber lst		*/
 
 static	const	int	nil_code = 0;
 static	const	int	gap_code = 1;
+static	const	int	MAXEXONS = 1024;	// max # of exons in a gene
 
 static	const	int	USE_EXG = 1;
 static	const	int	NSIMD = NTS+USE_EXG;
@@ -135,6 +134,7 @@ static	const	int	MinPctNucChar = 75;
 static	const	int	MinPctTronChar = 5;
 static	const	INT	MaxTestChar = 1000;
 static  const   char	NoSeqSpace[] = "%s: No space for sequence %d KB!\n";
+static	const	RANGE	rvs_endrng = {INT_MAX, INT_MAX - 1};
 
 struct	SEQ_CODE {
 	int	max_code;	// # of alphabets
@@ -165,11 +165,9 @@ mutable	INT	exgr:	2;
 	INT	polA:	2;
 	INT	est:	1;
 	INT	ori:	2;
-	INT	vtl:	1;
 	INT	nils:	2;
 	INT	sshp:	1;
 	INT	cmps:	1;
-	INT	vtwt:	1;
 };
 
 struct JUXT {
@@ -221,42 +219,50 @@ public:
 };
 
 static	PolyA	polyA;
+static	const	INEX	def_inex = {0};
 
 // basic single sequence class
 
 class Seq {
 protected:
-	int	base_;		// global numering base
-	int	area_;		// memory size ocupied
-	CHAR*	seq_;		// sequence body
-	CHAR*	end_;		// end of seq_ memory
-	Seq**	anti_;		// rlocation of everse-complement of this
+	int	base_ = 0;	// global numering base
+	int	area_ = 0;	// memory size ocupied
+	CHAR*	seq_ = 0;	// sequence body
+	CHAR*	end_ = 0;	// end of seq_ memory
+	Seq**	anti_ = 0;	// location of reverse-complement of this
+	Seq*	founder = 0;	// founder of clones
 	StrHash<int>*	mnhash = 0;
-	void	fillpad();
-	RANGE*	setrange(const char* pa, int* ncr = 0) const;
-template <typename file_t>
-	char*	readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd);
+	int	calcResNum(const int& i);
+	void	cdsForm(FILE* fd);
+	int	cdsForm(FILE* fd, int mode, const RANGE* rng);
 	void	estimate_len(FILE* fd, const int& nos, const SeqDb* dbf = 0);
 	void	estimate_len(gzFile fd, const int& nos, const SeqDb* dbf = 0);
+	void	exons2pfq(RANGE* cr, const int& mem = 0, 
+		const Gaps* gwk = 0, Mfile* pfqmfd = 0);
+	void	fillpad();
 	void	header_nat_aln(const int& n, const FTYPE& sumwt);
-	CHAR*	seq_realloc();
-	int	calcResNum(const int& i);
 	char*	onecds(RANGE& wexon, char* ps, int& par);
+template <typename file_t>
+	char*	readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd);
+	CHAR*	seq_realloc();
+	RANGE*	setrange(const char* pa, int* ncr = 0) const;
+	int	ejunc[2 * MAXEXONS];
+	int	n_ebrys = 0;
 public:
-	int	sid;		// seq id.
-	int	did;		// databse id number
-	int	vrtl;		// share seuence memory with other instance
-	int	many;		// number of sequences = 1
-	int	byte;		// = many
-	int	len;		// seq length
-	int	tlen;		// transcribed length without poly A or T
-mutable	int	left;		// left boundary to be operated
-mutable	int	right;		// right boundary to be operated
-	int	CdsNo;		// number of exons or hsps
-	int	wllvl;		// reserved
-	VTYPE	jscr;		// sum of weight2s
-	int*	lens;		// seq length of each member
-	int*	nbr;		// position of the first residue
+	int	sid = 0;	// seq id.
+	int	did = 0;	// databse id number
+mutable	int	sibs = 0;	// share seuence memory with other instance
+	int	many = 0;	// number of sequences = 1
+	int	byte = 0;	// = many
+	int	len = 0;	// seq length
+	int	tlen = 0;	// transcribed length without poly A or T
+mutable	int	left = 0;	// left boundary to be operated
+mutable	int	right = 0;	// right boundary to be operated
+	int	CdsNo = 0;	// number of exons or hsps
+	int	wllvl = 0;	// reserved
+	VTYPE	jscr = 0;	// sum of weight2s
+	int*	lens = 0;	// seq length of each member
+	int*	nbr = 0;	// position of the first residue
 	SEQ_CODE* code = 0;	// code table
 	char*	spath = 0;	// path name read from
 	char*	msaname = 0;	// msa name
@@ -267,7 +273,7 @@ mutable	int	right;		// right boundary to be operated
 	RANGE*	exons = 0;	// CDS/exons in a gene seq
 	Exinon*	exin = 0;	// statistical scores related to gene organization
 	SigII*	sigII = 0;	// eson-intron junction signal
-mutable	INEX	inex;		// internally used flags
+mutable	INEX	inex = def_inex;		// internally used flags
 #if USE_WEIGHT
 	FTYPE*	weight = 0;	// relative weight to each member
 	FTYPE*	pairwt = 0;	// weight to each pair of members
@@ -288,7 +294,7 @@ const	Seq*	consenseq() const {return (const Seq*) this;}
 		inex.molc == RNA || inex.molc == GENOME;}
 	bool	isprotein() const {return inex.molc == PROTEIN;}
 	bool	istron() const {return inex.molc == TRON;}
-	bool	is_eldest(const int& wide = 1) const {return (vrtl < wide);}
+	void	GBcdsForm(FILE* _fd, const RANGE* rng);
 	bool	empty()	const {return left == right;}
 	INT	r2s(const INT& r) const {return (isprotein()? r + ALA: ((1 << r) + _));}
 	void	setmolc(const int& molc) {inex.molc = molc;}
@@ -303,6 +309,7 @@ const	char*	sqname(bool fpri = false) const {
 	}
 	Seq*	attrseq(const char* pa);
 	Seq*	splice(Seq* dest, RANGE* rng, const int edit = 0);
+	Seq*	add_const_seqs(const int& n, const CHAR& c = CHAR(gap_code)) const;
 	int	siteno(const int& n) const {return base_ + n;}
 	int	SiteNm(const int& n, const int& m = 0) const
 		{return base_ + ((inex.sens & REVERS)? lens[m] - 1 - n: n);}
@@ -339,12 +346,12 @@ const	char*	sqname(bool fpri = false) const {
 	Seq*	cutseq(Seq* dest, const int& snl = CPY_ALL) const;
 	Seq*	copyseq(Seq* dest, const int& snl = CPY_ALL) const;
 	Seq*	duplseq(Seq* dest) const;
+	void	replace(const Seq* with);
 	Seq*	extseq(Seq* dest, const int* which, const int& snl = CPY_ALL,
 			const FTYPE& nfact = 1.);
-	Seq*	aliaseq(Seq* dest, const bool& thisisalias = false);
+	Seq*	aliaseq(Seq* dest);
 	Seq*	catseq(Seq* head, const int& cushion = 0);
-	Seq&	operator=(Seq& src) {return (*src.copyseq(this));}
-	Seq*	rndseq();
+	void	rndseq();
 	Seq*	deamb(const int& bzx = 3);
 	void	fillnbr(Seq* dest) const;
 	void	copynbr(Seq* dest) const;
@@ -354,7 +361,8 @@ const	char*	sqname(bool fpri = false) const {
 	void	tron2nuc(const bool& rev);
 	CHAR	tron2aa(const CHAR res) {return inex.molc == TRON? t2atab[res]: res;}
 	void	elim_amb();
-	GAPS*	elim_column(const int& which, float frac = 0.);
+	Gaps*	elim_column(const int& which, float frac = 0.);
+	bool	on_rvs_strand() {return (exons && exons[CdsNo].right < INT_MAX);}
 	void	push(const CHAR& c, CHAR*& ps, const int& step = 1) {
 		    if (ps >= end_) ps = seq_realloc();
 		    *ps = c; ps += step;
@@ -373,8 +381,9 @@ template <typename file_t>
 template <typename file_t>
 	int	fget(file_t fd, const char* fn = 0) {return (fgetseq(fd)? 1: EOF);}	// alias 
 	Seq*	getseq(const char* str, DbsDt* dbf = 0);
+	int	getgsi(const char* str);
 template <typename file_t>
-	int	getcds(file_t fd, char* str, int cdscolumn);
+	bool	getcds(file_t fd, char* str, int cdscolumn);
 	char*	sqline(int i, char* ps);
 template <typename file_t>
 	CHAR*	get_nat_aln(file_t fd, char* str, RANGE* pcr);
@@ -414,16 +423,16 @@ template <typename file_t>
 	bool	nogap(const CHAR* ps) const;
 	int	countgap(const int& mem = 0, int from = 0, int to = INT_MAX) const;
 	VTYPE	countunps() const;
+	float	gap_rate(const int& ng = 3) const;
 	int	pfqPos(const int& n) const {return isprotein()? 3 * n: n;}
 	int	sname2memno(const char* memid);
 	Seq*	randseq(double* pcmp);
 	Seq*	substseq(int n, const int& which);
-	void	initialize();
 	Seq(const int& num = 1, const int& lenth = 0);
 	Seq(const char* fname);
 	Seq(Seq& sd, const int* which = 0, const int& snl = CPY_ALL);
 	Seq(Seq* sd, const int* which = 0, const int& snl = CPY_ALL);
-	Seq(const Seq* sd, const bool& alias);
+	Seq(Seq* sd, const bool& = false);
 				// copy or extract
 	~Seq();
 friend	void 	antiseq(Seq** seqs);
@@ -512,14 +521,14 @@ const   char*   attrs[3] = {attr, attr2, 0};
 	}
 
 	int     nos = 0;
-	char    str[MAXL];
+	char    str[LINE_MAX];
 	long    fpos = 0L;
 // skip comment lines
 	for (;;) {
 	    fpos = ftell(fd);
-	    if (!fgets(str, MAXL, fd)) return (0);      // empty
+	    if (!fgets(str, LINE_MAX, fd)) return (0);      // empty
 	    if (*str != _LCOMM && !isBlankLine(str)) break;
-	    if ((strlen(str) + 1) == MAXL) flush_line(fd);
+	    if ((strlen(str) + 1) == LINE_MAX) flush_line(fd);
 	}
 
 // infer input sequence format
@@ -572,11 +581,11 @@ const   char*   attrs[3] = {attr, attr2, 0};
 }
 
 template <typename file_t>
-int Seq::getcds(file_t fd, char* str, int cdscolumn)
+bool Seq::getcds(file_t fd, char* str, int cdscolumn)
 {
 	Mfile	exonrng(sizeof(RANGE));
 	RANGE	ebuf = fullrng;
-	bool	rv = false;
+	bool	rvs = false;
 	int	par = 0;
 static	const	char* readthru = "CDS may be read through !\n";
 
@@ -584,11 +593,11 @@ static	const	char* readthru = "CDS may be read through !\n";
 	if (*ps == 'j' && strmatch(ps, "join(")) {
 	    ps += 5; ++par;
 	} else if (*ps == 'c' && strmatch(ps, "complement(join(")) {
-	    rv = true;
+	    rvs = true;
 	    ps += 16;
 	    par = 2;
 	} else if (*ps == '-') {
-	    rv = true; ++ps;
+	    rvs = true; ++ps;
 	} 
 	char*	qs = strchr(ps, '(');
 	if (qs) {
@@ -612,7 +621,7 @@ static	const	char* readthru = "CDS may be read through !\n";
 	    }
 	    ps = strcpy(str, ps);
 	    int	leng = strlen(ps);
-	    if (!fgets(str + leng, MAXL - leng, fd)) {
+	    if (!fgets(str + leng, LINE_MAX - leng, fd)) {
 		prompt(readthru);
 		break;
 	    }
@@ -620,9 +629,11 @@ static	const	char* readthru = "CDS may be read through !\n";
 eoj:
 	if (exons) delete[] exons;
 	CdsNo = exonrng.size();
-	exonrng.write(&zerorng);
-	exons = CdsNo? (RANGE*) exonrng.flush(): 0;
-	return (rv? -CdsNo: CdsNo);
+	if (CdsNo) {
+	    exonrng.write(rvs? &rvs_endrng: &endrng);
+	    exons = (RANGE*) exonrng.flush();
+	} else	exons = 0;
+	return (rvs);
 }
 
 template <typename file_t>
@@ -630,12 +641,13 @@ char* Seq::readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd)
 {
 	char*	ps = str;
 	int	feature = 0;
-	int	nseg = 0;
+	bool	rvs = false;
+	n_ebrys = 0;
 
 	for ( ; ps && ((db->FormID >= FASTA &&
 	    (*str == _COMM || *str == _NHEAD || *str == _CHEAD)) ||
 	    (db->SeqLabel && wordcmp(str, db->SeqLabel)));
-	    ps = fgets(str, MAXL, fd)) {
+	    ps = fgets(str, LINE_MAX, fd)) {
 	    if (db->FormID == GenBank && 
 		*str == 'F' && strmatch(str, "FEATURES")) {
 		    feature = 1;
@@ -643,11 +655,11 @@ char* Seq::readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd)
 		     (db->FormID == EMBL && strmatch(str, "FT"))) {
 		ps = str + typecolumn;
 		if (*ps == 'C' && strmatch(ps, "CDS")) {
-		    nseg = getcds(fd, str, datacolumn);
+		    rvs = getcds(fd, str, datacolumn);
 		}
 	    } else if (db->FormID >= FASTA) {
 		if (strmatch(str, ";C")) {
-		    nseg = getcds(fd, str, 3);
+		    rvs |= getgsi(str + 3);
 		} else if (strmatch(str, ";M")) {
 		    ps = cdr(str);
 		    bool	delfs = strmatch(ps, "Deleted");
@@ -660,9 +672,13 @@ char* Seq::readanno(file_t fd, char* str, SeqDb* db, Mfile& gapmfd)
 		}
 	    }
 	}
-	if (exons && ((exons->left > exons[CdsNo - 1].left) ^ (nseg < 0)))
-	    vreverse(exons, CdsNo);
-	if (ps && db->FormID < FASTA) ps = fgets(str, MAXL, fd);
+	if (n_ebrys) {
+	    CdsNo = n_ebrys / 2;
+	    exons = new RANGE[CdsNo + 1];
+	    vcopy((int*) exons, ejunc, n_ebrys);
+	    exons[CdsNo] = rvs? rvs_endrng: endrng;
+	}
+	if (ps && db->FormID < FASTA) ps = fgets(str, LINE_MAX, fd);
 	return (ps);
 }
 
@@ -676,7 +692,7 @@ CHAR* Seq::get_nat_aln(file_t fd, char* str, RANGE* qcr)
 	long	fpos = ftell(fd);
 	if (inex.molc == UNKNOWN) {
 //	Infer molecular type
-	    if (!fgets(str, MAXL, fd)) return (ss);
+	    if (!fgets(str, LINE_MAX, fd)) return (ss);
 	    infermolc(fd, str, true);
 	    fseek(fd, fpos, SEEK_SET);
 	}
@@ -690,7 +706,7 @@ CHAR* Seq::get_nat_aln(file_t fd, char* str, RANGE* qcr)
 	int	blkno = 0;
 	for (int i = 0; i < many; ) wrk[i++] = ss++;
 	int	i = 0;
-	for ( ; (ps = fgets(str, MAXL, fd)); fpos = ftell(fd)) {
+	for ( ; (ps = fgets(str, LINE_MAX, fd)); fpos = ftell(fd)) {
 	    if (*ps == _NHEAD || *ps == _CHEAD) {
 		fseek(fd, fpos, SEEK_SET);	// undo 1 line
 		break;
@@ -706,7 +722,7 @@ CHAR* Seq::get_nat_aln(file_t fd, char* str, RANGE* qcr)
 		}
 	    }
 	    if (*ps == _COMM) {
-		while (withinline(ps, MAXL, fd)) ;
+		while (withinline(ps, LINE_MAX, fd)) ;
 		continue;
 	    }
 	    chop(ps);
@@ -777,7 +793,7 @@ CHAR* Seq::get_msf_aln(file_t fd, char* str, RANGE* pcr)
 	int	num  = 0;
 	int	leng = 0;
 	if (!sname) sname = new Strlist;
-	while (fgets(str, MAXL, fd)) {
+	while (fgets(str, LINE_MAX, fd)) {
 	    if (!wordcmp(str, "//")) break;
 	    char*	qs = str;
 	    char*	ps = car(qs);
@@ -803,7 +819,7 @@ CHAR* Seq::get_msf_aln(file_t fd, char* str, RANGE* pcr)
 	CHAR*	ss = at(0);
 	int	m = 0;
 	inex.algn = 1;
-	while (fgets(str, MAXL, fd)) {
+	while (fgets(str, LINE_MAX, fd)) {
 	    char*	ps = cdr(str);
 	    if (!*ps) continue;	// blank line
 	    CHAR*	rr = ss + m;
@@ -829,7 +845,6 @@ CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* p
 {
 	SeqDb*	db = whichdb(str, fd);
 	if (!db)	return (0);		// bad format
-	GAPS gend = {INT_MAX, EOS};
 
 /*************************
 * read annotation
@@ -861,15 +876,17 @@ CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* p
 		    ss = sb;
 		}
 	    }
+	    char*	eql = strchr(ss, '=');
+	    if (eql) *eql = '\0';
 	    sname->push(ss);
 	    if (sp) {				// process comments in header
 		*sp++ = ' ';
 		do {
 		    if (algmode.mns == 0 && inex.ori == 0)
 			setstrand(1, sp); 
-		} while ((sp = withinline(str, MAXL, fd)));
+		} while ((sp = withinline(str, LINE_MAX, fd)));
 	    }
-	    if (!fgets(str, MAXL, fd)) return (0);	// empty seq
+	    if (!fgets(str, LINE_MAX, fd)) return (0);	// empty seq
 	    ps = readanno(fd, str, db, gapmfd);
 	} else
 	    ps = readanno(fd, str, db, gapmfd);
@@ -877,9 +894,10 @@ CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* p
 
 	int	ngaps = gapmfd.size();
 	GAPS*	gg = 0;
+	GAPS*	gt = 0;
 	if (ngaps) {
-	    gapmfd.write(&gend);
 	    gg = (GAPS*) gapmfd.flush();
+	    gt = gg + ngaps;
 	}
 
 /*************************
@@ -888,7 +906,7 @@ CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* p
 
 	long	fpos = ftell(fd);
 	if (inex.molc == UNKNOWN) {
-	    char	buf[MAXL];
+	    char	buf[LINE_MAX];
 	    strcpy(buf, str);
 	    infermolc(fd, buf);
 	    fseek(fd, fpos, SEEK_SET);
@@ -902,31 +920,38 @@ CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* p
 	int	nres = 0;
 	int	eij = 0;	// cumulated exon length
 	int	cds = 0;	// virtual CDS length != eij if frameshifts
-	bool	rev = exons && (exons->left > exons[CdsNo - 1].left);
-	RANGE*	bcr = 0;
+const	bool	rvs = on_rvs_strand();
 
 	if (sscanf(ps, "%d", nbr + mem) > 0)	nbr[mem]--;
 	else					nbr[mem] = 0;
 	nbr[mem] -= pcr->left;
 	GAPS*	gwk = gg;
 	bool	readspb = alprm2.spb > 0 && inex.molc != GENOME;
-	RANGE*&	cr = exons;
-	if ((readspb = readspb && exons)) {
-	    if (rev && ngaps) vreverse(gg, ngaps);
+	RANGE*	cr = 0;
+	RANGE*	bcr = 0;
+	RANGE*	tcr = 0;
+	if (CdsNo) {
+	    cr = new RANGE[CdsNo + 1];
+	    vcopy(cr, exons, CdsNo + 1);
+	    if (rvs) vreverse(cr, CdsNo);
+	    tcr = cr + CdsNo;
+	}
+	if ((readspb = readspb && CdsNo)) {
+	    if (rvs && ngaps) vreverse(gg, ngaps);
 	    bcr = (inex.molc != UNKNOWN)? cr: 0;
 	    eij = cds = cr->right - cr->left;
 	    if (gg) {
-		if (rev) {
-		    while (gaps_intr(gwk) && gwk->gps > cr->left)
+		if (rvs) {
+		    while (gwk < gt && gwk->gps > cr->left)
 			cds += (gwk++)->gln;
 		} else {
-		    while (gaps_intr(gwk) && gwk->gps < cr->right)
+		    while (gwk < gt && gwk->gps < cr->right)
 			cds += (gwk++)->gln;
 		}
 	    }
 	}
 
-	for ( ; ps; fpos = ftell(fd), ps = fgets(str, MAXL, fd)) {
+	for ( ; ps; fpos = ftell(fd), ps = fgets(str, LINE_MAX, fd)) {
 	    if (db->is_DbEntry(ps)) {
 		fseek(fd, fpos, SEEK_SET);	// undo 1 line
 		break;
@@ -935,7 +960,7 @@ CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* p
 	    if (flag == -2) continue;
 	    while (int c = *ps++) {
 		if (c == _COMM || c == _LCOMM) {
-		    while (withinline(str, MAXL, fd)) ;
+		    while (withinline(str, LINE_MAX, fd)) ;
 		    break;
 		}
 		if (c == _EOS && *ps == _EOS) {	/* // */
@@ -956,18 +981,18 @@ CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* p
 		    if (IsntGap(c)) ++lens[mem];
 		    if (flag == 1) push(c, ns, many);
 		    else if (flag == -1 && IsntGap(c)) ++nbr[mem];
-		    if (bcr && bcr < cr + CdsNo) {
+		    if (bcr && bcr < tcr) {
 			if (IsGap(c))	unps += step;
 			else		nres += step;
 			if ((step == 3 && cds < nres + 2) || cds == nres) {
 			    bcr->left = eij + unps;
 			    ++bcr;
 			    if (gg) {
-				if (rev) {
-				    while (gaps_intr(gwk) && gwk->gps > bcr->left)
+				if (rvs) {
+				    while (gwk < gt && gwk->gps > bcr->left)
 					cds += (gwk++)->gln;
 				} else {
-				    while (gaps_intr(gwk) && gwk->gps < bcr->right)
+				    while (gwk < gt && gwk->gps < bcr->right)
 					cds += (gwk++)->gln;
 				}
 			    }
@@ -978,50 +1003,14 @@ CHAR* Seq::seq_readin(file_t fd, char* str, const int& mem, RANGE* pcr, Mfile* p
 		}
 	    }
 	}
-	if (bcr && bcr < cr + CdsNo) bcr->left = eij + unps;
+	if (bcr && bcr < tcr) bcr->left = eij + unps;
 	inex.algn = unps? 3: 0;
-	if (!readspb) {delete[] gg; return (ns);}
-
-/***************************************
-* store exon-intron junction information
-***************************************/
-
-	if (!sigII) sigII = new SigII;
-	unps = 0;
-	gwk = gg;
-	if (pfqmfd) {
-	    bcr = cr + CdsNo;
-	    for (pcr = cr; pcr < bcr; ++pcr) {
-		if (gg) {
-		    while (gaps_intr(gwk) && (rev ^ (gwk->gps < pcr[rev].right)))
-			unps += (gwk++)->gln;
-		}
-		PFQ	pfqbf = {pcr->left + unps, mem, pcr->right};
-		pfqmfd->write(&pfqbf);
-	    }
-	} else {
-	    PFQ*	pfq = sigII->pfq = new PFQ[CdsNo];
-	    sigII->pfqnum = sigII->lstnum = CdsNo - 1;
-	    bcr = cr + CdsNo;
-	    for (pcr = cr; pcr < bcr; ++pcr, ++pfq) {
-		if (gg) {
-		    while (gaps_intr(gwk) && (rev ^ (gwk->gps < pcr[rev].right)))
-			unps += (gwk++)->gln;
-		}
-		pfq->pos = pcr->left + unps;
-		pfq->num = 1;
-		pfq->gps = pcr->right;
-#if USE_WEIGHT
-		pfq->dns = weight? weight[mem]: 1;
-#endif
-	    }
-	    (--pfq)->num = 0;
-#if USE_WEIGHT
-	    pfq->dns = 0;
-#endif
+	if (readspb) {
+	    Gaps*	gaps = ngaps? new Gaps(ngaps, gg): 0;
+	    exons2pfq(cr, mem, gaps, pfqmfd);
+	    delete gaps;
 	}
-	delete[] gg;
-	delete[] exons; exons = 0; CdsNo = 0;
+	delete[] cr;
 	return (ns);
 }
 
@@ -1097,7 +1086,7 @@ int Seq::infermolc(file_t fd, char* str, const bool& msf)
 	    char*	ps = str;
 	    if (*ps == _NHEAD || *ps == _CHEAD || *ps == _WGHT || 
 		*ps == _COMM || *ps == _LCOMM || pending) {
-		    pending = (strlen(str) + 1) == (INT) MAXL;
+		    pending = (strlen(str) + 1) == (INT) LINE_MAX;
 		    continue;
 	    }
 	    if (*ps == _EOS) break;
@@ -1112,7 +1101,7 @@ int Seq::infermolc(file_t fd, char* str, const bool& msf)
 		} else if (msf && *ps == _LABL) break;
 		else if (*ps == _COMM || *ps == _LCOMM) break;
 	    }
-	} while (fgets(str, MAXL, fd));
+	} while (fgets(str, LINE_MAX, fd));
 eol:
 	FTYPE	ncode = cmp[aton('A')] + cmp[aton('C')] + cmp[aton('G')]
 		+ cmp[aton('T')] + cmp[aton('U')];
@@ -1136,7 +1125,7 @@ CHAR* Seq::get_mfasta(file_t fd, long fpos, char* str, RANGE* pcr, const SeqDb* 
 	int	num = 0;
 	do {
 	    if (dbf->is_DbEntry(str)) ++num;
-	} while (fgets(str, MAXL, fd));
+	} while (fgets(str, LINE_MAX, fd));
 	fseek(fd, fpos, SEEK_SET);
 	if (!num) {
 	    prompt("Empty or not MSA !\n");
@@ -1334,7 +1323,7 @@ public:
 class PrintMember {
 const	Strlist*	sname;
 	Gnm2tab*	g2t;
-	char    fmt[MAXL];
+	char    fmt[LINE_MAX];
 public:
 	PrintMember(const Strlist* sn, bool pad_space = false, const char* tl = 0);
 	void    put_member(FILE* fd, int i) const;
@@ -1347,11 +1336,11 @@ public:
 };
 
 class PrintAln {
-const	GAPS**  gaps;
+const	Gaps**  gaps;
 	Seq**   seqs;
 	int     seqnum;
 	CHAR**  seq;
-const	GAPS**  gp;
+const	GAPS**  gbuf;
 	CHAR**  wkr;
 	int*    nbr;
 	int*    left;
@@ -1381,7 +1370,7 @@ const	Row_Mode	cpm;
 		const SEQ_CODE* defcode);
 public:
 	void    printaln();
-	PrintAln(const GAPS** _gaps, Seq* _seqs[], const int& _seqnum, FILE* _fd = 0);
+	PrintAln(const Gaps** _gaps, Seq* _seqs[], const int& _seqnum, FILE* _fd = 0);
 	~PrintAln();
 };
 
@@ -1448,9 +1437,8 @@ extern	void	close_output();
 extern	void	closeGeneRecord();
 extern	void	setprmode(const int& pmd, const int& lorn, int trc);
 extern	void	fphseqs(const Seq* seqs[], int n = 3, FILE* fd = 0);
-extern	void	GBcdsForm(const RANGE* rng, const Seq* sd, FILE* fd = 0);
 extern	void	fprint_seq_mem(const Seq* seqs[], const int& n, FILE* fd = 0);
-extern	void	pralnseq(const GAPS** gaps, Seq* seqs[], const int& seqnum, FILE* fd = 0);
+extern	void	pralnseq(const Gaps** gaps, Seq* seqs[], const int& seqnum, FILE* fd = 0);
 
 inline	VTYPE axbscale(const Seq** seqs)
 {

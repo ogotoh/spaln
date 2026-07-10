@@ -80,7 +80,6 @@ static	SEQ_CODE str_code = {28, 1, 2, 28, 0, alphab, 0};
 static	SEQ_CODE nts_code = {NSIMD, N, A, 6, nccode, nucl, ncredctab};
 static	SEQ_CODE trc_code = {TSIMD, AMB, ALA, 26, trccode, acodon, 0};
 static	SEQ_CODE aas_code = {ASIMD, AMB, ALA, 23, aacode, amino, aaredctab};
-static	const	INEX	def_inex = {0};
 
 void setdfn(const char* newdfn) {topath(seqdfn, newdfn);}
 
@@ -321,42 +320,35 @@ size_t SeqServer::total_seq_len(Seq* sd, int* many)
 
 void Seq::refresh(const int& num, const int length)
 {
-	if (!num && !seq_) return;
-	if (!is_eldest()) {
-	    sid = vrtl;
-	    seq_ = end_ = 0; cmps = 0; lens = 0; nbr = 0;
-	    sname = 0; spath = 0; exons = 0; msaname = 0;
-	    exin = 0; descr = 0;
-#if USE_WEIGHT
-	    if (inex.vtwt) delete[] weight;
-	    weight = pairwt = 0;
-#endif
-	} else {
-	    delete sigII; 
-	    delete exin; exin = 0;
+	int&	n_lnk = founder? founder->sibs: this->sibs;
+	if (n_lnk-- == 0) {
+	    delete sigII; sigII = 0;
+	    delete[] exons; exons = 0;
 #if USE_WEIGHT
 	    delete[] weight; weight = 0;
 	    delete[] pairwt; pairwt = 0;
 #endif
 	    if (num != many) {
-		delete[] lens; lens = 0;
-		delete[] nbr; nbr = 0;
+		delete[] lens;
+		delete[] nbr;
 	    }
 	    if (!num) {
-		if (seq_) {delete[] (seq_ - many); seq_ = 0;}
-		delete[] cmps; cmps = 0;
-		delete[] exons; exons = 0;
-		delete[] spath; spath = 0;
-		delete[] msaname; msaname = 0;
-		delete sname; sname = 0;
-		delete descr; descr = 0;
+		if (seq_) delete[] (seq_ - many);
+		delete[] cmps;
+		delete[] spath;
+		delete[] msaname;
+		delete sname;
+		delete descr;
 	    }
 	}
+
 	left = right = base_ = 0;
-	jscr = 0;  vrtl = 0; anti_ = 0;
-	inex = def_inex; sigII = 0; 
+	jscr = 0;  anti_ = 0;
+	inex = def_inex; 
+	sibs = 0;
+	delete exin; exin = 0;
 	delete[] jxt; jxt = 0; CdsNo = 0;
-	if (num) {
+	if (num && !founder) {
 	    seqalloc(num, length);
 	    if (!lens) lens = new int[num];
 	    vclear(lens, num);
@@ -365,32 +357,31 @@ void Seq::refresh(const int& num, const int length)
 	    if (sname)	sname->reset(num);
 	    else	sname = new Strlist(num);
 	} else {
-	    many = len = 0;
+	    seq_ = end_ = 0;
+	    area_ = 0;
+	    cmps = 0;
+	    spath = 0;
+	    msaname = 0;
+	    sname = 0;
+	    descr = 0;
+	    lens = 0;
+	    nbr = 0;
+	    many = byte = len = 0;
+	    founder = 0;
 	}
 }
 
 // alias of this
 
-Seq* Seq::aliaseq(Seq* dest, const bool& this_is_alias)
+Seq* Seq::aliaseq(Seq* dest)
 {
 	if (!dest)	dest = new Seq(0);
 	else	dest->refresh();
-	int	destid = dest->sid;
-	memcpy((void*) dest, (void*) this, sizeof(Seq));
-	dest->jxt = 0; dest->CdsNo = 0;
-	if (is_eldest()) --vrtl;
-	if (this_is_alias) {
-	    vrtl = sid;
-#if USE_WEIGHT
-	    inex.vtwt = !weight;
-	} else {
-	    dest->vrtl = destid;
-	    dest->inex.vtwt = !dest->weight;
-#else
-	} else {
-	    dest->vrtl = destid;
-#endif
-	}
+	Seq*	parent = founder? founder: this;
+	++parent->sibs;
+	*dest = *parent;
+	dest->founder = parent;
+	dest->jxt = 0; dest->CdsNo = 0; dest->exin = 0;
 	return (dest);
 }
 
@@ -406,40 +397,13 @@ void initseq(Seq** seqs, int n)
 	for ( ; n--; ++seqs) *seqs = new Seq();
 }
 
-// set eldest to the last member of aliases
-
-void rectiseq(Seq** seqs, Seq** cur)
-{
-	for ( ; cur > seqs; --cur) {
-	    if ((*cur)->is_eldest()) continue;
-	    int	old_sid = (*cur)->sid;
-	    Seq**	wrk = cur;
-	    while (--wrk >= seqs) {
-		if ((*wrk)->sid == old_sid && (*wrk)->is_eldest()) {
-		    (*cur)->sid = (*cur)->vrtl;
-		    (*cur)->vrtl = (*wrk)->vrtl;
-		    (*wrk)->vrtl = (*wrk)->sid;
-		    if ((*wrk)->lens != (*cur)->lens)
-			(*cur)->vrtl = (*cur)->sid;
-		    break;
-		}
-	    }
-	    while (--wrk >= seqs) {
-		if ((*wrk)->sid == old_sid)
-		    (*wrk)->sid = (*cur)->sid;
-	    }
-	}
-}
-
 void clearseq(Seq** seqs, int n)
 {
-	rectiseq(seqs, seqs + n - 1);
 	for ( ; n--; ++seqs) delete *seqs;
 }
 
 void cleanseq(Seq** seqs, int n, const int& num)
 {
-	rectiseq(seqs, seqs + n - 1);
 	for ( ; n--; ++seqs) (*seqs)->refresh(num);
 }
 
@@ -448,7 +412,7 @@ void reportseq(Seq** sqs, int n)
 	for (int i = 0; i < n; ++i) {
 	    Seq*&	sd = sqs[i];
 	    printf("%d\t%d\t%d\t%d\t%d\t%d\t%p\t%p\n", i + 1,
-	    sd->sid, sd->vrtl, sd->len, sd->area_, sd->did, sd->seq_, sd->lens);
+	    sd->sid, sd->sibs, sd->len, sd->area_, sd->did, sd->seq_, sd->lens);
 	}
 }
 
@@ -467,6 +431,7 @@ void swapseq(Seq** x, Seq** y)
 
 void Seq::seqalloc(const int& num, int length, const bool& keep)
 {
+static	int	aid = 0;
 	if (!length) length = DEFSEQLEN;
 	int	area = num * (length + 2);
 	if (seq_ && area <= area_ && area_ < RESERVE_AREA) {
@@ -482,6 +447,7 @@ void Seq::seqalloc(const int& num, int length, const bool& keep)
 	    seq_ -= many;
 	    delete[] seq_;
 	}
+did = ++aid;
 	CHAR*	ss = 0;
 	try {
 	    ss = new CHAR[area];
@@ -511,31 +477,16 @@ CHAR* Seq::seq_realloc()
 	    fatal(NoSeqSpace, (*this->sname)[0], area/1024);
 	}
 	memcpy(ss, seq_ -= many, area);
-	delete[] seq_;
 	int	sz = end_ - seq_;
+	delete[] seq_;
 	seq_ = ss + many;
 	end_ = ss + area_ - many;
 	return (ss + sz);
 }
 
-void Seq::initialize()
-{
-	sid = ++noseq; did = 0; vrtl = 0;
-	seq_ = end_ = 0; area_ = 0;
-	anti_ = 0; len = left = right = base_ = 0;
-	CdsNo = tlen = wllvl = 0;
-	lens = 0; nbr = 0; code = 0; spath = 0; msaname = 0; sname = 0; 
-	descr = 0; cmps = 0; jxt = 0; exons = 0; exin = 0; sigII = 0; 
-	inex = def_inex;
-	mnhash = 0;
-#if USE_WEIGHT
-	weight = pairwt = 0;
-#endif
-}
-
 Seq::Seq(const int& num, const int& length)
 {
-	initialize();
+	sid = ++noseq;
 	if ((many = num)) {
 	    byte = many = num;
 	    lens = new int[many];
@@ -549,8 +500,8 @@ Seq::Seq(const int& num, const int& length)
 
 Seq::Seq(const char* fname)
 {
-	initialize();
 	if (!fname) return;
+	sid = ++noseq;
 	ReadFile	fp;
 	if (!openseq(fname, fp))
 	    fatal(not_found, fname);
@@ -562,25 +513,23 @@ Seq::Seq(const char* fname)
 
 Seq::Seq(Seq& sd, const int* which, const int& snl)
 {
-	initialize();
+	sid = ++noseq;
 	if (which) sd.extseq(this, which, snl);
 	else	sd.copyseq(this, snl);
 }
 
 Seq::Seq(Seq* sd, const int* which, const int& snl)
 {
-	initialize();
+	sid = ++noseq;
 	if (which) sd->extseq(this, which, snl);
 	else	sd->copyseq(this, snl);
 }
 
-Seq::Seq(const Seq* sd, const bool& alias)
+Seq::Seq(Seq* sd, const bool& alias)
 {
-	memcpy((void*) this, (void*) sd, sizeof(Seq));
-	vrtl = alias;
-#if USE_WEIGHT
-	inex.vtwt = !weight;
-#endif
+	if (alias) ++sd->sibs;
+	*this = *sd;
+	if (alias) founder = sd;
 }
 
 const char* Seq::path2fn(const char* pname) const
@@ -683,6 +632,46 @@ JUXT* Seq::revjxt()
             wjx->jy = len - wjx->jy - wjx->jlen;
         }
         return (vreverse(jxt, CdsNo));
+}
+
+/***************************************
+* store exon-intron junction information
+***************************************/
+
+void Seq::exons2pfq(RANGE* cr, const int& mem, const Gaps* gwk, Mfile* pfqmfd)
+{
+const	bool	rvs = on_rvs_strand();
+	if (!sigII) sigII = new SigII;
+	int	unps = 0;
+const	GAPS*	gp = gwk? gwk->begin(): 0;
+const	GAPS*	gt = gwk? gwk->end(): 0;
+	if (pfqmfd) {
+	    RANGE*	bcr = cr + CdsNo;
+	    for (RANGE* pcr = cr; pcr < bcr; ++pcr) {
+		while (gp < gt && (rvs ^ (gp->gps < pcr[rvs].right)))
+		    unps += (gp++)->gln;
+		PFQ	pfqbf = {pcr->left + unps, mem, pcr->right};
+		pfqmfd->write(&pfqbf);
+	    }
+	} else {
+	    PFQ*	pfq = sigII->pfq = new PFQ[CdsNo];
+	    sigII->pfqnum = sigII->lstnum = CdsNo - 1;
+	    RANGE*	tcr = cr + CdsNo;
+	    for (RANGE* pcr = cr; pcr < tcr; ++pcr, ++pfq) {
+		while (gp < gt && (rvs ^ (gp->gps < pcr[rvs].right)))
+		    unps += (gp++)->gln;
+		pfq->pos = pcr->left + unps;
+		pfq->num = 1;
+		pfq->gps = pcr->right;
+#if USE_WEIGHT
+		pfq->dns = weight? weight[mem]: 1;
+#endif
+	    }
+	    (--pfq)->num = 0;
+#if USE_WEIGHT
+	    pfq->dns = 0;
+#endif
+	}
 }
 
 /* assume seq.many = 1 */
@@ -1078,6 +1067,27 @@ Seq* Seq::duplseq(Seq* dest) const
 	return (dest);
 }
 
+void Seq::replace(const Seq* with)
+{
+	if (many != with->many) return;	// error
+	int	delta = with->len - (right - left);
+	if (delta > 0 && (len + delta + 2) * many > area_) {
+	    area_ = (len + delta + 2) * many;
+	    CHAR*	ps = new CHAR[area_];
+	    CHAR*	qs = ps;
+	    memcpy(qs, at(-1), (left + 1) * many);
+	    qs += (left + 1) * many;
+	    memcpy(qs, with->at(0), many * with->len);
+	    qs += many * with->len;
+	    memcpy(qs, at(right), many * (len - right + 1));
+	    delete[] (seq_ - many);
+	    seq_ = ps + many;
+	} else {
+	    memcpy(at(left), with->at(0), many * with->len);
+	    memmove(at(left + with->len), at(right), many * (len - right + 1));
+	}
+}
+
 // catenate this after head with a spacer of length cushion
 
 Seq* Seq::catseq(Seq* head, const int& cushion)
@@ -1210,24 +1220,19 @@ void Seq::elim_amb()
 	}
 	if (sigII) {
 	    if (gbf.gln) mfd->write(&gbf);
-	    gbf.gps = right;
-	    gbf.gln = gaps_end;
-	    if (gbf.gln) mfd->write(&gbf);
 	    n = mfd->size();
-	    GAPS*	gaps = (GAPS*) mfd->flush();
+	    Gaps*	gaps = new Gaps(n, (GAPS*) mfd->flush());
 	    delete mfd;
-	    gaps->gps = left;
-	    gaps->gln = n;
 	    sigII->rmGapPfq(gaps);
-	    delete[] gaps;
+	    delete gaps;
 	}
 	if (dd == tt) return;
-	int k = at(len) - tt;
+const	int k = at(len) - tt;
 	if (k) memcpy(dd, ss, k);
 	postseq(dd + k);
 }
 
-Seq* Seq::rndseq()
+void Seq::rndseq()
 {
 	int 	width = right - left;
 	CHAR*	seq = at(left);
@@ -1241,7 +1246,6 @@ Seq* Seq::rndseq()
 	    memcpy(as, buf, many);
 	}
 	delete[] buf;
-	return (this);
 }
 
 char* Seq::onecds(RANGE& wexon, char* ps, int& par)
@@ -1264,6 +1268,29 @@ char* Seq::onecds(RANGE& wexon, char* ps, int& par)
 	return (ps);
 }
 
+// generate new msa from this and n seqs with constant elements
+
+Seq* Seq::add_const_seqs(const int& n, const CHAR& c) const
+{
+const	int	mm = n + many;
+const	int	ll = right - left;
+	CHAR*	gaps = new CHAR[n];
+	vset(gaps, c, n);
+	Seq*	added = new Seq(mm, ll);
+	added->len = added->tlen = added->right = ll;
+	copyattr(added);
+const	CHAR*	ps = at(left);
+	CHAR*	qs = added->at(0);
+	for (int i = 0; i < ll; ++i) {
+	    memcpy(qs, ps, many);
+	    memcpy(qs += many, gaps, n);
+	    ps += many;
+	    qs += n;
+	}
+	delete[] gaps;
+	return (added);
+}
+		
 int Nprim_code(int c)
 {
 	int	rn = ncredctab[c];
@@ -1586,13 +1613,33 @@ Seq* Seq::getseq(const char* str, DbsDt* dbf)
 		else	sname = new Strlist(&input[0], "");
 		fp.open(0);	// stdin
 	    } else {
-		fp.open(str);
+		makefnam(str, seqdfn, input);
+		fp.open(input);
 	    }
 	}
 	Seq*	sd = 0;
 	if (fp.fd)	sd = fgetseq(fp.fd, cdr(str)); else
 	if (fp.gzfd)	sd = fgetseq(fp.gzfd, cdr(str));
 	return (sd);
+}
+
+int Seq::getgsi(const char* ps)
+{
+	for ( ; *ps && isspace(*ps); ++ps) ;
+	int	rvs = (*ps == 'c' || *ps == '-');
+const	char*	qs = ps;
+	int	state = 0;
+	for ( ; *ps; ++ps) {
+const	    bool	isd = isdigit(*ps);
+	    if (isd && !(state % 2)) {
+		qs = ps;
+		++state;
+	    } else if (!isd && state % 2 && n_ebrys < 2 * MAXEXONS) {
+		ejunc[n_ebrys++] = atoi(qs) - (state == 1? 1: 0);
+		if (++state == 4) state = 0;
+	    }
+	}
+	return (rvs);
 }
 
 Seq* Seq::apndseq(const char* aname)
@@ -1847,11 +1894,26 @@ const	CHAR*	ss = at(left);
 	}
 }
 
+float Seq::gap_rate(const int& ng) const
+{
+	int	g = 0;
+const	CHAR*	ps = at(left);
+const	CHAR*	ts = at(right);
+	while (ps < ts) {
+	    switch (ng) {
+		case 0: if (*ps++ == nil_code) ++g; break;
+		case 1: if (*ps++ == gap_code) ++g; break;
+		default: if (isGap(*ps++)) ++g; break;
+	    }
+	}
+	return ((float) g / (float) ((right - left) * many));
+}
+
 // return information on deleted columns when (which & RET_GAP)
 
-GAPS* Seq::elim_column(const int& which, float frac)
+Gaps* Seq::elim_column(const int& which, float frac)
 {
-	bool	store_gap = (which & RET_GAP) || sigII;
+const	bool	store_gap = (which & RET_GAP) || sigII;
 	int	cond = which & ~RET_GAP;
 	FTYPE	w = 0;
 #if USE_WEIGHT
@@ -1872,10 +1934,8 @@ GAPS* Seq::elim_column(const int& which, float frac)
 	CHAR*	dd = ss;
 	int	n = left;
 	GAPS	gbf = {n, 0};
-	if (mfd) {
-	    mfd->write(&gbf);			// make space
-	    mfd->write(&gbf);			// 
-	}
+	if (store_gap) mfd->write(&gbf);
+
 	for ( ; ss < tt; ++n) {
 	    int	k = 0;
 	    int	ndel = 0;
@@ -1923,7 +1983,7 @@ GAPS* Seq::elim_column(const int& which, float frac)
 	    if (y) {
 		dd -= many;
 		if (!gbf.gln) gbf.gps = n;	// new gap
-		gbf.gln++;			// elong gap
+		++gbf.gln;			// elong gap
 	    } else if (gbf.gln) {
 		if (ndel) inex.dels = 1;
 		if (namb) inex.ambs = 1;
@@ -1931,26 +1991,25 @@ GAPS* Seq::elim_column(const int& which, float frac)
 		gbf.gln = 0;			// close gap
 	    }
 	}
-	GAPS*	gaps = 0;
-	if (mfd) {
+	Gaps*	gaps = 0;
+	if (store_gap) {
 	    if (gbf.gln) mfd->write(&gbf);
-	    gbf.gps = n; gbf.gln = gaps_end;
+	    gbf.gps = n;
+	    gbf.gln = 0;
 	    mfd->write(&gbf);
-	    int	m = mfd->size();
-	    gaps = (GAPS*) mfd->flush();
-	    gaps->gps = n; gaps->gln = m;
+const	    int	m = mfd->size();
+	    gaps = new Gaps(m, (GAPS*) mfd->flush());
+	    gaps->alen = right - left;
 	    delete mfd;
 	}
-	RANGE	rng;
-	rng.left = left;
-	rng.right = index(dd);
-	int k = at(len) - at(right);
+	RANGE	rng = {left, index(dd)};
+const	int k = len - right;
 	if (k) memcpy(dd, ss, k);
 	postseq(dd + k);
 	restrange(&rng);
 	if (sigII) sigII->rmGapPfq(gaps);
 	if (which & RET_GAP) return (gaps);
-	delete[] gaps;
+	delete gaps;
 	return (0);
 }
 

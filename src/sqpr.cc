@@ -43,15 +43,14 @@ static	const	char*	RGB_BLUE = "0,255,255";
 static	const	char*	unknown_taxon = "K_Pp";
 
 static	void	setgapchar(const Seq* sd, int c);
-static	int	cdsForm(const RANGE* rng, const Seq* sd, int mode, FILE* fd);
 static	void	put_SigII(const PFQ* pfq, const PFQ* tfq, const int* lst, 
 			int numlst, FILE* fd);
 static	int	chempro(const int* cmp, int ii);
 static	int	logonuc(const int* cmp, int ii, const SEQ_CODE* defcode);
 static	int	csym(const int cmp[], int rows, const SEQ_CODE* defcode);
 static	int	SeqGCGCheckSum(const char* seq, int len);
-static	int	checksum(int* checks, const GAPS* gaps, const Seq* sd);
-static	void	gcg_out(const GAPS** gaps, Seq* seqs[], int seqnum, FILE* fd);
+static	int	checksum(int* checks, const Gaps* gaps, const Seq* sd);
+static	void	gcg_out(const Gaps** gaps, Seq* seqs[], int seqnum, FILE* fd);
 
 static	char	ditto = _IBID;
 static	Row_Mode	prmode = Row_Last;
@@ -339,25 +338,77 @@ static void setgapchar(const Seq* sd, int c)
 }
 
 /*	CDS format	*/
+// genome structure informed transcript
 
-static int cdsForm(const RANGE* rng, const Seq* sd, int mode, FILE* fd)
+static	const	char	gftcds[] = "     CDS	     ";
+static	const	char	eftcds[] = "FT   CDS	     ";
+static	const	char	eblank[] = "FT		   ";
+static	const	char	emblxx[] = "XX\n";
+static	const	char	cdsmsg[] = ";C ";
+static	const	char	modmsg[] = ";M ";
+static	const	char	splus[] = "+";		// simplified
+static	const	char	sminus[] = "-";
+static	const	char	scoord[] = " %d %d";
+static	const	char	nplus[] = "join(";	// NCBI
+static	const	char	nminus[] = "complement(join(";
+static	const	char	ncoord[] = "%d..%d";
+
+static	const	int	cdsmsglen = strlen(cdsmsg);
+
+void Seq::cdsForm(FILE* fd)	// transcript
 {
-	int	cmpl = sd->inex.sens == COMREV;
+	if (!CdsNo || !OutPrm.gsiinf) return;	// nothing to do
+const	bool	rvs = on_rvs_strand();
+const	char*	plus = OutPrm.gsiinf == 1? splus: nplus;
+const	char*	minus = OutPrm.gsiinf == 1? sminus: nminus;
+const	char*	coord = OutPrm.gsiinf == 1? scoord: ncoord;
+	char	str[MAXL];
+	strcpy(str, cdsmsg);
+	strcat(str, rvs? minus: plus);
+	int	c = strlen(str);
+const	RANGE*	wrng = exons;
+	RANGE*	trng = exons + CdsNo;
+	for ( ; wrng < trng; ++wrng) {
+	    snprintf(str + c, MAXL - c, coord, wrng->left + 1, wrng->right);
+	    if ((c = strlen(str)) > 56) {
+		if (OutPrm.gsiinf & 2 && wrng + 1 == trng) {
+		    --c;		// remove ','
+		    str[c++] = ')';
+		    if (rvs) str[c++] = ')';
+		}
+		str[c++] = '\n';
+		str[c] = '\0';
+		fputs(str, fd);
+		strcpy(str, cdsmsg);
+		c = cdsmsglen;
+	    }
+	}
+	if (c > cdsmsglen) {
+	    if (OutPrm.gsiinf & 2) {
+		--c;		// remove ','
+		str[c++] = ')';	
+		if (rvs) str[c++] = ')';
+	    }
+	    str[c++] = '\n';
+	    str[c] = '\0';
+	    fputs(str, fd);
+	}
+}
+
+// encoded in genome
+
+int Seq::cdsForm(FILE* fd, int mode, const RANGE* rng)
+{
+	int	cmpl = inex.sens == COMREV;
 	char	str[MAXL];
 	int	i, l, r;
 	int	intv;
 	int	indel = 0;
-static	char	gftcds[] = "     CDS	     ";
-static	char	eftcds[] = "FT   CDS	     ";
-static	char	blank[]  = "		     ";
-static	char	eblank[] = "FT		   ";
-static	char	emblxx[] = "XX\n";
-static	char	cdsmsg[] = ";C ";
-static	char	modmsg[] = ";M ";
-const	char*	head = "";
 	int	c = 0;
 	int	lb = 0;
+const	char*	head = "";
 const	char*	ModifyMssg = modmsg;
+	char	blank[]  = "		     ";
 
 const	RANGE*	wrng = rng = fistrng(rng);
 	if (mode == 1) {
@@ -391,41 +442,41 @@ const	RANGE*	wrng = rng = fistrng(rng);
 		strcpy(str, cdsmsg);
 		break;
 	    }
-	    strcat(str, cmpl? "complement(join(": "join(");
+	    strcat(str, cmpl? nminus: nplus);
 	    c = strlen(str);
 	    lb = strlen(head);
 	}
 
 	if (cmpl) {
 	    while (neorng(wrng + 1)) ++wrng;
-	    l = sd->SiteNo(wrng->right - 1);
+	    l = SiteNo(wrng->right - 1);
 	} else
-	    l = sd->SiteNo(wrng->left);
+	    l = SiteNo(wrng->left);
 	while (neorng(wrng) && wrng >= rng) {
 	    if (cmpl) {
-		r = sd->SiteNo(wrng->left);
+		r = SiteNo(wrng->left);
 		if (wrng > rng) {
-		    i = sd->SiteNo(wrng[-1].right - 1);
+		    i = SiteNo(wrng[-1].right - 1);
 		    intv = i - r - 1;
 		    --wrng;
 		} else {
-		    if (mode == 2) snprintf(str + c, MAXL - c, "%d..%d", l, r);
+		    if (mode == 2) snprintf(str + c, MAXL - c, ncoord, l, r);
 		    break;
 		}
 	    } else {
-		r = sd->SiteNo(wrng->right - 1);
+		r = SiteNo(wrng->right - 1);
 		if (neorng(wrng + 1)) {
-		    i = sd->SiteNo(wrng[1].left);
+		    i = SiteNo(wrng[1].left);
 		    intv = i - r - 1;
 		    ++wrng;
 		} else {
-		    if (mode == 2) snprintf(str + c, MAXL - c, "%d..%d", l, r);
+		    if (mode == 2) snprintf(str + c, MAXL - c, ncoord, l, r);
 		    break;
 		}
 	    }
 	    if (intv == 0 || intv >= IntronPrm.llmt) {
 		if (mode != 2) continue;
-		snprintf(str + c, MAXL - c, "%d..%d", l, r);
+		snprintf(str + c, MAXL - c, ncoord, l, r);
 		l = i;
 		strcat(str, ",");
 		if ((c = strlen(str)) > 56) {
@@ -455,19 +506,19 @@ const	RANGE*	wrng = rng = fistrng(rng);
 	return (indel);
 }
 
-void GBcdsForm(const RANGE* rng, const Seq* sd, FILE* _fd)
+void Seq::GBcdsForm(FILE* _fd, const RANGE* rng)
 {
-	RANGE	svr;
+	RANGE	svrng;
 
 	FILE*	fd = _fd? _fd: out_fd;
-	sd->saverange(&svr);
+	saverange(&svrng);
 	if (out_form->FormID != GenBank && out_form->FormID != EMBL) {
-	    sd->left = 0; sd->right = sd->len;
+	    left = 0; right = len;
 	}
-	if (cdsForm(rng, sd, 0, fd))
-	    cdsForm(rng, sd, 1, fd);
-	cdsForm(rng, sd, 2, fd);
-	sd->restrange(&svr);
+	if (cdsForm(fd, 0, rng))
+	    cdsForm(fd, 1, rng);
+	cdsForm(fd, 2, rng);
+	restrange(&svrng);
 }
 
 static	const	char*	fmt3p = "%s\tALN\t%s\t%d\t%d\t%d\t%c\t%d\t";
@@ -1123,19 +1174,16 @@ void Gsinfo::repalninf(Seq* seqs[], int mode, FILE* _fd) const
 	}
 }
 
-int Gsinfo::print2(Seq* seqs[], const GAPS** gaps, 
+int Gsinfo::print2(Seq* seqs[], const Gaps** gaps, 
 	int nbr, int ttl, int skip, FILE* _fd) const
 {
-const	GAPS*	gp = gaps[0];
-	if (!gp) return (ERROR);
+const	int	span = gaps[0]->alen;
+	if (!span) return (ERROR);
 	fd = _fd? _fd: out_fd;
 	int	lpw = OutPrm.lpw;
 	INT	BlkSz = OutPrm.BlkSz;
 	Simmtx*	sm = getSimmtx(0);
 
-	while (gaps_intr(gp)) ++gp;
-	int	span = gp->gps - gaps[0]->gps;
-	if (!span) return (ERROR);
 	double	sscr = double(scr) / alprm.scale;	// spliced alignment score
 	double	tscr = double(fstat.val) / alprm.scale;	// transcript alignment score
 	PrintAln	praln(gaps, seqs, 2, fd);
@@ -1281,7 +1329,7 @@ void Gsinfo::printgene(Seq** seqs, int mode, FILE* _fd) const
 	    fprintf(fd, " %9.2f\n", fscr);
 	}
 	if (mode != PSJ_FORM && swp) swap(seqs[0], seqs[1]);
-	GBcdsForm(rng, gene, fd);
+	gene->GBcdsForm(fd, rng);
 	if (mode == AAS_FORM) {		// translate
 	    tsd->transout(fd, 0, 0);
 	} else if (mode == PSJ_FORM) {
@@ -1554,21 +1602,19 @@ static int SeqGCGCheckSum(const char* seq, int len)
 	return (check % 10000);
 }
 
-static int checksum(int* checks, const GAPS* gaps, const Seq* sd)
+static int checksum(int* checks, const Gaps* gaps, const Seq* sd)
 {
-	int	len = 0;
 	char	gapchar = sd->code->decode[gap_code];
 
-const	GAPS*	gp = gaps;
-	for ( ; gaps_intr(++gp); ) len += gp->gln;
-	len += gp->gps - gaps->gps;
-const 	CHAR*	ps = sd->at(gaps->gps);
-const 	CHAR*	ts = sd->at(gp->gps);
+const	GAPS*	gp = gaps->begin();
+const	GAPS*	gt = gaps->end();
+const	int	len = gaps->alen;
+const 	CHAR*	ps = sd->at(gp->gps);
+const 	CHAR*	ts = ps + len;
 
 	char*	seq = new char[len];
 	for (int i = 0; i < sd->many; ++i, ++ps) {
-	    int c = gaps->gps;
-	    gp = gaps;
+	    int c = gp->gps;
 	    const CHAR*	ws = ps;
 	    for (char* psq = seq; ws < ts; ) {
 		if (c == gp->gps) {
@@ -1577,7 +1623,7 @@ const 	CHAR*	ts = sd->at(gp->gps);
 			c += gp->gln;
 			psq += gp->gln;
 		    }
-		    if (gaps_intr(gp)) ++gp;
+		    if (gp < gt) ++gp;
 		    else	break;
 		} else {
 		    *psq++ = sd->isprotein()? amino[*ws]: nucl[*ws];
@@ -1591,7 +1637,7 @@ const 	CHAR*	ts = sd->at(gp->gps);
 	return (len);
 }
 
-static void gcg_out(const GAPS** gaps, Seq* seqs[], int seqnum, FILE* fd)
+static void gcg_out(const Gaps** gaps, Seq* seqs[], int seqnum, FILE* fd)
 {
 	setlpw(GCG_LINELENGTH);
 	setgapchar(seqs[0], GCG_GAP_CHAR);
@@ -1662,6 +1708,7 @@ const	char*	fname = (*sname)[j];
 		out_form->DbName? '\t': ' ', (*descr)[j]);
 	if (out_form->SeqLabel) fprintf(fd, "%s\n", out_form->SeqLabel);
 	if (out_form->SeqHead)  fputs(out_form->SeqHead, fd);
+	if (CdsNo && OutPrm.spjinf) cdsForm(fd);
 	int	i = 0;
 	for (int m = left; m < right; ++m, p += many) {
 	    if (OutPrm.trimendgap && IsGap(*p)) continue;
@@ -1922,7 +1969,7 @@ static	const	char* hml_color[] = {"black", "red", "green", "blue"};
 static	const	char spc9[] = "	 ";
 static	const	char spc12[] = "	    ";
 
-PrintAln::PrintAln(const GAPS**  _gaps, Seq* _seqs[], const int& _seqnum, FILE* _fd)
+PrintAln::PrintAln(const Gaps**  _gaps, Seq* _seqs[], const int& _seqnum, FILE* _fd)
 	: gaps(_gaps), seqs(_seqs), seqnum(_seqnum), 
 	  globpt(1), cpm(prmode), markeij(0), fd(_fd? _fd: out_fd)
 {
@@ -1947,8 +1994,9 @@ PrintAln::PrintAln(const GAPS**  _gaps, Seq* _seqs[], const int& _seqnum, FILE* 
 	    tfqs = new PFQ*[seqnum];
 	    lsts = new int*[seqnum];
 	}
-	for (int i = rows = 0; i < seqnum; ++i) rows += seqs[i]->many;
-	gp  = new const GAPS*[seqnum];
+	for (int i = rows = 0; i < seqnum; ++i)
+	    rows += seqs[i]->many;
+	gbuf  = new const GAPS*[seqnum];
 	seq = new CHAR*[seqnum];
 	wkr = new CHAR*[seqnum];
 	agap = new int[seqnum];
@@ -1962,7 +2010,7 @@ PrintAln::~PrintAln()
 {
 	prmode = cpm;
 	delete[] image[0]; delete[] image; delete[] left; delete[] nbr;
-	delete[] gp; delete[] seq; delete[] wkr; delete[] agap;
+	delete[] gbuf; delete[] seq; delete[] wkr; delete[] agap;
 	delete ecc; delete hcc;
 	delete[] pfqs; delete[] tfqs; delete[] lsts;
 }
@@ -2149,28 +2197,25 @@ void PrintAln::printaln()
 	int	gpos = 0;
 	int 	active = seqnum;
 const	RANGE*	exon = 0;
-	int	maxleft = 0;
 	int	df = 0;				// df >=0? CDS: intron
 	gene = -1;	// htl 1: AvsA, 2: GvsC, 3: GvsA
 
 	for (int j = htl = 0; j < seqnum; ++j) {
 	    Seq*&	sd = seqs[j];
-	    if (sd->left > maxleft) maxleft = sd->left;
+	    gbuf[j] = gaps[j]->begin();
 	    if (sd->isprotein()) {htl |= 1; pro = j;}
 	    else	htl |= 2;
 	    if (sd->inex.intr && sd->exons) {
 		exon = sd->exons + 1;	// 1: AvsA
 		gene = j;
-		gpos = gaps[j]->gps;
+		gpos = gbuf[j]->gps;
 		df = gpos - exon->left;
 	    }
 	    for (int i = 0; i < sd->many; ++i, ++k, wbuf += OutPrm.lpw) {
-		nbr[k] = sd->calcnbr(gaps[j]->gps, i);
+		nbr[k] = sd->calcnbr(gbuf[j]->gps, i);
 		image[k] = wbuf;
 	    }
-	    wkr[j] = seq[j] = sd->at(gaps[j]->gps);
-	    gp[j] = gaps[j];
-	    if (!gp[j]->gln) ++gp[j];
+	    wkr[j] = seq[j] = sd->at(gbuf[j]->gps);
 	    agap[j] = 0;
 	}
 const	int	c_step = (htl == 1)? 3: 1;
@@ -2180,7 +2225,7 @@ const	int	c_step = (htl == 1)? 3: 1;
 		if (sd->sigII) {
 		    sd->sigII->locate(pfqs[j], lsts[j], sd->left);
 		    tfqs[j] = sd->sigII->pfq + sd->sigII->pfqnum;
-		    agap[j] = -gaps[j]->gps * c_step;
+		    agap[j] = -gbuf[j]->gps * c_step;
 		} else {
 		    pfqs[j] = tfqs[j] = 0; lsts[j] = 0;
 		}
@@ -2194,14 +2239,14 @@ const	int	c_step = (htl == 1)? 3: 1;
 		int	jj = 0;			// skip long insert
 		int	gap = INT_MAX;
 		for (int j = 0; j < seqnum; ++j) {
-		    int	upr = gp[j]->gps - gaps[j]->gps;
-		    if (gp[j]->gln > 0) upr += gp[j]->gln;
+		    int	upr = gbuf[j]->gps - gaps[j]->begin()->gps;
+		    if (gbuf[j]->gln > 0) upr += gbuf[j]->gln;
 		    if (gap > upr) {
 			gap = upr;
 			jj = j;
 		    }
 		}
-const		int	pos = gp[jj]->gps - gaps[jj]->gps; 	// print one line
+const		int	pos = gbuf[jj]->gps - seqs[jj]->left; 	// print one line
 const		int	upr = (gap - z - OutPrm.EijMergin) / OutPrm.lpw * OutPrm.lpw;
 		if (gap < INT_MAX && z - pos > OutPrm.EijMergin && upr > 0) {
 		    for (int j = k = 0; j < seqnum; k += seqs[j++]->many) {
@@ -2245,9 +2290,11 @@ const			bool	step3 = htl == 3 && !sd->inex.intr;
 		for (int j = k = 0; j < seqnum; k += seqs[j++]->many) {
 		    Seq*&	sd = seqs[j];
 const		    bool	prot = sd->isprotein() && htl == 3;
-	loop:	    int		pos = gp[j]->gps - gaps[j]->gps;
-const		    bool	neog = gaps_intr(gp[j]);
-const		    int	gap = neog? gp[j]->gln: 0;
+loop:
+const		    GAPS*	gfst = gaps[j]->begin();
+		    int		pos = gbuf[j]->gps - gfst->gps;
+const		    bool	neog = gbuf[j] < gaps[j]->last();
+const		    int	gap = neog? gbuf[j]->gln: 0;
 		    if (!active) {
 			for (int i = 0; i < sd->many; ++i)
 			    image[k+i][clm] = BLANK;
@@ -2303,8 +2350,8 @@ const		    int	gap = neog? gp[j]->gln: 0;
 			    phs = next_p[phs];
 			if (!neog && !--active && !clm--) return;
 		    } else {
-			agap[j] += gp[j]->gln * c_step;
-			gp[j]++;
+			agap[j] += gbuf[j]->gln * c_step;
+			++gbuf[j];
 			goto loop;
 		    }
 		}
@@ -2314,7 +2361,7 @@ const		    int	gap = neog? gp[j]->gln: 0;
 	} while(active);
 }
 
-void pralnseq(const GAPS** gaps, Seq* seqs[], const int& seqnum, FILE* fd)
+void pralnseq(const Gaps** gaps, Seq* seqs[], const int& seqnum, FILE* fd)
 {
 	if (!OutPrm.lpw) return;
 	PrintAln	praln(gaps, seqs, seqnum, fd);
@@ -2411,8 +2458,8 @@ const	    CHAR*	t = at(right);
 	    for (int j = 0; j < many; ++j) listseq(fd, j, true);
 	    if (out_form->FormID == NEXUS) fputs(";\nend;\n", fd);
 	} else {
-const	    GAPS	gap[2] = {{left, 0}, {right, gaps_end}};
-const	    GAPS*	gpp[2] = {gap, gap + 1};
+	    Gaps	gaps(left, right);
+const	    Gaps*	gpp[1] = {&gaps};
 	    Seq*	tmp[1] = {this};
 	    PrintAln	praln(gpp, tmp, 1, fd);
 	    if (prmode <= Form_Native) {

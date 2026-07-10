@@ -25,9 +25,8 @@
 
 #include "divseq.h"
 #include "seq.h"
+#include "calcserv.h"
 #include "dist2.h"
-
-class mSeq;
 
 #define	EOL	(-1)
 #define	LEFT	1
@@ -80,31 +79,31 @@ struct LIST {
 	int     idx;
 };
 
-struct DistMat : public Dist2<FTYPE> {
-	DistCal	realign;
+class DistMat : public Dist2<FTYPE> {
+	DistCal	realign = Composition;
+	void	calcdist(Seq** seqs, int nn, DistCal realign);
+	void	calcdist(Seq* sd, Subset* ss, DistCal realn);
+public:
 	double	bias = 0;
+	DistMat(const char* fname) : Dist2<FTYPE>(fname) {}
 	DistMat(FILE* fd);
 	DistMat(int argc, const char** argv, 
 	    const char* catalog = 0, DistCal realin = Composition);
-	DistMat(Seq** seqs, int nn);
-	DistMat(mSeq** seqs, int nn, DistCal realin = DynAln);
-	DistMat(const char* fname) : Dist2<FTYPE>(fname) {}
+	DistMat(Seq** seqs, const int& nn, DistCal realin = DynAln);
+	DistMat(Seq* sd, Subset* ss, DistCal realn);
 	~DistMat() {}
 };
 
 struct Tnode {
-	Tnode*  left;
-	Tnode*  right;
-	Tnode*  parent;
-	int     tid;
-	int     ndesc;
-	FTYPE   height;
-	FTYPE   length;
-	char*	tname;
-	Tnode() {
-	    left = right = parent = 0;
-	    height = length = tid = ndesc = 0;
-	}
+	Tnode*  left = 0;
+	Tnode*  right = 0;
+	Tnode*  parent = 0;
+	int     tid = 0;
+	int     ndesc = 0;
+	FTYPE   height = 0;
+	FTYPE   length = 0;
+	char*	tname = 0;
+	Tnode() {}
 	~Tnode() {}
 	bool    isleaf() {return !(left || right);}
 	bool	isroot() {return (!parent);}
@@ -112,20 +111,18 @@ struct Tnode {
 };
 
 struct  Knode {
-	Knode*  left;
-	Knode*  right;
-	Knode*  parent;
-	int     tid;
-	int     ndesc;
-	FTYPE   height;
-	FTYPE   length;
+	Knode*  left = 0;
+	Knode*  right = 0;
+	Knode*  parent = 0;
+	int     tid = 0;
+	int     ndesc = 0;
+	FTYPE   height = 0;
+	FTYPE   length = 0;
 	union	{FTYPE vol; int gain;};
 	union 	{FTYPE cur; int loss;};
-	FTYPE	res;
+	FTYPE	res = 0;
 	union	{FTYPE ros; int stat;};
 	Knode() {
-	    left = right = parent = 0;
-	    height = length = tid = ndesc = 0;
 	    vol = cur = ros = res = 0;
 	}
 	~Knode() {}
@@ -411,8 +408,8 @@ public:
 	Knode*	root = 0;	// root
 	Ktree(int mem = 0, Knode* led = 0);
 	Ktree(DistMat* dmat, TreeMet tmethod = Def_METHOD, Knode* led = 0);
-	Ktree(Seq* sd, Subset* ss = 0, TreeMet 
-		tmethod = Def_METHOD, Knode* led = 0);
+	Ktree(Seq* sd, Subset* ss = 0, TreeMet tmethod = Def_METHOD, 
+	    Knode* led = 0, DistCal realn = distPrm.realign);
 	~Ktree() {delete[] lead; delete[] leaves;}
 	Knode*	skimtree() {lead = 0; return (root);}
 #if USE_WEIGHT
@@ -424,6 +421,7 @@ public:
 #endif
 	void	mkleaves() {if (!leaves) leaves = new LEAF[members];}
 	void	dollo(Seq* sd);
+	void	desc_list(Knode* kn, int*& list);
 };
 
 class DistTree : public Ktree {
@@ -444,7 +442,7 @@ public:
 	FTYPE*	mtrx = 0;
 	DistTree(DistMat* dmat, TreeMet tmethod = Def_METHOD, Knode* led = 0);
 	DistTree(Seq* sd, Subset* ss = 0, TreeMet tmethod = Def_METHOD,
-	    Knode* led = 0, bool nm = false);
+	    Knode* led = 0, bool nm = false, DistCal realin = distPrm.realign);
 	DistTree(const char* user_tree);
 	~DistTree() {
 	    delete[] nnbr; delete[] row;  delete[] mtrx; delete[] mname;
@@ -505,8 +503,6 @@ public:
 extern	TOUTMODE	treemode;
 
 extern	void	divseq(FSTAT* stat, Seq* sd, int* group1, int* group2);
-extern	FTYPE*	calcdist(mSeq** sqs, int nn, DistCal realn);
-extern	FTYPE*	calcdist(Seq* sd, Subset* ss = 0);
 extern	FTYPE*	calcdistsum(Seq* sd, Subset* ss = 0, FTYPE* dist = 0);
 extern	FTYPE*	calcdist_i(Seq* sd, int k, Subset* ss = 0, FTYPE* dist = 0);
 extern	TreeMet	setphyl(int method);

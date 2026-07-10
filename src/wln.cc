@@ -349,7 +349,7 @@ const	SGPT6*	bb = 0;
 	at = a->at(std::min(jxt->jx + jxt->jlen, a->right));
 	bt = b->at(std::min(jxt->jy + bbt * jxt->jlen, b->right));
 	ax = a->at(a->tlen);
-	bx = b->at(b->len);
+	bx = b->at(b->right);
 	if (bbt == 3) --bx;
 	jxt->jlen = jxt->nid = 0;
 	VTYPE	maxscr = scr;
@@ -821,9 +821,8 @@ const	VTYPE	maxh = (!algmode.lsg && algmode.mlt < 2)?
 	WLUNIT*	wlul = wlu;
 	WLUNIT*	wlur = wlu + num;
 	for ( ; wlul < wlur; ++wlul) {
-	    JUXT*	jxtr = wlul->jxt + wlul->num - 1;
 	    wlul->llmt = wlul->jxt->jy;
-	    wlul->ulmt = jxtr->jy + bbt * jxtr->jlen;
+	    wlul->ulmt = wlul->maxjy(bbt);
 	}
 	qsort((UPTR) wlu, (INT) num, sizeof(WLUNIT), (CMPF) cmpwlpos);
 // reset lower and upper bounds
@@ -833,8 +832,13 @@ const	VTYPE	maxh = (!algmode.lsg && algmode.mlt < 2)?
 	    wlul->llmt = llmt;
 	    for (WLUNIT* wluu = wlul + 1; wluu < wlur; ++wluu) {
 		if (wlul->ulmt < wluu->llmt) {	// in order
-	    	    llmt = wlul->ulmt;
-		    wlul->ulmt = wluu->llmt;
+		    if (wlul->jxt[wlul->num - 1].jx < wluu->jxt->jx) {
+			if (wlul->scr < wluu->scr) wlul->num = 0;
+			else wluu->num = 0;	// remove judged by sparse DP
+		    } else {
+	    		llmt = wlul->ulmt;
+			wlul->ulmt = wluu->llmt;
+		    }
 		    break;
 		} else {			// overlap
 		    JUXT*	jxtl = wluu->jxt;
@@ -874,8 +878,9 @@ const	VTYPE	maxh = (!algmode.lsg && algmode.mlt < 2)?
 		++wlul;
 	    } else	swap(*wlul, *--wlur);
 	}
+	wlu->llmt = std::max(wlu->llmt, wlu->jxt->jy - IntronPrm.maxl);
+	wlum->ulmt = std::min(b->right, wlum->maxjy(bbt) + IntronPrm.maxl);
 	num = wlur - wlu;
-	wlum->ulmt = b->right;
 	qsort((UPTR) wlu, (INT) num, sizeof(WLUNIT), (CMPF) cmpwlscr);
 	return (wlu);
 }
@@ -1022,8 +1027,8 @@ const	    bool	rvs = cmpl != master_cmpl;
 	    sd->jxt = new JUXT[wlu->num + 1];
 	    vcopy(sd->jxt, wlu->jxt, wlu->num + 1);
 	    sd->CdsNo = wlu->num;
-//	    sd->left = wlu->llmt;
-//	    sd->right = wlu->ulmt;
+	    sd->left = wlu->llmt;
+	    sd->right = sd->jxt[wlu->num].jy = wlu->ulmt;
 	    sd->wllvl = level;
 	    if (k == 1) ++k;
 	    if (++n >= OutPrm.MaxOut) break;

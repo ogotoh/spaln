@@ -1486,6 +1486,7 @@ const		int	mm3 = 3 * imd->mi;
 		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[0][r = rp]) {
 		    cpos[i][c++] = r + mm3;
+		    if (c > 9) return (NEVSEL);
 		}
 		cpos[i][c++] = r + mm3;
 		cpos[i][c] = end_of_ulk;

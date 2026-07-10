@@ -313,8 +313,8 @@ const	    int j8 = j9 - 1;
 const	    int	n9 = std::min(b->right, wdw.up + (ml + j8)) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
-	    vec_clear(ps_a, 2 * nelem);
+	    vec_clear(abuf, abufsize);
+	    vec_set(hv_a[0], nevsel, unitsize);
 
 regist_v    ev_v = ninf_v;
 regist_v    ev2_v = ninf_v;
@@ -507,10 +507,8 @@ const	    int j8 = j9 - 1;
 const	    int	n9 = std::min(b->right, wdw.up + (ml + j8)) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
-	    vec_clear(ps_a, 2 * nelem);
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
-	    vec_clear(hb_a[0], 4 * Np1 + 2 * nelem);
-	    vec_clear(pb_a, nelem);
+	    vec_clear(abuf, abufsize);
+	    vec_set(hv_a[0], nevsel, unitsize);
 
 	    if (spj) {
 		for (int j = 0; j < j9; ++j)
@@ -678,7 +676,7 @@ regist_v	    qb_v = Load(ps_a);		// post splicing
 		hb_v = Blend(one_v, zero_v, msk_m);	// diag: 1, others: 0
 regist_v	qb_v = Load(hb_a[p]);
 		qb_v = AndNot(hb_v, qb_v);		// t && !q = nd && di
-		Store(qb_a, qb_v);
+		Store(pb_a, qb_v);
 		Store(hv_a[p] + 1, hv_v);
 		Store(hb_a[p] + 1, hb_v);
 		Store(hc_a[p] + 1, hc_v);
@@ -687,7 +685,7 @@ regist_v	qb_v = Load(hb_a[p]);
 		int	nk = n - 1 - kb;
 		for (int k = kb; k < ke; ++k, ++mk, --nk) {
 const		    int	kp1 = k + 1;
-		    if (qb_a[k]) {
+		    if (pb_a[k]) {
 			int ptr = s2_i(hc_a[p][kp1], hd_a[p][kp1]); 
 			ptr = vmf->add(mk, nk, ptr);
 			hc_a[p][kp1] = i_s2(hd_a[p] + kp1, ptr);
@@ -804,16 +802,15 @@ regist_v	hb_v, fb_v, qb_v;	// used only when LocalL == true
 regist_v	hd_v, fd_v, fd2_v, qd_v;// used only when used == true
 
 	for (int ml = a->left, i = 0; ml < a->right; ml += nelem) {
+const	    bool	is_imd_ = ml == mm;
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
 	    int	n9 = std::min(b->right, wdw.up + (ml + j8)) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
-	    vec_clear(ps_a, 2 * nelem);
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
-	    vec_clear(hb_a[0], 4 * Np1 + 2 * nelem);
-const	    bool	is_imd_ = ml == mm;
+	    vec_clear(abuf, abufsize);
+	    vec_set(hv_a[0], nevsel, unitsize);
 
 	    if (spj) {
 		for (int j = 0; j < j9; ++j)
@@ -1126,6 +1123,7 @@ const		int	d = checkpoint(c);
 		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[d][r = rp]) {
 		    cpos[i][c++] = r + imd->mi;
+		    if (c > 9) return (NEVSEL);
 		}
 		cpos[i][c++] = r + imd->mi;
 		cpos[i][c] = end_of_ulk;

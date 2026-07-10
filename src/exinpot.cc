@@ -84,14 +84,25 @@ static void usage()
 	fputs("\t\tN & 1: summary\n", stdout);
 	fputs("\t\tN & 2: individual seqs\n", stdout);
 	fputs("\t\tN & 4: write X.[ipt|ept|cdp]\n", stdout);
+	fputs("Terms in headline:\n", stdout);
+	fputs("\t1\tidentifier\n", stdout);
+	fputs("\t2\t# of phases (1 or 3)\n", stdout);
+	fputs("\t3\t# of rows\n", stdout);
+	fputs("\t4\torder of Markov model\n", stdout);
+	fputs("\t5\t# of sample objects (intron or CDS) used for calculation\n", stdout);
+	fputs("\t6\tmean score (KL divergence) per 1000 bp\n", stdout);
+	fputs("\t7\tSD of per-1000-bp score\n", stdout);
+	fputs("\t8\tmean length of object\n", stdout);
+	fputs("\t9\tmean score per object\n", stdout);
+	fputs("\t10\tSD of per-object score\n", stdout);
+	fputs("\t11\t5' side margin of object\n", stdout);
+	fputs("\t12\t3' side margin of object\n", stdout);
 	exit(1);
 }
 
 class Ipt : public ExinPot {
-	float	avm = 0;
-	float	sdm = 0;
-	bool	nrml = false;
 public:
+	bool	nrml = false;
 	CodonUse*	codons = 0;
 	void	reset() {
 	    avm = sdm = avpot = sdpot = 0; avlen = 0; nsupport = 0;
@@ -99,6 +110,7 @@ public:
 	}
 	void	make_ipt(Seq* sd, const int n);
 	void	normalize();
+	void	recover();
 	void	finish(const float* gfq);
 template <typename file_t>
 	void	write_text(file_t fd, const float* gfq);
@@ -141,14 +153,25 @@ void Ipt::normalize()
 	sdm *= 1000.;
 }
 
+void Ipt::recover()
+{
+	nrml = true;
+const	float	approximate_avm = 1000. * avpot / avlen;
+	if (avm > 20. * approximate_avm) {
+	    avm = approximate_avm;	// older version
+	    sdm = 0.;			// not available
+	}
+}
+
 template <typename file_t>
 void Ipt::write_text(file_t fd, const float* gfq) {
 	char	str[LINE_MAX];
 	if (!algmode.nsa || algmode.nsa & 4) {	// readable output
-	    sprintf(str, "%s %d %d %7.1f ", 
-		iefp_tid[exin], nphase, size(), total / ndata / nphase);
+	    snprintf(str, LINE_MAX, "%s %d %d %d ", 
+		iefp_tid[exin], nphase, size(), morder);
 	    if (ispot() && nrml) {
-		sprintf(str + strlen(str), hfmt, 
+		char*	ps = str + strlen(str);
+		snprintf(ps, LINE_MAX - (ps - str), hfmt, 
 		nsupport, avm, sdm, avlen, avpot, sdpot, lm, rm);
 	    } else	strcat(str, "\n");
 	    fputs(str, fd);
@@ -170,10 +193,10 @@ const	    float*	dend = end();
 		    *ps++ = '\t';
 		}
 		if (algmode.nsa) {
-		    sprintf(ps, "%15.7e", *pot);
+		    snprintf(ps, LINE_MAX - (ps - str), "%15.7e", *pot);
 		    ps += 15;
 		} else {
-		    sprintf(ps, "%7d", (int) *pot);
+		    snprintf(ps, LINE_MAX - (ps - str), "%7d", (int) *pot);
 		    ps += 7;
 		}
 		if (nphase == 3) {
@@ -228,15 +251,16 @@ const	    char*	rname = fname? fname: iname;
 	    if (nrml)
 		printf(hfmt, nsupport, avm, sdm, avlen, avpot, sdpot, lm, rm);
 	    else
-		printf("%7d\t%7.2f %7.2f %7.2f\n", nsupport, avlen, avpot, ess);
+		printf("%7d\t%7.2f %7.2f %7.2f\n", nsupport, avlen, avpot, avm);
 	}
 	if (text) {
 	    WriteFile	fp(oname, 1, gzip);
 	    if (fp.gzfd)	write_text(fp.gzfd, gfq);
 	    else if (fp.fd)	write_text(fp.fd, gfq);
 	    else	fatal(no_file, uname);
-	} else
+	} else {
 	    writeBinary(oname, gzip);
+	}
 }
 
 int main(int argc, const char** argv)
@@ -360,8 +384,9 @@ const	    int	exn = fname2exin(oname, ft);
 	}
 	EiJuncSeq*	eijseq = eij? new EiJuncSeq(INTRON, eij, gnm): 0;
 	if (ewdfq) iwdfq = ewdfq;
-	if (fname && !ipt.from_file(fname)) usage();
-	else if (cus) {
+	if (fname && ipt.from_file(fname)) {
+	    ipt.recover();
+	} else if (cus) {
 	    CodonUse	codons(cus, true);
 	    codons.to_file(uname, text);
 	    exit(0);
@@ -371,8 +396,9 @@ const	    int	exn = fname2exin(oname, ft);
 	    if (argc)	ipt.getKmers(argc, argv, ipt.codons);
 	    if (algmode.nsa)	ipt.reform();
 	    if (gfq && !ipt.makeExinPot(gfq)) usage();
-	} else if (!gwdfq && !fname)
+	} else {
 	    usage();
+	}
 
 	if (!ipt.ispot()) {
 // nothing to do

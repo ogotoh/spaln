@@ -37,14 +37,14 @@ class Block;
 class MakeBlk;
 
 typedef	std::vector<INT>::iterator IntItr;
-struct	SeqLenStat {int num; INT maxv; LONG total;};
+struct	SeqLenStat {int n_entry; INT max_len, n_exon; LONG total;};
 
 extern	CHAR	gencode[];
 extern	int	thread_num;
 extern	bool	ignoreamb;
 
 static	const	int	BsVersion = 26;
-static	const	int	ENTSIZE = 23;	// for back compatibility
+static	const	int	ENTSIZE = 23;		// for back compatibility
 
 /***********************************************************
 	multi-threads
@@ -92,31 +92,53 @@ const	bool	isaa;
 	INT	maxlen;
 	char	entrystr[MAXL];
 	char	entryprv[MAXL];
+	INT*	gsiidx = 0;
+	INT*	gsipos = 0;
+	INT	t_ebrys = 0;	// total number of exon broundaris
+	union {
+	    int	ejunc[2 * MAXEXONS];
+	    RANGE	exons[MAXEXONS];
+	};
+	int	rvs_strand = 0;
+	INT	n_ebrys = 0;	// number of exon broundaris in a gene
+	char	gsi_fname[LINE_MAX] = "";
 	char*	write_path = 0;
 	FILE*	fgrp = 0;
 	FILE*	fseq = 0;
 	FILE*	fidx = 0;
 	FILE*	fent = 0;
+	FILE*	fgsi = 0;
 	char*	dbname = 0;
 	gzFile	gzseq = 0;
 	gzFile	gzidx = 0;
 	gzFile	gzent = 0;
+	gzFile	gzgsi = 0;
 	void	putsq(int c) {
-		if (gzseq)	fputc(c, gzseq);
-		else	 	fputc(c, fseq);
+	    if (gzseq)	fputc(c, gzseq);
+	    else	fputc(c, fseq);
 	}
 public:
 	MakeDbs(const char* dbname, int molc);
 	~MakeDbs() {
-		fclose(fgrp);
-		if (fseq) fclose(fseq);
-		if (fidx) fclose(fidx);
-		if (fent) fclose(fent);
-		if (gzseq) fclose(gzseq);
-		if (gzidx) fclose(gzidx);
-		if (gzent) fclose(gzent);
-		delete[] dbname;
-		delete[] write_path;
+	    INT	n_entry = gsipos - gsiidx;
+	    fclose(fgrp);
+	    if (fseq) fclose(fseq);
+	    if (fidx) fclose(fidx);
+	    if (fent) fclose(fent);
+	    if (fgsi) {
+		if (n_entry) fwrite(gsiidx, sizeof(INT), n_entry, fgsi);
+		fclose(fgsi);
+	    }
+	    if (gzseq) fclose(gzseq);
+	    if (gzidx) fclose(gzidx);
+	    if (gzent) fclose(gzent);
+	    if (gzgsi) {
+		if (n_entry) fwrite(gsiidx, sizeof(INT), n_entry, gzgsi);
+		fclose(gzgsi);
+	    }
+	    if (n_entry == 0 && *gsi_fname) unlink(gsi_fname);
+	    delete[] dbname;
+	    delete[] write_path;
 	}
 	INT	max_dbseq_len() {return maxlen;}
 	void	mkidx();
@@ -130,32 +152,57 @@ template <typename file_t>
 	void	write_idx(file_t fd);
 template <typename file_t>
 	void	write_odr(file_t fd, const INT* order, const char* str);
+template <typename file_t>
+	void	get_gsi(file_t fd);
+	void	usegsi(INT n_entry);
 	void	putseq(int c) {
-		if (isaa) putsq(c);
-		else if (rec.seqlen & 1) putsq(c + b);
-		else {
-			b = c << 4;
-			if (c == SEQ_DELIM) putsq(c + b);	// double delimiter
-		}
-		if (c != SEQ_DELIM) ++rec.seqlen;
+	    if (isaa) putsq(c);
+	    else if (rec.seqlen & 1) putsq(c + b);
+	    else {
+	    	b = c << 4;
+	    	if (c == SEQ_DELIM) putsq(c + b);	// double delimiter
+	    }
+	    if (c != SEQ_DELIM) ++rec.seqlen;
 	}
 	void	wrtgrp(const char* ps) {
-		long	fpos = 0L;
-		long	epos = 0L;
-		if (gzseq)	fpos = ftell(gzseq);
-		else	 	fpos = ftell(fseq);
-		if (gzent)	epos = ftell(gzent);
-		else		epos = ftell(fent);
-		fprintf(fgrp, "%8ld %u %u %s\n", 
-		    fpos, (INT) recnbr, (INT) epos, ps);
+	    long	fpos = 0L;
+	    INT	epos = 0L;
+	    if (gzseq)	fpos = ftell(gzseq);
+	    else	fpos = ftell(fseq);
+	    if (gzent)	epos = (INT) ftell(gzent);
+	    else	epos = (INT) ftell(fent);
+	    fprintf(fgrp, "%8ld %lu %u %u %s\n", 
+	        fpos, recnbr, epos, t_ebrys, ps);
 	}
 	void stamp21() {
-		DbsRec	rec21 = {magicver21, false, 0};
-		if (fidx) fwrite(&rec21, sizeof(DbsRec), 1, fidx);	// header record
-		else	fwrite(&rec21, sizeof(DbsRec), 1, gzidx);
+	    DbsRec	rec21 = {magicver21, false, 0};
+	    if (fidx) fwrite(&rec21, sizeof(DbsRec), 1, fidx);	// header record
+	    else	fwrite(&rec21, sizeof(DbsRec), 1, gzidx);
 	}
-
 };
+
+template <typename file_t>
+void MakeDbs::get_gsi(file_t fd)
+{
+	char	str[LINE_MAX];
+	if (!fgets(str, LINE_MAX, fd)) return;
+const	char*	ps = str;
+	for ( ; *ps && isspace(*ps); ++ps) ;
+	rvs_strand |= (*ps == 'c' || *ps == '-');
+const	char*	qs = ps;
+	int	state = 0;
+	for ( ; *ps && *ps != '\n'; ++ps) {
+const	    bool	isd = isdigit(*ps);
+	    if (isd && !(state % 2)) {
+		qs = ps;
+		++state;
+	    } else if (!isd && state % 2 && n_ebrys < 2 * MAXEXONS) {
+		ejunc[n_ebrys++] = atoi(qs) - (state == 1? 1: 0);
+		if (++state == 4) state = 0;
+	    }
+	}
+	if (isdigit(*qs)) ejunc[n_ebrys++] = atoi(qs) - (state == 1? 1: 0);
+}
 
 /*****************************************************
 	Pre Scan
@@ -272,7 +319,7 @@ const	Seq*	sd;
 	SEQ_CODE*	defcode;
 	INT*	tcount;
 	ContBlk	cntblk;
-	Block2Chr	b2c;
+	Block2Chr	b2c = {0., 0., 0.};
 	CHROMO	chrbuf;
 	CHROMO*	pchrid;
 	CHAR*   s2r;    // seq to reduced word
@@ -371,7 +418,7 @@ typedef	INT	BLKTYPE;
 
 struct BPAIR {
 	int	bscr, chr;
-	VTYPE	jscr;
+	int	jscr;
 	BLKTYPE	lb, rb;		// left-most & right-most blocks
 	BLKTYPE	ub, db;		// nearest upstream & downstream bolck pairs
 	BLKTYPE zl, zr;		// chromosomal boundaries
@@ -445,7 +492,7 @@ struct GeneRng {
 	int	rgap;
 	int	len;
 	int	num;
-	VTYPE	scr;
+	int	scr;
 	JUXT*	jxt;
 };
 
@@ -474,8 +521,8 @@ class SrchBlk {
 	int	kk;
 	int	DRNA;
 	bool	gnmdb;
-	VTYPE	vthr;	// each gene
-	VTYPE	critjscr;
+	int	vthr;	// each gene
+	int	critjscr;
 	int	DeltaPhase2;
 	SHORT	ptpl;
 	INT	maxmmc;
@@ -516,9 +563,9 @@ public:
 	Randbs*	rdbt = 0;
 	Bitpat** bpp = 0;
 	void	reset(DbsDt* df) {
-		dbf = df;
+	    dbf = df;
 #if TESTRAN
-		tstrn = new Testran();
+	    tstrn = new Testran();
 #endif
 	}
 	void	setseqs(Seq** sqs) {

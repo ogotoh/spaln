@@ -232,6 +232,20 @@ int wordcmp(const char* a, const char* b, int n)
 	return (-1);
 }
 
+int wordcmp(const char* a, const char* b, const char* delimt, int n)
+{
+	if (!delimt || !*delimt) return (wordcmp(a, b, n));
+ 	if (!a) a = "";
+ 	if (!b) b = "";
+
+	while (*a && *b && !strchr(delimt, *a) && !strchr(delimt, *b) && n--)
+	    if (int i = *a++ - *b++) return (i);
+	if (!n || ((!*a || strchr(delimt, *a)) && 
+		   (!*b || strchr(delimt, *b)))) return (0);
+	if (*a && strchr(delimt, *a)) return (1);
+	return (-1);
+}
+
 UPTR fbisrch( UPTR found, const UPTR key, FILE* fd, long left, long right, int width, CMPF cmpf)
 {
 

@@ -6,13 +6,13 @@ table_dir = /usr/local/bin
 alndbs_dir = /db/seqdb
 CXX  = g++
 # for MACOS uncomment below line
-#CXX  = clang++ -std=c++11
+#CXX  = clang++
 CFLAGS = -O3 -march=native
 #CFLAGS = -g -O0 -march=native
 #CFLAGS = -g -O0 -Wall -march=native -fsanitize=address -fno-omit-frame-pointer
-RANLIB = ranlib
+
 LD  = g++
-AR = ar ru
+AR = ar crs
 DEL = rm -f
 DEFLT = 
 
@@ -21,7 +21,7 @@ CXX := $(CXX) $(CFLAGS) $(DEFLT)
 .SUFFIXES: .o .cc .h .sh
 
 PROG_B = spaln sortgrcd makmdm makdbs
-PROG_A = dvn exinpot kmers npssm rdn utn
+PROG_A = dvn exinpot kmers npssm rdn utn 
 PROG_F = fitild compild decompild eij2ild plotild
 PROG = $(PROG_B) $(PROG_A) $(PROG_F)
 # for MACOS uncomment below line
@@ -35,6 +35,7 @@ SLIB = sblib.a $(CLIB)
 ULIB = ublib.a $(SLIB)
 ILIB = iblib.a $(CLIB)
 LLIB = -lpthread -lm -lz
+#LLIB = -lpthread -lduma -lm -lz
 GLIB = $(LLIB) -L/usr/local/lib -lgsl -lgslcblas
 
 BINDIR = $(DESTDIR)$(exec_prefix)
@@ -138,7 +139,6 @@ supprime.o:	supprime.cc	stdtype.h
 
 clib.a: clib.o iolib.o mfile.o sets.o supprime.o 
 	$(AR) clib.a clib.o iolib.o mfile.o sets.o supprime.o 
-	$(RANLIB) clib.a
 
 aln2.o:	aln2.cc	seq.h aln.h
 bitpat.o: bitpat.cc bitpat.h
@@ -174,7 +174,6 @@ sblib.a: aln2.o dbs.o gaps.o  codepot.o divseq.o kmers.o gsinfo.o \
 	$(AR) sblib.a aln2.o dbs.o gaps.o  codepot.o divseq.o kmers.o \
 	gsinfo.o fwd2b1.o fwd2d1.o fwd2h1.o fwd2s1.o bitpat.o eijunc.o \
 	seq.o simmtx.o sqpr.o utilseq.o vmf.o wln.o boyer_moore.o
-	$(RANLIB) sblib.a
 
 autocomp.h:	calcserv.h
 autocomp.o: autocomp.cc autocomp.h $(STDH)
@@ -186,11 +185,9 @@ resite.o: resite.cc resite.h pattern.h seq.h
 ublib.a: autocomp.o extcds.o montseq.o pattern.o resite.o
 	$(AR) ublib.a autocomp.o extcds.o \
 	montseq.o pattern.o resite.o
-	$(RANLIB) ublib.a
 
 iblib.a: ildpdf.o ild_data.o fitild.o
 	$(AR) iblib.a ildpdf.o ild_data.o fitild.o
-	$(RANLIB) iblib.a
 
 cmn.h:	$(STDH) 
 	touch cmn.h

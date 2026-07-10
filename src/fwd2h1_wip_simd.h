@@ -93,11 +93,14 @@ const	int	md = checkpoint(0);
 const	int	mw = a->right - a->left;
 const	int	mb = a->right - nelem;
 const	int	mt = a->left + mw / nelem * nelem;
-	vclear(sm_a, nelem);
+	vclear(sm_a, 3 * nelem);
 	for (int k = 0; k < a->right - mt; ++k) sm_a[k] = 1;
 regist_v    qv_v = Load(sm_a);
 const	regist_m	lmask = Cmp_eq(qv_v, one_v);
 
+	int	m = a->left;
+	PfqItr	api(a, m);
+const	int	api_size = api.size();
 	for (int ml = a->left; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
@@ -107,9 +110,26 @@ const	    int j8 = j9 - 1;
 const	    int	mp1 = ml + 1;
 	    int	q = (n + 3 * mp1) % 6;
 	    int	r = n - 3 * mp1;
-	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * nelem);	// [hv_a..fv_a]
-	    vec_clear(sm_a, 28 * Np1);		// sm_a, cp_a, s5/3_a, s5/3_a
+	    vclear(abuf, abufsize);
+	    vec_set(hv_a[0], nevsel, unitsize);	// [hv_a..fv_a]
 
+	    bool	a_in_zone = false;
+	    for (int k = 0; k < j9; ++k, ++m) {
+const	        bool	in_zone = api_size && api.eq(m);
+		if (in_zone) {
+		    a_in_zone = true;
+		    for (int phs = -1; phs < 2; ++phs) {
+			int	mscr = api.match_score(3 * m - phs);
+			if (mscr > 0) {
+			    cipscr[k] = mscr;
+			    cipphs[k] = accpr_code[phs + 1];
+			}
+		    }
+		    ++api;
+		}
+	    }
+regist_v    cip_v = Load(cipscr);	// conserved intron position score
+regist_v    cph_v = Load(cipphs);	// intron phase
 regist_v    hiv_v[3] = {ninf_v, ninf_v, ninf_v};
 regist_v    hil_v[3] = {zero_v, zero_v, zero_v};	// intron length
 
@@ -237,6 +257,11 @@ regist_v		pv_v = mean_v[0];
 			qv_v = Blend(qv_v, ninf_v, msk_m);
 			msk_m = Cmp_gt(hil_v[f], mil_v);	// filter 
 			qv_v = Blend(qv_v, ninf_v, msk_m);	// short intron
+			if (a_in_zone) {
+			    msk_m = Cmp_eq(ph_v, cph_v);
+			    pv_v = Blend(cip_v, zero_v, msk_m);
+			    qv_v = Add(qv_v, pv_v);
+			}
 			msk_m = Cmp_gt(qv_v, hv_v);		// is acceptor ?
 			hv_v = Blend(qv_v, hv_v, msk_m);
 			pb_v = Blend(accpr_v[f], pb_v, msk_m);
@@ -375,6 +400,9 @@ const	int	md = checkpoint(0);
 	int	mc = a->left + md;
 	VTYPE	accscr = 0;
 
+	int	m = a->left;
+	PfqItr	api(a, m);
+const	int	api_size = api.size();
 	for (int ml = a->left, i = 0; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
@@ -387,9 +415,26 @@ const	    int j8 = j9 - 1;
 	    int	donor_r[3] = {r, r, r};
 	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * nelem);
 	    vec_clear(hb_a[0], 12 * Np1 + 3 * nelem);
-	    vec_clear(sm_a, 28 * Np1);
+	    vec_clear(sm_a, 28 * Np1 + 2 * nelem);
 const	    bool	is_imd_ = ml == mm;
 
+	    bool	a_in_zone = false;
+	    for (int k = 0; k < j9; ++k, ++m) {
+const	        bool	in_zone = api_size && api.eq(m);
+		if (in_zone) {
+		    a_in_zone = true;
+		    for (int phs = -1; phs < 2; ++phs) {
+			var_t	mscr = api.match_score(3 * m - phs);
+			if (mscr > 0) {
+			    cipscr[k] = mscr;
+			    cipphs[k] = accpr_code[phs + 1];
+			}
+		    }
+		    ++api;
+		}
+	    }
+regist_v    cip_v = Load(cipscr);	// conserved intron position score
+regist_v    cph_v = Load(cipphs);	// intron phase
 regist_v    hiv_v[3] = {ninf_v, ninf_v, ninf_v};
 regist_v    hib_v[3] = {zero_v, zero_v, zero_v};
 regist_v    hic_v[3] = {zero_v, zero_v, zero_v};
@@ -586,6 +631,11 @@ regist_v		pv_v = mean_v[0];
 			qv_v = Blend(qv_v, ninf_v, msk_m);
 			msk_m = Cmp_gt(hil_v[f], mil_v);	// filter 
 			qv_v = Blend(qv_v, ninf_v, msk_m);	// short intron
+			if (a_in_zone) {
+			    msk_m = Cmp_eq(ph_v, cph_v);
+			    pv_v = Blend(cip_v, zero_v, msk_m);
+			    qv_v = Add(qv_v, pv_v);
+			}
 			msk_m = Cmp_gt(qv_v, hv_v);		// is acceptor ?
 			hv_v = Blend(qv_v, hv_v, msk_m);
 			if (LocalL) hb_v = Blend(hib_v[f], hb_v, msk_m);
@@ -746,6 +796,7 @@ const	    int	r = fhlastH1(maxh);
 		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[d][r = rp]) {
 		    cpos[i][c++] = r + mm3;
+		    if (c > 9) return (NEVSEL);
 		}
 		cpos[i][c++] = r + mm3;
 		cpos[i][c] = end_of_ulk;

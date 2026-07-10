@@ -134,7 +134,7 @@ SigII::SigII(const int* poss, int nn, int s) :
 	} else	pfq = 0;
 }
 
-SigII::SigII(const Seq** slist, const GAPS** gsrc, FTYPE* wtlst)
+SigII::SigII(const Seq** slist, const Gaps** gsrc, FTYPE* wtlst)
 {
 	int	i = 0, j = 0, k = 0;
 	for (const Seq** sq = slist ; *sq; ++sq, ++k) {
@@ -153,9 +153,10 @@ SigII::SigII(const Seq** slist, const GAPS** gsrc, FTYPE* wtlst)
 	PFQ**	pfqs = new PFQ*[k + 1];
 	PFQ**	wsqs = new PFQ*[k];
 const	GAPS**	glst = new const GAPS*[k];
+const	GAPS**	tlst = new const GAPS*[k];
 	*pfqs = new PFQ[i + k];
 	int**	wlst = new int*[k];
-	int	len = gaps_span(*gsrc);
+	int	len = (*gsrc)->alen;
 	if (step == 3) len *= 3;
 	int*	queue = new int[k + 1];
 	int*	amany = new int[k + 1];
@@ -163,12 +164,14 @@ const	GAPS**	glst = new const GAPS*[k];
 	j = 0;
 	for (const Seq** sq = slist; j < k; ++j, ++sq) {
 	    wsqs[j] = pfqs[j];
-	    glst[j] = gsrc[j] + 1;
+	    glst[j] = gsrc[j]->begin();
+	    tlst[j] = gsrc[j]->end();
 	    amany[j + 1] = (many += (*sq)->many);
 	    if ((*sq)->sigII) {
 		wlst[j] = (*sq)->sigII->lst;
 		vcopy(pfqs[j], (*sq)->sigII->pfq, (*sq)->sigII->pfqnum + 1);
-		unfoldPfq(pfqs[j], (*sq)->sigII->pfqnum, gsrc[j], step);
+		unfoldPfq(pfqs[j], (*sq)->sigII->pfqnum, 
+		    (const Gaps*) gsrc[j], step);
 		pfqs[j+1] = pfqs[j] + (*sq)->sigII->pfqnum + 1;
 	    } else {
 		*pfqs[j] = pfqend;
@@ -189,8 +192,9 @@ const	GAPS**	glst = new const GAPS*[k];
 		if (wlst[j]) *wst++ = *wlst[j]++;
 		else	*wst++ = amany[j];
 const	    GAPS*&	gj = glst[j];
-	    while (gaps_intr(gj) && step * (gj->gps + gj->gln) < pos) ++gj;
-	    int play = (gaps_intr(gj) && (step * (gj->gps + gj->gps)) == pos)?
+const	    GAPS*&	gt = tlst[j];
+	    while (gj < gt && step * (gj->gps + gj->gln) < pos) ++gj;
+	    int play = (gj < gt && (step * (gj->gps + gj->gps)) == pos)?
 		step * gj->gln: 0;
 	    int diffpos = pos - pfqbuf.pos;
 	    if (!diffpos || (diffpos <= play && !(diffpos % 3))) {
@@ -219,6 +223,7 @@ const	    GAPS*&	gj = glst[j];
 	delete[] wsqs;
 	delete[] wlst;
 	delete[] glst;
+	delete[] tlst;
 	delete[] amany;
 }
 
@@ -749,18 +754,20 @@ const	EISCR*	eij = eijnc->begin();
 	return (CDSrng);
 }
 
-RANGE* Gsinfo::eiscrunfold(GAPS* gp)
+RANGE* Gsinfo::eiscrunfold(const Gaps* gg)
 {
 	int	gap = 0;
 	EISCR*	eij = eijnc->begin();
 	RANGE*	rng = new RANGE[noeij + 2];
 	RANGE*	wrk = rng;
+const	GAPS*	gp = gg->begin();
+const	GAPS*	gt = gg->end();
 
 	(wrk++)->left = noeij;
 	for ( ; neoeij(eij); ++eij, ++wrk) {
-	    while (gp->gps < eij->left) gap += (gp++)->gln;
+	    while (gp < gt && gp->gps < eij->left) gap += (gp++)->gln;
 	    wrk->left = eij->left + gap;
-	    while (gp->gps < eij->right) gap += (gp++)->gln;
+	    while (gp < gt && gp->gps < eij->right) gap += (gp++)->gln;
 	    wrk->right = eij->right + gap;
 	}
 	*wrk = endrng;
@@ -1114,10 +1121,11 @@ static PFQ* fusePfqinaGap(PFQ* dst, int igp)
 	return (dst);
 }
 
-void SigII::rmGapPfq(const GAPS* gp)
+void SigII::rmGapPfq(const Gaps* gg)
 {
-	if ((gp++)->gln == 3) return;	/* no gap no action */
-
+	if (gg->gapless()) return;	/* no gap no action */
+const	GAPS*	gp = gg->begin();
+const	GAPS*	gt = gg->end();
 	int	gpos = step * gp->gps;
 	int	gupp = step * (gp->gps + gp->gln);
 	PFQ*	wfq = pfq;
@@ -1129,7 +1137,7 @@ void SigII::rmGapPfq(const GAPS* gp)
 	int	phs = 0;
 
 	while (wfq <= end) {
-	    if (!gaps_intr(gp) || gpos + play >= wfq->pos) {
+	    if (gp >= gt || gpos + play >= wfq->pos) {
 		*dst = *wfq;
 		dst->pos -= glen;
 		++wfq;
@@ -1192,13 +1200,15 @@ const 	int*	lst = sd->sigII->lst;
 #endif
 }
 
-void unfoldPfq(PFQ* pfq, int num, const GAPS* gg, int step)
+void unfoldPfq(PFQ* pfq, int num, const Gaps* gg, int step)
 {
-	if ((gg++)->gln == 3) return;		// no gap to be inserted
+	if (gg->gapless()) return;		// no gap to be inserted
 	PFQ*	tfq = pfq + num;
+const	GAPS*	gp = gg->begin();
+const	GAPS*	gt = gg->end();
 	for (int glen = 0; pfq <= tfq; ++pfq) {
-	    while (gaps_intr(gg) && step * gg->gps <= pfq->pos + glen)
-		glen += step * (gg++)->gln;
+	    while (gp < gt && step * gp->gps <= pfq->pos + glen)
+		glen += step * (gp++)->gln;
 	    pfq->pos += glen;
 	}
 }

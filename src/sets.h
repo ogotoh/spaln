@@ -25,22 +25,25 @@
 static	const	int	EOTAB = -1;
 
 struct Subset {
-	int**	group;
-	int*	pool;
-	int	num;
-	int	elms;
-	Subset(Subset& ss);
-	Subset(int n) {rsubset(n);}
-	Subset(int n, int e) : num(n), elms(e) {
-	    pool = new int[n + e];
+	int**	group = 0;
+	int*	pool = 0;
+	int	num = 0;
+	int	elms = 0;
+	Subset(const Subset& ss);
+	Subset(const int& n) {rsubset(n);}
+	Subset(const int& n, const int& e) : num(n), elms(e) {
+	    if (elms) pool = new int[n + e];
 	    group = new int*[n + 1];
 	}
-	Subset(int n, FILE* fd) {
+	Subset(const int& n, FILE* fd) {
 	    rsubset(n, 0, fd);
 	}
-	Subset(int n, const char* str);
-	~Subset();
-	void	rsubset(int n, const char* ps = 0, FILE* fd = 0);
+	Subset(const int& n, const char* str);
+	~Subset() {
+	    if (elms) delete[] pool;
+	    delete[] group;
+	}
+	void	rsubset(const int& n, const char* ps = 0, FILE* fd = 0);
 };
 
 #endif

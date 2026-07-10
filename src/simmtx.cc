@@ -47,7 +47,7 @@ static	const	char*	strscale = "scale";
 ALPRM	alprm = {FQUERY, FQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 0, 0};
 //ALPRM	alprm = {FQUERY, FQUERY, 0., 0.6, 0, 1.0, 35., 1., 8., 0.5, 7, 1, 100, 2, 0};
 //		   x,   y,      z,   o, m, bti, spb, Z, sss, jneibr termk1 desert
-ALPRM2	alprm2 = {30., FQUERY, FQUERY, 30., 9., 8., 20., 0., -1., 10, 45, 150};
+ALPRM2	alprm2 = {30., FQUERY, FQUERY, 30., 9., 8., 15., 0., -1., 10, 45, 150};
 //		scnd, hydr, hpmt, hpwing, no_angle
 ALPRM3	alprm3 = {0., 0., 0., 3, 0};
 

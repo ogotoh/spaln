@@ -152,7 +152,8 @@ const	Seq*&	b = seqs[1];
 
 IntronPenalty::IntronPenalty(VTYPE f, int dvsp, EijPat* eijpat, ExinPot* exinpot)
 {
-	if (IntronPrm.ip == FQUERY) IntronPrm.ip = dvsp? 15: 12;
+	if (IntronPrm.ip == FQUERY) IntronPrm.ip = dvsp? 
+	    (algmode.alg < 2? 33: 16): 12;
 	IntronPrm.sip = (STYPE) (f * IntronPrm.ip);
 
 	if (IntronPrm.maxl <= 0)
@@ -173,8 +174,7 @@ const		double	fB = f * alprm2.sss * bpprm.factor;
 	if (exinpot) expsig += exinpot->avrpot(f * alprm2.Z);
 	AvrSig = (STYPE) expsig;
 const	double	IpBias = expsig + fY * IntronPrm.mean + f * IntronPrm.ip;
-const	double	mean_ip = fY * IntronPrm.mean - IpBias;
-	GapWI = STYPE(mean_ip);
+	GapWI = STYPE(-IpBias);
 	if (fY == 0.) return;
 
 	IntronPrm.rlmt = max_intron_len(rlmt_quant);	// 80% quantile
@@ -192,7 +192,7 @@ const	float	q_interval = 1. / IntronPrm.nquant;
 	double	fmt = 0.;		// first moment
 	double	qdf = q_interval;	// next quantile
 	double	qfm = 0.;		// previous fmt
-	double	optipen = DBL_MIN;
+	double	optipen = -DBL_MAX;
 	LenPen*	wqm = qm;
 	double	a2 = IntronPrm.a2? IntronPrm.a2: 1 - IntronPrm.a1;
 	double	a3 = IntronPrm.a2? 1 - IntronPrm.a1 - IntronPrm.a2: 0;

@@ -104,7 +104,8 @@ struct OUTPRM {
 const	char*	out_file;
 	INT	RemoveTmp:	1;
 	INT	SkipLongGap:	2;	// 0: don't skip, 1: skip, 3: run time
-	INT	spjinf:		1;
+	INT	gsiinf: 	2;	// 0: no, 1: short, 2: NCBI
+	INT	spjinf:		1;	// 0; no, 1: print
 	INT	trimend:	1;
 	INT	deflbl:		2;	// 0: sname, 1: fname, 2: tally, 3: new
 	INT	all_out:	1;	// output results irrespective of score

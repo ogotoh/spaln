@@ -330,7 +330,7 @@ void Sortgrcd::print_cds(GeneRecord* gwrk, RANGE* exon, const char* Rname)
 	    fprintf(out_fd, "%s %c 1:%d ( %d - %d ) N %7.2f\n",
 		Rname, gwrk->Csense? '-': '+', gwrk->Rlen,
 		gwrk->Rstart, gwrk->Rend, gwrk->Gscore);
-	    GBcdsForm(exon, &gene, out_fd);
+	    gene.GBcdsForm(out_fd, exon);
 	    cds->typeseq(out_fd);
 	} else if (orfs) {		// translated
 	    cds->left = orfs->pos;
@@ -339,7 +339,7 @@ void Sortgrcd::print_cds(GeneRecord* gwrk, RANGE* exon, const char* Rname)
 		Rname, gwrk->Csense? '-': '+', orfs->len,
 		gwrk->Rstart, gwrk->Rend, gwrk->Gscore);
 	    cdsrng(exon, cds);
-	    GBcdsForm(exon, &gene, out_fd);
+	    gene.GBcdsForm(out_fd, exon);
 	    if (OutMode == 7)
 		cds->transout(out_fd, STOP, 0);
 	    else {

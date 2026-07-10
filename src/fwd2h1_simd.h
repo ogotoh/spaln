@@ -103,14 +103,18 @@ const	var_t	nevsel;
 const	Rvulmn	black_Rvulmn;
 	int	rlst[3];
 	size_t	buf_size;
+	size_t	abufsize;
+	size_t	unitsize;
 	var_t*	abuf;
 	var_t*	sm_a;		// aa similarity
+	var_t*	cipscr;		// conserved intron position
+	var_t*	cipphs;		// conserved intron phase
 	var_t*	cp_a[3];	// coding potential
 	var_t*	s5_a[6];	// 5' splice signal
 	var_t*	s3_a[6];	// 3' splice signal
 	var_t*	p5_a[6];	// 5' splice phase
 	var_t*	p3_a[6];	// 3' splice phase
-	var_t*	ps_a[3];
+	var_t*	ps_a[3];	// post splicing state
 	var_t*	pv_a[3];
 	var_t*	qv_a[3];
 	var_t*	hv_a[6];
@@ -209,8 +213,10 @@ public:
 #endif
 	    black_Rvulmn{nevsel, end_of_ulk, 
 		SHORT(a->left), SHORT(a->right), b->right},
-	    buf_size((wdw.width + 2 + 7 * nelem) / nelem * nelem)
+	    buf_size((wdw.width + 2 + 7 * nelem) / nelem * nelem),
 //	    buf_size((wdw.width + 3 + 6 * nelem + nelem - 1) / nelem * nelem)
+	    abufsize(52 * Np1 + 14 * nelem),
+	    unitsize(12 * Np1 + 6 * nelem)
 {
 
 #define	Add(a, b)	this->add(a, b)
@@ -237,12 +243,13 @@ public:
 *	  5	 0 + 0	 0 + 0	12 + 3	12 + 3	0 + 0	vmf2
 ******************************************************************/
 
-	    size_t	abufsize  = 52 * Np1 + 12 * nelem;
 	    if (mode > 1)	abufsize += 24 * Np1 + 18 * nelem;
 
 	    abuf = new var_t[abufsize];
 	    sm_a = abuf;
-	    cp_a[0] = sm_a + Np1;
+	    cipscr = sm_a + Np1;
+	    cipphs = cipscr + nelem;
+	    cp_a[0] = cipphs + nelem;
 	    s5_a[0] = cp_a[0] + 3 * Np1;
 	    s3_a[0] = s5_a[0] + 6 * Np1;
 	    p5_a[0] = s3_a[0] + 6 * Np1;
@@ -851,10 +858,8 @@ const	    int	n9 = std::min(b->right, wdw.up + 3 * (ml + j9)) + 3 * j9;
 	    int	n0 = n - 3 * j8;
 const	    int	mp1 = ml + 1;
 	    int	q = (n + 3 * mp1) % 6;
-	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * nelem);	// [hv_a..fv_a]
-	    vec_clear(hb_a[0], 12 * Np1 + 3 * nelem);
-	    vec_clear(ps_a[0], 6 * nelem);	// ps_a, pv_a
-	    vclear(sm_a, 4 * Np1);
+	    vclear(abuf, abufsize);
+	    vec_set(hv_a[0], nevsel, unitsize);	// [hv_a..fv_a]
 	    if (spj) {
 		for (int j = 0; j < j9; ++j)
 		    fsjss[j]->reset();
@@ -1146,7 +1151,7 @@ const	    int j8 = j9 - 1;
 	    vec_set(hv_a[0], nevsel, 12 * Np1 + 3 * nelem);	// [hv_a..fv_a]
 	    vec_clear(hb_a[0], 12 * Np1 + 3 * nelem);
 	    vec_clear(ps_a[0], 6 * nelem);	// ps_a, pv_a
-	    vclear(sm_a, 4 * Np1);
+	    vclear(sm_a, 4 * Np1 + 2 * nelem);
 const	    bool	is_imd_ = ml == mm;
 
 	    if (spj) {
@@ -1448,6 +1453,7 @@ const	    int	r = fhlastH1(maxh);
 		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[d][r = rp]) {
 		    cpos[i][c++] = r + mm3;
+		    if (c > 9) return (NEVSEL);
 		}
 		cpos[i][c++] = r + mm3;
 		cpos[i][c] = end_of_ulk;

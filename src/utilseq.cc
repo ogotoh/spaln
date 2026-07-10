@@ -557,7 +557,7 @@ CodonUse::CodonUse(const char* fname, bool from_file) : ncodons(0)
 	    sl = sl? sl + 1: str;
 	    char*	dot = strchr(sl, '.');
 	    if (dot) *dot = '\0';
-	    strncpy(id, sl, ID_SIZE - 1);
+	    setid(sl);
 	}
 }
 
@@ -1260,7 +1260,7 @@ const	int	plus = isfpp()? vsize: 0;
 	return (data);
 }
 
-void ExinPot::reform_1(float* bkg)
+void ExinPot::reform_1(const float& total, float* bkg)
 {
 	int	i = 0;
 	float	s = 0;
@@ -1283,7 +1283,7 @@ const	bool	fpp = bkg? false: isfpp();
 	}
 }
 
-void ExinPot::reform_3()
+void ExinPot::reform_3(const float& total)
 {
 	int	i = 0;
 	float	s[3];
@@ -1310,12 +1310,12 @@ const	bool	fpp = isfpp();
 
 void ExinPot::reform(float* bkg)
 {
-	total = 0;
+float	total = 0;
 const	float*	fw = bkg? bkg: fbegin();
 const	float*	fe = bkg? (fw + ndata): fend();
 	while (fw < fe) total += *fw++;
-	if (bkg || nphase == 1) reform_1(bkg);
-	else	reform_3();
+	if (bkg || nphase == 1) reform_1(total, bkg);
+	else	reform_3(total);
 }
 
 bool ExinPot::makeExinPot(const float* bkg)
@@ -1329,13 +1329,13 @@ bool ExinPot::makeExinPot(const float* bkg)
 const	    float	freq = *frq++;
 const	    float	potl = log10(freq / *bkg);
 	    *pot++ = potl;
-	    if (isfpp()) ess += freq * potl;
+	    if (isfpp()) avm += freq * potl;
 	    if (++p == nphase) {
 		++bkg;
 		p = 0;
 	    }
 	}
-	if (isfpp()) ess *= 1000;	// mean score per 1000 bp
+	if (isfpp()) avm *= 1000;	// mean score per 1000 bp
 	return (true);
 }
 
@@ -1498,12 +1498,3 @@ VTYPE ExinPot::intpot(const SGPT6* b5, const SGPT6* b3) const
 	return  (VTYPE) (b3->sigI - b5->sigI);	// unnormalize
 }
 
-/*
-VTYPE ExinPot::intpot(const SGPT2* b5, const SGPT2* b3) const
-{
-	b5 += lm;
-	b3 -= rm;
-	if (b5 >= b3) return (0);
-	return  (VTYPE) (b3->sigI - b5->sigI);	// unnormalize
-}
-*/

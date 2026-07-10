@@ -27,14 +27,7 @@
 
 typedef	int	DIM2[2];
 
-static char memerror[] = "Memory error at %s, %d > %d";
-
 static	int	scmpf(const SKL* a, const SKL* b);
-
-/*	Each GAPS* variable has a header containing the length of the
-	alignment and the number of elements in that array.  These values
-	are returned by the macros defined in "gaps.h".
-*/
 
 #if CDEBUG
 
@@ -63,48 +56,35 @@ void putskl(const SKL* skl)
 
 #endif
 
-
-/*	A folded form of GAPS record differs from an unfolded form
+/*	A folded form of Gaps record differs from an unfolded form
 	in that the 'gps' field indicates the sequence position
 	after removal of all preceding gaps.
 */
 
-void toimage(GAPS* gaps[], int numseq)
+void toimage(Gaps* gaps[], int numseq)
 {
 	for (int j = 0; j < numseq; j++) {
 	    int 	gap = 0;
-	    GAPS*	gp = gaps[j];
-	    for ( ; gaps_intr(gp); gp++) {
+	    GAPS*	gp = gaps[j]->begin();
+	    GAPS*	gt = gaps[j]->end();
+	    for ( ; gp < gt; ++gp) {
 		gp->gps += gap;
 		gap += gp->gln;
 	    }
-	    (gp--)->gps += gap;
-	    if (gp[1].gps == gp->gps + gp->gln)
-		gp->gln = gaps_end;
 	}
 }
 
-void unfoldgap(GAPS* gp, int step, bool hl)
+void unfoldgap(Gaps* gg, int step)
 {
-	GAPS*	gg = gp;
-	if (hl) ++gp;
-	int	bas = gp->gps;
-	int 	gap = gp->gln + bas;
+	GAPS*	gp = gg->begin();
+	GAPS*	gt = gg->end();
+	int	base = gp->gps;
+	int 	glen = gp->gln + base;
 
-	while (gaps_intr(++gp)) {
-	    gp->gps = step * (gp->gps - bas) + gap;
-	    gap += gp->gln;
+	while (++gp < gt) {
+	    gp->gps = step * (gp->gps - base) + glen;
+	    glen += gp->gln;
 	}
-	gp->gps = step * (gp->gps - bas) + gap;
-	if (hl) {
-	    gg->gps = gp->gps;
-	    return;
-	}
-/*
-	--gp;
-	if (gp[1].gps == gp->gps + gp->gln)
-	    gp->gln = gaps_end;
-*/
 }
 
 void swapskl(SKL* skl)
@@ -277,137 +257,148 @@ SKL* trimskl(const Seq* seqs[], SKL* skl)
 	return (skl);
 }
 
-SKL* gap2skl(const GAPS* gga, const GAPS* ggb, const Seq** sqs)
+SKL* gap2skl(const Gaps* gga, const Gaps* ggb, const Seq** sqs)
 {
-const 	GAPS*	ga = gga;
-const 	GAPS*	gb = ggb;
-const	int	maxskl = 2 * (gaps_size(ga) + gaps_size(gb));
-const 	GAPS*	gaps[2] = {++ga, ++gb};
+const 	GAPS*	gaps[2] = {gga->begin(), ggb->begin()};
+const 	GAPS*&	ga = gaps[0];
+const 	GAPS*&	gb = gaps[1];
+const 	GAPS*	gat = gga->last();
+const 	GAPS*	gbt = ggb->last();
+	int	maxskl = 2 * (gga->size() + ggb->size());
 	int	mn[2] = {ga->gps - gb->gps, gb->gps - ga->gps};
 	int	ndel[2] = {0, 0};
-	int	node[2] = {gaps[0]->gps, gaps[1]->gps};
+	int	node[2] = {ga->gps, gb->gps};
 	bool	parity[2] = {false, false};
 	SKL	pinc = {1, -1};
-	SKL*	skl = new SKL[maxskl + 1];
-	SKL*	wk = skl + 1;
+	SKL*	skl = new SKL[maxskl + 2];
+	SKL*	wsk = skl + 1;
 
-	wk->m = node[0];
-	wk->n = node[1];
-	wk++;
+	wsk->m = node[0];
+	wsk->n = node[1];
+	++wsk;
 
 	do {
-	    int	i = (node[0] > node[1] || !gaps_intr(gaps[0]))? 1: 0;
+	    int	i = (node[0] > node[1] || ga >= gat)? 1: 0;
 	    int	j = 1 - i;
 	    if (parity[i]) ndel[i] += gaps[i]->gln;
-	    wk->m = node[i] - ndel[i];
-	    wk->n = min(node[i] - mn[i], gaps[j]->gps) - ndel[j];
-	    if (i) swap(wk->m, wk->n);
-	    SKL	cinc = {wk->m - (wk-1)->m, wk->n - (wk-1)->n};
+	    wsk->m = node[i] - ndel[i];
+	    wsk->n = std::min(node[i] - mn[i], gaps[j]->gps) - ndel[j];
+	    if (i) swap(wsk->m, wsk->n);
+	    SKL	cinc = {wsk->m - (wsk-1)->m, wsk->n - (wsk-1)->n};
 	    if (cinc.m < 0 || cinc.n < 0) {
 		delete[] skl;
 		return (0);
 	    }
 	    if (pinc.m * cinc.n != pinc.n * cinc.m) {
-		wk++;
+		++wsk;
 		pinc = cinc;
 	    } else
-		*(wk - 1) = *wk;
+		*(wsk - 1) = *wsk;
 	    if (parity[i])
 		node[i] = (++gaps[i])->gps;
 	    else
 		node[i] += gaps[i]->gln;
 	    parity[i] = !parity[i];
-	} while (gaps_intr(gaps[0]) || gaps_intr(gaps[1]));
-	wk->m = node[0] - ndel[0];
-	wk->n = node[1] - ndel[1];
-	SKL	cinc = {wk->m - (wk-1)->m, wk->n - (wk-1)->n};
+	} while (ga < gat || gb < gbt);
+	wsk->m = node[0] - ndel[0];
+	wsk->n = node[1] - ndel[1];
+	SKL	cinc = {wsk->m - (wsk-1)->m, wsk->n - (wsk-1)->n};
 	if (cinc.m < 0 || cinc.n < 0) {
 	    delete[] skl;
 	    return (0);
-	} else if (cinc.m || cinc.n) ++wk;
-	wk->m = wk->n = EOS;
-	int	i = wk - skl;
+	} else if (cinc.m || cinc.n) 
+	    ++wsk;
+	wsk->m = wsk->n = EOS;
+const	int	i = wsk - skl;
 	skl->n = i - 1;
 	skl->m = 1;
-	if (++i > maxskl) fatal(memerror, "gap2skl()", i, maxskl);
 	if (badskl(skl, sqs)) {
 	    delete[] skl; skl = 0;
 	}
 	return (skl);
 }
 
-void skl2gaps(GAPS* gaps[], const SKL* skl, bool hl)
+void skl2gaps(Gaps* gaps[], const SKL* skl)
 {
 	int	num = (skl++)->n;
-	GAPS*	wga = gaps[0] = new GAPS[num + 2];
-	GAPS*	wgb = gaps[1] = new GAPS[num + 2];
+	delete gaps[0];
+	delete gaps[1];
+	gaps[0] = new Gaps(num);
+	gaps[1] = new Gaps(num);
+	GAPS*	wga = gaps[0]->begin();
+	GAPS*	wgb = gaps[1]->begin();
 	GAPS	gpa = {skl->m, 0};
 	GAPS	gpb = {skl->n, 0};
+	int	span = 0;
 
 	*wga++ = gpa;
 	*wgb++ = gpb;
-	if (hl) {
-	    *wga++ = gpa;
-	    *wgb++ = gpb;
-	}
-
 	while (--num) {
-	    skl++;
-	    int	i = skl->m - skl->n - gpa.gps + gpb.gps;
+	    ++skl;
+const	    int	d[2] = {skl->m - gpa.gps, skl->n - gpb.gps};
+const	    int	i = d[0] - d[1];
 	    gpa.gps = skl->m;
 	    gpb.gps = skl->n;
 	    if (i < 0) {
 		gpa.gln = -i;
+		span -= i;
 		*wga++ = gpa;
 	    } else if (i > 0 ) {
 		gpb.gln = i;
+		span += i;
 		*wgb++ = gpb;
+	    } else {
+		gpa.gln = gpb.gln = 0;
+		span += d[0];
 	    }
-	} 
-	gpa.gln = gpb.gln = gaps_end;
+	}
+	gpa.gln = gpb.gln = 0;
 	*wga++ = gpa;
 	*wgb++ = gpb;
-	if (hl) {
-	    gaps[0]->gln = wga - gaps[0];
-	    gaps[1]->gln = wgb - gaps[1];
-	    gaps[0]->gps = skl->m - gaps[0][1].gps;
-	    gaps[1]->gps = skl->n - gaps[1][1].gps;
-	}
+	gaps[0]->elms = wga - gaps[0]->begin();
+	gaps[1]->elms = wgb - gaps[1]->begin();
+	gaps[0]->alen = gaps[1]->alen = span;
 }
 
-void skl2gaps3(GAPS* gaps[], const SKL* skl, int pro)
+void skl2gaps3(Gaps* gaps[], const SKL* skl, const int& pro)
 {
 	int	num = (skl++)->n;
-	GAPS*	wga = gaps[0] = new GAPS[num + 2];
-	GAPS*	wgb = gaps[1] = new GAPS[num + 2];
+	delete gaps[0];
+	delete gaps[1];
+	gaps[0] = new Gaps(num);
+	gaps[1] = new Gaps(num);
+	GAPS*	wga = gaps[0]->begin();
+	GAPS*	wgb = gaps[1]->begin();
 	GAPS	gpa = {skl->m, 0};
 	GAPS	gpb = {skl->n, 0};
+	int	span = 0;
 
 	*wga++ = gpa;
 	*wgb++ = gpb;
 	while (--num) {
-	    skl++;
-	    int	m = skl->m;
-	    int	n = skl->n;
-	    int	i;
-	    if (pro == 1) {
-		i = 3 * (m - gpa.gps) - (n - gpb.gps);
-	    } else {
-		i = m - gpa.gps - 3 * (n - gpb.gps);
-	    }
-	    gpa.gps = m;
-	    gpb.gps = n;
+	    ++skl;
+const	    int	d[2] = {skl->m - gpa.gps, skl->n - gpb.gps};
+const	    int	i = (pro == 1)? 3 * d[0] - d[1]: d[0] - 3 * d[1];
+	    gpa.gps = skl->m;
+	    gpb.gps = skl->n;
 	    if (i < 0) {
 		gpa.gln = -i;
+		span -= i;
 		*wga++ = gpa;
 	    } else if (i > 0 ) {
 		gpb.gln = i;
+		span += i;
 		*wgb++ = gpb;
+	    } else {
+		span += (pro == 1)? d[1]: d[0];
 	    }
 	}
-	gpa.gln = gpb.gln = gaps_end;
+	gpa.gln = gpb.gln = 0;
 	*wga++ = gpa;
 	*wgb++ = gpb;
+	gaps[0]->elms = wga - gaps[0]->begin();
+	gaps[1]->elms = wgb - gaps[1]->begin();
+	gaps[0]->alen = gaps[1]->alen = span;
 }
 
 bool sameskl(const SKL* a, const SKL* b)

@@ -79,6 +79,10 @@ template <typename file_t>
 	int	fget(file_t& fd, const char* fn);
 	void	to_file(const char* oname, int text);
 	void	normalize();
+	void	setid(const char* src) {
+	    char*	ps = id;
+	    for (int i = 0; ++i < ID_SIZE && (*ps++ = *src++); ) ;
+	}
 };
 
 template <typename file_t>
@@ -100,7 +104,7 @@ bool CodonUse::read_textCu(file_t fd)
 	} while (isBlankLine(str));
 	if (*str == '>') {
 	    sscanf(str, "%*s [%ld:%*d]", &ncodons);
-	    strncpy(id, str + 1, ID_SIZE - 1);
+	    setid(str + 1);
 	} else {
 	    for ( ; !*ps; ps = cdr(ps))
 		*u++ = (float) atof(ps) / 100.;
@@ -141,13 +145,13 @@ bool CodonUse::write_textCu(file_t ofd)
 {
 static	const	char	acgt[] = {'A', 'C', 'G', 'T'};
 	char	str[MAXL];
-	sprintf(str, ">%s [%ld:%d]\n", id, ncodons, 64);
+	snprintf(str, MAXL, ">%s [%ld:%d]\n", id, ncodons, 64);
 	fputs(str, ofd);
 	char*	ps = str;
 	if (algmode.nsa & 4) {
 	    *ps++ = '#';
 	    for (int i = 0; i < 4; ++i) {
-		sprintf(ps, "\t%5c", acgt[i]);
+		snprintf(ps, MAXL - (ps - str), "\t%5c", acgt[i]);
 		ps += strlen(ps);
 	    }
 	    *ps++ = '\n';
@@ -163,7 +167,7 @@ static	const	char	acgt[] = {'A', 'C', 'G', 'T'};
 		    *ps++ = acgt[s];
 		}
 		for (int t = 0; t < 4; ++t) {
-		    sprintf(ps, "\t%7.4f", 100. * *u++);
+		    snprintf(ps, MAXL - (ps - str), "\t%7.4f", 100. * *u++);
 		    ps += strlen(ps);
 		}
 		*ps++ = '\n';
@@ -211,16 +215,16 @@ protected:
 	int	nsupport = 0;
 	int	lm = 0;
 	int	rm = 0;
-	float	total = 0;	// total # of foreground kmers
-	float	avpot = 0;	// mean of nsupport self scores
+	float	avm = 0;	// mean ipt per 1000 bp
+	float	avpot = 0;	// mean self scores per intron
 	float	sdpot = 0;	// SD of self scores
 	float	avlen = 0;	// average length of nsupport introns
-	float	ess = 0;	// expected mean of self scores
+	float	sdm = 0;	// SD of ipt per 100 bp
 	float*	data = 0;
 	void	count_kmers_1(const Seq* sd, float* fq);
 	void	count_kmers_3(const Seq* sd, float* fq, CodonUse* cu);
-	void	reform_1(float* bkg = 0);
-	void	reform_3();
+	void	reform_1(const float& total, float* bkg = 0);
+	void	reform_3(const float& total);
 	float*	calcScr_1(const Seq* sd, float* scr = 0) const;
 	float*	calcScr_3(const Seq* sd, float* scr = 0) const;
 public:
@@ -286,7 +290,7 @@ template <typename file_t>
 	VTYPE	intpot(const SGPT6* b5,const  SGPT6* b3) const;
 //	VTYPE	intpot(const SGPT2* b5,const  SGPT2* b3) const;
 	VTYPE	avrpot(float f = 1.) const {return (VTYPE) (f * avpot);}
-	VTYPE	self_score() const {return (ess);}
+	VTYPE	self_score() const {return (avm);}
 };
 
 struct EijPat {

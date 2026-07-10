@@ -207,7 +207,7 @@ template <class var_t> class VarLoader;
 
 struct Minvar {
 	int	sid;
-	bool	vrtl;
+	bool	sibs;
 	int	fget(FILE* fd, const char* fn = 0) {return (0);}
 };
 
@@ -215,7 +215,7 @@ template <class var_t>
 void clearvars(var_t** vars, int n, bool del = true)
 {
 	while (--n >= 0) {
-	    if (del && *vars && !(*vars)->vrtl) delete *vars;
+	    if (del && *vars && !(*vars)->sibs) delete *vars;
 	    *vars++ = 0;
 	}
 }
@@ -260,7 +260,7 @@ const	char*	catalog;
 	}
 	void	alias_of(var_t* dst, var_t* src) {
 	    *dst = *src;
-	    dst->vrtl = true;
+	    dst->sibs = true;
 	}
 	void	initialize() 
 	  {

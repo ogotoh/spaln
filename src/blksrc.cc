@@ -75,10 +75,9 @@ static	double	cfact = 0.75;
 static	int	bthr = 35;
 
 static	void	setupbitpat(int molc, size_t gnmsz);
-static	bool	newer(char* str, const char** argv);
+static	bool	newer(const char** argv, char* str);
 static	bool	testblk(char* str, int molc, const char** argv);
 static	void	idx2SeqLenStat(const char* fn, SeqLenStat& sls);
-static	bool	testlut(char* str, int molc, const char** argv);
 
 int setQ4prm(const char* ps, const char* ss)
 {
@@ -214,14 +213,25 @@ MakeDbs::MakeDbs(const char* dbn, int molc)
 	    gzseq = gzopenpbe(OutPrm.out_file, dbname, SGZ_EXT, "w", 2);
 	    gzidx = gzopenpbe(OutPrm.out_file, dbname, IDZ_EXT, "w", 2);
 	    gzent = gzopenpbe(OutPrm.out_file, dbname, ENZ_EXT, "w", 2);
-	} else
-	{
+	} else {
 	    fseq = fopenpbe(OutPrm.out_file, dbname, SEQ_EXT, "w", 2);
 	    fidx = fopenpbe(OutPrm.out_file, dbname, IDX_EXT, "w+", 2);
 	    fent = fopenpbe(OutPrm.out_file, dbname, ENT_EXT, "w+", 2);
 	}
 	vclear(&rec);
 	fgrp = fopenpbe(OutPrm.out_file, dbname, GRP_EXT, "w", 2);
+}
+
+void MakeDbs::usegsi(INT n_entry)
+{
+	if (OutPrm.gzipped) {
+	    gzgsi = 
+		gzopenpbe(OutPrm.out_file, dbname, GSZ_EXT, "w", 2, gsi_fname);
+	} else {
+	    fgsi = 
+		fopenpbe(OutPrm.out_file, dbname, GSI_EXT, "w", 2, gsi_fname);
+	}
+	gsiidx = gsipos = new INT[n_entry + 1];
 }
 
 static	DbsRec*	rbuf;
@@ -303,6 +313,9 @@ void MakeDbs::mkidx()
 	delete[] cbuf;
 	delete[] rbuf;
 	delete[] order;
+	if (n_ebrys >= 2 * MAXEXONS)
+	    prompt("%s: too many exon boundaries %d\n", 
+		gsi_fname, n_ebrys);
 }
 
 template <typename file_t>
@@ -339,7 +352,15 @@ int MakeDbs::write_recrd(file_t fd, int c)
 		fputs(pe, fent); fputc('\0', fent);
 	    }
 	}
-	rec.seqlen = b = 0;
+	if (rvs_strand)
+	    exons->right = -exons->right;
+	if (n_ebrys) {
+	    if (fgsi) fwrite(ejunc, sizeof(int), n_ebrys, fgsi); else
+	    if (gzgsi) fwrite(ejunc, sizeof(int), n_ebrys, gzgsi);
+	}
+	if (gsipos) *gsipos++ = (t_ebrys += n_ebrys);
+	rec.seqlen = n_ebrys = b = 0;
+	rvs_strand = 0;
 	return (c);
 }
 
@@ -691,7 +712,7 @@ static void setupbitpat(int molc, size_t gnmsz)
 	}
 }
 
-static bool newer(char* str, const char** argv)
+static bool newer(const char** argv, char* str)
 {
 	bool    update = !is_filled_file(str);
 	if (update) {
@@ -713,7 +734,7 @@ static bool testblk(char* str, int molc, const char** argv)
 	    case DNA:   strcat(str, BKN_EXT); break;
 	    case TRON:  strcat(str, BKP_EXT); break;
 	}
-	return (newer(str, argv));
+	return (newer(argv, str));
 }
 
 MakeBlk* makeblock(int argc, const char** argv, int molc, bool mk_blk)
@@ -732,21 +753,17 @@ MakeBlk* makeblock(int argc, const char** argv, int molc, bool mk_blk)
 	if (dot)	*dot = '\0';
 	else    dot = str + strlen(str);
 	strcat(str, ".idx");
-	bool    update = newer(str, argv);
+	bool    update = newer(argv, str);
 	if (update) {   // idx file absent or older
 	    *dot = '\0';
 	    makedbs = new MakeDbs(str, molc);
 	} else {
 	    *dot = '\0';
 	    update = testblk(str, molc, argv);
-	    if (!update && algmode.alg) {
-		*dot = '\0';
-		update = testlut(str, molc, argv);
-	    }
 	}
 	if (!update) return (0);	// up to date
 	if (molc == PROTEIN) {
-	    SeqLenStat	sls = {0, 0, 0};
+	    SeqLenStat	sls = {0, 0, 0, 0};
 	    if (!makedbs) {		// .idx exists
 		*dot = '\0';
 		strcat(str, ".idx");
@@ -754,9 +771,10 @@ MakeBlk* makeblock(int argc, const char** argv, int molc, bool mk_blk)
 	    } else {			// .idx to be made
 		PreScan	ps(&sd, wcp.Nalpha);
 		ps.lenStat(argc, argv, sls);
+		if (sls.n_exon) makedbs->usegsi(sls.n_entry);
 	    }
 	    setupbitpat(molc, (size_t) sls.total);
-	    wcp.blklen = (INT) sls.maxv;
+	    wcp.blklen = (INT) sls.max_len;
 	} else {
 	    long	gnmsz = file_size(*argv);	// temporary genome size
 	    if (is_gz(*argv)) gnmsz *= 2;
@@ -766,7 +784,7 @@ MakeBlk* makeblock(int argc, const char** argv, int molc, bool mk_blk)
 	if (thread_num >= 1 && molc != PROTEIN) 
 	    mb->m_idxblk(argc, argv);
 	else
-	mb->idxblk(argc, argv);
+	    mb->idxblk(argc, argv);
 	return (mb);
 }
 
@@ -976,13 +994,16 @@ void PreScan::scan_genome(file_t fd, SeqLenStat& sls)
 	    } else switch (c) {
 		case '>':		// FASTA Header
 		    if (posinentry > 0) {
-			++sls.num;
+			++sls.n_entry;
 			sls.total += posinentry;
-			if (sls.maxv < posinentry) sls.maxv = posinentry;
+			if (sls.max_len < posinentry) sls.max_len = posinentry;
 			posinentry = 0;
 		    }
+		    for ( ; c != EOF && c != '\n'; c = fgetc(fd));
+		    break;
 		case ';': case '#':	// comments
-		    while ((c = fgetc(fd)) != EOF && c != '\n');
+		    if ((c = fgetc(fd)) == 'C') ++sls.n_exon;
+		    for ( ; c != EOF && c != '\n'; c = fgetc(fd));
 		    break;
 		case '/': 
 		    if ((c = fgetc(fd)) == '/')
@@ -993,9 +1014,9 @@ void PreScan::scan_genome(file_t fd, SeqLenStat& sls)
 	    }
 	}
 	if (posinentry > 0) {
-	    ++sls.num;
+	    ++sls.n_entry;
 	    sls.total += posinentry;
-	    if (sls.maxv < posinentry) sls.maxv = posinentry;
+	    if (sls.max_len < posinentry) sls.max_len = posinentry;
 	}
 }
 
@@ -1031,25 +1052,15 @@ static void idx2SeqLenStat(const char* fn, SeqLenStat& sls)
 	rewind(fidx);
 	if (fread(recidx, sizeof(DbsRec), numidx, fidx) != numidx)
 	    fatal("%s: Index file may be corrupted!\n", fn);
-	sls.num = numidx;
-	sls.maxv = 0;
+	sls.n_entry = numidx;
+	sls.max_len = 0;
 	DbsRec*	widx = recidx;
 	DbsRec*	tidx = recidx + numidx;
 	for ( ; widx < tidx; ++widx) {
-	    if (sls.maxv < widx->seqlen) sls.maxv = widx->seqlen;
+	    if (sls.max_len < widx->seqlen) sls.max_len = widx->seqlen;
 	    sls.total += widx->seqlen;
 	}
 	delete[] recidx;
-}
-
-static bool testlut(char* str, int molc, const char** argv)
-{
-	switch (molc) {
-	    case PROTEIN: return (false);
-	    case DNA:   strcat(str, LUN_EXT); break;
-	    case TRON:  strcat(str, LUP_EXT); break;
-	}
-	return (newer(str, argv));
 }
 
 // Read from amino acid or nucleotide sequence files
@@ -1058,7 +1069,7 @@ template <typename file_t>
 void MakeBlk::scan_genome(file_t fd, INT* tc)
 {
 	int	c = 0;
-	bool	mdbs = tc && mkdbs;
+const	bool	mdbs = tc && mkdbs;
 	int	posinblk = 0;
 	int	rest = 0;
 	while ((c = fgetc(fd)) != EOF) {
@@ -1093,12 +1104,14 @@ void MakeBlk::scan_genome(file_t fd, INT* tc)
 			else	++cntblk.ChrNo;
 			posinblk = 0;
 		    }
-		    if (mdbs) {
-			c = mkdbs->write_recrd(fd);
-			if (c == '\n' || c == EOF) break;
-		    }			// no break
+		    if (mdbs) c = mkdbs->write_recrd(fd);
+		    for ( ; c != EOF && c != '\n'; c = fgetc(fd));
+		    break;
 		case ';': case '#':	// comments
-		    while ((c = fgetc(fd)) != EOF && c != '\n');
+		    if ((c = fgetc(fd)) == 'C' && mdbs) 
+			mkdbs->get_gsi(fd);
+		    else
+			for ( ; c != EOF && c != '\n'; c = fgetc(fd));
 		    break;
 		case '/': 
 		    if ((c = fgetc(fd)) == '/')
@@ -1220,7 +1233,7 @@ void MakeBlk::idxblk(Seq* sd, SeqServer* svr)
 	DbsRec*	pr = wdbf->recidx;
 	CHAR*	ps = wdbf->dbsseq;
 	char*	pe = wdbf->entry;
-	int*	pg = wdbf->gsiidx;
+	INT*	pg = wdbf->gsiidx;
 	int*	pp = wdbf->gsipool;
 
 	INT	m = 0;
@@ -1317,7 +1330,7 @@ void MakeBlk::idxblk(Seq* sd)
 	    reset();
 	}
 	if (sd->sigII) {
-	    int*	npfq = new int[sd->many + 1];
+	    INT*	npfq = new INT[sd->many + 1];
 	    vclear(npfq, sd->many + 1);
 	    int*	lst = sd->sigII->lst;
 	    PFQ*	lfq = sd->sigII->pfq + sd->sigII->pfqnum;
@@ -1841,9 +1854,6 @@ const	char*	path = getenv(ALN_DBS);
 	    *dot = 0;
 	    dot = strrchr(str, '.');
 	}
-	if (!strcmp(dot, BKN_EXT)) strcpy(dot, LUN_EXT);
-	else if (!strcmp(dot, BKP_EXT)) strcpy(dot, LUP_EXT);
-	else exit(0);
 	exit (0);
 }
 
@@ -1909,6 +1919,7 @@ void SrchBlk::setSegLen()
 
 int SrchBlk::findChrNo(const INT& blk)
 {
+	if (!pb2c) return (blk);
 	int	lw = (int) (pb2c->BClw + pb2c->BCce * (blk - 1)) - 1;
 	int	up = (int) (pb2c->BCup + pb2c->BCce * (blk - 1)) + 1;
 
@@ -1962,7 +1973,7 @@ static int scmpf(const KVpair<INT, int>* a,const  KVpair<INT, int>* b)
 
 static int gcmpf(const GeneRng* a, const GeneRng* b)
 {
-	VTYPE	d = b->scr - a->scr;
+	int	d = b->scr - a->scr;
 
 	if (d > 0) return 1;
 	if (d < 0) return -1;
@@ -2054,9 +2065,11 @@ SrchBlk::SrchBlk(Seq* sqs[], MakeBlk* mb, bool gdb) :
 	gnmdb(gdb), dbf(mb->wdbf)
 {
 	pbwc = new ContBlk;
-	pb2c = new Block2Chr;
 	*pbwc = mb->cntblk;
-	*pb2c = mb->b2c;
+	if (mb->b2c.BCup > 0.) {
+	    pb2c = new Block2Chr;
+	    *pb2c = mb->b2c;
+	}
 	mb->wdbf = 0;
 	if (dbf->curdb->defmolc != PROTEIN) dbf->curdb->defmolc = DNA;
 	ConvTab = mb->iConvTab;
@@ -2128,7 +2141,7 @@ void SrchBlk::initialize(Seq* sqs[], const char* fn)
 	maxmmc = (MaxMmc == 0 || (int) MaxMmc > (INT_MAX / bpp[0]->weight)
 		 || algmode.lcl & 16)?
 	    INT_MAX: bpp[0]->weight * MaxMmc / wcp.Nshift;
-	vthr = (VTYPE) (alprm.scale * 2 * bthr);
+	vthr = (int) (alprm.scale * 2 * bthr);
 	ptpl = rdbt->base() / pbwc->AvrScr;
 	DeltaPhase2 = (int) (ptpl * pbwc->AvrScr);
 	MaxBlock = wcp.MaxGene / wcp.blklen;
@@ -2298,7 +2311,7 @@ retry:
 	JUXT	rend = {query->left, 0};
 	int	nbetter = 0;
 	int	multi = 0;
-	VTYPE	lcritjscr = critjscr;
+	int	lcritjscr = critjscr;
 	for ( ; n--; ++wlu) {
 	    if (wlu->num > 1) ++multi;
 	    if (wlu->tlen > qlen) {
@@ -2416,7 +2429,7 @@ retry:
 		if (cursd != *curgr) cursd->aliaseq(*curgr);
 		(*curgr)->restrange(&grng);
 	    }
-	    (*curgr)->jscr = (VTYPE) wlu->scr;
+	    (*curgr)->jscr = wlu->scr;
 	    (*curgr)->CdsNo = 0;
 	    (*curgr)->left = wlu->llmt;
 	    if (wlu->ulmt < (*curgr)->right) (*curgr)->right = wlu->ulmt;
@@ -2613,7 +2626,6 @@ static	const	char	ofmt2[] =
 	    }
 	}
 	if (phase1) {			// phase1 passed
-	    rectiseq(gener, curgr);
 	    if (ReportAln) return (curgr - gener);
 	} else if (force < 2) return (0);	// next reccurence
 	else if (ReportAln && query->isprotein() && algmode.slv) {	// examine all positive blocks

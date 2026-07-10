@@ -359,12 +359,17 @@ size_t DbsDt::readgrp(FILE* fgrp)
 	    } else if (stl.size() ==  4) {	// ver22
 		grp.entspc = atoi(stl[2]);
 		grplbl->push(stl[3]);
+	    } else if (stl.size() ==  5) {	// ver23
+		grp.entspc = atoi(stl[2]);
+		grp.bryspc = atoi(stl[3]);
+		grplbl->push(stl[4]);
 	    } else
 		continue;
 	    mfd.write(&grp);
 	    ress += grp.seqptr;
 	    numidx += grp.recnbr;
 	    ent_space += grp.entspc;
+	    gsi_space += grp.bryspc;
 	}
 	numgrp = (INT) mfd.size() - 1;
 	dbsgrp = (DbsGrp*) mfd.flush();
@@ -404,26 +409,26 @@ void DbsDt::clean()
 	gsiidx = 0; gsipool = 0;
 }
 
-void DbsDt::prepare(size_t entry_space, size_t num, size_t seq_space, size_t gsi_space)
+void DbsDt::prepare(size_t entry_space, size_t num, size_t seq_space, size_t t_pfqnum)
 {
 	dbsseq = new CHAR[seq_space];
 	recidx = new DbsRec[numidx = num];
 	entry = new char[ent_space = entry_space];
-	if (gsi_space) {
-	    gsipool = new int[gsi_space + 1];
-	    gsiidx = new int[num + 1];
+	if (t_pfqnum) {
+	    gsipool = new int[t_pfqnum + 1];
+	    gsiidx = new INT[num + 1];
 	}
 }
 
-void DbsDt::prepare(Strlist& sname, int num, size_t seq_space, size_t gsi_space)
+void DbsDt::prepare(Strlist& sname, int num, size_t seq_space, size_t t_pfqnum)
 {
 	dbsseq = new CHAR[seq_space];
 	recidx = new DbsRec[numidx = num];
 	ent_space = sname.space();
 	entry = sname.squeeze();
-	if (gsi_space) {
-	    gsipool = new int[gsi_space + 1];
-	    gsiidx = new int[num + 1];
+	if (t_pfqnum) {
+	    gsipool = new int[t_pfqnum + 1];
+	    gsiidx = new INT[num + 1];
 	}
 }
 
@@ -546,6 +551,14 @@ const	char*	path = 0;
 	    else {
 		gzfd = gzopenpbe(path, form, ODZ_EXT, "r", -1, str);
 		if (gzfd) readodr(gzfd, str);
+	    }
+
+// read "gsi" file
+	    fd = fopenpbe(path, form, GSI_EXT, "r", -1, str);
+	    if (fd)	readgsi(fd, str);
+	    else {
+		gzfd = gzopenpbe(path, form, GSZ_EXT, "r", -1, str);
+		if (gzfd) readgsi(gzfd, str);
 	    }
 
 // read "seq" file
@@ -699,10 +712,11 @@ const 	RANGE*	r = rng;
 	postseq(ps);
 	sname->assign(dbf->entname(rec));
 	did = dbf->recno(rec);
-	if (int pfqnum = dbf->gsisize(did)) {
-	    delete sigII;
-	    sigII = new SigII(dbf->gsient(did), pfqnum, isprotein()? 3: 1);
-	    sigII->resetend(len);
+	if (dbf->gsiidx) {
+const	    int	p_ebry = dbf->gsiidx[did];
+const	    int n_ebry = dbf->gsiidx[did + 1] - p_ebry;
+	    delete[] sigII;
+	    sigII = new SigII(dbf->gsipool + p_ebry, n_ebry, 3);
 	}
 	return this;
 }
@@ -720,10 +734,11 @@ DbsRec* DbsDt::bisearch(const char* key) const
 {
 	int	left = 0;
 	int	right = numidx;
+const	char*	delm = " =\t\n";
 	while (right - left >= 0) {
 	    int	mid = (right + left) / 2;
 	    DbsRec*	found = recidx + mid;
-	    int comp = wordcmp(key, entname(recodr? dbsrec(found): found));
+	    int comp = wordcmp(key, entname(recodr? dbsrec(found): found), delm);
 	    if (comp < 0)	right = mid - 1;
 	    else if (comp > 0)	left = mid + 1;
 	    else	return (found);
@@ -746,8 +761,8 @@ Seq* Seq::getdbseq(DbsDt* dbf, const char* code, int c, bool readin)
 
 	if (!dbf) dbf = defdbf;
 	if (!dbf) return (0);
-	refresh();
-	DbsRec*	record = (0 <= c && c < int(dbf->numidx))? dbf->dbsrec(c): 0;
+	refresh(1);
+	DbsRec*	record = (0 <= c)? dbf->dbsrec(c): 0;
 	if (!record) {
 	    if (!code) return (0);
 	    if (*code == DBSID) ++code;

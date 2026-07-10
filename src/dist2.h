@@ -90,14 +90,19 @@ void Dist2<var_t>::write_text(file_t fd)
 {
 	char	str[MAXL];
 	for (INT i = 0; i < mem_num; ++i) {
-	    fputs((*sname)[i], fd);
+	    if (sname && (*sname)[i] && *(*sname)[i])
+		fputs((*sname)[i], fd);
+	    else {
+		snprintf(str, MAXL, "OTU%d", i);
+		fputs(str, fd);
+	    }
 	    fputc('\n', fd);
 	}
 	fputc('\n', fd);
 	for (INT j = 1, k = 0; j < mem_num; ++j) {
 	    int	n = 0;
 	    for (INT i = 0; i < j; ++i, ++k) {
-		sprintf(str, " %15.7e", dist[k]);
+		snprintf(str, MAXL, " %15.7e", dist[k]);
 		fputs(str, fd);
 		if (++n == 5) {
 		    fputc('\n', fd);

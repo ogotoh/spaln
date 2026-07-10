@@ -1069,6 +1069,7 @@ const	    Rvwml*	mx = hlastS_ng(hh, wdw);
 		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[0][r = rp]) {
 		    cpos[i][c++] = r + imd->mi;
+		    if (c > 9) return (NEVSEL);
 		}
 		cpos[i][c++] = r + imd->mi;
 		cpos[i][c] = end_of_ulk;

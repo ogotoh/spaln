@@ -70,6 +70,9 @@ const	int	ipen = spj? pwd->IntPen->Penalty(): nevsel;
 const	int	md = checkpoint(0);
 	int	mc = md + a->left;
 
+	int	m = a->left;
+	PfqItr	api(a, m);
+const	int	api_size = api.size();
 	for (int ml = a->left; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
@@ -78,10 +81,18 @@ const	    int	n9 = std::min(b->right, wdw.up + (ml + j8)) + j9;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
 const	    SGPT2*	bb = spj? b->exin->score_n(n): 0;
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
-	    vec_clear(s5_a, 2 * Np1);
-	    vec_clear(ps_a, 2 * nelem);
+	    vec_clear(abuf, abufsize);
+	    vec_set(hv_a[0], nevsel, unitsize);
 
+	    bool	a_in_zone = false;
+	    for (int k = 0; k < j9; ++k, ++m) {
+		if (api_size && api.eq(m)) {
+		    a_in_zone = true;
+		    pb_a[k] = api.match_score(m);
+		    ++api;
+		}
+	    }
+regist_v    cip_v = Load(pb_a);	// conserved intron position score
 regist_v    ev_v = ninf_v;
 regist_v    hv2_v = ninf_v;
 regist_v    fv2_v = ninf_v;
@@ -168,6 +179,7 @@ regist_v	    pv_v = mean_v[0];
 		    qv_v = Add(qv_v, pv_v);
 		    msk_m = Cmp_gt(hil_v, mil_v);	// filter shorter than
 		    qv_v = Blend(qv_v, ninf_v, msk_m);	// lower limit of intron
+		    if (a_in_zone) qv_v = Add(qv_v, cip_v);
 		    msk_m = Cmp_gt(qv_v, hv_v);
 		    hv_v = Blend(qv_v, hv_v, msk_m);
 		    qv_v = Blend(one_v, zero_v, msk_m);
@@ -279,6 +291,9 @@ const	int	mt = a->left + mw / nelem * nelem;
 regist_v    qv_v = Load(pv_a);	
 const	regist_m	lmask = Cmp_eq(qv_v, one_v);
 
+	int	m = a->left;
+	PfqItr	api(a, m);
+const	int	api_size = api.size();
 	for (int ml = a->left; ml < a->right; ml += nelem) {
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
@@ -287,10 +302,18 @@ const	    int j8 = j9 - 1;
 	    int	n0 = n - j8;
 	    int	r = n - (ml + 1);
 const	    SGPT2*	bb = spj? b->exin->score_n(n): 0;
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
-	    vec_clear(s5_a, 2 * Np1);
-	    vec_clear(ps_a, 2 * nelem);
+	    vec_clear(abuf, abufsize);
+	    vec_set(hv_a[0], nevsel, unitsize);
 
+	    bool	a_in_zone = false;
+	    for (int k = 0; k < j9; ++k, ++m) {
+		if (api_size && api.eq(m)) {
+		    a_in_zone = true;
+		    pb_a[k] = api.match_score(m);
+		    ++api;
+		}
+	    }
+regist_v    cip_v = Load(pb_a);	// conserved intron position score
 regist_v    ev_v = ninf_v;
 regist_v    hv2_v = ninf_v;
 regist_v    fv2_v = ninf_v;
@@ -394,6 +417,7 @@ regist_v	    pv_v = mean_v[0];
 		    qv_v = Add(qv_v, pv_v);
 		    msk_m = Cmp_gt(hil_v, mil_v);
 		    qv_v = Blend(qv_v, ninf_v, msk_m);	// filter short intron
+		    if (a_in_zone) qv_v = Add(qv_v, cip_v);
 		    msk_m = Cmp_gt(qv_v, hv_v);		// is acceptor ?
 		    hv_v = Blend(qv_v, hv_v, msk_m);
 		    pb_v = Blend(acc_v, pb_v, msk_m);
@@ -511,7 +535,11 @@ const	int	md = checkpoint(0);
 	int	mc = a->left + md;
 	VTYPE	accscr = 0;
 
+	int	m = a->left;
+	PfqItr	api(a, m);
+const	int	api_size = api.size();
 	for (int ml = a->left, i = 0; ml < a->right; ml += nelem) {
+const	    bool	is_imd_ = ml == mm;
 const	    int	j9 = std::min(nelem, a->right - ml);
 const	    int j8 = j9 - 1;
 	    int	n  = std::max(b->left, wdw.lw + ml);
@@ -520,12 +548,18 @@ const	    int j8 = j9 - 1;
 	    int	r = n - (ml + 1);
 	    int	donor_r = r;
 const	    SGPT2*	bb = spj? b->exin->score_n(n): 0;
-	    vec_set(hv_a[0], nevsel, 4 * Np1 + 2 * nelem);
-	    vec_clear(hb_a[0], 4 * Np1 + 2 * nelem);
-	    vec_clear(s5_a, 2 * Np1);
-	    vec_clear(ps_a, 2 * nelem);
-const	    bool	is_imd_ = ml == mm;
+	    vec_clear(abuf, abufsize);
+	    vec_set(hv_a[0], nevsel, unitsize);
 
+	    bool	a_in_zone = false;
+	    for (int k = 0; k < j9; ++k, ++m) {
+		if (api_size && api.eq(m)) {
+		    a_in_zone = true;
+		    pb_a[k] = api.match_score(m);
+		    ++api;
+		}
+	    }
+regist_v    cip_v = Load(pb_a);	// conserved intron position score
 regist_v    ev_v = ninf_v;
 regist_v    eb_v = zero_v;
 regist_v    ec_v = zero_v;
@@ -690,6 +724,7 @@ regist_v	    pv_v = mean_v[0];
 		    qv_v = Add(qv_v, pv_v);
 		    msk_m = Cmp_gt(hil_v, mil_v);
 		    qv_v = Blend(qv_v, ninf_v, msk_m);	// filter short intron
+		    if (a_in_zone) qv_v = Add(qv_v, cip_v);
 		    msk_m = Cmp_gt(qv_v, hv_v);		// is acceptor
 		    hv_v = Blend(qv_v, hv_v, msk_m);
 		    if (LocalL) hb_v = Blend(hb2_v, hb_v, msk_m);
@@ -837,6 +872,7 @@ const		int	d = checkpoint(c);
 		    wdw.lw <= rp && rp < wdw.up && r != rp;
 		    rp = imd->hlnk[d][r = rp]) {
 		    cpos[i][c++] = r + imd->mi;
+		    if (c > 9) return (NEVSEL);
 		}
 		cpos[i][c++] = r + imd->mi;
 		cpos[i][c] = end_of_ulk;

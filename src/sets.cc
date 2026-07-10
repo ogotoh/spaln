@@ -22,7 +22,7 @@
 
 #include "stdtype.h"
 
-void Subset::rsubset(int n, const char* ps, FILE* fd)
+void Subset::rsubset(const int& n, const char* ps, FILE* fd)
 {
 	pool = new int[2 * n];
 	group = new int*[n + 1];
@@ -71,7 +71,7 @@ void Subset::rsubset(int n, const char* ps, FILE* fd)
 	num = pg - group;
 }
 
-Subset::Subset(Subset& src)	// copy
+Subset::Subset(const Subset& src)	// copy
 {
 	elms = src.elms;
 	num = src.num;
@@ -87,7 +87,7 @@ Subset::Subset(Subset& src)	// copy
 	*pg = 0;
 }
 
-Subset::Subset(int nn, const char* ps)
+Subset::Subset(const int& nn, const char* ps)
 {
 	FILE*	fg = 0;
 
@@ -104,10 +104,4 @@ Subset::Subset(int nn, const char* ps)
 	}
 	rsubset(nn, 0, fg);
 	if (fg && fg != stdin) fclose(fg);
-}
-
-Subset::~Subset()
-{
-	delete[] group;
-	delete[] pool;
 }

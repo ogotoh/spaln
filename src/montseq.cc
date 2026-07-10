@@ -99,7 +99,8 @@ Seq* randseq(Seq* sd, int len)
 	for (int n = 0; n < len; n++)
 	    *s++ = randres();
 	sd->postseq(s);
-	return (sd->rndseq());
+	sd->rndseq();
+	return (sd);
 }
 
 /*

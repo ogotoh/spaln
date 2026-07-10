@@ -1,8 +1,8 @@
-# SPALN information
+0# SPALN information
 
 ### Map and align a set of cDNA/EST or protein sequences onto a genome
-#### Present Version 3.0.8b
-#### Last updated: 2026-02-28
+#### Present Version 3.0.9
+#### Last updated: 2026-07-10
 
 - [Overview](#Ov)
 - [Install](#Inst)
@@ -366,6 +366,43 @@ following series of commands after moving to _seqdb_.
 ```
 
 ## <a name="Changes">Changes from previous version</a>
+## Changes in version 3.0.9
+1. Fix a bug of twice (at both 5' and 3' sides of intron boundary) 
+imposing an intron penalty in simd-based (A2, A3) calculation.
+2. Different default values have been set for the intron penalty of (A0, A1) 
+and (A2, A3) modes (can be reset at the run time with -yi*N* option.)
+3. The headline formats of IntronPotTab[.dgz] and CodepotTab[.dgz] have 
+been slightly modified. This change is intended to mitigate the large 
+variation among species in the optimal weight values of intron potential
+(default = 0, can be reset with the -yZ*N* option.)
+
+An example of improvised spliced alignment accuracy of version 3.09 
+compared with those of version 3.04 shown in Table S3 in [Ref 7](#Ref7).  
+Gene-level sensitivity (GN) and exon-level F1 measure (EF) tested on 
+*D. melanogaster* genome vs. *A. gambiae* queries.  
+<style>
+.tabS3 table {
+    width: 40%;
+    text-align: left;
+}
+</style>
+
+<div class="tabS3">
+
+|Method|$\Delta$GN|(%)|$\Delta$EF|(%)|
+|:---|:---:|:---:|:---:|:---:|
+|-yZ*N*|0|1|0|1|
+|Q0A0|4.737|5.191|4.596|4.907|
+|Q0A1|5.459|5.871|4.420|4.692|
+|Q0A2|5.128|5.046|4.394|4.281|
+|Q0A3|3.810|3.666|3.661|3.491|
+|Q3A0|3.192|3.542|2.964|3.140|
+|Q3A1|4.263|4.407|3.317|3.431|
+|Q3A2|4.428|4.325|4.228|4.069|
+|Q3A3|3.378|3.296|3.623|3.460|
+
+</div>
+
 ## Changes in version 3.0.8
 1. Recover a serious bug concerning with saturated 
 addition/subtraction that sneaked in ver.3.0.5. 

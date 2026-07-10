@@ -238,8 +238,8 @@ void Kmers::write_text(file_t fd)
 	 	    fputc(decoder[c / m], fd);
 		    c %= m;
 		}
-		if (j < hdr.max_sk) sprintf(str, "\t%7ld\n", sresults[j][i]);
-		else	sprintf(str, "\t%7d\n", lresults[j][i]);
+		if (j < hdr.max_sk) snprintf(str, MAXL, "\t%7ld\n", sresults[j][i]);
+		else	snprintf(str, MAXL, "\t%7d\n", lresults[j][i]);
 		fputs(str, fd);
 	    }
 	}

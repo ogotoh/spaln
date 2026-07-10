@@ -232,7 +232,7 @@ const	int	np1 = n + 1;
 	    else	*lod++ = r;
 	}
 	if (entropy && morder == 0) {
-	    sprintf(str, "%d\t%9.5lf %9.5lf ", np1, -h, maxh + h);
+	    snprintf(str, MAXL, "%d\t%9.5lf %9.5lf ", np1, -h, maxh + h);
 	    fputs(str, ofd);
 	}
 	if (morder > 0) {
@@ -244,7 +244,7 @@ const	int	np1 = n + 1;
 		    else	*lod++ = r;
 		}
 	    if (entropy &&  morder == 1) {
-		sprintf(str, "%d\t%9.5lf %9.5lf ", np1, -h, 2 * maxh + h);
+		snprintf(str, MAXL, "%d\t%9.5lf %9.5lf ", np1, -h, 2 * maxh + h);
 		fputs(str, ofd);
 	    }
 	}
@@ -258,7 +258,7 @@ const	int	np1 = n + 1;
 		else	*lod++ = r;
 	      }
 	  if (entropy &&  morder == 2) {
-		sprintf(str, "%d\t%9.5lf %9.5lf ", np1, -h, 3 * maxh + h);
+		snprintf(str, MAXL, "%d\t%9.5lf %9.5lf ", np1, -h, 3 * maxh + h);
 		fputs(str, ofd);
 	  }
 	}
@@ -351,12 +351,12 @@ const	int	mm1 = std::min(morder, ref->morder) + 1;
 	float	scrp = 0;
 	for (; lod < led && rod < red; lod += lod_size, rod += ref->lod_size) {
 	    for (int i = 0; i < bias[mm1]; ++i) {
-		float	rf = rcomp[i] * (exp10((double) lod[i]) 
-		    * (1. + depsilon) - depsilon);
+		float	rf = rcomp[i] * (pow(10., ((double) lod[i]) 
+		    * (1. + depsilon) - depsilon));
 		scrf += rf * rod[i];
 		if (!rrcomp) continue;
-		rf = rrcomp[i] * (exp10((double) rod[i]) 
-		    * (1. + repsilon) - repsilon);
+		rf = rrcomp[i] * (pow(10., ((double) rod[i]) 
+		    * (1. + repsilon) - repsilon));
 		scrp += rf * lod[i];
 	    }
 	}

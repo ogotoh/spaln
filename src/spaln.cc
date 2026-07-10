@@ -58,7 +58,7 @@ public:
 };
 
 
-class ThQueue {
+class SeqThQueue {
 	int	rp, wp;
 	int	remain;
 	pthread_cond_t	not_full;
@@ -68,28 +68,28 @@ public:
 	Seq**	sque;
 	pthread_mutex_t	mutex;
 	Mfile*	mfd;
-	ThQueue(Seq** sqs);
-	~ThQueue() {delete[] sque;}
+	SeqThQueue(Seq** sqs);
+	~SeqThQueue() {delete[] sque;}
 	void	enqueue(Seq** fsd, int n = 1);
 	void	dequeue(Seq** fsd, int n = 1);
 	void	putqueue();
 };
 
-struct thread_arg_t {
-	ThQueue*	q;
+struct SeqThread_arg_t {
+	SeqThQueue*	q;
 	int	cpuid;
 	Seq**	seqs;
 	SeqServer*	svr;
 	void*	pwd;
 };
 
-struct mast_arg_t {
-	ThQueue*	q;
+struct SeqMast_arg_t {
+	SeqThQueue*	q;
 	SeqServer*	svr;
 };
 
-struct mist_arg_t {
-	ThQueue*	q;
+struct SeqMist_arg_t {
+	SeqThQueue*	q;
 	int	nhf;
 	HalfGene*	hfg;
 };
@@ -109,10 +109,10 @@ static	void	seg_job(Seq** sqs, SeqServer* svr, SrchBlk* sbk);
 static	void	all_in_func(Seq** sqs, SeqServer* svr, void* prm);
 static	void	setdefparam();
 static	PwdB*	SetUpPwd(Seq* sqs[]);
-static	int	blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q);
-static	int	match_2(Seq* sqs[], PwdB* pwd, ThQueue* q = 0);
-static	int	quick4(Seq* sqs[], SrchBlk* bks, ThQueue* q = 0);
-static	void	spaln_job(Seq* sqs[], void* prm, ThQueue* q = 0);
+static	int	blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, SeqThQueue* q);
+static	int	match_2(Seq* sqs[], PwdB* pwd, SeqThQueue* q = 0);
+static	int	quick4(Seq* sqs[], SrchBlk* bks, SeqThQueue* q = 0);
+static	void	spaln_job(Seq* sqs[], void* prm, SeqThQueue* q = 0);
 static	void	genomicseq(Seq** sqs, PwdB* pwd, int ori = 1);
 
 static	const	char*	ReadBlock = 0;
@@ -131,8 +131,8 @@ static	int	g_segment = 2 * MEGA;
 static	int	q_mns = 3;
 static	int	no_seqs = 3;
 static	bool	gsquery = QRYvsDB == GvsA || QRYvsDB == GvsC;
-static	const	char*	version = "3.0.8";
-static	const	int	date = 260125;
+static	const	char*	version = "3.0.9";
+static	const	int	date = 260707;
 static	AlnOutModes	outputs;
 
 static void usage(const char* messg)
@@ -403,13 +403,15 @@ const	    char*	val = argv[0] + 2;
 		case 'p':
 		    switch (*val) {
 			case 'a': polyA.setthr(val + 1); break;
+			case 'b': OutPrm.spjinf = 1 - OutPrm.spjinf; break;
 			case 'd': OutPrm.descrp = 1; break;
 			case 'D': OutPrm.debug = 1; break;
 			case 'e': OutPrm.trimend = !OutPrm.trimend; break;
 			case 'f': OutPrm.deflbl = 1; break;
 			case 'F': OutPrm.full_name = 1; break;
 			case 'i': OutPrm.ColorEij = 1; break;
-			case 'j': OutPrm.spjinf = 1 - OutPrm.spjinf; break;
+			case 'j': OutPrm.gsiinf = 
+				    isdigit(val[1])? atoi(val+1): 2; break;
 			case 'n': OutPrm.overwrite = 2; break;
 			case 'o': OutPrm.overwrite = 1; break;
 			case 'q': setprompt(0, 0); break;
@@ -545,7 +547,7 @@ void AlnOutModes::alnoutput(Seq** sqs, Gsinfo* GsI)
 const	bool	swp = sqs[1]->inex.intr || 
 		(sqs[0]->isprotein() && sqs[1]->istron());
 	Seq*	gene = 0;
-	GAPS*	gaps[2] = {0, 0};
+	Gaps*	gaps[2] = {0, 0};
 
 	if (swp) {
 	    std::swap(sqs[0], sqs[1]);
@@ -570,7 +572,7 @@ const	bool	swp = sqs[1]->inex.intr ||
 	    if (out_mode[n] == ALN_FORM) {
 		if (gene) {
 		    fphseqs((const Seq**) sqs, 2, fds[n]);
-		    GBcdsForm(GsI->CDSrng, gene, fds[n]);
+		    gene->GBcdsForm(fds[n], GsI->CDSrng);
 		    print2Skip = 1;
 		}
 		if (getlpw()) {		// print alignment
@@ -578,7 +580,7 @@ const	bool	swp = sqs[1]->inex.intr ||
 		    if (gene) gene->exons = GsI->eiscrunfold(gaps[0]);
 		    unfoldgap(gaps[0], 1);
 		    unfoldgap(gaps[1], 3);
-		    GsI->print2(sqs, (const GAPS**) gaps, 
+		    GsI->print2(sqs, (const Gaps**) gaps, 
 			 1, 1, print2Skip, fds[n]);
 		} else
 		    GsI->repalninf(sqs, out_mode[n], fds[n]);
@@ -594,11 +596,11 @@ const	bool	swp = sqs[1]->inex.intr ||
 		}
 		if (gene) {
 		    fphseqs((const Seq**) sqs, 2, fds[n]);
-		    GBcdsForm(GsI->CDSrng, gene, fds[n]);
+		    gene->GBcdsForm(fds[n], GsI->CDSrng);
 		    print2Skip = 1;
 		}
 		if (getlpw())
-		    GsI->print2(sqs, (const GAPS**) gaps, 
+		    GsI->print2(sqs, (const Gaps**) gaps, 
 			1, 1, print2Skip, fds[n]);
 		else
 		    GsI->repalninf(sqs, out_mode[n], fds[n]);
@@ -610,7 +612,7 @@ const	bool	swp = sqs[1]->inex.intr ||
 		if (getlpw()) {
 		    skl2gaps(gaps, GsI->skl);
 		    toimage(gaps, 2);
-		    GsI->print2(sqs, (const GAPS**) gaps, 
+		    GsI->print2(sqs, (const Gaps**) gaps, 
 			1, 1, print2Skip, fds[n]);
 		} else {
 		    GsI->repalninf(sqs, out_mode[n], fds[n]);
@@ -625,8 +627,8 @@ const	bool	swp = sqs[1]->inex.intr ||
 	    std::swap(sqs[0], sqs[1]);
 	    swapskl(GsI->skl);
 	}
-	delete[] gaps[0];
-	delete[] gaps[1];
+	delete gaps[0];
+	delete gaps[1];
 }
 
 // Convert alignment coordinates to gene organization
@@ -720,7 +722,7 @@ static	PwdB* SetUpPwd(Seq* sqs[])
 	return (pwd);
 }
 
-static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
+static int match_2(Seq* sqs[], PwdB* pwd, SeqThQueue* q)
 {
 	if (gsquery) std::swap(sqs[0], sqs[1]);
 	Seq*&	a = sqs[0];
@@ -817,7 +819,7 @@ static int match_2(Seq* sqs[], PwdB* pwd, ThQueue* q)
 	return (dir);
 }
 
-static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, ThQueue* q)
+static int blkaln(Seq* sqs[], SrchBlk* bks, RANGE* rng, SeqThQueue* q)
 {
 	int	nparalog = 0;
 	RANGE	grng = {0, 0};
@@ -1064,7 +1066,7 @@ static SrchBlk* getblkinf(Seq* sqs[], const char* dbs, MakeBlk* mb)
 	return bks;
 }
 
-static int quick4(Seq* sqs[], SrchBlk* bks, ThQueue* q)
+static int quick4(Seq* sqs[], SrchBlk* bks, SeqThQueue* q)
 {
 	Seq*&	a = sqs[0];	// query
 	if (bks->incompatible(a)) {
@@ -1121,7 +1123,7 @@ static void genomicseq(Seq** sqs, PwdB* pwd, int ori)
 	}
 }
 
-static void spaln_job(Seq* sqs[], void* prm, ThQueue* q)
+static void spaln_job(Seq* sqs[], void* prm, SeqThQueue* q)
 {
 	Seq*&	a = sqs[0];
 	PwdB*	pwd = (PwdB*) prm;
@@ -1186,7 +1188,7 @@ static void put_genome_entries()
 	}
 }
 
-ThQueue::ThQueue(Seq** sqs) : sinp(sqs)
+SeqThQueue::SeqThQueue(Seq** sqs) : sinp(sqs)
 {
 	sque = new Seq*[max_queue_num];
 	initseq(sque, max_queue_num);
@@ -1198,7 +1200,7 @@ ThQueue::ThQueue(Seq** sqs) : sinp(sqs)
 	pthread_cond_init(&not_empty, 0);
 }
 
-void ThQueue::enqueue(Seq** sqs, int n)
+void SeqThQueue::enqueue(Seq** sqs, int n)
 {
 	pthread_mutex_lock(&mutex);
 	while (remain == max_queue_num)
@@ -1218,7 +1220,7 @@ void ThQueue::enqueue(Seq** sqs, int n)
 	pthread_mutex_unlock(&mutex);
 }
 
-void ThQueue::dequeue(Seq** sqs, int n)
+void SeqThQueue::dequeue(Seq** sqs, int n)
 {
 	pthread_mutex_lock(&mutex);
 	while (remain == 0)
@@ -1241,7 +1243,7 @@ void ThQueue::dequeue(Seq** sqs, int n)
 
 // enqueue the (if necessary segmented) query
 
-void ThQueue::putqueue()
+void SeqThQueue::putqueue()
 {
 	int	slen = sinp[0]->len;
 
@@ -1265,8 +1267,8 @@ void ThQueue::putqueue()
 
 static void* master_func(void* arg)
 {
-	mast_arg_t*	targ = (mast_arg_t*) arg;
-	ThQueue*	q = targ->q;
+	SeqMast_arg_t*	targ = (SeqMast_arg_t*) arg;
+	SeqThQueue*	q = targ->q;
 	Seq**	fsd = q->sinp;
 	int	nf = targ->svr->input_form == IM_PARA? 1: 0;
 
@@ -1303,8 +1305,8 @@ static int hcmp(HalfGene* a, HalfGene* b)
 
 static void* mistress_func(void* arg)
 {
-	mist_arg_t*	targ = (mist_arg_t*) arg;
-	ThQueue*		q = targ->q;
+	SeqMist_arg_t*	targ = (SeqMist_arg_t*) arg;
+	SeqThQueue*		q = targ->q;
 	Seq**		fsd = q->sinp;
 	HalfGene*	whf = targ->hfg;
 	HalfGene*	thf = whf + targ->nhf - 1;
@@ -1330,7 +1332,7 @@ static void* mistress_func(void* arg)
 
 static void* worker_func(void* arg)
 {
-	thread_arg_t*	targ = (thread_arg_t*) arg;
+	SeqThread_arg_t*	targ = (SeqThread_arg_t*) arg;
 	SrchBlk*	sbk = algmode.blk? (SrchBlk*) targ->pwd: 0;
 
 #ifdef __CPU_SET
@@ -1356,16 +1358,16 @@ static void* worker_func(void* arg)
 
 static void MasterWorker(Seq** sqs, SeqServer* svr, void* prm)
 {
-	mast_arg_t	maarg;
-	mist_arg_t	miarg;
+	SeqMast_arg_t	maarg;
+	SeqMist_arg_t	miarg;
 	pthread_t	master;
 
 	max_queue_num = (max_queue_num + svr->input_ns - 1) / svr->input_ns * svr->input_ns;
-	thread_arg_t*	targ = new thread_arg_t[thread_num];
+	SeqThread_arg_t*	targ = new SeqThread_arg_t[thread_num];
 	pthread_t*	worker = new pthread_t[thread_num];
 	SrchBlk*	primaty = svr->target_dbf? (SrchBlk*) prm: 0;
 
-	ThQueue	q(sqs);
+	SeqThQueue	q(sqs);
 	maarg.q = &q;
 	maarg.svr = svr;
 	targ[0].seqs = new Seq*[no_seqs * thread_num];
@@ -1454,7 +1456,6 @@ static void setdefparam()
 	OutPrm.SkipLongGap = 1;	// suppress display of long gaps
 	OutPrm.fastanno = 1;	// add annotation in fasta output
 	polyA.setthr(def_polya_thr);
-
 #if !FVAL
 	alprm.scale = 10;
 #endif

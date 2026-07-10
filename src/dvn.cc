@@ -90,8 +90,8 @@ struct Member
 {
 	int	sid;
 	int	pid;
-	bool	vrtl;
-	Member(int id = 0) : sid(id), vrtl(false) {}
+	bool	sibs;
+	Member(int id = 0) : sid(id), sibs(false) {}
 	void	setids(int id, int pd) {sid = id; pid = pd;}
 template <typename file_t>
 	int	fget(file_t fd, const char* fn = 0) {return (0);}

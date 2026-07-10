@@ -260,7 +260,8 @@ static Seq* eliminseq(Seq* dst, Seq* src)
 
 static Seq* uniqseq(Seq* dst, Seq* src)
 {
-	FTYPE*  dist = calcdist(src);
+	DistMat	dm(src, 0, Composition);
+	FTYPE*  dist = dm.dist;
 	int*	which = new int[src->many + 2];
 	int*	parent = new int[src->many];
 	int*	linkm = new int[src->many];

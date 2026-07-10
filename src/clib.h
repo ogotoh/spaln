@@ -87,38 +87,45 @@ static	const	char	stddelim[] = " \t\n\r";
 template <typename X> X* vcopy(X* dst, const X* src, int n)
 {
 	if (!dst) dst = new X[n];
-	X*	head = dst;
-	while (n-- > 0) *dst++ = *src++;
-	return (head);
+	X*	w = dst;
+	while (n-- > 0) *w++ = *src++;
+	return (dst);
+}
+
+template <typename X> X* vmove(X* dst, const X* src, int n)
+{
+	if (!dst) dst = new X[n];
+	memmove(dst, src, n * sizeof(X));
+	return (dst);
 }
 
 template <typename X> X* vset(X* dst, const X& val, size_t n)
 {
-	if (n == 0) return(dst);
+	if (n <= 0) return(dst);
 	if (!dst) dst = new X[n];
-	X*	w = dst + n;
-	while (--w >= dst) *w = val;
+	X*	w = dst;
+	while (n-- > 0) *w++ = val;
 	return (dst);
 }
 
-template  <typename X> inline void vclear(X* ary, const int n = 1)
+template <typename X> inline void vclear(X* ary, const int n = 1)
 {
 	memset(ary, '\0', n * sizeof(X));
 }
 
 template <typename X> X* vadd_c(X* dst, const X& val, size_t n)
 {
-	if (!dst || val == 0 || n == 0) return(dst);
-	X*	w = dst + n;
-	while (--w >= dst) *w += val;
+	if (!dst || val == 0 || n <= 0) return(dst);
+	X*	w = dst;
+	while (n--) *w++ += val;
 	return (dst);
 }
 
 template <typename X> X* vsub_c(X* dst, const X& val, size_t n)
 {
-	if (!dst || val == 0 || n == 0) return(dst);
-	X*	w = dst + n;
-	while (--w >= dst) *w -= val;
+	if (!dst || val == 0 || n <= 0) return(dst);
+	X*	w = dst;
+	while (n--) *w++ -= val;
 	return (dst);
 }
 
@@ -1263,6 +1270,8 @@ extern	int	chop(char* ps);
 extern	char*	rm_end_spc(char* str);
 extern	char*	next_wd(char** sp);
 extern	int	wordcmp(const char* a, const char* b, int n = INT_MAX);
+extern	int	wordcmp(const char* a, const char* b, 
+		const char* delimt, int n = INT_MAX);
 extern	UPTR	fbisrch(UPTR found, const UPTR key, FILE* fd, long left, long right, int width, CMPF cmpf);
 extern	int	comb2(int i, int j);
 extern	int	comb3(int i, int j, int k);

@@ -103,10 +103,13 @@ const	int	avmch;
 const	var_t	nevsel;
 const	Rvulmn	black_Rvulmn;
 	int	rlst;
-	size_t	buf_size;
+const	size_t	buf_size;
+const	size_t	unitsize;
+const	size_t	abufsize;
 	var_t*	abuf = 0;
 	var_t*	ps_a = 0;
 	var_t*	pv_a = 0;
+	var_t*	cipscr = 0;
 	var_t*	hv_a[2] = {0, 0};
 	var_t*	fv_a = 0, *fv2_a = 0;
 	var_t*	ev_a = 0, *ev2_a = 0;
@@ -115,7 +118,6 @@ const	Rvulmn	black_Rvulmn;
 	var_t*	fb_a = 0, *fb2_a = 0;
 	var_t*	eb_a = 0, *eb2_a = 0;
 	var_t*	pb_a = 0;
-	var_t*	qb_a = 0;
 	var_t*	hc_a[2] = {0, 0};
 	var_t*	fc_a = 0, *fc2_a = 0;
 	var_t*	ec_a = 0, *ec2_a = 0;
@@ -203,7 +205,9 @@ public:
 #endif
 	    black_Rvulmn{nevsel, end_of_ulk, a->left, a->right, b->right},
 	    rlst(INT_MAX), 
-	    buf_size((wdw.width + 3 * nelem - 1) / nelem * nelem)
+	    buf_size((wdw.width + 3 * nelem - 1) / nelem * nelem),
+	    unitsize(8 * Np1 + 4 * nelem),
+	    abufsize(10 * Np1 + 7 * nelem + (mode > 1? unitsize: 0))
 {
 
 #define	Add(a, b)	this->add(a, b)
@@ -221,37 +225,34 @@ public:
 
 /*****************************************************************
 *	mode	v	b	c	d	o	
-*	  0	4 + 2	0 + 0	0 + 0	0 + 0	2 + 2	score only
-*	  1	4 + 2	4 + 2	0 + 0	0 + 0	2 + 2	bimap
-*	  2	4 + 2	4 + 2	4 + 2	0 + 0	2 + 2	udh1
-*	  3	4 + 2	4 + 2	4 + 2	0 + 0	2 + 4	vmf1
-*	  4	4 + 2	4 + 2	4 + 2	4 + 2	2 + 2	udh2
-*	  5	4 + 2	4 + 2	4 + 2	4 + 2	2 + 4	vmf2
+*	  0	4 + 2	0 + 0	0 + 0	0 + 0	2 + 3	score only
+*	  1	4 + 2	4 + 2	0 + 0	0 + 0	2 + 3	bimap
+*	  2	4 + 2	4 + 2	4 + 2	0 + 0	2 + 3	udh1
+*	  3	4 + 2	4 + 2	4 + 2	0 + 0	2 + 5	vmf1
+*	  4	4 + 2	4 + 2	4 + 2	4 + 2	2 + 3	udh2
+*	  5	4 + 2	4 + 2	4 + 2	4 + 2	2 + 5	vmf2
 ******************************************************************/
 
-	    size_t		bufsiz =  10 * Np1 + 6 * nelem;
-	    if (mode > 1)	bufsiz += (8 * Np1 + 6 * nelem);
-	    abuf = new var_t[bufsiz];
+	    abuf = new var_t[abufsize];
 	    ps_a = abuf;
 	    pv_a = ps_a + nelem;
-	    hv_a[0] = pv_a + nelem;
+	    pb_a = pv_a + nelem;
+	    s5_a = pb_a + nelem;
+	    s3_a = s5_a + Np1;
+	    hv_a[0] = s3_a + Np1;
 	    hv_a[1] = hv_a[0] + Np1;
 	    ev_a = hv_a[1] + Np1;
 	    fv_a = ev_a + nelem;
 	    ev2_a = fv_a + Np1;
 	    fv2_a = ev2_a + nelem;
-	    s5_a = fv2_a + Np1;
-	    s3_a = s5_a + Np1;
-	    hb_a[0] = s3_a + Np1;
+	    hb_a[0] = fv2_a + Np1;
 	    hb_a[1] = hb_a[0] + Np1;
 	    eb_a = hb_a[1] + Np1;
 	    fb_a = eb_a + nelem;
 	    eb2_a = fb_a + Np1;
 	    fb2_a = eb2_a + nelem;
 	    if (mode > 1) {
-		pb_a = fb2_a + Np1;
-		qb_a = pb_a + nelem;
-		hc_a[0] = qb_a + nelem;
+		hc_a[0] = fb2_a + Np1;
 		hc_a[1] = hc_a[0] + Np1;
 		ec_a = hc_a[1] + Np1;
 		fc_a = ec_a + nelem;

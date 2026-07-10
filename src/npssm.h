@@ -146,20 +146,20 @@ void TriFreq::text_output(file_t fd)
 {
 	char	str[MAXL];
 	if (wdfq || pssm_in) {
-	    sprintf(str, "%d %d %d 1 0 %7.3f %7.3f %7.3f %d\n",
+	    snprintf(str, MAXL, "%d %d %d 1 0 %7.3f %7.3f %7.3f %d\n",
 		right - left, lod_size, jnk - left + 1, 
 		mmm.min, mmm.mean, mmm.max, nsupport);
 	    fputs(str, fd);
 	} else if (!wdfq && trim_in) {
 const	    char*	sl = strrchr(trim_in, '/');
-	    sprintf(str, ">%s %d %d %d", sl? sl + 1: trim_in, 
+	    snprintf(str, MAXL, ">%s %d %d %d", sl? sl + 1: trim_in, 
 		right - left, lod_size, jnk - left + 1);
 	    fputs(str, fd);
 	}
 	float*	lod = lods + left * lod_size;
 	for (int n = left; n < right; ++n) {
 	    for (int i = 0; i < lod_size; ++i) {
-		sprintf(str, " %9.5f", *lod++);
+		snprintf(str, MAXL, " %9.5f", *lod++);
 		fputs(str, fd);
 	    }
 	    fputc('\n', fd);
@@ -195,7 +195,7 @@ void TriFreq::markovmodel(file_t ofd, const int phase)
 {
 	char	str[MAXL];
 	if (entropy) {
-	    sprintf(str, ">%s [%d:%d]\n", sname, nsupport, sites);
+	    snprintf(str, MAXL, ">%s [%d:%d]\n", sname, nsupport, sites);
 	    fputs(str, ofd);
 	}
 	float	maxg = 0;
@@ -243,10 +243,10 @@ const		    float	sig = log10((r + depsilon) / (1 + depsilon));
 		}
 	    }
 	    if (entropy) {
-		sprintf(str, "%d\t%15.7le", np1, h);
+		snprintf(str, MAXL, "%d\t%15.7le", np1, h);
 		fputs(str, ofd);
 		for (int i = 0; i < nelm; ++i) {
-		    sprintf(str, "\t%7d", int(scomp[i]));
+		    snprintf(str, MAXL, "\t%7d", int(scomp[i]));
 		    fputs(str, ofd);
 		}
 	    } else if (phase == 0) {
@@ -271,7 +271,7 @@ const			    float	sig = log10((r + depsilon) / (1 + depsilon));
 		    }
 		}
 	        if (entropy && morder == 1) {
-		    sprintf(str, "%d\t%15.7le ", np1, h);
+		    snprintf(str, MAXL, "%d\t%15.7le ", np1, h);
 		    fputs(str, ofd);
 		}
 	    }
@@ -292,7 +292,7 @@ const			    float	sig = log10((r + depsilon) / (1 + depsilon));
 		  }
 		}
 		if (entropy && morder == 2) {
-		    sprintf(str, "%d\t%15.7le ", np1, h);
+		    snprintf(str, MAXL, "%d\t%15.7le ", np1, h);
 		    fputs(str, ofd);
 		}
 	    }
@@ -389,12 +389,12 @@ template <typename file_t>
 void PsFrqMat::write_text(file_t fd)
 {
 	char	str[MAXL];
-	sprintf(str, ">%s [%d:%d]\n", id, many, cols);
+	snprintf(str, MAXL, ">%s [%d:%d]\n", id, many, cols);
 	fputs(str, fd);
 	float*	f = frq;
 	for (int c = 0; c < cols; ++c) {
 	    for (int r = 0; r < nelm; ++r) {
-		sprintf(str, " %9.5f", *f++);
+		snprintf(str, MAXL, " %9.5f", *f++);
 		fputs(str, fd);
 	    }
 	    fputc('\n', fd);

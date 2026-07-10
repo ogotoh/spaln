@@ -23,7 +23,6 @@
 #ifndef _GSINFO_H_
 #define _GSINFO_H_
 
-class	Seq;
 struct	Iiinfo;
 
 #if USE_WEIGHT
@@ -48,12 +47,12 @@ struct SigII {
 	SigII(const SigII& src);	// copy constructor
 	SigII(int p, int l, int s);	// known properties
 	SigII(const Iiinfo& iif);
-	SigII(const Seq** sq, const GAPS** gsrc, FTYPE* wtlst = 0);
+	SigII(const Seq** sq, const Gaps** gsrc, FTYPE* wtlst = 0);
 template <typename file_t>
 	SigII(file_t fd, char* str, FTYPE* wt = 0);	// read from seq file
 	SigII(const int* poss, int num, int step);	// list of positions
 	~SigII();
-	void	rmGapPfq(const GAPS* gg);
+	void	rmGapPfq(const Gaps* gg);
 	void	relist(int bias);
 	void	swaplst(int an, int bn);
 	void	renumlst(const int* lst_odr);
@@ -157,20 +156,21 @@ const 	FTYPE*	weight = 0;
 #endif
 public:
 	PfqItr& operator++() {
-	    if (wfq < tfq) {
+	    if (wfq && wfq < tfq) {
 		if (wst) wst += wfq->num;
 		++wfq;
 	    }
 	    return (*this);
 	}
 	PfqItr& operator--() {
-	    if (wfq > pfq) {
+	    if (wfq && wfq > pfq) {
 		if (wst) wst -= wfq->num;
 		 --wfq;
 	    }
 	    return (*this);
 	}
 	PfqItr& operator+=(int n) {
+	    if (!wfq) return (*this);
 	    while (n-- > 0 && wfq < tfq) {
 		if (wst) wst += wfq->num;
 		++wfq;
@@ -178,6 +178,7 @@ public:
 	    return (*this);
 	}
 	PfqItr& operator-=(int n) {
+	    if (!wfq) return (*this);
 	    while (n-- > 0 && wfq > pfq) {
 		if (wst) wst -= wfq->num;
 		 --wfq;
@@ -208,7 +209,7 @@ public:
 	bool eq(int m) const {		// codon +-1 match
 	    if (SpbFact == 0 || !wfq) return (false);
 	    if (step == 1) return (wfq->pos == m);
-	    m = step * m - 1;
+	    m = step * (m + 1) - 1;
 	    return ((m <= wfq->pos) && (wfq->pos < m + step));
 	}
 	bool lt(int m) const {
@@ -218,7 +219,7 @@ public:
 	    return (wfq && (wfq->pos + 1 < ++m * step));
 	}
 	int size() const {return pfqnum;}
-	bool end() const {return (wfq >= tfq);}
+	bool end() const {return (!wfq || wfq >= tfq);}
 	PfqItr& reset(int n = 0) {
 	    wfq = pfq; wst = lst; n *= step;
 	    while (wfq < tfq && wfq->pos < n) {
@@ -228,54 +229,55 @@ public:
 	    return (*this);
 	}
 	PFQ&	current_pfq() const {
-	    return (*wfq);
+	    return (wfq? *wfq: pfqend);
 	}
 #if USE_WEIGHT
 	PfqItr(SigII& sgi, const int& n = 0, const FTYPE* wt = 0);
 	VTYPE	density() const {
-	    return (wfq->dns);
+	    return (wfq? wfq->dns: 0);
 	}
 	VTYPE	density(const int& n) const {
-	    return (n == wfq->pos? wfq->dns: 0);
+	    return ((wfq && n == wfq->pos)? wfq->dns: 0);
 	}
 	VTYPE	match_score() const {
-	    return (SpbFact * wfq->dns);
+	    return (wfq? SpbFact * wfq->dns: 0);
 	}
 	VTYPE	match_score(const int& n) const {
-	    return (n == wfq->pos? SpbFact * wfq->dns: 0);
+	    return ((wfq && n == wfq->pos)? SpbFact * wfq->dns: 0);
 	}
 #else
 	PfqItr(SigII& sgi, const int& n = 0);
 	VTYPE	density() const {
-	    return (wfq->num);
+	    return (wfq? wfq->num: 0);
 	}
 	VTYPE	density(const int& n) const {
-	    return (n == wfq->pos? wfq->num: 0);
+	    return ((wfq && n == wfq->pos)? wfq->num: 0);
 	}
 	VTYPE	match_score() const {
-	    return (SpbFact * wfq->num);
+	    return (wfq? SpbFact * wfq->num: 0);
 	}
 	VTYPE	match_score(const int& n) const {
-	    return (n == wfq->pos? SpbFact * wfq->num: 0);
+	    return ((wfq && n == wfq->pos)? SpbFact * wfq->num: 0);
 	}
 #endif
 	int	nextsite() const {
-	    return (wfq->pos / step);
+	    return (wfq? wfq->pos / step: 0);
 	}
 	int	phase() const {
-	    return (wfq->pos % step);
+	    return (wfq? wfq->pos % step: 0);
 	}
 	int	number() const {
-	    return (wfq->num);
+	    return (wfq? wfq->num: 0);
 	}
 	int	phase(const int& n) const {
-	    return (n == wfq->pos? wfq->pos % step: 0);
+	    return ((wfq && n == wfq->pos)? wfq->pos % step: 0);
 	}
 	int	number(const int& n) const {
-	    return (n == wfq->pos? wfq->num: 0);
+	    return ((wfq && n == wfq->pos)? wfq->num: 0);
 	}
 	PfqItr(const Seq* sd, int n = 0);
 	VTYPE match_score(PfqItr& bpi, bool all_phase = true) const {
+	    if (!wfq) return (0);
 	    if (step != 1) {
 		if ((wfq->pos - bpi.wfq->pos) % step) return (0);
 		if (!all_phase && wfq->pos % step) return (0);	// only phase 0
@@ -470,14 +472,14 @@ const	char*	prefix = 0;
 	    sigII = iif? iif->finalize(len): 0;
 	}
 	RANGE*	eiscr2rng();
-	RANGE*	eiscrunfold(GAPS* gp);
+	RANGE*	eiscrunfold(const Gaps* gp);
 	RANGE*	querygs(const Seq* qry) const;
 	void	BoundaryInf(const Seq* sd) const;	// write to out_fd
 	void	BoundarySeq(const Seq* sd) const;	// write to out_fd
 	int	center(int k) const;	// center position
 	void	repalninf(Seq* seqs[], int mode, FILE* fd = 0) const;
 	void	printgene(Seq** seqs, int mode, FILE* _fd = 0) const;
-	int	print2(Seq* seqs[], const GAPS** gaps, 
+	int	print2(Seq* seqs[], const Gaps** gaps, 
 		int nbr, int ttl, int skip, FILE* _fd = 0) const;
 	void	setprefix(const char* px) {prefix = px;}
 };
@@ -491,7 +493,7 @@ extern	FTYPE*	eijdmx(Seq* sd);
 extern	void	fouteijdmx(FILE* fd, const Seq* sd, bool dmx = true);
 extern	void	fouteij(FILE* fd, Seq* sd);
 extern	VTYPE	spb_fact();
-extern	void	unfoldPfq(PFQ* pfq, int num, const GAPS* gg, int step);
+extern	void	unfoldPfq(PFQ* pfq, int num, const Gaps* gg, int step);
 
 inline	bool	neoeij(const EISCR* eij) {return (eij->left != endrng.left);}
 inline	bool	neopfq(const PFQ* pfq) {return (pfq && pfq->num);}

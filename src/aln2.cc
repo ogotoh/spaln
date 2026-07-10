@@ -133,7 +133,7 @@ const	int	step = (DvsP == 3)? 1: 3;
 	}
 	if (!seqs[0]->inex.intr && !seqs[1]->inex.intr) return;	// without splice
 	eijpat = new EijPat(DvsP);				// boundary signal
-	if (alprm2.Z > 0)  intnpot = new ExinPot(static_cast<int>(Iefp::IP));
+	if (alprm2.Z > 0) intnpot = new ExinPot(static_cast<int>(Iefp::IP));
 	IntPen = new IntronPenalty(Vab, DvsP, eijpat, intnpot);
 	if (!DvsP && alprm2.z > 0)
 	    exonpot = new ExinPot(static_cast<int>(Iefp::EP));

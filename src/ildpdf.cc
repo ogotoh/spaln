@@ -656,7 +656,7 @@ static	int cmpi(const int* a, const int* b)
 
 Ild::Ild(IldPrm* ildprm, const INT& n_sample, 
 	Drand48_data* drnad_buff, const char* snm)
-	: nfact(0), sid(0), vrtl(false), ntotal(0), 
+	: nfact(0), sid(0), sibs(false), ntotal(0), 
 	  ftotal(0), entry(snm), intlf(0), k_th_qtil(0)
 {
 	double*	uniform = new double[n_sample];
